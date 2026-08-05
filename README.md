@@ -12,6 +12,30 @@ A native component runtime and application framework are long-term Research and 
 
 The project is in the documentation and architecture foundation stage. No stable public runtime API exists yet.
 
+## What we implement first
+
+The first technical sequence is:
+
+```text
+pnpm and Nx repository bootstrap
+→ strict TypeScript and ESM package baseline
+→ one buildable and packable Core package
+→ State read, write, and subscriptions
+→ Computed, Batch, Scope, and disposal
+→ bounded Diagnostics
+→ packed Vanilla consumer fixture
+→ React, Angular, and Vue adapters
+→ small CLI foundation
+```
+
+Practical instructions:
+
+- [Implementation Guide](./docs/implementation/IMPLEMENTATION_GUIDE.md)
+- [Phase 0 Execution Playbook](./docs/implementation/PHASE_0_EXECUTION_PLAYBOOK.md)
+- [State Alpha Execution Guide](./docs/implementation/STATE_ALPHA_EXECUTION.md)
+- [First Implementation Backlog](./docs/implementation/FIRST_IMPLEMENTATION_BACKLOG.md)
+- [Agent and Developer Guide](./docs/implementation/AGENT_AND_DEVELOPER_GUIDE.md)
+
 ## Current commitments
 
 - Product thesis and architecture documentation

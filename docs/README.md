@@ -8,10 +8,11 @@ This directory is the primary map for Vii product, architecture, security, gover
 2. [Product Boundaries](strategy/PRODUCT_BOUNDARIES.md)
 3. [System Overview](architecture/SYSTEM_OVERVIEW.md)
 4. [Architecture Map](architecture/ARCHITECTURE_MAP.md)
-5. [State Architecture](architecture/STATE_ARCHITECTURE.md)
-6. [Security Architecture](security/SECURITY_ARCHITECTURE.md)
-7. [Implementation Roadmap](roadmap/IMPLEMENTATION_ROADMAP.md)
-8. [Phase 0 Foundation](roadmap/PHASE_0_FOUNDATION.md)
+5. [Implementation Guide](implementation/IMPLEMENTATION_GUIDE.md)
+6. [Phase 0 Execution Playbook](implementation/PHASE_0_EXECUTION_PLAYBOOK.md)
+7. [State Alpha Execution Guide](implementation/STATE_ALPHA_EXECUTION.md)
+8. [Security Architecture](security/SECURITY_ARCHITECTURE.md)
+9. [Implementation Roadmap](roadmap/IMPLEMENTATION_ROADMAP.md)
 
 ## Current implementation focus
 
@@ -19,14 +20,28 @@ The committed implementation sequence remains:
 
 ```text
 repository foundation
--> State
--> Scope and Resources
--> Diagnostics
--> Vanilla fixture
--> framework adapters and CLI foundation
+→ State
+→ Scope and Resources
+→ Diagnostics
+→ Vanilla fixture
+→ framework adapters and CLI foundation
 ```
 
 Native components, the application framework, SSR, native build orchestration, Nx integration, desktop, and mobile remain Research or Vision until prerequisites and evidence exist.
+
+## Practical implementation guides
+
+These documents explain how to execute the architecture:
+
+- `implementation/IMPLEMENTATION_GUIDE.md`, overall order and implementation boundaries;
+- `implementation/PHASE_0_EXECUTION_PLAYBOOK.md`, repository bootstrap steps;
+- `implementation/STATE_ALPHA_EXECUTION.md`, State implementation order and tests;
+- `implementation/FIRST_IMPLEMENTATION_BACKLOG.md`, first independently actionable tasks;
+- `implementation/REPOSITORY_TARGET_STRUCTURE.md`, incremental repository layout;
+- `implementation/AGENT_AND_DEVELOPER_GUIDE.md`, collaboration and validation rules;
+- `implementation/TASK_SPEC_TEMPLATE.md`, reusable issue and agent task template.
+
+Developers and agents should read these guides together with the architecture document for the package they are changing.
 
 ## Strategy
 

@@ -12,14 +12,16 @@ The roadmap is evidence-driven. A phase is complete only when its exit criteria 
 2. Validate architecture through real consumers.
 3. Do not begin a major module before its prerequisites are stable.
 4. Prefer thin adapters over duplicated implementations.
-5. Treat diagnostics, security, testing, documentation, packaging, and migrations as product work.
+5. Treat diagnostics, security, testing, documentation, packaging, migrations, and agent governance as product work.
 6. Keep research work separate from committed delivery.
 7. Do not confuse multiple authoring profiles with multiple runtime models.
 8. Do not build a general-purpose bundler before Vii-specific compiler value is proven.
+9. Keep Intentloom, InLoom, agents, and AI providers outside the Vii production runtime.
+10. Preserve human authority over architecture, security, governance, and releases.
 
 ## Phase sequence
 
-### Phase 0: Repository, protocol, and security foundation
+### Phase 0: Repository, protocol, security, and engineering-context foundation
 
 Status: Committed
 
@@ -28,10 +30,14 @@ Goals:
 - bootstrap the monorepo;
 - establish package boundaries;
 - configure formatting, linting, testing, type checking, builds, and release validation;
-- create architecture, security, RFC, and ADR indexes;
+- create architecture, security, RFC, ADR, implementation, and agent-policy indexes;
 - define first protocol schemas and package conventions;
 - maintain the initial threat model;
-- create minimal consumer and malicious fixtures.
+- create minimal consumer and malicious fixtures;
+- consolidate implementation playbooks;
+- define the Intentloom integration boundary;
+- define agent context, permissions, approvals, mutation, rollback, and audit rules;
+- optionally validate one read-only and one documentation-only Intentloom workflow.
 
 Exit criteria:
 
@@ -40,6 +46,8 @@ Exit criteria:
 - packed packages can be installed into at least one fixture;
 - branch and release conventions are documented;
 - security architecture and threat boundaries are referenced by Definition of Done;
+- agent authority and stop conditions are explicit;
+- packed runtime artifacts have no hidden Intentloom or AI dependency;
 - Phase 1 issues are ready and independently actionable.
 
 ### Phase 1: Vii State Alpha
@@ -71,7 +79,8 @@ Out of scope:
 - Query cache;
 - mandatory RxJS;
 - deep proxy Store;
-- reducer or dispatch architecture.
+- reducer or dispatch architecture;
+- mandatory Intentloom or AI integration.
 
 ### Phase 2: Framework adapters and CLI foundation
 
@@ -84,7 +93,9 @@ Goals:
 - `create-vii` prototype;
 - `vii init`, `vii add state`, and `vii doctor`;
 - deterministic project detection and dry-run output;
-- safe generator engine foundations.
+- safe generator engine foundations;
+- stable machine-readable plans and reports for external tools;
+- approval metadata without granting external clients implicit authority.
 
 Exit criteria:
 
@@ -93,7 +104,9 @@ Exit criteria:
 - SSR isolation is verified where applicable;
 - CLI modifications are previewable, root-confined, and idempotent;
 - registry scripts and hidden command execution remain disallowed;
-- consumer fixtures cover supported frameworks.
+- consumer fixtures cover supported frameworks;
+- stale revision invalidates a mutation plan;
+- external clients cannot bypass CLI validation.
 
 ### Phase 3: Diagnostics and Devtools foundation
 
@@ -107,7 +120,8 @@ Goals:
 - machine-readable export;
 - initial browser and CLI inspectors;
 - production-safe redaction;
-- structured security diagnostics.
+- structured security diagnostics;
+- redacted diagnostics consumption by Intentloom and InLoom.
 
 Exit criteria:
 
@@ -115,6 +129,7 @@ Exit criteria:
 - diagnostics do not change runtime behavior;
 - production-safe mode avoids State and request values by default;
 - security events do not expose complete malicious payloads;
+- agent consumers gain no mutation authority through diagnostics;
 - overhead is measured and documented.
 
 ### Phase 4: Real application validation
@@ -126,7 +141,8 @@ Goals:
 - integrate Vii into at least one non-trivial reference application;
 - gather external alpha feedback;
 - simplify APIs based on evidence;
-- confirm memory, packaging, type-check, and security behavior in a larger project.
+- confirm memory, packaging, type-check, and security behavior in a larger project;
+- evaluate whether agent context and task policies reduce or increase review cost.
 
 Exit criteria:
 
@@ -134,7 +150,8 @@ Exit criteria:
 - major ergonomics issues are documented and resolved or explicitly deferred;
 - migration path exists for accepted breaking changes;
 - threat model assumptions are reviewed against the application;
-- malicious fixtures cover the supported adapters and project patterns.
+- malicious fixtures cover the supported adapters and project patterns;
+- agent-assisted tasks preserve provenance and deterministic evidence where used.
 
 ### Phase 5: Vii Query
 
@@ -249,7 +266,7 @@ Potential goals:
 
 This phase advances only if the native runtime provides a clear advantage beyond existing framework adapters.
 
-### Phase 11: Ecosystem expansion
+### Phase 11: Ecosystem and agent-assisted expansion
 
 Status: Vision
 
@@ -263,7 +280,13 @@ Potential work:
 - Stream module and RxJS interop;
 - partial hydration or islands research;
 - additional build and deployment targets;
-- optional AI assistance governed by Intentloom and Vii security policy.
+- Intentloom repository profiles and policy bundles;
+- InLoom first-class Vii workflows;
+- multi-agent task handoffs and conflict detection;
+- optional AI diagnostics, migrations, and code assistance;
+- local and remote provider adapters.
+
+Protected architecture, security, governance, and release decisions remain human-controlled.
 
 ## Phase gate rule
 
@@ -275,7 +298,8 @@ A phase may begin in parallel only when:
 - it is clearly marked as Research, Planned, or Vision;
 - it cannot be mistaken for supported production functionality;
 - its security and privacy boundaries are identified;
-- its output can be deleted without blocking committed work.
+- its output can be deleted without blocking committed work;
+- agent permissions and context boundaries are defined where automation is used.
 
 ## Stop rule
 
@@ -285,4 +309,7 @@ Research should stop or be deferred when:
 - compatibility or security cannot meet published gates;
 - tooling quality would create an unacceptable developer experience;
 - maintenance capacity is missing;
-- existing framework adapters already solve the validated user need.
+- existing framework adapters already solve the validated user need;
+- agent host enforcement is insufficient;
+- context provenance or privacy cannot meet policy;
+- automation adds more review cost than value.

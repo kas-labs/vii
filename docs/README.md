@@ -1,6 +1,6 @@
 # Vii Documentation
 
-This directory is the primary map for Vii product, architecture, security, governance, quality, and implementation documentation.
+This directory is the primary map for Vii product, architecture, security, governance, quality, implementation, agent, and integration documentation.
 
 ## Start here
 
@@ -8,10 +8,14 @@ This directory is the primary map for Vii product, architecture, security, gover
 2. [Product Boundaries](strategy/PRODUCT_BOUNDARIES.md)
 3. [System Overview](architecture/SYSTEM_OVERVIEW.md)
 4. [Architecture Map](architecture/ARCHITECTURE_MAP.md)
-5. [State Architecture](architecture/STATE_ARCHITECTURE.md)
-6. [Security Architecture](security/SECURITY_ARCHITECTURE.md)
-7. [Implementation Roadmap](roadmap/IMPLEMENTATION_ROADMAP.md)
-8. [Phase 0 Foundation](roadmap/PHASE_0_FOUNDATION.md)
+5. [Implementation Guide](implementation/IMPLEMENTATION_GUIDE.md)
+6. [Phase 0 Execution Playbook](implementation/PHASE_0_EXECUTION_PLAYBOOK.md)
+7. [State Alpha Execution Guide](implementation/STATE_ALPHA_EXECUTION.md)
+8. [Security Architecture](security/SECURITY_ARCHITECTURE.md)
+9. [Intentloom Integration](integrations/INTENTLOOM_INTEGRATION.md)
+10. [Agent Governance](agents/AGENT_GOVERNANCE.md)
+11. [Implementation Roadmap](roadmap/IMPLEMENTATION_ROADMAP.md)
+12. [Foundation Coverage Audit](roadmap/FOUNDATION_COVERAGE_AUDIT.md)
 
 ## Current implementation focus
 
@@ -19,14 +23,30 @@ The committed implementation sequence remains:
 
 ```text
 repository foundation
--> State
--> Scope and Resources
--> Diagnostics
--> Vanilla fixture
--> framework adapters and CLI foundation
+→ State
+→ Scope and Resources
+→ Diagnostics
+→ Vanilla fixture
+→ framework adapters and CLI foundation
 ```
 
 Native components, the application framework, SSR, native build orchestration, Nx integration, desktop, and mobile remain Research or Vision until prerequisites and evidence exist.
+
+Intentloom integration begins as a documentation, policy, and task-context layer. It must not delay the first Core package or become a runtime dependency.
+
+## Practical implementation guides
+
+These documents explain how to execute the architecture:
+
+- `implementation/IMPLEMENTATION_GUIDE.md`, overall order and implementation boundaries;
+- `implementation/PHASE_0_EXECUTION_PLAYBOOK.md`, repository bootstrap steps;
+- `implementation/STATE_ALPHA_EXECUTION.md`, State implementation order and tests;
+- `implementation/FIRST_IMPLEMENTATION_BACKLOG.md`, first independently actionable tasks;
+- `implementation/REPOSITORY_TARGET_STRUCTURE.md`, incremental repository layout;
+- `implementation/AGENT_AND_DEVELOPER_GUIDE.md`, collaboration and validation rules;
+- `implementation/TASK_SPEC_TEMPLATE.md`, reusable issue and agent task template.
+
+Developers and agents should read these guides together with the architecture document for the package they are changing.
 
 ## Strategy
 
@@ -77,13 +97,35 @@ These documents describe a future direction, not current implementation support.
 - `architecture/SERVER_FOUNDATION.md`
 - `architecture/DESKTOP_MOBILE_RESEARCH.md`
 
+## Intentloom and agent engineering
+
+- `integrations/INTENTLOOM_INTEGRATION.md`, product boundary and development-time integration surfaces;
+- `agents/AGENT_GOVERNANCE.md`, roles, capabilities, approvals, authority, and stop conditions;
+- `agents/CONTEXT_AND_MEMORY_MODEL.md`, provenance, freshness, trust, memory, and provider-transfer rules;
+- `agents/MUTATION_AND_APPROVAL_PROTOCOL.md`, Analyze through rollback lifecycle;
+- `implementation/AGENT_AND_DEVELOPER_GUIDE.md`, practical repository collaboration;
+- `rfcs/0021-intentloom-integration-and-agent-governance.md`, proposed ecosystem contract.
+
+The controlling formula is:
+
+```text
+Intentloom governs engineering work.
+InLoom executes and assists.
+Vii runs application behavior.
+```
+
+Intentloom and agents remain optional development integrations. Vii Core and applications must not require them.
+
 ## Security
 
 - `security/SECURITY_ARCHITECTURE.md`
 - `security/THREAT_MODEL.md`
 - `quality/SECURITY_AND_PRIVACY.md`
+- `agents/AGENT_GOVERNANCE.md`
+- `agents/CONTEXT_AND_MEMORY_MODEL.md`
+- `agents/MUTATION_AND_APPROVAL_PROTOCOL.md`
 
-The Security Architecture defines intended controls. The Threat Model defines protected assets, trust boundaries, attacker capabilities, and abuse cases. The quality document defines release and privacy expectations.
+The Security Architecture defines intended controls. The Threat Model defines protected assets, trust boundaries, attacker capabilities, and abuse cases. The quality document defines release and privacy expectations. The agent documents define context-poisoning, capability, approval, mutation, and audit boundaries.
 
 ## Roadmap
 
@@ -92,6 +134,7 @@ The Security Architecture defines intended controls. The Threat Model defines pr
 - `roadmap/MILESTONE_MODEL.md`
 - `roadmap/ISSUE_BREAKDOWN.md`
 - `roadmap/DEFINITION_OF_DONE.md`
+- `roadmap/FOUNDATION_COVERAGE_AUDIT.md`
 
 The root `/ROADMAP.md` provides the public phase overview.
 
@@ -113,19 +156,26 @@ The root `/ROADMAP.md` provides the public phase overview.
 - `governance/REPOSITORY_OPERATING_MODEL.md`
 - `governance/CONTRIBUTOR_ROLES.md`
 
-## Key proposed RFCs for the future framework direction
+## Key proposed RFCs
+
+### Future native framework direction
 
 - RFC 0018: Native Component and Reactivity Model
 - RFC 0019: Application Framework and Build System Direction
 - RFC 0020: Security Architecture and Threat Model
 
-The proposals remain Proposed. Implementation and support claims require accepted decisions, milestones, tests, fixtures, and releases.
+### Agent and engineering-context direction
+
+- RFC 0021: Intentloom Integration and Agent Governance
+
+These proposals remain Proposed. Implementation and support claims require accepted decisions, milestones, tests, fixtures, and releases.
 
 ## Decision records
 
 - Public and ecosystem-level proposals live in `/rfcs`.
 - Accepted internal architectural decisions live in `/adr`.
 - Pull requests document local implementation decisions.
+- Agent plans and memory cannot silently replace decision records.
 
 ## Status language
 
@@ -153,3 +203,5 @@ Support claims require evidence such as:
 - malicious security fixtures;
 - real application use;
 - accepted RFCs and ADRs.
+
+Agent output is a proposal or execution report. It is not authoritative evidence unless backed by deterministic validation and reviewable artifacts.

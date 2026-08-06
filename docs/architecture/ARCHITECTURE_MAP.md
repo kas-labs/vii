@@ -12,9 +12,28 @@ The primary differentiator is understandable execution:
 
 A possible native Vii framework remains Research and Vision until the core proves its value through real consumers.
 
+## Product and control-plane relationship
+
+```text
+Intentloom governs engineering context, policy, permissions, and task handoffs.
+InLoom executes and assists through explicit tools and approvals.
+Vii runs deterministic application behavior.
+```
+
+Intentloom and InLoom are development-time integrations. They are not Vii Core or application runtime dependencies.
+
 ## Layer map
 
 ```text
+Engineering control plane (optional, development time)
+  ├─ Intentloom engineering profile
+  ├─ canonical context and repository memory
+  ├─ agent permissions and task specifications
+  ├─ approval and mutation policy
+  ├─ validation and release restrictions
+  └─ InLoom and other agent clients
+             │ consumes plans, metadata, diagnostics, and evidence
+             ▼
 Applications and products
   ├─ React applications
   ├─ Angular applications
@@ -83,14 +102,16 @@ ECMAScript and selected Web Platform APIs
 
 ## Dependency rule
 
-Dependencies flow downward.
+Dependencies flow downward inside Vii.
 
 - Applications may depend on framework, adapters, integrations, and modules.
 - The native Application Framework may coordinate modules and shared foundations.
 - Framework, build, and platform adapters depend on stable Vii contracts, not the reverse.
 - Product modules may depend on shared foundations.
-- Shared foundations must not depend on frameworks, package managers, CLIs, UI renderers, bundlers, or host runtimes.
-- Core packages must not import Node, Bun, Deno, DOM, Tauri, Vite, Nx, or Capacitor APIs directly.
+- Shared foundations must not depend on frameworks, package managers, CLIs, UI renderers, bundlers, host runtimes, Intentloom, InLoom, or AI providers.
+- Core packages must not import Node, Bun, Deno, DOM, Tauri, Vite, Nx, Capacitor, agent SDK, or model-provider APIs directly.
+
+Intentloom and agent clients consume Vii metadata and tooling from outside the runtime dependency graph.
 
 Reverse dependencies are prohibited unless a documented contract or generated artifact explicitly requires them.
 
@@ -149,6 +170,7 @@ The Security Foundation defines:
 - plugin boundaries;
 - supply-chain controls;
 - AI prompt-injection defense;
+- agent permission and approval boundaries;
 - maintained threat models and malicious fixtures.
 
 Security is not isolated inside one package or one final audit.
@@ -159,6 +181,8 @@ Diagnostics describe causal behavior across stores, queries, components, routes,
 
 Diagnostics consumers observe behavior but must not alter runtime semantics.
 
+Intentloom or agent clients may consume redacted diagnostic events. They cannot gain mutation authority through the diagnostics channel.
+
 ### Scopes and resources
 
 Scopes define ownership and lifetime. Stores, computed values, effects, subscriptions, requests, timers, sockets, component trees, server requests, platform handles, and other disposable resources have visible ownership.
@@ -168,6 +192,20 @@ Scopes define ownership and lifetime. Stores, computed values, effects, subscrip
 The CLI is an orchestration layer over declarative project analysis and transformations.
 
 It supports safe generation, migration, build commands, and optional workspace adapters without defining runtime semantics.
+
+The mutation lifecycle is:
+
+```text
+Analyze
+→ Plan
+→ Preview
+→ Approve
+→ Apply
+→ Validate
+→ Report
+```
+
+Approval and rollback are development-governance concerns layered around deterministic CLI plans.
 
 ### Build System
 
@@ -197,13 +235,45 @@ The registry distributes declarative manifests, source files, metadata, and inte
 
 It cannot silently execute arbitrary installation code or grant build plugin authority.
 
+### Intentloom
+
+Intentloom is an optional engineering control plane.
+
+It may provide:
+
+- a Vii repository profile;
+- canonical context manifests;
+- repository memory with provenance and expiry;
+- task specifications and handoffs;
+- least-privilege capability policy;
+- architecture and security checks;
+- release restrictions;
+- provider-neutral context for agents.
+
+Intentloom cannot:
+
+- become a Vii Core dependency;
+- change runtime semantics through policy;
+- bypass repository permissions;
+- accept RFCs or ADRs;
+- merge or publish without authority;
+- make AI mandatory.
+
 ### AI and InLoom
 
 AI is optional. Deterministic Vii functionality remains usable without AI services.
 
-InLoom and agent integrations consume structured project plans, diagnostics, and machine-readable CLI output rather than becoming hidden runtime dependencies.
+InLoom and other agent clients consume structured project plans, diagnostics, context manifests, and machine-readable CLI output rather than becoming hidden runtime dependencies.
 
-Files, webpages, issue text, logs, and tool results are untrusted AI context. Model output remains a proposal and cannot bypass deterministic permissions.
+Files, webpages, issue text, logs, generated content, and tool results are untrusted AI context. Model output remains a proposal and cannot bypass deterministic permissions, security policy, or the CLI plan.
+
+### Agent context and memory
+
+Engineering context is selected by task, versioned, freshness-checked, and provenance-preserving.
+
+Accepted decisions, current contracts, tests, and roadmap status take precedence over external references and ephemeral agent memory.
+
+Material context influencing a change must be visible in the task, pull request, decision record, or audit evidence.
 
 ## Initial implementation boundary
 
@@ -216,6 +286,8 @@ The first implementation slice contains:
 5. a Vanilla consumer fixture;
 6. framework adapters only after Core semantics are validated.
 
+The initial Intentloom slice is limited to repository documentation, policy references, and one read-only or documentation-mutation workflow. It must not block the Core implementation sequence.
+
 Query, native components, the Application Framework, Build System implementation, UI, Registry, expanded Server, desktop, and mobile remain outside the first implementation slice.
 
 ## Research sequence
@@ -224,14 +296,14 @@ The long-term framework sequence is evidence-driven:
 
 ```text
 State and Scope
--> framework adapters and real applications
--> native component prototypes
--> one Component IR
--> Web renderer
--> basic SSR and hydration
--> router and Vii App
--> hybrid rendering
--> additional build and runtime adapters
+→ framework adapters and real applications
+→ native component prototypes
+→ one Component IR
+→ Web renderer
+→ basic SSR and hydration
+→ router and Vii App
+→ hybrid rendering
+→ additional build and runtime adapters
 ```
 
 The sequence may stop if existing framework adapters provide sufficient value.
@@ -249,5 +321,7 @@ An architectural claim is considered validated only when supported by one or mor
 - accepted RFCs and ADRs;
 - real application usage;
 - external security or architecture review where appropriate.
+
+Agent plans, generated text, and model confidence are not implementation evidence by themselves.
 
 Documentation records intent. It does not prove implementation support.

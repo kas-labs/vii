@@ -1,6 +1,6 @@
 # Vii RFCs
 
-Requests for Comments record proposals that affect public APIs, package boundaries, protocols, compatibility promises, governance, security policy, or long-term ecosystem direction.
+Requests for Comments record proposals that affect public APIs, package boundaries, protocols, compatibility promises, governance, security policy, agent authority, or long-term ecosystem direction.
 
 ## RFC states
 
@@ -51,7 +51,11 @@ Requests for Comments record proposals that affect public APIs, package boundari
 - `0019-application-framework-and-build-system.md` — Proposed
 - `0020-security-architecture-and-threat-model.md` — Proposed
 
-RFCs 0018 through 0020 document Research and Vision direction. They do not change the committed Phase 0 and State Alpha implementation sequence.
+### Engineering context and agents
+
+- `0021-intentloom-integration-and-agent-governance.md` — Proposed
+
+RFCs 0018 through 0021 document Research, Vision, or development-governance direction. They do not change the committed first implementation sequence unless accepted decisions explicitly revise it.
 
 ## When an RFC is required
 
@@ -65,11 +69,15 @@ Use an RFC for changes such as:
 - registry or lockfile formats;
 - native component or application framework semantics;
 - build engine contracts;
+- Intentloom integration contracts;
+- agent capability, approval, or mutation policy;
 - stability and release policy;
 - governance changes;
 - security or privacy defaults.
 
 Local implementation details normally belong in pull requests. Internal architectural choices normally belong in ADRs.
+
+Agent plans, prompts, and repository memory cannot silently replace an RFC or ADR.
 
 ## Required RFC sections
 
@@ -82,6 +90,7 @@ Local implementation details normally belong in pull requests. Internal architec
 - Compatibility
 - Diagnostics and observability
 - Security and privacy
+- Authority and approval boundaries where applicable
 - Alternatives
 - Risks
 - Migration

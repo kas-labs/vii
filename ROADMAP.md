@@ -9,7 +9,7 @@ This roadmap separates near-term commitments from long-term possibilities. Dates
 - **Research**: architecture and feasibility are not yet approved as a support promise.
 - **Vision**: long-term possibility, not a delivery promise.
 
-## Phase 0: Product and protocol foundation — Committed
+## Phase 0: Product, protocol, security, and engineering-context foundation — Committed
 
 - Product thesis and product boundaries
 - Core vocabulary and anti-goals
@@ -23,6 +23,12 @@ This roadmap separates near-term commitments from long-term possibilities. Dates
 - Repository, CI, release, and security foundations
 - Security Architecture and maintained Threat Model
 - Clear separation between State, Query, Resource, and Stream concerns
+- Implementation playbooks and first independently actionable backlog
+- Intentloom integration boundary
+- Agent governance, context provenance, permissions, approvals, and stop conditions
+- Foundation coverage audit with visible unresolved decisions
+
+Phase 0 Intentloom work is limited to repository policy, context, task, and validation contracts. It is not a Vii runtime dependency and must not delay the first Core package.
 
 ## Phase 1: Vii State Core — Committed
 
@@ -37,7 +43,7 @@ This roadmap separates near-term commitments from long-term possibilities. Dates
 - Vanilla integration
 - Unit, lifecycle, type, security, and benchmark suites
 
-State Alpha does not include a native renderer, Query cache, RxJS requirement, deep proxy store, or NgRx-style reducer architecture.
+State Alpha does not include a native renderer, Query cache, RxJS requirement, deep proxy store, NgRx-style reducer architecture, or AI-required behavior.
 
 ## Phase 2: Framework adapters and CLI — Committed
 
@@ -53,10 +59,11 @@ State Alpha does not include a native renderer, Query cache, RxJS requirement, d
 - Safe generator foundations
 - Machine-readable CLI output
 - Deterministic Analyze, Plan, Preview, Apply, Validate, Report lifecycle
+- Approval metadata and task-scoped execution surfaces for external development tools
 
-Native component generators, build commands, and Nx support remain Research until their underlying layers exist.
+Native component generators, build commands, Nx support, autonomous agents, and release automation remain Research until their underlying layers exist.
 
-## Phase 3: Devtools foundation — Planned
+## Phase 3: Devtools and explainability foundation — Planned
 
 - Trace viewer
 - State and dependency graph
@@ -66,6 +73,8 @@ Native component generators, build commands, and Nx support remain Research unti
 - Production-safe diagnostics mode
 - Security event inspection with redaction
 - OpenTelemetry bridge research
+- Redacted diagnostic consumption by Intentloom and InLoom
+- Causal explanations that remain observational and cannot mutate runtime behavior
 
 ## Phase 4: Real application validation — Planned
 
@@ -76,6 +85,7 @@ Native component generators, build commands, and Nx support remain Research unti
 - Bundle, execution, memory, and type-check budgets
 - Threat-model review against real deployments
 - Malicious fixtures for supported adapters and runtimes
+- Review of agent task quality against real engineering work
 
 ## Phase 5: Vii Query — Planned
 
@@ -169,7 +179,7 @@ Possible scope:
 
 This phase is not a delivery promise and is not required for Vii State, Query, UI, or adapters to succeed.
 
-## Phase 11: Expansion — Vision
+## Phase 11: Ecosystem and agent-assisted expansion — Vision
 
 - Forms
 - Advanced server adapters
@@ -179,6 +189,13 @@ This phase is not a delivery promise and is not required for Vii State, Query, U
 - Stream module or RxJS interop expansion
 - Partial hydration or islands research
 - Additional build and deployment targets
+- Intentloom repository profiles and policy bundles
+- InLoom first-class Vii workflows
+- Multi-agent task handoffs and conflict detection
+- Optional AI diagnostics and migration assistance
+- Provider-neutral local and remote model adapters
+
+AI remains optional. Protected architecture, security, governance, and release decisions remain human-controlled.
 
 ## Quality gates
 
@@ -192,7 +209,8 @@ A phase advances only when:
 - client/server and capability boundaries are documented;
 - at least one real consumer validates the design;
 - risks, privacy impact, and breaking changes are documented;
-- implementation support is not inferred from documentation alone.
+- implementation support is not inferred from documentation alone;
+- agent-assisted work preserves provenance, permissions, approvals, and validation evidence where used.
 
 ## Framework decision rule
 
@@ -204,3 +222,15 @@ The native framework sequence may stop at any stage if:
 - maintenance capacity is insufficient.
 
 Vii Core remains useful independently of the framework decision.
+
+## Agent decision rule
+
+Agent integration may stop at documentation and read-only analysis if:
+
+- host capability enforcement is insufficient;
+- context freshness and provenance cannot be trusted;
+- automation adds more review cost than value;
+- remote-provider privacy cannot meet policy;
+- deterministic CLI and validation surfaces are not mature enough.
+
+Vii development remains fully possible without Intentloom, InLoom, agents, or AI providers.

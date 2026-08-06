@@ -12,6 +12,33 @@ A native component runtime and application framework are long-term Research and 
 
 The project is in the documentation and architecture foundation stage. No stable public runtime API exists yet.
 
+The foundation is detailed enough to begin Phase 0 repository bootstrap, but documentation remains design intent rather than implementation evidence.
+
+## What we implement first
+
+The first technical sequence is:
+
+```text
+pnpm and Nx repository bootstrap
+→ strict TypeScript and ESM package baseline
+→ one buildable and packable Core package
+→ State read, write, and subscriptions
+→ Computed, Batch, Scope, and disposal
+→ bounded Diagnostics
+→ packed Vanilla consumer fixture
+→ React, Angular, and Vue adapters
+→ small CLI foundation
+```
+
+Practical instructions:
+
+- [Implementation Guide](./docs/implementation/IMPLEMENTATION_GUIDE.md)
+- [Phase 0 Execution Playbook](./docs/implementation/PHASE_0_EXECUTION_PLAYBOOK.md)
+- [State Alpha Execution Guide](./docs/implementation/STATE_ALPHA_EXECUTION.md)
+- [First Implementation Backlog](./docs/implementation/FIRST_IMPLEMENTATION_BACKLOG.md)
+- [Agent and Developer Guide](./docs/implementation/AGENT_AND_DEVELOPER_GUIDE.md)
+- [Foundation Coverage Audit](./docs/roadmap/FOUNDATION_COVERAGE_AUDIT.md)
+
 ## Current commitments
 
 - Product thesis and architecture documentation
@@ -22,6 +49,36 @@ The project is in the documentation and architecture foundation stage. No stable
 - CLI foundation and project diagnostics
 - Security Architecture and ecosystem Threat Model
 - Reproducible tests, benchmarks, malicious fixtures, and package validation
+- Development-time agent governance and Intentloom integration boundaries
+
+## Intentloom and agents
+
+Intentloom is the engineering-context and agent-governance control plane for Vii development.
+
+```text
+Intentloom governs engineering work.
+InLoom executes and assists.
+Vii runs application behavior.
+```
+
+Intentloom, InLoom, agents, and AI providers are optional development integrations. They are not Vii production runtime dependencies.
+
+Agent-assisted work must remain:
+
+- task-scoped and least-privilege;
+- previewable and attributable;
+- controlled by deterministic validation;
+- subject to RFC, ADR, security, and release governance;
+- usable with local models, remote providers, or AI disabled;
+- unable to merge, publish, weaken security, or accept decisions without explicit authority.
+
+See:
+
+- [Intentloom Integration Architecture](./docs/integrations/INTENTLOOM_INTEGRATION.md)
+- [Agent Governance](./docs/agents/AGENT_GOVERNANCE.md)
+- [Context and Memory Model](./docs/agents/CONTEXT_AND_MEMORY_MODEL.md)
+- [Mutation and Approval Protocol](./docs/agents/MUTATION_AND_APPROVAL_PROTOCOL.md)
+- [RFC 0021](./rfcs/0021-intentloom-integration-and-agent-governance.md)
 
 ## Long-term direction
 
@@ -48,6 +105,9 @@ Vii Core
 Vii modules and adapters
   Query, UI, Server, React, Angular, Vue, runtime integrations
 
+Development control plane
+  Intentloom context, policy, permissions, task and evidence contracts
+
 Future Vii UI Runtime
   Component Model, Component IR, DOM rendering, hydration
 
@@ -71,6 +131,8 @@ Different component authoring profiles must share one State, lifecycle, diagnost
 - User freedom and gradual adoption
 - Multiple authoring profiles, one runtime model
 - Replaceable tools and build engines behind stable Vii contracts
+- Agent context with provenance, freshness, and visible authority
+- Human control over protected architecture, security, and release actions
 
 ## Security
 
@@ -85,7 +147,8 @@ Vii documentation covers:
 - CLI and registry trust;
 - plugin and supply-chain security;
 - diagnostics privacy;
-- AI prompt-injection defense.
+- AI prompt-injection defense;
+- agent permissions, context poisoning, approvals, and audit evidence.
 
 See:
 
@@ -112,9 +175,11 @@ See:
 
 Documentation records intent. Support requires implementation, tests, consumer fixtures, packed artifacts, compatibility results, benchmarks, security evidence, and release documentation.
 
+Agent output, plans, and confidence scores are not implementation evidence by themselves.
+
 ## Status
 
-Vii is experimental and pre-alpha. Package names, APIs, architecture, security contracts, and timelines may change before the first public release.
+Vii is experimental and pre-alpha. Package names, APIs, architecture, security contracts, integration schemas, and timelines may change before the first public release.
 
 ## License
 

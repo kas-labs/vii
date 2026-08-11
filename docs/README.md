@@ -1,6 +1,6 @@
 # Vii Documentation
 
-This directory is the primary map for Vii product, architecture, security, governance, quality, implementation, agent, and integration documentation.
+This directory is the primary map for Vii product, architecture, security, governance, quality, implementation, agent, integration, website, and public-documentation guidance.
 
 ## Start here
 
@@ -14,8 +14,9 @@ This directory is the primary map for Vii product, architecture, security, gover
 8. [Security Architecture](security/SECURITY_ARCHITECTURE.md)
 9. [Intentloom Integration](integrations/INTENTLOOM_INTEGRATION.md)
 10. [Agent Governance](agents/AGENT_GOVERNANCE.md)
-11. [Implementation Roadmap](roadmap/IMPLEMENTATION_ROADMAP.md)
-12. [Foundation Coverage Audit](roadmap/FOUNDATION_COVERAGE_AUDIT.md)
+11. [Public Website and Documentation Lifecycle](website/PUBLIC_WEBSITE_AND_DOCUMENTATION_LIFECYCLE.md)
+12. [Implementation Roadmap](roadmap/IMPLEMENTATION_ROADMAP.md)
+13. [Foundation Coverage Audit](roadmap/FOUNDATION_COVERAGE_AUDIT.md)
 
 ## Current implementation focus
 
@@ -34,6 +35,8 @@ Native components, the application framework, SSR, native build orchestration, N
 
 Intentloom integration begins as a documentation, policy, and task-context layer. It must not delay the first Core package or become a runtime dependency.
 
+Public website work follows validated product capability. Website content must not become a substitute for implementation evidence or canonical technical documentation.
+
 ## Practical implementation guides
 
 These documents explain how to execute the architecture:
@@ -43,7 +46,7 @@ These documents explain how to execute the architecture:
 - `implementation/STATE_ALPHA_EXECUTION.md`, State implementation order and tests;
 - `implementation/FIRST_IMPLEMENTATION_BACKLOG.md`, first independently actionable tasks;
 - `implementation/REPOSITORY_TARGET_STRUCTURE.md`, incremental repository layout;
-- `implementation/AGENT_AND_DEVELOPER_GUIDE.md`, collaboration and validation rules;
+- `implementation/AGENT_AND_DEVELOPER_GUIDE.md`, collaboration, public-surface assessment, and validation rules;
 - `implementation/TASK_SPEC_TEMPLATE.md`, reusable issue and agent task template.
 
 Developers and agents should read these guides together with the architecture document for the package they are changing.
@@ -116,6 +119,18 @@ Vii runs application behavior.
 
 Intentloom and agents remain optional development integrations. Vii Core and applications must not require them.
 
+## Public website and documentation
+
+- `website/PUBLIC_WEBSITE_AND_DOCUMENTATION_LIFECYCLE.md`, feature-to-docs-to-website publication lifecycle;
+- `implementation/AGENT_AND_DEVELOPER_GUIDE.md`, required `Website and docs impact` assessment;
+- `implementation/TASK_SPEC_TEMPLATE.md`, task-level public-surface planning;
+- `roadmap/DEFINITION_OF_DONE.md`, completion criteria for public feature work;
+- `rfcs/0022-public-website-and-documentation-lifecycle.md`, proposed publication contract.
+
+The website is a presentation and discovery surface. It does not outrank accepted decisions, implementation contracts, tests, compatibility evidence, or canonical repository documentation.
+
+When a feature is validated enough to change what Vii can accurately present to users, agents should proactively identify the affected website page, documentation, example, and release communication rather than waiting for a separate manual reminder.
+
 ## Security
 
 - `security/SECURITY_ARCHITECTURE.md`
@@ -168,6 +183,10 @@ The root `/ROADMAP.md` provides the public phase overview.
 
 - RFC 0021: Intentloom Integration and Agent Governance
 
+### Public website and documentation direction
+
+- RFC 0022: Public Website and Documentation Lifecycle
+
 These proposals remain Proposed. Implementation and support claims require accepted decisions, milestones, tests, fixtures, and releases.
 
 ## Decision records
@@ -186,7 +205,7 @@ Vii uses four roadmap statuses:
 - **Research**: under investigation, without a support promise.
 - **Vision**: possible long-term direction, not a delivery commitment.
 
-Documentation must preserve these distinctions and must not present research or vision work as supported functionality.
+Documentation and website copy must preserve these distinctions and must not present research or vision work as supported functionality.
 
 ## Evidence rule
 

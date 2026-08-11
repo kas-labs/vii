@@ -37,14 +37,26 @@ try {
     .filter(Boolean);
   const expectedEntries = new Set([
     "package/README.md",
+    "package/dist/computed.d.ts",
+    "package/dist/computed.d.ts.map",
+    "package/dist/computed.js",
+    "package/dist/computed.js.map",
     "package/dist/index.d.ts",
     "package/dist/index.d.ts.map",
     "package/dist/index.js",
     "package/dist/index.js.map",
+    "package/dist/notifier.d.ts",
+    "package/dist/notifier.d.ts.map",
+    "package/dist/notifier.js",
+    "package/dist/notifier.js.map",
     "package/dist/state.d.ts",
     "package/dist/state.d.ts.map",
     "package/dist/state.js",
     "package/dist/state.js.map",
+    "package/dist/tracking.d.ts",
+    "package/dist/tracking.d.ts.map",
+    "package/dist/tracking.js",
+    "package/dist/tracking.js.map",
     "package/package.json",
   ]);
   assert.deepEqual(new Set(entries), expectedEntries, "Core artifact contains unexpected files");

@@ -2,10 +2,10 @@
 
 This is the first buildable Vii package created by the Phase 0 repository bootstrap.
 
-The package currently exposes the experimental `state` factory:
+The package currently exposes experimental State, Computed, Batch, and Scope primitives:
 
 ```ts
-import { batch, computed, state } from "@vii/core";
+import { batch, computed, createScope, state } from "@vii/core";
 
 const count = state(0);
 count.set(1);
@@ -60,4 +60,25 @@ batches share that boundary, repeated writes to one State notify only its final 
 dependencies are recomputed at most once per batch. Errors are reported after committed writes and
 the remaining queued notifications have been processed.
 
-Scope, Query, UI, adapters, and CLI work belong to later implementation tasks.
+Scopes make synchronous resource ownership explicit:
+
+```ts
+const scope = createScope({ name: "checkout" });
+
+scope.run(() => {
+  count.subscribe((value) => console.log(value));
+  computed(() => count.get() * 2);
+});
+
+scope.dispose();
+```
+
+Subscriptions and Computed values created during `scope.run` are owned by that Scope. Resources can
+also be attached explicitly with `scope.use(resource)`; unsubscribe functions are accepted as
+resources. Child scopes are created with `scope.createChild()` and are disposed by their parent.
+Disposal is synchronous, idempotent, and deterministic: resources are cleaned up in reverse
+registration order. A disposed Scope rejects `run`, `use`, and `createChild`. If multiple cleanups
+fail, `ScopeDisposalError` reports all errors after every cleanup has been attempted.
+
+Async disposal, resource transfer, and asynchronous context propagation remain later work. Query,
+UI, adapters, and CLI work also belong to later implementation tasks.

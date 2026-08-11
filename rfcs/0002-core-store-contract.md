@@ -30,22 +30,22 @@ Creation:
 
 ```ts
 const store = createStore(initialValue, {
-  name: 'counter',
+  name: "counter",
 });
 ```
 
 Derived state:
 
 ```ts
-const doubled = select(store, value => value * 2);
+const doubled = select(store, (value) => value * 2);
 ```
 
 Batching:
 
 ```ts
 batch(() => {
-  store.update(value => value + 1);
-  store.update(value => value + 1);
+  store.update((value) => value + 1);
+  store.update((value) => value + 1);
 });
 ```
 
@@ -90,6 +90,21 @@ The State prototype exposes `batch(work)` as a synchronous propagation boundary:
 - callback and listener errors are reported after committed writes and queued jobs finish.
 
 Batching remains synchronous and does not introduce a scheduler or asynchronous runtime dependency.
+
+### Prototype decision: Scope ownership
+
+The State prototype exposes `createScope(options?)` for synchronous ownership:
+
+- `scope.run(work)` makes subscriptions and Computed values created during `work` owned by the Scope;
+- `scope.use(resource)` accepts a `ViiResource` or a cleanup function;
+- `scope.createChild()` attaches a child Scope to its parent;
+- disposal is idempotent and rejects new work or resources after disposal;
+- resources are disposed in reverse registration order, including child Scopes;
+- one cleanup error is rethrown, while multiple errors are reported as `ScopeDisposalError`, an
+  `AggregateError`, after every registered resource has been attempted.
+
+The Alpha resource contract is synchronous (`dispose(): void`). Async disposal, resource transfer,
+and context propagation across asynchronous boundaries remain outside the prototype contract.
 
 ## Default equality
 

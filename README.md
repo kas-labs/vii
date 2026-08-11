@@ -12,7 +12,8 @@ A native component runtime and application framework are long-term Research and 
 
 The repository bootstrap foundation is now implemented: pnpm, Nx, strict TypeScript, ESM package
 validation, linting, formatting, Vitest, and CI are in place. Core currently exposes experimental
-State and Computed runtime primitives; the public API remains pre-alpha and intentionally small.
+State, Computed, Batch, and Scope runtime primitives; the public API remains pre-alpha and
+intentionally small.
 
 The foundation is detailed enough to begin Phase 0 repository bootstrap, but documentation remains design intent rather than implementation evidence.
 
@@ -26,7 +27,7 @@ pnpm and Nx repository bootstrap
 → one buildable and packable Core package
 → State read, write, subscriptions, and re-entrant update semantics
 → Computed and disposal
-→ Batch and Scope
+→ Batch and Scope ownership
 → bounded Diagnostics
 → packed Vanilla consumer fixture
 → React, Angular, and Vue adapters

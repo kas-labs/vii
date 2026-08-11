@@ -1,0 +1,30 @@
+{
+  "name": "vii",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.12.4",
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=10.12.4"
+  },
+  "scripts": {
+    "format": "prettier --write \"**/*.{js,mjs,cjs,ts,mts,json,jsonc,yaml,yml}\"",
+    "format:check": "prettier --check \"**/*.{js,mjs,cjs,ts,mts,json,jsonc,yaml,yml}\"",
+    "lint": "eslint eslint.config.mjs scripts vitest.config.ts && nx run-many --target=lint --all",
+    "typecheck": "nx run-many --target=typecheck --all",
+    "test": "nx run-many --target=test --all",
+    "build": "nx run-many --target=build --all",
+    "pack:check": "node scripts/package-validation/validate-package.mjs",
+    "check": "pnpm validate",
+    "validate": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm pack:check"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "eslint": "10.8.0",
+    "nx": "23.1.0",
+    "prettier": "3.9.6",
+    "typescript": "6.0.2",
+    "typescript-eslint": "8.65.0",
+    "vitest": "4.1.10"
+  }
+}

@@ -56,6 +56,17 @@ A pull request should include:
 
 ## Quality requirements
 
+The repository uses pnpm. Enable Corepack or install pnpm 10.12.4, then run:
+
+```bash
+pnpm install --frozen-lockfile
+pnpm validate
+```
+
+The root validation surface runs formatting, linting, type checking, tests, builds, and packed
+artifact validation. The Vanilla fixture is validated from the packed Core artifact so it does not
+depend on workspace source imports.
+
 Changes may be required to pass:
 
 - unit and integration tests

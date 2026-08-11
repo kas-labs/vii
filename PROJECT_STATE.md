@@ -18,6 +18,11 @@ Current architectural priorities include:
 - first-class diagnostics without hidden telemetry;
 - public API stability through RFC/ADR governance.
 
+The `main` branch now contains the State Core implementation through P1.7: State reads/writes and
+subscriptions, re-entrant updates, Computed, Batch, Scope ownership/disposal, and bounded opt-in
+Diagnostics. These APIs remain experimental and are validated through the packed Core artifact and
+Vanilla consumer fixture.
+
 ## Repository operating model
 
 - Default branch: `main`.

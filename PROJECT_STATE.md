@@ -18,10 +18,11 @@ Current architectural priorities include:
 - first-class diagnostics without hidden telemetry;
 - public API stability through RFC/ADR governance.
 
-The `main` branch now contains the State Core implementation through P1.7: State reads/writes and
+The current implementation includes the State Core surface through P1.8: State reads/writes and
 subscriptions, re-entrant updates, Computed, Batch, Scope ownership/disposal, and bounded opt-in
-Diagnostics. These APIs remain experimental and are validated through the packed Core artifact and
-Vanilla consumer fixture.
+Diagnostics. These APIs remain experimental. The Vanilla consumer fixture exercises State,
+Computed, Batch, and Scope, and the package-validation script verifies those behaviors after
+installing the packed Core artifact into a clean temporary consumer.
 
 ## Repository operating model
 

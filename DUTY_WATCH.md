@@ -150,3 +150,72 @@ PR: #24 (merged)
 - None for the merge task.
 - Older historical stacked `codex/*` branches remain on the remote because only the merged current
   feature branch was in scope for deletion.
+
+## 2026-08-12 00:12 Europe/Berlin | Expand packed Vanilla fixture
+
+Status: partial
+Branch: `feat/expand-vanilla-fixture`
+PR: not opened
+
+### Scope
+
+- Complete P1.8 by expanding the Vanilla consumer fixture across the current experimental Core
+  primitives and validating the packed artifact in a clean consumer.
+
+### Changes
+
+- Added executable Vanilla coverage for Computed, Batch, and Scope alongside State.
+- Added five fixture assertions and expanded packed-consumer assertions in `pack:check`.
+- Added a fixture README whose example matches the executable source and linked it from the root
+  README.
+- Updated `PROJECT_STATE.md` to record the P1.8 validation surface.
+
+### Validation
+
+- `pnpm validate`: passed; 46 Core tests and 5 Vanilla tests passed.
+- `pnpm pack:check`: passed with tarball installation, TypeScript compilation, and clean consumer
+  runtime assertions.
+- `git diff --check`: passed.
+
+### Architecture / compatibility
+
+- No runtime dependencies or public API changes; the fixture consumes the existing experimental
+  Core exports and remains framework-neutral.
+- Packed-artifact coverage now explicitly checks State, Computed, Batch, and Scope behavior without
+  source-alias resolution.
+
+### Remaining / recovery
+
+- Open the draft PR, merge it into `main`, delete the feature branch, and append a completed
+  post-merge handoff with the final PR number and main revision.
+
+## 2026-08-12 00:17 Europe/Berlin | Open P1.8 fixture PR
+
+Status: partial
+Branch: `feat/expand-vanilla-fixture`
+PR: #26 (draft)
+
+### Scope
+
+- Publish the completed P1.8 fixture work for review against `main`.
+
+### Changes
+
+- Opened PR #26 with the implementation, packed-consumer validation, documentation, and durable
+  state handoff.
+
+### Validation
+
+- `pnpm validate`: passed before push.
+- `pnpm pack:check`: passed before push.
+- Two-axis review found no hard standards violations or spec gaps; the lifecycle judgement call
+  was addressed by explicitly releasing the batch subscription.
+
+### Architecture / compatibility
+
+- No runtime dependency, public API, or framework-boundary changes.
+
+### Remaining / recovery
+
+- Merge PR #26 into `main`, delete the feature branch, and append the completed post-merge handoff
+  with the resulting main revision.

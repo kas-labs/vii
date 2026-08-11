@@ -32,7 +32,8 @@ Read the smallest relevant set of documents:
 6. security and quality requirements for the changed boundary;
 7. `docs/agents/AGENT_GOVERNANCE.md` for agent-assisted work;
 8. `docs/agents/CONTEXT_AND_MEMORY_MODEL.md` when assembling external or remembered context;
-9. `docs/agents/MUTATION_AND_APPROVAL_PROTOCOL.md` before repository mutation.
+9. `docs/agents/MUTATION_AND_APPROVAL_PROTOCOL.md` before repository mutation;
+10. `docs/website/PUBLIC_WEBSITE_AND_DOCUMENTATION_LIFECYCLE.md` when a change may affect a public feature, API, integration, release, example, or product claim.
 
 Do not infer that a Vision or Research feature is approved for implementation.
 
@@ -72,8 +73,20 @@ Tests to add
 Security impact
 Privacy impact
 Compatibility impact
+Website and docs impact
 Required approvals
 Rollback approach
+```
+
+For `Website and docs impact`, classify:
+
+```text
+Repository docs: required | not required
+Public docs: required | not required
+Website: required now | follow-up | not required
+Examples: required | not required
+Changelog/release notes: required | not required
+Reason: ...
 ```
 
 For a small bug fix, this may be a short PR description. For an architectural change, it should be a dedicated issue or RFC.
@@ -93,7 +106,8 @@ Understand
 → Implement
 → Test
 → Validate package
-→ Update docs
+→ Assess public surface impact
+→ Update docs and website work
 → Report evidence
 → Roll back when required
 ```
@@ -138,13 +152,45 @@ Add behavior, type, lifecycle, integration, performance, or security tests appro
 
 When public package behavior changes, validate the packed artifact in a clean consumer.
 
-### Update docs
+### Assess public surface impact
+
+Before completing the task, determine whether the change affects something users can discover, install, configure, call, observe, migrate to, compare, or depend on.
+
+For public or potentially public work, inspect:
+
+- repository documentation;
+- public documentation;
+- examples;
+- API reference;
+- website feature pages or ecosystem overview;
+- compatibility pages;
+- benchmarks and evidence pages;
+- changelog and release notes.
+
+If no public-surface update is required, report that explicitly with a reason.
+
+### Update docs and website work
 
 Update examples, limitations, compatibility, migration notes, status labels, and decision references where relevant.
 
+If a validated feature materially changes what Vii can publicly present, the agent should proactively report:
+
+```text
+Public surface trigger detected.
+This feature is now validated enough to add/update:
+- documentation: <pages>
+- website: <section/page>
+- examples: <examples>
+- release communication: <entry>
+```
+
+Prefer the same PR when the documentation or website change is small and tightly coupled. If public-site work belongs in a different deployment/repository boundary or release window, create or recommend an explicit linked follow-up instead of an informal reminder.
+
+The website is a public presentation layer, not the source of technical truth. Public claims must remain backed by implementation evidence and accepted support status.
+
 ### Report evidence
 
-The PR should say what commands passed, what fixtures or measurements were used, what was skipped, and what remains unresolved.
+The PR should say what commands passed, what fixtures or measurements were used, what was skipped, what remains unresolved, and the final website/docs impact classification.
 
 ### Roll back
 
@@ -161,6 +207,7 @@ An AI agent must not:
 - weaken security checks to make tests pass;
 - replace deterministic behavior with an AI dependency;
 - claim performance, compatibility, security, or completion without evidence;
+- publish or draft website claims that overstate the validated support level;
 - implement Research or Vision work as if it were Committed;
 - accept or supersede RFCs or ADRs;
 - mark a package Stable;
@@ -205,7 +252,7 @@ The following require explicit human authority and should normally be separated 
 - modifying release security;
 - accepting decisions;
 - merging protected branches;
-- publishing packages or releases;
+- publishing packages, releases, or production website deployments;
 - changing licenses;
 - weakening security or privacy defaults.
 
@@ -232,6 +279,7 @@ Examples:
 - Vii Core may not depend on Intentloom, InLoom, agent SDKs, or model providers.
 - Testing helpers may depend on public contracts.
 - Production Core must not depend on Testing.
+- Public website and documentation tooling may consume package metadata and generated docs, but runtime packages must not depend on the website application.
 
 ## Coding principles
 
@@ -333,6 +381,8 @@ Documentation should answer:
 
 Use explicit status labels: Committed, Planned, Research, or Vision.
 
+For public features, documentation work should also answer whether the capability is discoverable from the public website and whether the website wording matches the validated support level.
+
 ## Pull request checklist
 
 A PR is ready for review when:
@@ -344,6 +394,7 @@ A PR is ready for review when:
 - package and compatibility impact are documented;
 - security and privacy impact are addressed;
 - docs are updated;
+- website/public-docs impact is classified and either completed or linked as explicit follow-up work;
 - no unrelated refactor is mixed in;
 - completion evidence is included;
 - agent context and external data transfer are disclosed where applicable;
@@ -365,6 +416,7 @@ Capabilities: repository.read, repository.write for Core and tests, command.run 
 Tests: NaN, -0, object identity, subscriber notification.
 Security impact: none.
 Compatibility: defines initial Alpha behavior.
+Website and docs impact: repository docs if semantics change; website not required for an internal Alpha detail.
 Approval: normal PR review.
 Rollback: revert task commit.
 ```
@@ -391,6 +443,7 @@ validation executed
 failed or skipped validation
 open decisions
 context added or invalidated
+website/docs impact and follow-up task when applicable
 ```
 
 The receiving developer or agent revalidates the handoff against the current repository revision.
@@ -408,6 +461,7 @@ Request a decision before proceeding when:
 - implementation evidence contradicts the current architecture;
 - context is stale or lacks provenance;
 - the requested capability exceeds task scope;
-- rollback is not practical for a high-risk action.
+- rollback is not practical for a high-risk action;
+- public website wording would require a support claim that current evidence does not justify.
 
-Stopping before an unsafe or unauthorized mutation is a successful outcome.
+Stopping before an unsafe, unauthorized, or misleading mutation is a successful outcome.

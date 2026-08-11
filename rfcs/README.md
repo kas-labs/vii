@@ -55,7 +55,11 @@ Requests for Comments record proposals that affect public APIs, package boundari
 
 - `0021-intentloom-integration-and-agent-governance.md` — Proposed
 
-RFCs 0018 through 0021 document Research, Vision, or development-governance direction. They do not change the committed first implementation sequence unless accepted decisions explicitly revise it.
+### Public website and documentation lifecycle
+
+- `0022-public-website-and-documentation-lifecycle.md` — Proposed
+
+RFCs 0018 through 0022 document Research, Vision, development-governance, or publication-process direction. They do not change the committed first implementation sequence unless accepted decisions explicitly revise it.
 
 ## When an RFC is required
 
@@ -71,6 +75,7 @@ Use an RFC for changes such as:
 - build engine contracts;
 - Intentloom integration contracts;
 - agent capability, approval, or mutation policy;
+- public website/documentation lifecycle requirements;
 - stability and release policy;
 - governance changes;
 - security or privacy defaults.

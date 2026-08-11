@@ -32,26 +32,30 @@ This model is intended to support browser components, routes, server requests, m
 ## Conceptual API
 
 ```ts
-const scope = createScope({ name: 'checkout' });
+const scope = createScope({ name: "checkout" });
 
-const cart = scope.createStore(initialCart);
-const unsubscribe = cart.subscribe(renderCart);
+scope.run(() => {
+  cart.subscribe(renderCart);
+});
 
-scope.use(unsubscribe);
 scope.use(createTimer());
+const child = scope.createChild({ name: "checkout-validation" });
 
 scope.dispose();
 ```
 
-The final API remains subject to RFC review.
+The initial Core API is synchronous and experimental. `scope.run` owns subscriptions and Computed
+values created during its callback; `scope.use` also accepts cleanup functions. A child scope is
+owned by its parent.
 
 ## Resource contract
 
-The smallest common resource contract should remain compatible with synchronous and asynchronous cleanup.
+The initial common resource contract is synchronous. It can later be extended with a separate async
+disposal API without making ordinary subscription cleanup asynchronous.
 
 ```ts
 interface ViiResource {
-  dispose(): void | Promise<void>;
+  dispose(): void;
 }
 ```
 
@@ -63,10 +67,11 @@ Functions returned by subscriptions may be adapted into resources.
 2. A child scope is owned by its parent unless detached explicitly.
 3. Disposing a parent disposes its children.
 4. Disposal is idempotent.
-5. Resources are disposed in a documented deterministic order.
+5. Resources are disposed in reverse registration order (LIFO).
 6. New resources cannot be attached to a disposed scope.
-7. Updates to stores owned by a disposed scope should fail with a structured error in development.
-8. Production behavior must remain safe and documented.
+7. Multiple cleanup failures are reported as a structured `ScopeDisposalError` after all resources
+   have been attempted.
+8. Asynchronous context propagation and resource transfer are not part of the initial contract.
 
 ## Parent and child scopes
 

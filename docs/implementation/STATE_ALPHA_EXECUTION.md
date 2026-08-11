@@ -19,7 +19,7 @@ const count = state(0);
 
 count.get();
 count.set(1);
-count.update(value => value + 1);
+count.update((value) => value + 1);
 ```
 
 Required behavior:
@@ -36,7 +36,7 @@ Required behavior:
 Illustrative usage:
 
 ```ts
-const unsubscribe = count.subscribe(value => {
+const unsubscribe = count.subscribe((value) => {
   console.log(value);
 });
 
@@ -60,16 +60,18 @@ These semantics must be intentional, not accidental consequences of an array loo
 Create explicit tests for:
 
 ```ts
-count.subscribe(value => {
+count.subscribe((value) => {
   if (value < 3) {
     count.set(value + 1);
   }
 });
 ```
 
-Decide whether nested updates are processed immediately, queued, or rejected in specific situations.
-
-The decision must preserve determinism and avoid corrupted notification state.
+The State prototype queues notifications for writes made inside listeners in synchronous FIFO order.
+The write commits immediately, the current listener snapshot completes, and the outermost write drains
+all queued notifications before returning. Listener errors are collected until that queue is empty.
+This decision preserves determinism and avoids recursive notification interleaving. See RFC 0002 for
+the contract wording and the Core tests for the executable behavior.
 
 ### 4. Computed values
 
@@ -126,6 +128,14 @@ scope.run(() => {
 scope.dispose();
 ```
 
+The initial Scope contract is synchronous and explicit. Subscriptions and Computed values created
+inside `scope.run` are registered with that Scope. Other resources can be attached with
+`scope.use(resource)`; a cleanup function is accepted as a resource. `scope.createChild()` attaches
+the child to its parent. Disposal runs resources in reverse registration order, disposes children
+through the same rule, and is idempotent. A disposed Scope rejects `run`, `use`, and `createChild`.
+If more than one cleanup fails, `ScopeDisposalError` contains every failure after all cleanups have
+been attempted. Async disposal and asynchronous context propagation are deferred.
+
 Required behavior:
 
 - disposal is idempotent;
@@ -142,12 +152,12 @@ A Store should compose State primitives, not create a second state engine.
 Example direction:
 
 ```ts
-export const counterStore = store('counter', () => {
+export const counterStore = store("counter", () => {
   const count = state(0);
   const doubled = computed(() => count.get() * 2);
 
   function increment() {
-    count.update(value => value + 1);
+    count.update((value) => value + 1);
   }
 
   return {
@@ -164,19 +174,36 @@ Do not require reducers, dispatch strings, action type constants, or middleware 
 
 Add minimal events after runtime behavior is tested.
 
-Initial event direction:
+The P1.7 prototype exposes an opt-in bounded collector:
+
+```ts
+const diagnostics = createDiagnostics({ maxEvents: 100 });
+
+diagnostics.run(() => {
+  const count = state(0);
+  count.set(1);
+});
+```
+
+The current event types are:
 
 ```text
 state.created
 state.updated
-subscription.added
-subscription.removed
-computed.invalidated
-computed.evaluated
+computed.created
+computed.recomputed
+computed.disposed
+subscription.created
+subscription.notified
+subscription.disposed
 batch.started
 batch.committed
+batch.failed
 scope.created
+scope.disposing
 scope.disposed
+resource.attached
+resource.disposed
 ```
 
 Diagnostics must:
@@ -187,6 +214,10 @@ Diagnostics must:
 - use bounded buffers;
 - be removable or minimal when disabled;
 - never change State behavior.
+
+Core diagnostics omit State values and use per-collector identifiers. The default ring buffer drops
+the oldest events when full and exposes `droppedEvents`. Sink failures are isolated. Network,
+telemetry, and Devtools integrations remain outside Core.
 
 ## Suggested internal modules
 

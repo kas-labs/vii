@@ -1,3 +1,7 @@
+import { createNotifier } from "./notifier.js";
+import { getActiveDiagnostics, type DiagnosticsRuntime } from "./diagnostics.js";
+import { trackDependency, type Dependency } from "./tracking.js";
+
 export type StateListener<T> = (value: T) => void;
 
 export interface WritableState<T> {
@@ -9,66 +13,59 @@ export interface WritableState<T> {
 
 export function state<T>(initialValue: T): WritableState<T> {
   let currentValue = initialValue;
-  const subscriptions: Array<{
-    active: boolean;
-    listener: StateListener<T>;
-  }> = [];
+  let version = 0;
+  const diagnostics = getActiveDiagnostics();
+  const stateId = diagnostics?.mode === "off" ? undefined : diagnostics?.allocateId("state");
+  const notifier = createNotifier<T>({
+    diagnostics,
+    ownerId: stateId,
+    ownerType: "state",
+  });
 
-  const notify = (value: T): void => {
-    const errors: unknown[] = [];
+  recordStateEvent(diagnostics, "state.created", stateId, {});
+  const dependency: Dependency = {
+    subscribe: (listener) => notifier.subscribe(() => listener()),
+  };
 
-    for (const subscription of [...subscriptions]) {
-      if (!subscription.active) {
-        continue;
-      }
-
-      try {
-        subscription.listener(value);
-      } catch (error) {
-        errors.push(error);
-      }
-    }
-
-    if (errors.length === 1) {
-      throw errors[0];
-    }
-
-    if (errors.length > 1) {
-      throw new AggregateError(errors, "State subscriber errors");
+  const setValue = (nextValue: T): void => {
+    if (!Object.is(currentValue, nextValue)) {
+      currentValue = nextValue;
+      const previousVersion = version;
+      version += 1;
+      recordStateEvent(diagnostics, "state.updated", stateId, {
+        previousVersion,
+        nextVersion: version,
+        subscriberCount: notifier.size(),
+      });
+      notifier.notify(currentValue);
+    } else {
+      recordStateEvent(diagnostics, "state.update_skipped", stateId, {
+        version,
+        reason: "equal",
+      });
     }
   };
 
   return {
-    get: () => currentValue,
-    set: (nextValue) => {
-      if (!Object.is(currentValue, nextValue)) {
-        currentValue = nextValue;
-        notify(currentValue);
-      }
+    get: () => {
+      trackDependency(dependency);
+      return currentValue;
     },
-    update: (updater) => {
-      const nextValue = updater(currentValue);
-
-      if (!Object.is(currentValue, nextValue)) {
-        currentValue = nextValue;
-        notify(currentValue);
-      }
-    },
-    subscribe: (listener) => {
-      const subscription = { active: true, listener };
-      subscriptions.push(subscription);
-
-      return () => {
-        if (!subscription.active) {
-          return;
-        }
-
-        subscription.active = false;
-        const index = subscriptions.indexOf(subscription);
-        if (index >= 0) {
-          subscriptions.splice(index, 1);
-        }
-      };
-    },
+    set: setValue,
+    update: (updater) => setValue(updater(currentValue)),
+    subscribe: (listener) => notifier.subscribe(listener),
   };
+}
+
+function recordStateEvent(
+  diagnostics: DiagnosticsRuntime | undefined,
+  type: string,
+  stateId: string | undefined,
+  payload: Readonly<Record<string, unknown>>,
+): void {
+  if (diagnostics === undefined || stateId === undefined) {
+    return;
+  }
+
+  diagnostics.record(type, { stateId, ...payload });
 }

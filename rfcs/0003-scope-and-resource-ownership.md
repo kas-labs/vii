@@ -18,15 +18,40 @@ Without an explicit model, lifecycle behavior becomes adapter-specific and diffi
 
 ```ts
 interface ViiResource {
-  dispose(): void | Promise<void>;
+  dispose(): void;
 }
 
-const scope = createScope({ name: 'checkout' });
+const scope = createScope({ name: "checkout" });
 scope.use(resource);
 scope.dispose();
 ```
 
 Scopes may create child scopes and own Vii stores.
+
+## Prototype decisions
+
+The first Core implementation resolves the initial lifecycle questions with a synchronous Scope:
+
+```ts
+const scope = createScope({ name: "checkout" });
+
+scope.run(() => {
+  cart.subscribe(renderCart);
+});
+
+scope.dispose();
+```
+
+- `scope.run(work)` owns subscriptions and Computed values created synchronously by `work`;
+- `scope.use(resource)` accepts a resource or cleanup function;
+- `scope.createChild()` registers a child with its parent;
+- resources are disposed in reverse registration order (LIFO);
+- disposal is idempotent, and disposed Scopes reject `run`, `use`, and `createChild`;
+- one cleanup error is rethrown; multiple errors are reported through `ScopeDisposalError`, which
+  preserves every error after all cleanups are attempted.
+
+The Alpha `ViiResource` contract is synchronous. Async disposal, resource transfer, and propagation
+across asynchronous boundaries remain future work.
 
 ## Proposed rules
 

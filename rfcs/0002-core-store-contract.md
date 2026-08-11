@@ -30,22 +30,22 @@ Creation:
 
 ```ts
 const store = createStore(initialValue, {
-  name: 'counter',
+  name: "counter",
 });
 ```
 
 Derived state:
 
 ```ts
-const doubled = select(store, value => value * 2);
+const doubled = select(store, (value) => value * 2);
 ```
 
 Batching:
 
 ```ts
 batch(() => {
-  store.update(value => value + 1);
-  store.update(value => value + 1);
+  store.update((value) => value + 1);
+  store.update((value) => value + 1);
 });
 ```
 
@@ -63,6 +63,48 @@ Before acceptance, this RFC must define:
 - whether `set` accepts an updater or only `update` does;
 - development metadata and naming;
 - snapshot requirements for framework adapters.
+
+### Prototype decision: re-entrant updates
+
+The State prototype uses a synchronous FIFO notification queue for writes made from listeners:
+
+- an effective write commits its value immediately;
+- notification of that value is queued when another notification is in progress;
+- the current listener snapshot completes before the next queued value is notified;
+- the outermost `set` or `update` drains the queue before returning;
+- `Object.is`-equal writes do not enqueue notifications;
+- listener errors are collected across the complete flush and reported after queued writes finish.
+
+This prevents recursive listener interleaving and lost queued updates while keeping State synchronous.
+The prototype does not yet define Scope disposal semantics.
+
+### Prototype decision: batching
+
+The State prototype exposes `batch(work)` as a synchronous propagation boundary:
+
+- writes commit immediately while their notifier jobs are deferred;
+- nested batches flush only when the outermost batch completes;
+- repeated writes to one notifier coalesce to its final value before the flush;
+- notifier jobs run in FIFO commit order;
+- Computed invalidation jobs coalesce, so a Computed recomputes at most once per batch;
+- callback and listener errors are reported after committed writes and queued jobs finish.
+
+Batching remains synchronous and does not introduce a scheduler or asynchronous runtime dependency.
+
+### Prototype decision: Scope ownership
+
+The State prototype exposes `createScope(options?)` for synchronous ownership:
+
+- `scope.run(work)` makes subscriptions and Computed values created during `work` owned by the Scope;
+- `scope.use(resource)` accepts a `ViiResource` or a cleanup function;
+- `scope.createChild()` attaches a child Scope to its parent;
+- disposal is idempotent and rejects new work or resources after disposal;
+- resources are disposed in reverse registration order, including child Scopes;
+- one cleanup error is rethrown, while multiple errors are reported as `ScopeDisposalError`, an
+  `AggregateError`, after every registered resource has been attempted.
+
+The Alpha resource contract is synchronous (`dispose(): void`). Async disposal, resource transfer,
+and context propagation across asynchronous boundaries remain outside the prototype contract.
 
 ## Default equality
 

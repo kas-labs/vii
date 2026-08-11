@@ -150,3 +150,41 @@ PR: #24 (merged)
 - None for the merge task.
 - Older historical stacked `codex/*` branches remain on the remote because only the merged current
   feature branch was in scope for deletion.
+
+## 2026-08-12 00:12 Europe/Berlin | Expand packed Vanilla fixture
+
+Status: partial
+Branch: `feat/expand-vanilla-fixture`
+PR: not opened
+
+### Scope
+
+- Complete P1.8 by expanding the Vanilla consumer fixture across the current experimental Core
+  primitives and validating the packed artifact in a clean consumer.
+
+### Changes
+
+- Added executable Vanilla coverage for Computed, Batch, and Scope alongside State.
+- Added five fixture assertions and expanded packed-consumer assertions in `pack:check`.
+- Added a fixture README whose example matches the executable source and linked it from the root
+  README.
+- Updated `PROJECT_STATE.md` to record the P1.8 validation surface.
+
+### Validation
+
+- `pnpm validate`: passed; 46 Core tests and 5 Vanilla tests passed.
+- `pnpm pack:check`: passed with tarball installation, TypeScript compilation, and clean consumer
+  runtime assertions.
+- `git diff --check`: passed.
+
+### Architecture / compatibility
+
+- No runtime dependencies or public API changes; the fixture consumes the existing experimental
+  Core exports and remains framework-neutral.
+- Packed-artifact coverage now explicitly checks State, Computed, Batch, and Scope behavior without
+  source-alias resolution.
+
+### Remaining / recovery
+
+- Open the draft PR, merge it into `main`, delete the feature branch, and append a completed
+  post-merge handoff with the final PR number and main revision.

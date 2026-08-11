@@ -17,11 +17,11 @@ test("Vanilla fixture observes State changes from Core", () => {
   expect(observedValues).toEqual([1, 2]);
 });
 
-test("Vanilla fixture reads Computed from the packed Core artifact", () => {
+test("Vanilla fixture reads Computed from Core", () => {
   expect(doubledValue).toBe(4);
 });
 
-test("Vanilla fixture batches writes from the packed Core artifact", () => {
+test("Vanilla fixture batches writes from Core", () => {
   expect(batchedValue).toBe(2);
   expect(batchedObservedValues).toEqual([2]);
 });

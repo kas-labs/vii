@@ -167,17 +167,13 @@ For public or potentially public work, inspect:
 - benchmarks and evidence pages;
 - changelog and release notes.
 
-A public feature must not be treated as complete merely because its implementation tests pass.
-
-If no public surface update is required, report that explicitly with a reason.
+If no public-surface update is required, report that explicitly with a reason.
 
 ### Update docs and website work
 
 Update examples, limitations, compatibility, migration notes, status labels, and decision references where relevant.
 
-If a validated feature materially changes what Vii can publicly present, the agent should proactively report that it is time to update the website.
-
-Use:
+If a validated feature materially changes what Vii can publicly present, the agent should proactively report:
 
 ```text
 Public surface trigger detected.
@@ -188,7 +184,7 @@ This feature is now validated enough to add/update:
 - release communication: <entry>
 ```
 
-Prefer a same-PR update when the change is small and tightly coupled. If website work belongs in a different deployment/repository boundary or launch timing, create or recommend an explicit linked follow-up task rather than leaving an informal reminder.
+Prefer the same PR when the documentation or website change is small and tightly coupled. If public-site work belongs in a different deployment/repository boundary or release window, create or recommend an explicit linked follow-up instead of an informal reminder.
 
 The website is a public presentation layer, not the source of technical truth. Public claims must remain backed by implementation evidence and accepted support status.
 
@@ -310,3 +306,162 @@ User-controlled data remains data. Privileged operations require explicit APIs, 
 ### No premature generalization
 
 Implement the current consumer need. Record future directions in issues or design notes rather than adding unused extension systems.
+
+### Visible uncertainty
+
+Unknown semantics, skipped validation, and unresolved conflicts must be reported rather than hidden behind confident language.
+
+## Tests expected by change type
+
+### Core runtime change
+
+- unit behavior tests;
+- type tests;
+- lifecycle tests;
+- diagnostics invariants;
+- packed fixture when public API changes.
+
+### Adapter change
+
+- shared compliance suite;
+- host-specific integration test;
+- cleanup test;
+- SSR isolation test where applicable.
+
+### CLI or mutation change
+
+- dry-run;
+- deterministic plan;
+- changed-file snapshot;
+- idempotency;
+- root confinement;
+- JSON output where public;
+- approval invalidation on stale revision;
+- rollback or recovery behavior.
+
+### Security boundary change
+
+- malicious input test;
+- allow and deny cases;
+- redaction test;
+- documented threat and mitigation;
+- no secret or raw payload logging.
+
+### Agent or Intentloom integration change
+
+- context provenance and freshness tests;
+- capability allow and deny tests;
+- conflicting instruction test;
+- prompt-injection fixture;
+- provider-transfer visibility;
+- no runtime dependency in packed artifacts;
+- human approval for protected actions.
+
+### Build or packaging change
+
+- clean build;
+- package-content check;
+- clean installation;
+- public export resolution;
+- declarations and source maps.
+
+## Documentation style
+
+Documentation should answer:
+
+- What is this capability?
+- Why does it exist?
+- What is the mental model?
+- What is the simplest example?
+- What are the important edge cases?
+- What is intentionally unsupported?
+- How is correctness validated?
+- What authority is required?
+- What happens when the integration is unavailable?
+
+Use explicit status labels: Committed, Planned, Research, or Vision.
+
+For public features, documentation work should also answer whether the capability is discoverable from the public website and whether the website wording matches the validated support level.
+
+## Pull request checklist
+
+A PR is ready for review when:
+
+- scope is narrow and explained;
+- acceptance criteria are satisfied;
+- relevant tests pass;
+- new dependencies are justified;
+- package and compatibility impact are documented;
+- security and privacy impact are addressed;
+- docs are updated;
+- website/public-docs impact is classified and either completed or linked as explicit follow-up work;
+- no unrelated refactor is mixed in;
+- completion evidence is included;
+- agent context and external data transfer are disclosed where applicable;
+- skipped checks and unresolved decisions are visible.
+
+## Example task
+
+Task: implement State equality behavior.
+
+Expected plan:
+
+```text
+Goal: Skip propagation when Object.is(previous, next) is true.
+In scope: State set/update and tests.
+Out of scope: custom equality and Computed.
+Package: Core.
+Relevant decision: State RFC.
+Capabilities: repository.read, repository.write for Core and tests, command.run for validation.
+Tests: NaN, -0, object identity, subscriber notification.
+Security impact: none.
+Compatibility: defines initial Alpha behavior.
+Website and docs impact: repository docs if semantics change; website not required for an internal Alpha detail.
+Approval: normal PR review.
+Rollback: revert task commit.
+```
+
+Expected implementation evidence:
+
+```text
+pnpm test core
+pnpm typecheck
+pnpm build
+pnpm pack:check
+Vanilla fixture passes
+```
+
+## Handoff requirements
+
+A handoff should include:
+
+```text
+base revision
+completed mutations
+remaining scope
+validation executed
+failed or skipped validation
+open decisions
+context added or invalidated
+website/docs impact and follow-up task when applicable
+```
+
+The receiving developer or agent revalidates the handoff against the current repository revision.
+
+## Escalation conditions
+
+Request a decision before proceeding when:
+
+- two documents prescribe different semantics;
+- a public API must change;
+- a dependency rule must be violated;
+- a privileged capability lacks a security contract;
+- the task requires a new package;
+- an accepted RFC must be superseded;
+- implementation evidence contradicts the current architecture;
+- context is stale or lacks provenance;
+- the requested capability exceeds task scope;
+- rollback is not practical for a high-risk action;
+- public website wording would require a support claim that current evidence does not justify.
+
+Stopping before an unsafe, unauthorized, or misleading mutation is a successful outcome.

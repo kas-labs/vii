@@ -26,7 +26,8 @@ Explain the current problem and which roadmap milestone it supports.
 - prerequisite tasks;
 - relevant RFCs;
 - relevant ADRs;
-- architecture documents.
+- architecture documents;
+- Claude Design project/export references when visual website work is involved.
 
 ## Proposed example
 
@@ -51,6 +52,28 @@ If the task introduces or promotes a public feature, integration, package, frame
 
 Do not use `not required` merely because website work is inconvenient or lives in another repository.
 
+## Claude Design impact
+
+For visual website work, record:
+
+```text
+Claude Design reference:
+Design status: missing | draft | approved
+Export status: not-needed | pending | exported
+Repository import status: not-needed | pending | imported
+Implementation validation: pending | passed
+```
+
+State whether the task:
+
+- uses an existing approved Claude Design surface;
+- requires a new or updated design state;
+- requires export/handoff into the repository;
+- changes shared website tokens/components;
+- has no visual design impact.
+
+Do not invent visual values when an approved Claude Design source exists but is unavailable. Record the missing dependency and defer or stop the affected visual work.
+
 ## Acceptance criteria
 
 - [ ] Behavior is implemented.
@@ -62,6 +85,8 @@ Do not use `not required` merely because website work is inconvenient or lives i
 - [ ] Repository documentation is updated when required.
 - [ ] Public documentation/examples are updated or linked as explicit follow-up work when required.
 - [ ] Website impact is assessed and the required update is included or tracked explicitly.
+- [ ] Claude Design handoff state is recorded when visual website work is involved.
+- [ ] Imported design artifacts are reviewable in the repository before being treated as implemented.
 - [ ] Changelog/release-note impact is assessed.
 - [ ] Security and privacy impact is addressed.
 - [ ] Compatibility impact is addressed.
@@ -91,6 +116,11 @@ Website
 - Ecosystem > Framework integrations > Vue
 - Home feature card: no change
 
+Claude Design
+- integration card: approved
+- export: pending
+- repository import: pending
+
 Examples
 - examples/vue-counter
 
@@ -98,7 +128,7 @@ Release
 - changelog entry
 ```
 
-If the website is intentionally updated later, link the follow-up issue/task and explain why it is separate.
+If the website or Claude Design work is intentionally updated later, link the follow-up issue/task and explain why it is separate.
 
 ## Completion evidence
 
@@ -121,10 +151,16 @@ Website and docs impact
 - Website: follow-up #123
 - Examples: validated
 - Changelog: prepared
+
+Claude Design
+- Design: approved
+- Export: exported
+- Repository import: imported
+- Implementation validation: passed
 ```
 
 ## Follow-up work
 
 List deferred tasks without implementing them inside the current change.
 
-Deferred public website/documentation work must have an explicit task rather than an informal TODO.
+Deferred public website/documentation or Claude Design export/import work must have an explicit task rather than an informal TODO.

@@ -8,10 +8,12 @@ import { fileURLToPath } from "node:url";
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = path.resolve(scriptDirectory, "../..");
 const fixtureDirectory = path.join(repositoryRoot, "fixtures/vanilla");
+const reactFixtureDirectory = path.join(repositoryRoot, "fixtures/react");
 const pnpm = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 const temporaryRoot = await mkdtemp(path.join(os.tmpdir(), "vii-pack-check-"));
 const artifactDirectory = path.join(temporaryRoot, "artifact");
 const consumerDirectory = path.join(temporaryRoot, "consumer");
+const reactConsumerDirectory = path.join(temporaryRoot, "react-consumer");
 
 function run(command, args, cwd = repositoryRoot) {
   execFileSync(command, args, {
@@ -21,21 +23,41 @@ function run(command, args, cwd = repositoryRoot) {
   });
 }
 
-try {
-  await mkdir(artifactDirectory, { recursive: true });
-  await mkdir(consumerDirectory, { recursive: true });
-
-  run(pnpm, ["--filter", "@vii/core", "build"]);
-  run(pnpm, ["--filter", "@vii/core", "pack", "--pack-destination", artifactDirectory]);
-
-  const artifactNames = await readdir(artifactDirectory);
-  assert.equal(artifactNames.length, 1, "expected exactly one Core package artifact");
-  const artifactPath = path.join(artifactDirectory, artifactNames[0]);
+function assertPackageEntries(artifactPath, expectedEntries, label) {
   const entries = execFileSync("tar", ["-tzf", artifactPath], { encoding: "utf8" })
     .trim()
     .split("\n")
     .filter(Boolean);
-  const expectedEntries = new Set([
+  assert.deepEqual(
+    new Set(entries),
+    expectedEntries,
+    `${label} artifact contains unexpected files`,
+  );
+}
+
+try {
+  await mkdir(artifactDirectory, { recursive: true });
+  await mkdir(consumerDirectory, { recursive: true });
+  await mkdir(reactConsumerDirectory, { recursive: true });
+
+  run(pnpm, ["--filter", "@vii/core", "build"]);
+  run(pnpm, ["--filter", "@vii/react", "build"]);
+  run(pnpm, ["--filter", "@vii/core", "pack", "--pack-destination", artifactDirectory]);
+  run(pnpm, ["--filter", "@vii/react", "pack", "--pack-destination", artifactDirectory]);
+
+  const artifactNames = await readdir(artifactDirectory);
+  assert.equal(artifactNames.length, 2, "expected Core and React package artifacts");
+  const artifactPaths = new Map(
+    artifactNames.map((name) => [
+      name.startsWith("vii-core-") ? "core" : "react",
+      path.join(artifactDirectory, name),
+    ]),
+  );
+  const coreArtifactPath = artifactPaths.get("core");
+  const reactArtifactPath = artifactPaths.get("react");
+  assert.ok(coreArtifactPath, "expected a Core package artifact");
+  assert.ok(reactArtifactPath, "expected a React package artifact");
+  const expectedCoreEntries = new Set([
     "package/README.md",
     "package/dist/batch.d.ts",
     "package/dist/batch.d.ts.map",
@@ -79,7 +101,19 @@ try {
     "package/dist/tracking.js.map",
     "package/package.json",
   ]);
-  assert.deepEqual(new Set(entries), expectedEntries, "Core artifact contains unexpected files");
+  assertPackageEntries(coreArtifactPath, expectedCoreEntries, "Core");
+  assertPackageEntries(
+    reactArtifactPath,
+    new Set([
+      "package/README.md",
+      "package/dist/index.d.ts",
+      "package/dist/index.d.ts.map",
+      "package/dist/index.js",
+      "package/dist/index.js.map",
+      "package/package.json",
+    ]),
+    "React",
+  );
 
   await cp(path.join(fixtureDirectory, "src"), path.join(consumerDirectory, "src"), {
     recursive: true,
@@ -91,7 +125,7 @@ try {
         name: "vii-packed-consumer",
         private: true,
         type: "module",
-        dependencies: { "@vii/core": `file:${artifactPath}` },
+        dependencies: { "@vii/core": `file:${coreArtifactPath}` },
       },
       null,
       2,
@@ -140,7 +174,58 @@ try {
     2,
     "packed Vanilla consumer should keep State usable after Scope disposal",
   );
-  console.log("Packed Core artifact and clean Vanilla consumer validated.");
+
+  await cp(path.join(reactFixtureDirectory, "src"), path.join(reactConsumerDirectory, "src"), {
+    recursive: true,
+  });
+  await writeFile(
+    path.join(reactConsumerDirectory, "package.json"),
+    JSON.stringify(
+      {
+        name: "vii-packed-react-consumer",
+        private: true,
+        type: "module",
+        dependencies: {
+          "@vii/core": `file:${coreArtifactPath}`,
+          "@vii/react": `file:${reactArtifactPath}`,
+          react: "19.2.8",
+          "react-dom": "19.2.8",
+        },
+        devDependencies: {
+          "@types/react": "19.2.17",
+          "@types/react-dom": "19.2.3",
+        },
+      },
+      null,
+      2,
+    ),
+  );
+  await writeFile(
+    path.join(reactConsumerDirectory, "tsconfig.json"),
+    JSON.stringify(
+      {
+        extends: path.join(repositoryRoot, "tsconfig.base.json"),
+        compilerOptions: {
+          noEmit: false,
+          outDir: "dist",
+          rootDir: "src",
+        },
+        include: ["src/**/*.ts"],
+      },
+      null,
+      2,
+    ),
+  );
+
+  run(pnpm, ["install", "--ignore-scripts", "--no-frozen-lockfile"], reactConsumerDirectory);
+  run(pnpm, ["exec", "tsc", "-p", path.join(reactConsumerDirectory, "tsconfig.json")]);
+  const reactConsumer = await import(path.join(reactConsumerDirectory, "dist/main.js"));
+  assert.equal(
+    reactConsumer.renderedMarkup,
+    '<span data-value="2">2</span>',
+    "packed React consumer should render the Core server snapshot",
+  );
+  console.log("Packed Core and React artifacts with clean consumers validated.");
 } finally {
   await rm(temporaryRoot, { recursive: true, force: true });
 }

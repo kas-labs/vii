@@ -18,11 +18,21 @@ Current architectural priorities include:
 - first-class diagnostics without hidden telemetry;
 - public API stability through RFC/ADR governance.
 
-The current implementation includes the State Core surface through P1.8: State reads/writes and
-subscriptions, re-entrant updates, Computed, Batch, Scope ownership/disposal, and bounded opt-in
-Diagnostics. These APIs remain experimental. The Vanilla consumer fixture exercises State,
-Computed, Batch, and Scope, and the package-validation script verifies those behaviors after
-installing the packed Core artifact into a clean temporary consumer.
+The current implementation includes the State Core surface through P1.9, the initial P2.1 shared
+adapter compliance suite, and the initial P2.2 React adapter: State reads/writes and subscriptions,
+re-entrant updates, Computed, Batch, Scope ownership/disposal, bounded opt-in Diagnostics, and a
+reproducible local performance baseline suite. These APIs remain experimental.
+The Vanilla consumer fixture exercises State, Computed, Batch, and Scope, and the package-validation
+script verifies those behaviors after installing the packed Core artifact into a clean temporary
+consumer. The baseline suite measures State creation/writes, subscriber fan-out, Computed chains,
+batch propagation, subscription disposal, Scope cleanup, and Diagnostics overhead without adding a
+runtime dependency or numeric release budget. The adapter suite is private and provisional: it
+checks the adapter-facing snapshot, selection, batching, cleanup, disposal, request-isolation,
+server-snapshot, and type-inference behaviors against a Core-backed reference adapter while RFC 0005
+remains Draft. The private React adapter exposes `useVii` through React's external-store integration,
+including selector/equality overloads and server snapshots; it keeps React at the peer boundary and
+leaves request-isolated store creation and hydration data to the application. A packed React artifact
+is validated in a clean consumer fixture alongside the packed Core artifact.
 
 ## Repository operating model
 
@@ -59,6 +69,11 @@ pnpm validate
 ```
 
 It currently covers formatting, linting, type checking, tests, builds, and packed-artifact validation.
+The focused Core performance command is `pnpm benchmark:core`; it records raw results under
+`benchmarks/results/` with methodology in `docs/quality/CORE_PERFORMANCE_BASELINE.md`.
+The focused adapter command is `pnpm --filter @vii/adapter-testing test`; the full suite is included
+in `pnpm validate`. React adapter checks also include `pnpm --filter @vii/react test` and the packed
+React clean-consumer fixture.
 
 Repository governance CI additionally checks branch naming and forbidden authorship/tool-attribution metadata for pull requests and their commits.
 

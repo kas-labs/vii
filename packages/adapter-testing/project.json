@@ -1,0 +1,28 @@
+{
+  "name": "adapter-testing",
+  "projectType": "library",
+  "sourceRoot": "packages/adapter-testing/src",
+  "targets": {
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm lint",
+        "cwd": "packages/adapter-testing"
+      }
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm typecheck",
+        "cwd": "packages/adapter-testing"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm test",
+        "cwd": "packages/adapter-testing"
+      }
+    }
+  }
+}

@@ -1,0 +1,167 @@
+{
+  "schemaVersion": "0.1",
+  "suite": "core-state-baseline",
+  "package": {
+    "name": "@vii/core",
+    "version": "0.0.0",
+    "entry": "dist/index.js"
+  },
+  "revision": "8256b798622a246bdb8f1bf2fcabfde32624e10e",
+  "workingTreeDirty": true,
+  "environment": {
+    "node": "v22.17.0",
+    "platform": "darwin arm64 25.5.0",
+    "cpu": "Apple M4"
+  },
+  "configuration": {
+    "iterations": 10000,
+    "warmupRounds": 2,
+    "repetitions": 5,
+    "fanout": 100,
+    "chainDepth": 10
+  },
+  "results": [
+    {
+      "name": "state-creation",
+      "operations": 10000,
+      "samplesMs": [
+        1.039,
+        1.725,
+        1.396,
+        1.554,
+        0.823
+      ],
+      "medianMs": 1.396,
+      "operationsPerSecond": 7161400.054
+    },
+    {
+      "name": "state-write",
+      "operations": 10000,
+      "samplesMs": [
+        1.848,
+        3.895,
+        1.544,
+        1.962,
+        2.144
+      ],
+      "medianMs": 1.962,
+      "operationsPerSecond": 5096946.47
+    },
+    {
+      "name": "subscriber-fanout",
+      "operations": 10000,
+      "samplesMs": [
+        26.188,
+        28.517,
+        30.26,
+        35.224,
+        25.923
+      ],
+      "medianMs": 28.517,
+      "operationsPerSecond": 350668.527,
+      "fanout": 100,
+      "notifications": 7000000
+    },
+    {
+      "name": "computed-chain",
+      "operations": 10000,
+      "samplesMs": [
+        62.583,
+        89.862,
+        67.893,
+        74.019,
+        60.282
+      ],
+      "medianMs": 67.893,
+      "operationsPerSecond": 147289.867,
+      "chainDepth": 10,
+      "checksum": 350735000
+    },
+    {
+      "name": "batch-propagation",
+      "operations": 10000,
+      "samplesMs": [
+        401.359,
+        302.45,
+        302.481,
+        327.149,
+        264.809
+      ],
+      "medianMs": 302.481,
+      "operationsPerSecond": 33059.941,
+      "fanout": 100,
+      "notifications": 7000000
+    },
+    {
+      "name": "subscription-disposal",
+      "operations": 10000,
+      "samplesMs": [
+        1.615,
+        0.767,
+        1.081,
+        0.844,
+        0.81
+      ],
+      "medianMs": 0.844,
+      "operationsPerSecond": 11851851.852
+    },
+    {
+      "name": "scope-cleanup",
+      "operations": 10000,
+      "samplesMs": [
+        27.762,
+        11.128,
+        15.073,
+        11.579,
+        15.372
+      ],
+      "medianMs": 15.073,
+      "operationsPerSecond": 663439.784
+    },
+    {
+      "name": "diagnostics-off-write",
+      "operations": 10000,
+      "samplesMs": [
+        2.806,
+        2.057,
+        2.227,
+        3.121,
+        2.131
+      ],
+      "medianMs": 2.227,
+      "operationsPerSecond": 4491102.004,
+      "events": 0,
+      "droppedEvents": 0
+    },
+    {
+      "name": "diagnostics-development-write",
+      "operations": 10000,
+      "samplesMs": [
+        8.717,
+        10.416,
+        12.146,
+        7.455,
+        7.367
+      ],
+      "medianMs": 8.717,
+      "operationsPerSecond": 1147172.741,
+      "events": 1000,
+      "droppedEvents": 69001
+    },
+    {
+      "name": "diagnostics-production-safe-write",
+      "operations": 10000,
+      "samplesMs": [
+        6.867,
+        8.017,
+        6.764,
+        10.542,
+        4.984
+      ],
+      "medianMs": 6.867,
+      "operationsPerSecond": 1456301.914,
+      "events": 1000,
+      "droppedEvents": 69001
+    }
+  ]
+}

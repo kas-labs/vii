@@ -1,4 +1,5 @@
 import { isBatching, schedule } from "./scheduler.js";
+import { registerResource } from "./scope-context.js";
 
 interface Subscription<T> {
   active: boolean;
@@ -68,7 +69,7 @@ export function createNotifier<T>(): Notifier<T> {
     const subscription: Subscription<T> = { active: true, listener };
     subscriptions.push(subscription);
 
-    return () => {
+    const unsubscribe = (): void => {
       if (!subscription.active) {
         return;
       }
@@ -79,6 +80,9 @@ export function createNotifier<T>(): Notifier<T> {
         subscriptions.splice(index, 1);
       }
     };
+
+    registerResource({ dispose: unsubscribe });
+    return unsubscribe;
   };
 
   return {

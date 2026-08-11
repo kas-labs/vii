@@ -1,5 +1,6 @@
 import { createNotifier } from "./notifier.js";
 import { schedule } from "./scheduler.js";
+import { registerResource } from "./scope-context.js";
 import type { StateListener } from "./state.js";
 import { trackDependency, withTracker, type Dependency } from "./tracking.js";
 
@@ -98,7 +99,7 @@ export function computed<T>(read: () => T): Computed<T> {
     }
   };
 
-  return {
+  const result: Computed<T> = {
     get: () => {
       assertActive();
       trackDependency(computedDependency);
@@ -133,4 +134,7 @@ export function computed<T>(read: () => T): Computed<T> {
       dirty = true;
     },
   };
+
+  registerResource({ dispose: result.dispose });
+  return result;
 }

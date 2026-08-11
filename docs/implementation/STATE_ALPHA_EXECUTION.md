@@ -19,7 +19,7 @@ const count = state(0);
 
 count.get();
 count.set(1);
-count.update(value => value + 1);
+count.update((value) => value + 1);
 ```
 
 Required behavior:
@@ -36,7 +36,7 @@ Required behavior:
 Illustrative usage:
 
 ```ts
-const unsubscribe = count.subscribe(value => {
+const unsubscribe = count.subscribe((value) => {
   console.log(value);
 });
 
@@ -60,7 +60,7 @@ These semantics must be intentional, not accidental consequences of an array loo
 Create explicit tests for:
 
 ```ts
-count.subscribe(value => {
+count.subscribe((value) => {
   if (value < 3) {
     count.set(value + 1);
   }
@@ -128,6 +128,14 @@ scope.run(() => {
 scope.dispose();
 ```
 
+The initial Scope contract is synchronous and explicit. Subscriptions and Computed values created
+inside `scope.run` are registered with that Scope. Other resources can be attached with
+`scope.use(resource)`; a cleanup function is accepted as a resource. `scope.createChild()` attaches
+the child to its parent. Disposal runs resources in reverse registration order, disposes children
+through the same rule, and is idempotent. A disposed Scope rejects `run`, `use`, and `createChild`.
+If more than one cleanup fails, `ScopeDisposalError` contains every failure after all cleanups have
+been attempted. Async disposal and asynchronous context propagation are deferred.
+
 Required behavior:
 
 - disposal is idempotent;
@@ -144,12 +152,12 @@ A Store should compose State primitives, not create a second state engine.
 Example direction:
 
 ```ts
-export const counterStore = store('counter', () => {
+export const counterStore = store("counter", () => {
   const count = state(0);
   const doubled = computed(() => count.get() * 2);
 
   function increment() {
-    count.update(value => value + 1);
+    count.update((value) => value + 1);
   }
 
   return {

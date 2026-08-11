@@ -5,7 +5,7 @@ This is the first buildable Vii package created by the Phase 0 repository bootst
 The package currently exposes the experimental `state` factory:
 
 ```ts
-import { computed, state } from "@vii/core";
+import { batch, computed, state } from "@vii/core";
 
 const count = state(0);
 count.set(1);
@@ -46,4 +46,18 @@ Computed values invalidate when a dependency changes and notify subscribers only
 result changes. Dependencies that are no longer read are released. Circular reads throw
 `Computed cycle detected`, and `dispose()` releases dependencies and makes further use invalid.
 
-Batch, Scope, Query, UI, adapters, and CLI work belong to later implementation tasks.
+Use `batch` to group synchronous writes into one propagation boundary:
+
+```ts
+batch(() => {
+  count.set(1);
+  count.update((current) => current + 1);
+});
+```
+
+Writes commit immediately, but notifications wait until the outermost batch completes. Nested
+batches share that boundary, repeated writes to one State notify only its final value, and Computed
+dependencies are recomputed at most once per batch. Errors are reported after committed writes and
+the remaining queued notifications have been processed.
+
+Scope, Query, UI, adapters, and CLI work belong to later implementation tasks.

@@ -1,3 +1,5 @@
+import { isBatching, schedule } from "./scheduler.js";
+
 interface Subscription<T> {
   active: boolean;
   listener: (value: T) => void;
@@ -13,7 +15,7 @@ export interface Notifier<T> {
 export function createNotifier<T>(): Notifier<T> {
   const subscriptions: Array<Subscription<T>> = [];
   const pendingValues: T[] = [];
-  let isFlushing = false;
+  let flushScheduled = false;
 
   const notifyListeners = (value: T): unknown[] => {
     const errors: unknown[] = [];
@@ -33,23 +35,12 @@ export function createNotifier<T>(): Notifier<T> {
     return errors;
   };
 
-  const notify = (value: T): void => {
-    pendingValues.push(value);
-
-    if (isFlushing) {
-      return;
-    }
-
-    isFlushing = true;
+  const flush = (): void => {
+    flushScheduled = false;
     const errors: unknown[] = [];
 
-    try {
-      while (pendingValues.length > 0) {
-        errors.push(...notifyListeners(pendingValues.shift()!));
-      }
-    } finally {
-      pendingValues.length = 0;
-      isFlushing = false;
+    while (pendingValues.length > 0) {
+      errors.push(...notifyListeners(pendingValues.shift()!));
     }
 
     if (errors.length === 1) {
@@ -58,6 +49,18 @@ export function createNotifier<T>(): Notifier<T> {
 
     if (errors.length > 1) {
       throw new AggregateError(errors, "State subscriber errors");
+    }
+  };
+
+  const notify = (value: T): void => {
+    if (isBatching()) {
+      pendingValues.length = 0;
+    }
+    pendingValues.push(value);
+
+    if (!flushScheduled) {
+      flushScheduled = true;
+      schedule(flush);
     }
   };
 

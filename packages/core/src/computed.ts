@@ -1,4 +1,5 @@
 import { createNotifier } from "./notifier.js";
+import { schedule } from "./scheduler.js";
 import type { StateListener } from "./state.js";
 import { trackDependency, withTracker, type Dependency } from "./tracking.js";
 
@@ -19,6 +20,7 @@ export function computed<T>(read: () => T): Computed<T> {
   let dirty = true;
   let evaluating = false;
   let disposed = false;
+  let recomputeScheduled = false;
 
   const assertActive = (): void => {
     if (disposed) {
@@ -78,13 +80,21 @@ export function computed<T>(read: () => T): Computed<T> {
 
     dirty = true;
 
-    if (notifier.hasSubscribers()) {
-      const previousValue = currentValue;
-      const nextValue = evaluate();
+    if (notifier.hasSubscribers() && !recomputeScheduled) {
+      recomputeScheduled = true;
+      schedule(() => {
+        recomputeScheduled = false;
+        if (disposed || !dirty || !notifier.hasSubscribers()) {
+          return;
+        }
 
-      if (!Object.is(previousValue, nextValue)) {
-        notifier.notify(nextValue);
-      }
+        const previousValue = currentValue;
+        const nextValue = evaluate();
+
+        if (!Object.is(previousValue, nextValue)) {
+          notifier.notify(nextValue);
+        }
+      });
     }
   };
 

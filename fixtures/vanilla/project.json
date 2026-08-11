@@ -1,0 +1,35 @@
+{
+  "name": "vanilla",
+  "projectType": "application",
+  "sourceRoot": "fixtures/vanilla/src",
+  "targets": {
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm lint",
+        "cwd": "fixtures/vanilla"
+      }
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm typecheck",
+        "cwd": "fixtures/vanilla"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm test",
+        "cwd": "fixtures/vanilla"
+      }
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm build",
+        "cwd": "fixtures/vanilla"
+      }
+    }
+  }
+}

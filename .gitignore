@@ -1,0 +1,19 @@
+# Dependencies and package-manager files
+node_modules/
+.pnpm-debug.log*
+
+# Generated build and validation output
+dist/
+coverage/
+.nx/
+.artifacts/
+
+# Local tooling and operating-system files
+.idea/
+.DS_Store
+*.swp
+
+# Local environment files
+.env
+.env.*
+!.env.example

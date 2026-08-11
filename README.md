@@ -10,7 +10,9 @@ A native component runtime and application framework are long-term Research and 
 
 ## Current stage
 
-The project is in the documentation and architecture foundation stage. No stable public runtime API exists yet.
+The repository bootstrap foundation is now implemented: pnpm, Nx, strict TypeScript, ESM package
+validation, linting, formatting, Vitest, and CI are in place. The first Core package is intentionally
+an empty buildable entrypoint; no stable public runtime API exists yet.
 
 The foundation is detailed enough to begin Phase 0 repository bootstrap, but documentation remains design intent rather than implementation evidence.
 

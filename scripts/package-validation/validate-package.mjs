@@ -86,6 +86,11 @@ try {
   run(pnpm, ["exec", "tsc", "-p", path.join(consumerDirectory, "tsconfig.json")]);
   const consumer = await import(path.join(consumerDirectory, "dist/main.js"));
   assert.equal(consumer.countValue, 2, "packed Vanilla consumer should read and write State");
+  assert.deepEqual(
+    consumer.observedValues,
+    [1, 2],
+    "packed Vanilla consumer should observe State changes",
+  );
   console.log("Packed Core artifact and clean Vanilla consumer validated.");
 } finally {
   await rm(temporaryRoot, { recursive: true, force: true });

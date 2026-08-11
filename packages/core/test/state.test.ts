@@ -125,3 +125,57 @@ test("state notifies remaining listeners before reporting subscriber errors", ()
   expect(laterListener).toHaveBeenCalledWith(1);
   expect(count.get()).toBe(1);
 });
+
+test("state queues writes made during notification", () => {
+  const count = state(0);
+  const observed: string[] = [];
+
+  count.subscribe((value) => {
+    observed.push(`first:${value}`);
+    if (value === 1) {
+      count.set(2);
+    }
+  });
+  count.subscribe((value) => observed.push(`second:${value}`));
+
+  count.set(1);
+
+  expect(observed).toEqual(["first:1", "second:1", "first:2", "second:2"]);
+  expect(count.get()).toBe(2);
+});
+
+test("state drains a chain of queued writes in FIFO order", () => {
+  const count = state(0);
+  const observed: number[] = [];
+
+  count.subscribe((value) => {
+    observed.push(value);
+    if (value < 3) {
+      count.update((current) => current + 1);
+    }
+  });
+
+  count.set(1);
+
+  expect(observed).toEqual([1, 2, 3]);
+  expect(count.get()).toBe(3);
+});
+
+test("state drains queued writes before reporting listener errors", () => {
+  const count = state(0);
+  const observed: number[] = [];
+  const error = new Error("listener failed");
+
+  count.subscribe((value) => {
+    observed.push(value);
+    if (value === 1) {
+      count.set(2);
+      throw error;
+    }
+  });
+  count.subscribe((value) => observed.push(value));
+
+  expect(() => count.set(1)).toThrow(error);
+  expect(observed).toEqual([1, 1, 2, 2]);
+  expect(count.get()).toBe(2);
+});

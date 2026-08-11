@@ -64,6 +64,20 @@ Before acceptance, this RFC must define:
 - development metadata and naming;
 - snapshot requirements for framework adapters.
 
+### Prototype decision: re-entrant updates
+
+The State prototype uses a synchronous FIFO notification queue for writes made from listeners:
+
+- an effective write commits its value immediately;
+- notification of that value is queued when another notification is in progress;
+- the current listener snapshot completes before the next queued value is notified;
+- the outermost `set` or `update` drains the queue before returning;
+- `Object.is`-equal writes do not enqueue notifications;
+- listener errors are collected across the complete flush and reported after queued writes finish.
+
+This prevents recursive listener interleaving and lost queued updates while keeping State synchronous.
+The prototype does not yet define batching, Computed invalidation, or Scope disposal semantics.
+
 ## Default equality
 
 `Object.is` is proposed as the default equality function.

@@ -1,3 +1,5 @@
+import { getActiveDiagnostics } from "./diagnostics.js";
+
 type Job = () => void;
 
 let batchDepth = 0;
@@ -51,6 +53,12 @@ export function schedule(job: Job): void {
 }
 
 export function runBatch<T>(work: () => T): T {
+  const diagnostics = getActiveDiagnostics();
+  const batchId = diagnostics?.mode === "off" ? undefined : diagnostics?.allocateId("batch");
+  if (diagnostics !== undefined && batchId !== undefined) {
+    diagnostics.record("batch.started", { batchId });
+  }
+
   batchDepth += 1;
   let result!: T;
   let callbackError: unknown;
@@ -67,6 +75,14 @@ export function runBatch<T>(work: () => T): T {
 
   const flushErrors = batchDepth === 0 && !isFlushing ? flushJobs() : [];
   const errors = hasCallbackError ? [callbackError, ...flushErrors] : flushErrors;
+
+  if (diagnostics !== undefined && batchId !== undefined) {
+    diagnostics.record(errors.length === 0 ? "batch.committed" : "batch.failed", {
+      batchId,
+      errorCount: errors.length,
+    });
+  }
+
   throwCollectedErrors(errors, "Batch errors");
 
   return result;

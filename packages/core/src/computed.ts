@@ -1,4 +1,5 @@
 import { createNotifier } from "./notifier.js";
+import { getActiveDiagnostics, type DiagnosticsRuntime } from "./diagnostics.js";
 import { schedule } from "./scheduler.js";
 import { registerResource } from "./scope-context.js";
 import type { StateListener } from "./state.js";
@@ -14,7 +15,13 @@ export interface Computed<T> extends ReadableState<T> {
 }
 
 export function computed<T>(read: () => T): Computed<T> {
-  const notifier = createNotifier<T>();
+  const diagnostics = getActiveDiagnostics();
+  const selectorId = diagnostics?.mode === "off" ? undefined : diagnostics?.allocateId("computed");
+  const notifier = createNotifier<T>({
+    diagnostics,
+    ownerId: selectorId,
+    ownerType: "computed",
+  });
   const dependencySubscriptions = new Map<Dependency, () => void>();
   let currentValue!: T;
   let hasValue = false;
@@ -22,6 +29,8 @@ export function computed<T>(read: () => T): Computed<T> {
   let evaluating = false;
   let disposed = false;
   let recomputeScheduled = false;
+
+  recordComputedEvent(diagnostics, "computed.created", selectorId, {});
 
   const assertActive = (): void => {
     if (disposed) {
@@ -71,6 +80,9 @@ export function computed<T>(read: () => T): Computed<T> {
     currentValue = nextValue;
     hasValue = true;
     dirty = false;
+    recordComputedEvent(diagnostics, "computed.recomputed", selectorId, {
+      dependencyCount: nextDependencies.size,
+    });
     return nextValue;
   };
 
@@ -132,9 +144,23 @@ export function computed<T>(read: () => T): Computed<T> {
       dependencySubscriptions.clear();
       notifier.clear();
       dirty = true;
+      recordComputedEvent(diagnostics, "computed.disposed", selectorId, {});
     },
   };
 
   registerResource({ dispose: result.dispose });
   return result;
+}
+
+function recordComputedEvent(
+  diagnostics: DiagnosticsRuntime | undefined,
+  type: string,
+  selectorId: string | undefined,
+  payload: Readonly<Record<string, unknown>>,
+): void {
+  if (diagnostics === undefined || selectorId === undefined) {
+    return;
+  }
+
+  diagnostics.record(type, { selectorId, ...payload });
 }

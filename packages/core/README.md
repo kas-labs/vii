@@ -2,10 +2,10 @@
 
 This is the first buildable Vii package created by the Phase 0 repository bootstrap.
 
-The package currently exposes experimental State, Computed, Batch, and Scope primitives:
+The package currently exposes experimental State, Computed, Batch, Scope, and Diagnostics primitives:
 
 ```ts
-import { batch, computed, createScope, state } from "@vii/core";
+import { batch, computed, createDiagnostics, createScope, state } from "@vii/core";
 
 const count = state(0);
 count.set(1);
@@ -82,3 +82,22 @@ fail, `ScopeDisposalError` reports all errors after every cleanup has been attem
 
 Async disposal, resource transfer, and asynchronous context propagation remain later work. Query,
 UI, adapters, and CLI work also belong to later implementation tasks.
+
+Diagnostics are opt-in, structured, bounded, and value-free by default:
+
+```ts
+const diagnostics = createDiagnostics({ maxEvents: 100 });
+
+diagnostics.run(() => {
+  const count = state(0);
+  count.set(1);
+});
+
+diagnostics.getEvents();
+```
+
+The collector uses a bounded ring buffer and reports dropped event counts. `off`, `development`,
+and `production-safe` modes are supported; diagnostics sinks are observers and cannot break runtime
+updates. Core events contain identifiers, versions, counts, and lifecycle metadata, not State values.
+The diagnostics protocol is experimental and does not add network, telemetry, or Devtools
+dependencies.

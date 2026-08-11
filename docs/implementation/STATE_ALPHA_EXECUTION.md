@@ -174,19 +174,36 @@ Do not require reducers, dispatch strings, action type constants, or middleware 
 
 Add minimal events after runtime behavior is tested.
 
-Initial event direction:
+The P1.7 prototype exposes an opt-in bounded collector:
+
+```ts
+const diagnostics = createDiagnostics({ maxEvents: 100 });
+
+diagnostics.run(() => {
+  const count = state(0);
+  count.set(1);
+});
+```
+
+The current event types are:
 
 ```text
 state.created
 state.updated
-subscription.added
-subscription.removed
-computed.invalidated
-computed.evaluated
+computed.created
+computed.recomputed
+computed.disposed
+subscription.created
+subscription.notified
+subscription.disposed
 batch.started
 batch.committed
+batch.failed
 scope.created
+scope.disposing
 scope.disposed
+resource.attached
+resource.disposed
 ```
 
 Diagnostics must:
@@ -197,6 +214,10 @@ Diagnostics must:
 - use bounded buffers;
 - be removable or minimal when disabled;
 - never change State behavior.
+
+Core diagnostics omit State values and use per-collector identifiers. The default ring buffer drops
+the oldest events when full and exposes `droppedEvents`. Sink failures are isolated. Network,
+telemetry, and Devtools integrations remain outside Core.
 
 ## Suggested internal modules
 

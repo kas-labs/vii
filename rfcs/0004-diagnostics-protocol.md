@@ -70,6 +70,39 @@ interface DiagnosticSink {
 
 Potential sinks include no-op, bounded in-memory storage, console rendering, Devtools transport, trace file export, and OpenTelemetry bridges.
 
+## Prototype decision: bounded Core collector
+
+P1.7 implements the smallest runtime-neutral collector without adding a network, telemetry, or
+Devtools dependency:
+
+```ts
+const diagnostics = createDiagnostics({
+  mode: "development",
+  maxEvents: 100,
+});
+
+diagnostics.run(() => {
+  const count = state(0);
+  count.set(1);
+});
+```
+
+- `createDiagnostics` creates an isolated collector; `run` establishes its synchronous context;
+- the default mode is `development`; `off` disables collection and `production-safe` keeps the same
+  value-free event shape;
+- events use protocol version `0.1`, per-collector `diagnostic-N` IDs, an injectable clock for
+  deterministic tests, and `@vii/core` as the package identifier;
+- the in-memory store is a bounded ring buffer; the oldest event is dropped when full and
+  `droppedEvents` reports the number removed;
+- Core event payloads contain identifiers, versions, counts, and lifecycle metadata, never State
+  values by default;
+- sink failures are isolated and cannot change runtime behavior;
+- the P1.7 prototype names events `state.*`, `computed.*`, `subscription.*`, `batch.*`,
+  `scope.*`, and `resource.*`.
+
+Cause and trace propagation remain reserved protocol fields. P1.7 provides stable entity and event
+identifiers; richer cross-operation cause graphs require an accepted follow-up decision.
+
 ## Privacy defaults
 
 The protocol excludes by default:

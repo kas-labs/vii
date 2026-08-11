@@ -53,15 +53,13 @@ resource.attached
 resource.detached
 resource.disposed
 
-store.created
-store.updated
-store.update_skipped
-store.disposed
+state.created
+state.updated
+state.update_skipped
 
-selector.created
+computed.created
 selector.recomputed
-selector.recompute_skipped
-selector.disposed
+computed.disposed
 
 subscription.created
 subscription.notified
@@ -73,6 +71,9 @@ batch.failed
 
 error.raised
 ```
+
+The P1.7 Core prototype uses the `state.*` and `computed.*` names above. The broader protocol may
+later provide store and selector aliases when those higher-level modules exist.
 
 Query, UI, server, and platform families will be added by their own RFCs.
 
@@ -178,6 +179,12 @@ Possible sinks:
 - file export through a platform adapter;
 - Devtools connection;
 - OpenTelemetry bridge.
+
+Core currently exposes a bounded in-memory collector through `createDiagnostics(options)`. Its
+`run` method establishes the diagnostic context for State, Computed, Batch, and Scope operations.
+The collector defaults to development mode, accepts `off` and `production-safe`, drops the oldest
+events when its limit is reached, and exposes the number of dropped events. Sink failures are
+isolated from runtime behavior.
 
 ## Privacy and redaction
 

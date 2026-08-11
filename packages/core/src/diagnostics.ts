@@ -83,11 +83,18 @@ export function createDiagnostics(options: DiagnosticsOptions = {}): Diagnostics
         return;
       }
 
+      let timestamp = 0;
+      try {
+        timestamp = clock();
+      } catch {
+        // Diagnostic clocks are observers and must not affect runtime behavior.
+      }
+
       const event: DiagnosticEvent = {
         protocolVersion: "0.1",
         id: `diagnostic-${nextEventId++}`,
         type,
-        timestamp: clock(),
+        timestamp,
         package: "@vii/core",
         payload: Object.freeze({ ...payload }),
         ...(causeId === undefined ? {} : { causeId }),

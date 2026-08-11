@@ -97,6 +97,8 @@ diagnostics.run(() => {
 - Core event payloads contain identifiers, versions, counts, and lifecycle metadata, never State
   values by default;
 - sink failures are isolated and cannot change runtime behavior;
+- custom clock failures are isolated with a deterministic fallback timestamp and cannot change
+  runtime behavior;
 - the P1.7 prototype names events `state.*`, `computed.*`, `subscription.*`, `batch.*`,
   `scope.*`, and `resource.*`.
 

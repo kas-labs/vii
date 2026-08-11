@@ -73,6 +73,37 @@ test("a failing diagnostic sink cannot break State updates", () => {
   expect(count.get()).toBe(1);
 });
 
+test("a failing diagnostic clock cannot break State updates", () => {
+  const diagnostics = createDiagnostics({
+    clock: () => {
+      throw new Error("clock failed");
+    },
+  });
+  const observed: number[] = [];
+
+  diagnostics.run(() => {
+    const count = state(0);
+    count.subscribe((value) => observed.push(value));
+    count.set(1);
+  });
+
+  expect(observed).toEqual([1]);
+  expect(diagnostics.getEvents().every((event) => event.timestamp === 0)).toBe(true);
+});
+
+test("production-safe diagnostics preserve the value-free event shape", () => {
+  const diagnostics = createDiagnostics({ mode: "production-safe" });
+
+  diagnostics.run(() => {
+    const count = state("private-production-value");
+    count.set("private-production-next-value");
+  });
+
+  expect(diagnostics.mode).toBe("production-safe");
+  expect(JSON.stringify(diagnostics.getEvents())).not.toContain("private-production-value");
+  expect(JSON.stringify(diagnostics.getEvents())).not.toContain("private-production-next-value");
+});
+
 test("diagnostics records subscription lifecycle without listener values", () => {
   const diagnostics = createDiagnostics({ clock: () => 789 });
   const observed: number[] = [];

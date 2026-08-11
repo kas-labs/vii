@@ -123,6 +123,23 @@ try {
     [1, 2],
     "packed Vanilla consumer should observe State changes",
   );
+  assert.equal(consumer.doubledValue, 4, "packed Vanilla consumer should read Computed");
+  assert.equal(consumer.batchedValue, 2, "packed Vanilla consumer should commit batched writes");
+  assert.deepEqual(
+    consumer.batchedObservedValues,
+    [2],
+    "packed Vanilla consumer should observe one final batched value",
+  );
+  assert.deepEqual(
+    consumer.scopedObservedValues,
+    [1],
+    "packed Vanilla consumer should dispose Scope-owned subscriptions",
+  );
+  assert.equal(
+    consumer.scopedFinalValue,
+    2,
+    "packed Vanilla consumer should keep State usable after Scope disposal",
+  );
   console.log("Packed Core artifact and clean Vanilla consumer validated.");
 } finally {
   await rm(temporaryRoot, { recursive: true, force: true });

@@ -42,6 +42,7 @@ Practical instructions:
 - [First Implementation Backlog](./docs/implementation/FIRST_IMPLEMENTATION_BACKLOG.md)
 - [Agent and Developer Guide](./docs/implementation/AGENT_AND_DEVELOPER_GUIDE.md)
 - [Foundation Coverage Audit](./docs/roadmap/FOUNDATION_COVERAGE_AUDIT.md)
+- [Packed Vanilla fixture](./fixtures/vanilla/README.md)
 
 ## Current commitments
 

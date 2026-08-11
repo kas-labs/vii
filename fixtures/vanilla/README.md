@@ -1,3 +1,9 @@
+# Packed Vanilla fixture
+
+This fixture is a small clean-consumer example for the packed `@vii/core` artifact. Its executable
+source uses the current experimental State, Computed, Batch, and Scope APIs:
+
+```ts
 import { batch, computed, createScope, state } from "@vii/core";
 
 const count = state(0);
@@ -26,11 +32,8 @@ scope.run(() => {
 scopedCount.set(1);
 scope.dispose();
 scopedCount.set(2);
+```
 
-export const countValue = count.get();
-export const doubledValue = doubled.get();
-export const observedValues = observed;
-export const batchedValue = batchedCount.get();
-export const batchedObservedValues = batchedObserved;
-export const scopedFinalValue = scopedCount.get();
-export const scopedObservedValues = scopedObserved;
+The package-validation script installs a Core tarball into a clean temporary consumer, compiles
+this source, and checks the exported values and observations. The fixture test covers the same
+behavior from the workspace package.

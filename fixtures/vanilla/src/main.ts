@@ -11,11 +11,12 @@ const doubled = computed(() => count.get() * 2);
 
 const batchedCount = state(0);
 const batchedObserved: number[] = [];
-batchedCount.subscribe((value) => batchedObserved.push(value));
+const unsubscribeBatched = batchedCount.subscribe((value) => batchedObserved.push(value));
 batch(() => {
   batchedCount.set(1);
   batchedCount.set(2);
 });
+unsubscribeBatched();
 
 const scopedCount = state(0);
 const scopedObserved: number[] = [];

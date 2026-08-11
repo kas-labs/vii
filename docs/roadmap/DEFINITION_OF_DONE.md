@@ -44,6 +44,16 @@ A Vii work item is complete only when the relevant criteria below are satisfied.
 - public claims match implementation evidence, compatibility status, and roadmap maturity;
 - the website is not used as a substitute for canonical technical documentation.
 
+For visual website work:
+
+- Claude Design reference and approval state are recorded;
+- export/handoff state is recorded;
+- repository import state is recorded;
+- imported artifacts are reviewable in source control;
+- implementation is validated independently from the design export;
+- accessibility and responsive behavior are checked where applicable;
+- Claude Design is not treated as runtime or support evidence by itself.
+
 See `docs/website/PUBLIC_WEBSITE_AND_DOCUMENTATION_LIFECYCLE.md`.
 
 ## Packaging and release
@@ -71,6 +81,7 @@ A pull request should show:
 - known limitations;
 - compatibility impact;
 - website and documentation impact;
+- Claude Design handoff state when visual website work is involved;
 - screenshots or traces only when they add useful evidence.
 
 For public feature work, the PR should include a section such as:
@@ -83,6 +94,12 @@ Website and docs impact
 - Examples: updated | not required
 - Changelog/release notes: prepared | not required
 - Reason: ...
+
+Claude Design
+- Design: approved | pending | not required
+- Export: exported | pending | not required
+- Repository import: imported | pending | not required
+- Implementation validation: passed | pending | not required
 ```
 
 ## Documentation-only work
@@ -103,5 +120,7 @@ Website work is complete when:
 - technical terminology matches canonical repository documentation;
 - links to guides, API reference, compatibility, security, or benchmark evidence are valid where applicable;
 - temporary deployment domains are not treated as architecture contracts;
-- design follows the approved Vii/Kas Labs visual system without inventing conflicting runtime semantics;
+- visual implementation follows the approved Claude Design source where one exists;
+- Claude Design export/import provenance is reviewable when used;
+- the implementation does not invent conflicting runtime semantics;
 - protected production deployment still follows normal approval rules.

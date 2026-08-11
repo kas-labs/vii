@@ -13,8 +13,10 @@ export function state<T>(initialValue: T): WritableState<T> {
     active: boolean;
     listener: StateListener<T>;
   }> = [];
+  const pendingValues: T[] = [];
+  let isFlushing = false;
 
-  const notify = (value: T): void => {
+  const notify = (value: T): unknown[] => {
     const errors: unknown[] = [];
 
     for (const subscription of [...subscriptions]) {
@@ -29,6 +31,28 @@ export function state<T>(initialValue: T): WritableState<T> {
       }
     }
 
+    return errors;
+  };
+
+  const flushNotifications = (value: T): void => {
+    pendingValues.push(value);
+
+    if (isFlushing) {
+      return;
+    }
+
+    isFlushing = true;
+    const errors: unknown[] = [];
+
+    try {
+      while (pendingValues.length > 0) {
+        errors.push(...notify(pendingValues.shift()!));
+      }
+    } finally {
+      pendingValues.length = 0;
+      isFlushing = false;
+    }
+
     if (errors.length === 1) {
       throw errors[0];
     }
@@ -38,22 +62,17 @@ export function state<T>(initialValue: T): WritableState<T> {
     }
   };
 
+  const setValue = (nextValue: T): void => {
+    if (!Object.is(currentValue, nextValue)) {
+      currentValue = nextValue;
+      flushNotifications(currentValue);
+    }
+  };
+
   return {
     get: () => currentValue,
-    set: (nextValue) => {
-      if (!Object.is(currentValue, nextValue)) {
-        currentValue = nextValue;
-        notify(currentValue);
-      }
-    },
-    update: (updater) => {
-      const nextValue = updater(currentValue);
-
-      if (!Object.is(currentValue, nextValue)) {
-        currentValue = nextValue;
-        notify(currentValue);
-      }
-    },
+    set: setValue,
+    update: (updater) => setValue(updater(currentValue)),
     subscribe: (listener) => {
       const subscription = { active: true, listener };
       subscriptions.push(subscription);

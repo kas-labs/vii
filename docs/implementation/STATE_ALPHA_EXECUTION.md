@@ -67,9 +67,11 @@ count.subscribe(value => {
 });
 ```
 
-Decide whether nested updates are processed immediately, queued, or rejected in specific situations.
-
-The decision must preserve determinism and avoid corrupted notification state.
+The State prototype queues notifications for writes made inside listeners in synchronous FIFO order.
+The write commits immediately, the current listener snapshot completes, and the outermost write drains
+all queued notifications before returning. Listener errors are collected until that queue is empty.
+This decision preserves determinism and avoids recursive notification interleaving. See RFC 0002 for
+the contract wording and the Core tests for the executable behavior.
 
 ### 4. Computed values
 

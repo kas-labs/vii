@@ -1,3 +1,7 @@
-import * as core from "@vii/core";
+import { state } from "@vii/core";
 
-export const coreExports = Object.keys(core);
+const count = state(0);
+count.set(1);
+count.update((current) => current + 1);
+
+export const countValue = count.get();

@@ -41,6 +41,10 @@ try {
     "package/dist/index.d.ts.map",
     "package/dist/index.js",
     "package/dist/index.js.map",
+    "package/dist/state.d.ts",
+    "package/dist/state.d.ts.map",
+    "package/dist/state.js",
+    "package/dist/state.js.map",
     "package/package.json",
   ]);
   assert.deepEqual(new Set(entries), expectedEntries, "Core artifact contains unexpected files");
@@ -80,10 +84,8 @@ try {
 
   run(pnpm, ["install", "--ignore-scripts", "--no-frozen-lockfile"], consumerDirectory);
   run(pnpm, ["exec", "tsc", "-p", path.join(consumerDirectory, "tsconfig.json")]);
-  const result = execFileSync(process.execPath, [path.join(consumerDirectory, "dist/main.js")], {
-    encoding: "utf8",
-  });
-  assert.equal(result, "", "packed Vanilla consumer should not write to stdout");
+  const consumer = await import(path.join(consumerDirectory, "dist/main.js"));
+  assert.equal(consumer.countValue, 2, "packed Vanilla consumer should read and write State");
   console.log("Packed Core artifact and clean Vanilla consumer validated.");
 } finally {
   await rm(temporaryRoot, { recursive: true, force: true });

@@ -17,40 +17,83 @@ Describe the problem, the chosen approach, and the observable outcome.
 - [ ] New experimental API
 - [ ] Public API change
 - [ ] Tooling or CI
-- [ ] Security-related change
+- [ ] Performance-related change
+- [ ] Security/privacy-related change
 - [ ] Website or public documentation
 - [ ] Claude Design / design-system related
 
 ## Validation
 
-List the exact commands and evidence used to validate this change.
+List the exact commands and evidence used to validate this change. Do not claim a check passed unless it was run.
 
 ```text
 pnpm ...
 ```
 
-- [ ] Unit tests pass
+- [ ] Relevant focused tests pass
+- [ ] `pnpm validate` passes when implementation changed
 - [ ] Type checking passes
 - [ ] Linting passes
 - [ ] Package build passes
 - [ ] Packed-artifact validation passes when applicable
 - [ ] Consumer fixture passes when applicable
-- [ ] Framework or runtime compliance tests pass when applicable
+- [ ] Framework/runtime compliance tests pass when applicable
+- [ ] `git diff --check` passes locally when available
 
-## Architecture and compatibility
+## Architecture and maintainability
 
-Describe dependency-direction, public API, framework, runtime, package-manager, SSR, or migration implications.
+Describe:
+
+- affected package/module boundary;
+- intended dependency direction;
+- whether core remains framework/platform neutral;
+- whether files/functions exceed quality budgets;
+- decomposition performed or intentionally deferred;
+- any code-quality exception, responsible area, and review trigger.
+
+```text
+Production file >250 lines: yes | no
+Production file >300 lines: yes | no
+New/substantially expanded production file >400 lines: yes | no
+Function >40 lines: yes | no
+Function >80 lines: yes | no
+Exception required: yes | no
+Reason / follow-up:
+```
+
+## Runtime, compatibility, and package impact
+
+Describe public API, framework, runtime, package-manager, type-level, package-export, SSR, migration, or compatibility implications.
+
+```text
+Public API: changed | unchanged
+Compatibility: changed | unchanged
+Bundle/tree-shaking: improved | regressed | unchanged | not measured
+Memory/disposal: improved | regressed | unchanged | not applicable | not measured
+SSR/non-browser safety: changed | unchanged | not applicable
+Diagnostics overhead: changed | unchanged | not applicable
+Packed artifact impact: changed | unchanged | not applicable
+Migration required: yes | no
+```
+
+Performance, bundle, or memory claims must include reproducible evidence or be described as unverified hypotheses.
 
 ## Security and privacy
 
-Describe changes to permissions, diagnostics, data handling, registry content, dependencies, or supply-chain behavior. Write `None identified` when applicable.
+Describe changes to permissions, diagnostics, data handling, registry content, dependencies, network behavior, telemetry, or supply-chain behavior. Write `None identified` when applicable.
 
-## Documentation
+- [ ] No hidden telemetry or network access was introduced.
+- [ ] New runtime dependencies are explicitly justified.
+- [ ] No secrets, private source code, or personal data are included.
+
+## Documentation and durable state
 
 - [ ] Public behavior is documented
-- [ ] Relevant architecture documents are updated
+- [ ] Relevant architecture/RFC/ADR documents are updated
 - [ ] Migration notes are included when required
-- [ ] No documentation change is required
+- [ ] `PROJECT_STATE.md` is updated when durable state changed
+- [ ] `DUTY_WATCH.md` contains an accurate task handoff
+- [ ] No additional documentation change is required
 
 ## Website and docs impact
 
@@ -83,8 +126,12 @@ Implementation validation: pending | passed | not-needed
 - [ ] Exported artifacts are imported and reviewable in the repository
 - [ ] No visual design impact
 
-## Checklist
+## Authorship and delivery checklist
 
+- [ ] Branch follows `<type>/<short-kebab-description>` and has no actor/tool/model prefix.
+- [ ] Commits are atomic and use Conventional Commit subjects.
+- [ ] Commit messages contain no `Co-Authored-By` trailer for an assistant, model, agent, tool, or bot.
+- [ ] PR title/body contain no generated-by or tool/AI attribution.
 - [ ] The change is focused and reviewable.
 - [ ] I understand the submitted code, including AI-assisted code.
 - [ ] New dependencies are justified.
@@ -92,4 +139,3 @@ Implementation validation: pending | passed | not-needed
 - [ ] Website claims do not exceed current implementation and validation evidence.
 - [ ] New visual values are not invented when approved Claude Design context is required.
 - [ ] Claude Design output is not treated as implementation evidence by itself.
-- [ ] No secrets, private source code, or personal data are included.

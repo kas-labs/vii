@@ -37,6 +37,10 @@ try {
     .filter(Boolean);
   const expectedEntries = new Set([
     "package/README.md",
+    "package/dist/batch.d.ts",
+    "package/dist/batch.d.ts.map",
+    "package/dist/batch.js",
+    "package/dist/batch.js.map",
     "package/dist/computed.d.ts",
     "package/dist/computed.d.ts.map",
     "package/dist/computed.js",
@@ -53,6 +57,10 @@ try {
     "package/dist/state.d.ts.map",
     "package/dist/state.js",
     "package/dist/state.js.map",
+    "package/dist/scheduler.d.ts",
+    "package/dist/scheduler.d.ts.map",
+    "package/dist/scheduler.js",
+    "package/dist/scheduler.js.map",
     "package/dist/tracking.d.ts",
     "package/dist/tracking.d.ts.map",
     "package/dist/tracking.js",

@@ -76,7 +76,20 @@ The State prototype uses a synchronous FIFO notification queue for writes made f
 - listener errors are collected across the complete flush and reported after queued writes finish.
 
 This prevents recursive listener interleaving and lost queued updates while keeping State synchronous.
-The prototype does not yet define batching, Computed invalidation, or Scope disposal semantics.
+The prototype does not yet define Scope disposal semantics.
+
+### Prototype decision: batching
+
+The State prototype exposes `batch(work)` as a synchronous propagation boundary:
+
+- writes commit immediately while their notifier jobs are deferred;
+- nested batches flush only when the outermost batch completes;
+- repeated writes to one notifier coalesce to its final value before the flush;
+- notifier jobs run in FIFO commit order;
+- Computed invalidation jobs coalesce, so a Computed recomputes at most once per batch;
+- callback and listener errors are reported after committed writes and queued jobs finish.
+
+Batching remains synchronous and does not introduce a scheduler or asynchronous runtime dependency.
 
 ## Default equality
 

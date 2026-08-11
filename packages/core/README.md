@@ -5,7 +5,7 @@ This is the first buildable Vii package created by the Phase 0 repository bootst
 The package currently exposes the experimental `state` factory:
 
 ```ts
-import { state } from "@vii/core";
+import { computed, state } from "@vii/core";
 
 const count = state(0);
 count.set(1);
@@ -35,4 +35,15 @@ order. The current notification always completes before the queued notification 
 outermost `set` or `update` drains the complete synchronous queue before returning. Listener errors
 are reported after that queue is drained, so a failing listener cannot lose a later queued write.
 
-Computed, Batch, Scope, Query, UI, adapters, and CLI work belong to later implementation tasks.
+Computed values are lazy, cache their last result, and track synchronous State or Computed reads:
+
+```ts
+const doubled = computed(() => count.get() * 2);
+doubled.get(); // 4
+```
+
+Computed values invalidate when a dependency changes and notify subscribers only when the computed
+result changes. Dependencies that are no longer read are released. Circular reads throw
+`Computed cycle detected`, and `dispose()` releases dependencies and makes further use invalid.
+
+Batch, Scope, Query, UI, adapters, and CLI work belong to later implementation tasks.

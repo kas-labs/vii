@@ -219,3 +219,40 @@ PR: #26 (draft)
 
 - Merge PR #26 into `main`, delete the feature branch, and append the completed post-merge handoff
   with the resulting main revision.
+
+## 2026-08-12 00:20 Europe/Berlin | Complete P1.8 packed Vanilla fixture
+
+Status: completed
+Branch: `main` (source branch `feat/expand-vanilla-fixture` deleted after merge)
+PR: #26 (merged)
+
+### Scope
+
+- Finish P1.8 and record the post-merge repository state for the next task.
+
+### Changes
+
+- Merged PR #26 into `main` as `2fe80fc`.
+- Confirmed the Vanilla fixture now exercises State, Computed, Batch, and Scope through the packed
+  Core artifact and the clean-consumer package validation path.
+- Deleted local and remote `feat/expand-vanilla-fixture` after merge.
+- Confirmed future work remains on `<type>/<short-kebab-description>` branches; no `codex/*`
+  branch was used for this task.
+
+### Validation
+
+- `pnpm validate`: passed before merge; 46 Core tests and 5 Vanilla tests passed.
+- `pnpm pack:check`: passed before merge with tarball installation, compilation, and runtime
+  assertions in a clean consumer.
+- `git diff --check`: passed before merge.
+- Local `main` fast-forwarded to `2fe80fc` and matched `origin/main` after merge.
+
+### Architecture / compatibility
+
+- No runtime dependency, public API, framework-boundary, SSR, telemetry, or migration changes.
+- Core remains experimental, framework-neutral, ESM, and dependency-free at runtime; the fixture
+  explicitly releases its subscriptions and Scope-owned resources.
+
+### Remaining / recovery
+
+- None for P1.8. The next planned backlog item is P1.9 performance baselines.

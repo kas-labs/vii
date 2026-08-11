@@ -74,3 +74,39 @@ PR: not opened
 - Update `CONTRIBUTING.md` and pull-request template with the standardized delivery/attribution rules.
 - Add CI governance checks for branch names and forbidden attribution metadata.
 - Run/inspect repository validation and open the pull request.
+
+## 2026-08-11 22:51 Europe/Berlin | Governance alignment handoff
+
+Status: completed
+Branch: `docs/align-engineering-governance`
+PR: #23
+
+### Scope
+
+- Finish the governance alignment and make the delivery conventions enforceable in pull requests.
+
+### Changes
+
+- Updated `CONTRIBUTING.md` with branch naming, atomic Conventional Commits, attribution policy, Clean Architecture direction, size budgets, testing requirements, runtime/library review points, and Duty Watch/Project State requirements.
+- Updated `.github/PULL_REQUEST_TEMPLATE.md` with architecture/decomposition evidence, file/function budgets, bundle/memory/SSR/package impact, durable-state checks, and attribution/delivery checks.
+- Added `.github/workflows/governance.yml` to validate branch names, Conventional Commit-style PR titles, commit subjects, and forbidden `Co-Authored-By` / generated-by / made-with attribution.
+- Opened PR #23: `docs(governance): align engineering delivery rules`.
+
+### Validation
+
+- Compared current Vii governance and contribution surfaces with Intentloom's `AGENTS.md`, `CONTRIBUTING.md`, and `docs/governance/CODE_QUALITY_STANDARDS.md` through the GitHub API.
+- Confirmed the branch itself follows the new naming convention: `docs/align-engineering-governance`.
+- Confirmed created commit subjects use allowed Conventional Commit forms.
+- `pnpm validate`: not run locally because this task was performed through repository API mutations rather than a local checkout.
+- GitHub Actions workflow/status results were queried immediately after PR creation; no run/status had been reported yet at that point.
+
+### Architecture / compatibility
+
+- No runtime implementation, public API, package export, bundle, memory, SSR, or migration behavior changed.
+- Shared governance is aligned with Intentloom, but Intentloom-specific provider, Tauri, Desktop, MCP, and catalog constraints remain intentionally excluded.
+- Vii-specific governance now treats lifecycle/disposal, framework isolation, bundle size, memory behavior, SSR safety, tree-shaking, packed artifacts, diagnostics overhead, and benchmark evidence as first-class review concerns.
+
+### Remaining / recovery
+
+- Review GitHub Actions results on PR #23 when available before merge.
+- No additional repository changes are required for the requested governance alignment unless CI reveals a workflow syntax or policy-regex issue.

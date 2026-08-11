@@ -3,4 +3,5 @@
  *
  * This module exists to prove the package's ESM entrypoint and declaration output.
  */
-export {};
+export { state } from "./state.js";
+export type { WritableState } from "./state.js";

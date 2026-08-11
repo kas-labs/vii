@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
-import { coreExports } from "../src/main.js";
+import { countValue } from "../src/main.js";
 
-test("Vanilla fixture imports the Core package entrypoint", () => {
-  expect(coreExports).toEqual([]);
+test("Vanilla fixture reads and writes State from Core", () => {
+  expect(countValue).toBe(2);
 });

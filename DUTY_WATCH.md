@@ -110,3 +110,43 @@ PR: #23
 
 - Review GitHub Actions results on PR #23 when available before merge.
 - No additional repository changes are required for the requested governance alignment unless CI reveals a workflow syntax or policy-regex issue.
+
+## 2026-08-12 00:04 Europe/Berlin | Merge Core State stack into main
+
+Status: completed
+Branch: `main` (source branch `codex/diagnostics` deleted after merge)
+PR: #24 (merged)
+
+### Scope
+
+- Merge the completed stacked Core implementation through P1.7 into `main` and remove the current
+  feature branch.
+
+### Changes
+
+- Retargeted PR #24 from `codex/scope` to `main` and merged it as `9f11415`.
+- The merge brings the State, Computed, Batch, Scope, and bounded Diagnostics implementation into
+  `main`.
+- Deleted remote and local `codex/diagnostics` after the merge.
+- Confirmed the repository branch convention from `AGENTS.md`: future branches use
+  `<type>/<short-kebab-description>` and never actor/tool prefixes.
+
+### Validation
+
+- `pnpm validate`: passed on the P1.7 implementation branch before merge.
+- Evidence included 46 Core tests, 2 Vanilla fixture tests, build, packed artifact validation, and
+  clean packed-consumer verification.
+- Local `main` was fast-forwarded to `9f11415` and is clean.
+
+### Architecture / compatibility
+
+- No new runtime changes were made by this handoff task; it records the already merged experimental
+  Core surface.
+- Core remains framework-neutral, ESM, dependency-free at runtime, value-free by default for
+  diagnostics, and validated through the packed artifact.
+
+### Remaining / recovery
+
+- None for the merge task.
+- Older historical stacked `codex/*` branches remain on the remote because only the merged current
+  feature branch was in scope for deletion.

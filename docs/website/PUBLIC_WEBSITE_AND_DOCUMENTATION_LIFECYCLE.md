@@ -19,8 +19,9 @@ Vii currently distinguishes these surfaces:
 3. **Public documentation**: user-facing guides, API references, examples, migration guides, tutorials, and troubleshooting.
 4. **Public website**: landing pages, ecosystem overview, feature pages, release highlights, benchmarks, compatibility information, and links to documentation.
 5. **Release communication**: changelog, release notes, upgrade notes, and public support status.
+6. **Design authoring**: Claude Design projects, approved visual states, prototypes, exported assets, tokens, and handoff artifacts used to implement website surfaces.
 
-A change may affect one or more surfaces. The agent must assess all five rather than assuming a code change is complete when tests pass.
+A change may affect one or more surfaces. The agent must assess all relevant surfaces rather than assuming a code change is complete when tests pass.
 
 ## Domain and deployment boundary
 
@@ -47,6 +48,8 @@ accepted RFCs and ADRs
 → website summaries and marketing copy
 ```
 
+Claude Design is the visual design-authoring source for approved website surfaces, but it does not define package behavior, support status, compatibility, runtime architecture, security guarantees, or release maturity.
+
 The website may simplify technical content, but it must not claim support that is absent from implementation evidence.
 
 ## Feature publication lifecycle
@@ -59,6 +62,8 @@ Implement
 → Classify public impact
 → Update canonical docs
 → Update examples/API reference
+→ Assess Claude Design impact for visual surfaces
+→ Export and import approved design artifacts when required
 → Update website when public value changes
 → Prepare release communication
 → Verify links and claims
@@ -124,7 +129,38 @@ A public feature normally requires at least one user-facing artifact:
 
 Examples should prefer runnable or validated code over illustrative pseudo-APIs.
 
-### 6. Update the website
+### 6. Assess Claude Design impact
+
+Visual website work must identify whether an approved Claude Design source already exists or whether new design work is required.
+
+Use this handoff state:
+
+```text
+Claude Design reference:
+Design status: missing | draft | approved
+Export status: not-needed | pending | exported
+Repository import status: not-needed | pending | imported
+Implementation validation: pending | passed
+```
+
+The normal design-to-code path is:
+
+```text
+Claude Design
+→ reviewed/approved design
+→ export or handoff
+→ repository import
+→ implementation
+→ responsive/accessibility validation
+→ website review
+→ publication approval
+```
+
+A Claude Design project, mockup, prototype, or export is design evidence, not implementation-support evidence by itself.
+
+Agents must not invent visual values when an approved Claude Design source exists but is unavailable. They should report the missing design dependency and stop or defer the visual portion of the task.
+
+### 7. Update the website
 
 A website update is required when the change materially affects what Vii can publicly present.
 
@@ -143,7 +179,7 @@ Typical triggers:
 
 The website does not need a new section for every internal refactor, test improvement, implementation detail, or experimental branch.
 
-### 7. Prepare release communication
+### 8. Prepare release communication
 
 When release policy requires it, prepare:
 
@@ -153,7 +189,7 @@ When release policy requires it, prepare:
 - migration note;
 - package-version/support status.
 
-### 8. Verify claims
+### 9. Verify claims
 
 Before publication, verify that public wording matches actual evidence.
 
@@ -185,7 +221,9 @@ Website and docs impact
 - Reason: ...
 ```
 
-The agent must not silently decide that a public feature requires no documentation.
+When visual website work is involved, also report the Claude Design handoff state.
+
+The agent must not silently decide that a public feature requires no documentation or design assessment.
 
 ## Agent recommendation trigger
 
@@ -205,9 +243,10 @@ This feature is now validated enough to add/update:
 - website: <section/page>
 - examples: <examples>
 - release communication: <entry>
+- Claude Design: existing approved design | new design required | export/import pending
 ```
 
-The agent may prepare the content and implementation plan, but protected publication/deployment actions still follow normal approval rules.
+The agent may prepare the content, implementation plan, and approved design import within authorized repository paths, but protected publication/deployment actions still follow normal approval rules.
 
 ## Website task classes
 
@@ -274,20 +313,37 @@ Not every category must exist on day one.
 
 The website should grow when implementation evidence requires a new surface, not because an empty navigation item was planned years in advance.
 
-## Figma and design-system relationship
+## Claude Design and design-system relationship
 
-Figma defines intended visual design and interaction references.
+Claude Design is the design authoring source for Vii website surfaces.
 
-The repository defines implementation and technical truth.
+It may define:
 
-When the website is implemented, reusable visual primitives should follow the approved design system and tokens rather than creating an unrelated website-only component language.
+- layouts;
+- typography;
+- spacing;
+- visual hierarchy;
+- component states;
+- interaction behavior;
+- responsive states;
+- light and dark themes;
+- visual tokens;
+- brand assets;
+- prototypes.
+
+The repository remains the source of implemented, reviewable artifacts and technical truth.
+
+When the website is implemented, approved Claude Design output should move through an explicit export/handoff and repository-import step. Production website code should consume reviewable repository artifacts such as tokens, CSS variables, assets, components, or generated files rather than depending on live Claude Design access at runtime.
 
 However:
 
-- Figma is not the source of runtime/API truth;
-- website copy must not be generated from mockups alone;
+- Claude Design is not the source of runtime/API truth;
+- website copy must not be generated from design artifacts alone;
 - design updates do not automatically change public support status;
-- technical examples must be validated independently from visual design.
+- technical examples must be validated independently from visual design;
+- Claude Design must not become a Vii runtime dependency.
+
+If design output and implementation drift, treat the difference as a reviewable discrepancy rather than silently choosing one side.
 
 ## Same-PR versus follow-up rule
 
@@ -295,14 +351,16 @@ Prefer the same PR when:
 
 - documentation is small and directly coupled to the feature;
 - examples are required to understand the API;
-- a stale website claim would be incorrect after merge.
+- a stale website claim would be incorrect after merge;
+- the approved Claude Design export is small, reviewable, and directly tied to the website change.
 
 Use a linked follow-up task when:
 
 - the website lives in a different deployment/repository boundary;
 - launch timing is intentionally separate;
 - the feature is implemented but not yet ready for public announcement;
-- visual/content work is substantial and would make the implementation PR unsafe or hard to review.
+- visual/content work is substantial and would make the implementation PR unsafe or hard to review;
+- Claude Design work is still draft or export/import is not ready.
 
 A follow-up must be explicit. "Update website later" without an issue/task is not sufficient.
 
@@ -319,9 +377,10 @@ A future Vii profile may automatically assess changed files and suggest public-s
 - documentation paths;
 - compatibility changes;
 - roadmap status;
-- labels or task metadata.
+- labels or task metadata;
+- Claude Design handoff metadata for visual surfaces.
 
-Intentloom may propose or create approved tasks, but it must not fabricate support claims or publish content without required authority.
+Intentloom may propose or create approved tasks, but it must not fabricate support claims, invent visual design, or publish content without required authority.
 
 ## Example
 
@@ -343,6 +402,10 @@ Website
 - add Vue to the framework integration overview
 - add or update ecosystem feature card
 
+Claude Design
+- verify approved integration-card/page state exists
+- export/import visual artifacts if the website surface changes
+
 Release
 - changelog/release note
 
@@ -355,7 +418,8 @@ An internal refactor of the same adapter with no public behavior change would no
 ```text
 Website: not required
 Public docs: not required
-Reason: no public API, support, compatibility, or user-visible behavior changed
+Claude Design: not required
+Reason: no public API, support, compatibility, user-visible behavior, or visual surface changed
 ```
 
 ## Non-goals
@@ -366,5 +430,7 @@ This policy does not:
 - make the website the technical source of truth;
 - force website code into Vii runtime packages;
 - require one deployment technology or domain forever;
+- make Claude Design a Vii runtime dependency;
 - allow an agent to publish unsupported claims;
+- allow an agent to invent missing visual design;
 - bypass human approval for protected deployment or release operations.

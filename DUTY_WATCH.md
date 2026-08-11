@@ -37,6 +37,138 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-12 01:42 Europe/Berlin | Implement P2.2 React adapter
+
+Status: completed
+Branch: `perf/state-core-baselines`
+PR: not opened
+
+### Scope
+
+- Implement the first private React adapter on top of the P2.1 external-store contract.
+- Verify React lifecycle, selector/equality, batching, SSR, types, and packed-consumer behavior.
+
+### Changes
+
+- Added private `packages/react` with the `useVii` hook backed by React's external-store integration.
+- Added selector and custom equality support while keeping Core responsible for snapshots, batching,
+  and subscription cleanup.
+- Added Strict Mode cleanup, selector equality, batch propagation, SSR server-snapshot, and type
+  inference tests.
+- Added `fixtures/react` and extended package validation to install packed Core and React artifacts in
+  clean Vanilla and React consumers.
+- Documented the experimental/private status, peer dependency boundary, SSR responsibility, and next
+  adapter direction.
+
+### Validation
+
+- `pnpm --filter @vii/react lint`: passed.
+- `pnpm --filter @vii/react typecheck`: passed.
+- `pnpm --filter @vii/react test`: passed; 6 tests.
+- `npx -y react-doctor@latest . --verbose`: passed; 100/100, no issues found.
+- `pnpm validate`: passed; formatting, lint, typecheck, Core 46 tests, adapter-testing 9 tests, React
+  6 tests, React fixture 1 test, Vanilla 5 tests, builds, and packed Core/React clean-consumer
+  validation.
+- `git diff --check`: passed.
+
+### Architecture / compatibility
+
+- Core has no React dependency; React stays at the adapter peer boundary and React DOM/test renderer
+  remain development-only dependencies.
+- The package is private and experimental; no stable public API or finalized RFC 0005 naming contract
+  was introduced.
+- The adapter uses Core snapshots and subscriptions, provides React's server snapshot, and leaves
+  request-isolated store creation and hydration data to the application.
+- Packed artifact inspection confirms the React package contains adapter output only and does not bundle
+  React or introduce network, telemetry, or other runtime side effects.
+
+### Remaining / recovery
+
+- None for P2.2. The next planned backlog item is P2.3, the Angular adapter.
+
+## 2026-08-12 00:49 Europe/Berlin | Establish P1.9 Core performance baselines
+
+Status: completed
+Branch: `perf/state-core-baselines`
+PR: not opened
+
+### Scope
+
+- Establish the P1.9 baseline suite for the existing experimental Core runtime.
+
+### Changes
+
+- Added `scripts/benchmarks/core-state-baseline.mjs` and the `pnpm benchmark:core` command.
+- Added baseline coverage for State creation/writes, subscriber fan-out, Computed chains, batch
+  propagation, subscription disposal, Scope cleanup, and Diagnostics `off`, `development`, and
+  `production-safe` modes.
+- Added the reproducibility/methodology document and committed raw JSON output under
+  `benchmarks/results/`.
+- Updated Prettier ignores for generated benchmark data and the existing pnpm-owned lockfile without
+  changing the lockfile contents.
+
+### Validation
+
+- `pnpm benchmark:core`: passed; 10 scenarios, 10,000 operations, two warm-up rounds, five timed
+  repetitions, median samples recorded on Node 22.17.0 / Apple M4.
+- `pnpm validate`: passed; formatting, lint, typecheck, 46 Core tests, 5 Vanilla tests, build, and
+  packed Core artifact/clean Vanilla consumer validation.
+- `git diff --check`: passed.
+
+### Architecture / compatibility
+
+- No Core runtime, public API, dependency, framework-boundary, SSR, security, privacy, or migration
+  changes.
+- Benchmarks import the built Core ESM artifact and remain outside the production package. Results
+  are local baselines, not cross-runtime claims or numeric release budgets.
+
+### Remaining / recovery
+
+- None for P1.9. The next planned backlog item is P2.1, the shared adapter compliance suite.
+
+## 2026-08-12 01:22 Europe/Berlin | Establish P2.1 adapter compliance suite
+
+Status: completed
+Branch: `perf/state-core-baselines`
+PR: not opened
+
+### Scope
+
+- Create the shared adapter compliance suite required before implementing React, Angular, or Vue
+  adapters.
+
+### Changes
+
+- Added private `packages/adapter-testing` with a reusable generic compliance runner and a Core-backed
+  reference adapter test.
+- Added checks for current snapshot reads, update delivery, selected-value equality, nested batching,
+  explicit unsubscribe, disposal cleanup, parallel factory/request isolation, optional server
+  snapshots, and concrete TypeScript inference.
+- Added the package to Nx validation and the workspace lockfile as a local `@vii/core` devDependency.
+- Documented the provisional/private status in the adapter contract; public package naming and final
+  selector overloads remain governed by Draft RFC 0005.
+
+### Validation
+
+- `pnpm --filter @vii/adapter-testing lint`: passed.
+- `pnpm --filter @vii/adapter-testing typecheck`: passed.
+- `pnpm --filter @vii/adapter-testing test`: passed; 9 tests.
+- `pnpm validate`: passed; 3 Nx projects, 46 Core tests, 9 adapter compliance tests, 5 Vanilla
+  tests, build, and packed Core/clean Vanilla consumer validation.
+- `git diff --check`: passed.
+
+### Architecture / compatibility
+
+- Core remains dependency-free from adapter-testing; dependency direction is adapter-testing/tests →
+  Core, never Core → adapter-testing.
+- No runtime dependency, Core public API, framework package, SSR protocol, security/privacy default,
+  or migration contract was added. The suite is private until RFC 0005 resolves public naming and
+  selector semantics.
+
+### Remaining / recovery
+
+- None for P2.1. The next planned backlog item is P2.2, the React adapter.
+
 ## 2026-08-11 22:45 Europe/Berlin | Align engineering governance with Intentloom baseline
 
 Status: partial

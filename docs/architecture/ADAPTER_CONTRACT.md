@@ -99,6 +99,11 @@ Requirements:
 - no tearing introduced by the adapter;
 - cleanup on unmount.
 
+The initial private implementation lives in `packages/react` and exposes `useVii` through
+`useSyncExternalStore`. Core remains the source of truth for snapshots, selection, equality, batching,
+and subscription cleanup. The adapter provides the server snapshot required by React; applications
+remain responsible for request-isolated stores and equivalent hydration data.
+
 ## Angular direction
 
 The Angular adapter should expose Vii values as Angular Signals while respecting Angular injection and destruction lifecycles.
@@ -181,6 +186,10 @@ isolates parallel SSR requests
 preserves public TypeScript inference
 does not bundle the framework runtime
 ```
+
+The initial source-level suite lives in the private `packages/adapter-testing` workspace package. It
+is exercised by a Core-backed reference adapter and deliberately does not establish the final public
+package name or selector overloads while RFC 0005 remains Draft.
 
 ## Compatibility levels
 

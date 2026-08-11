@@ -14,6 +14,7 @@
     "typecheck": "nx run-many --target=typecheck --all",
     "test": "nx run-many --target=test --all",
     "build": "nx run-many --target=build --all",
+    "benchmark:core": "pnpm --filter @vii/core build && node scripts/benchmarks/core-state-baseline.mjs",
     "pack:check": "node scripts/package-validation/validate-package.mjs",
     "check": "pnpm validate",
     "validate": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm pack:check"

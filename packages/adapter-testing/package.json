@@ -1,0 +1,15 @@
+{
+  "name": "@vii/adapter-testing",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Internal shared compliance suite for Vii adapter implementations.",
+  "scripts": {
+    "lint": "eslint src test",
+    "typecheck": "tsc -p tsconfig.test.json",
+    "test": "vitest run --config ../../vitest.config.ts"
+  },
+  "devDependencies": {
+    "@vii/core": "workspace:*"
+  }
+}

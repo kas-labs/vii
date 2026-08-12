@@ -41,7 +41,7 @@ PR: <number or not opened>
 
 Status: completed
 Branch: `feat/project-detection`
-PR: [#36](https://github.com/kas-labs/vii/pull/36) open
+PR: #32
 
 ### Scope
 
@@ -857,7 +857,7 @@ PR: #35
 
 Status: completed
 Branch: `feat/cli-machine-output`
-PR: not opened
+PR: [#36](https://github.com/kas-labs/vii/pull/36) open
 
 ### Scope
 

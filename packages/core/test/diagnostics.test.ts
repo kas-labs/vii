@@ -104,6 +104,26 @@ test("production-safe diagnostics preserve the value-free event shape", () => {
   expect(JSON.stringify(diagnostics.getEvents())).not.toContain("private-production-next-value");
 });
 
+test("production-safe diagnostics redact user-provided scope names and trace ids", () => {
+  const diagnostics = createDiagnostics({
+    mode: "production-safe",
+    traceId: "customer@example.com",
+    clock: () => 123,
+  });
+
+  diagnostics.run(() => {
+    const scope = createScope({ name: "customer@example.com" });
+    scope.dispose();
+  });
+
+  const trace = diagnostics.exportTrace();
+
+  expect(trace.traceId).toBeUndefined();
+  expect(trace.events.every((event) => event.traceId === undefined)).toBe(true);
+  expect(trace.events[0]?.payload).not.toHaveProperty("name");
+  expect(JSON.stringify(trace)).not.toContain("customer@example.com");
+});
+
 test("diagnostics records subscription lifecycle without listener values", () => {
   const diagnostics = createDiagnostics({ clock: () => 789 });
   const observed: number[] = [];

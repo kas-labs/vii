@@ -168,7 +168,10 @@ redaction policies, and external schema compatibility remain deferred.
 
 Core also accepts an optional `traceId` when creating a diagnostics collector. When supplied, the
 identifier is copied to each event and the exported trace envelope for correlation. It is not
-inferred, propagated across asynchronous boundaries, or treated as an authorization token.
+inferred, propagated across asynchronous boundaries, or treated as an authorization token. In
+`production-safe` mode, the identifier is omitted and caller-provided `scope.created` names are
+redacted before events reach the in-memory buffer, sink, or exported trace. Core-generated
+identifiers and structural counts remain available for inspection.
 
 ## Diagnostic sinks
 

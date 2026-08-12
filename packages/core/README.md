@@ -102,5 +102,7 @@ and `production-safe` modes are supported; diagnostics sinks are observers and c
 updates. `exportTrace()` returns the current bounded snapshot in the versioned `vii.trace` `0.1`
 envelope with its dropped-event count. Core events contain identifiers, versions, counts, and
 lifecycle metadata, not State values. An explicit `traceId` option is copied to events and exports
-for correlation; no trace context is inferred or propagated automatically. The diagnostics protocol
-is experimental and does not add network, telemetry, or Devtools dependencies.
+for correlation in development mode; it is omitted in `production-safe` mode and no trace context
+is inferred or propagated automatically. Production-safe `scope.created` events also omit
+caller-provided scope names. The diagnostics protocol is experimental and does not add network,
+telemetry, or Devtools dependencies.

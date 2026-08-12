@@ -41,6 +41,16 @@ ownershipDiagnostics.run(() => {
   applicationScope.dispose();
 });
 const ownershipTrace = ownershipDiagnostics.exportTrace();
+const productionSafeDiagnostics = createDiagnostics({
+  mode: "production-safe",
+  traceId: "production-safe-user@example.com",
+  clock: () => 789,
+});
+productionSafeDiagnostics.run(() => {
+  const productionSafeScope = createScope({ name: "production-safe-user@example.com" });
+  productionSafeScope.dispose();
+});
+const productionSafeTrace = productionSafeDiagnostics.exportTrace();
 
 export const countValue = count.get();
 export const doubledValue = doubled.get();
@@ -54,5 +64,9 @@ export const diagnosticTraceVersion = diagnosticTrace.version;
 export const diagnosticTraceId = diagnosticTrace.traceId;
 export const diagnosticTraceEventTypes = diagnosticTrace.events.map((event) => event.type);
 export const diagnosticScopePayloads = ownershipTrace.events
+  .filter((event) => event.type === "scope.created")
+  .map((event) => event.payload);
+export const productionSafeTraceId = productionSafeTrace.traceId;
+export const productionSafeScopePayloads = productionSafeTrace.events
   .filter((event) => event.type === "scope.created")
   .map((event) => event.payload);

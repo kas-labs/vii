@@ -1102,3 +1102,51 @@ PR: [#41](https://github.com/kas-labs/vii/pull/41) open
 
 - PR #41 is open; monitor review and required checks. Do not implement or merge the API without an
   accepted RFC decision and explicit review.
+
+## 2026-08-13 00:53 CEST | Reconcile PR #41 merge and next-slice boundary
+
+Status: completed
+Branch: `docs/record-pr41-merge-status`
+PR: [#43](https://github.com/kas-labs/vii/pull/43) open
+
+### Scope
+
+- Verify the actual GitHub and local repository state after the RFC 0023 proposal and determine
+  whether a safe Phase 3 implementation slice is justified.
+
+### Changes
+
+- Recorded that PR #41 merged as `80ca537` with all six GitHub checks passing and no reviews or
+  comments; PR #42 subsequently merged as `4aae8b7` with all six checks passing.
+- Recorded that local `main` was clean, synchronized with `origin/main`, and that no runtime/API
+  implementation was started because RFC 0023 remains Proposed, RFC 0004 remains Draft, and no
+  security producer or consumer validates the proposed contract.
+- Confirmed that terminal CLI, Devtools, OpenTelemetry, network transport, telemetry, and new
+  packages remain outside this focused task.
+
+### Validation
+
+- Read-only `git status`, branch, log, merge metadata, and GitHub PR #41 checks/reviews/comments:
+  passed; PR #41 checks: CodeQL actions, CodeQL JavaScript/TypeScript, CodeQL, dependency review,
+  delivery policy, and validate all passed.
+- `git pull --ff-only origin main`: passed; already up to date.
+- `git diff --check`: passed.
+- `pnpm format:check`: passed.
+- `pnpm validate`: passed with lint, typecheck, tests, builds, and `pnpm pack:check`; clean packed
+  consumers for Core, React, Angular, Vue, and CLI Core passed. The first sandboxed attempt was
+  interrupted after repeated npm-registry DNS failures; the unchanged command passed with approved
+  network access.
+
+### Architecture / compatibility
+
+- No source, package, dependency, public API, protocol, filesystem, network, telemetry, security
+  enforcement, privacy boundary, bundle, memory, SSR, or compatibility behavior changed.
+- RFC 0023 remains Proposed; RFC 0004 remains Draft; RFC 0020 remains Proposed.
+
+### Remaining / recovery
+
+- A future implementation slice requires an accepted RFC decision plus a real security producer and
+  consumer, or another explicitly approved Phase 3 contract with a demonstrated consumer.
+- Do not implement `recordSecurity` or merge a security diagnostics API before those governance and
+  consumer prerequisites exist.
+- PR #43 checks are pending/in progress; do not merge without the separate explicit decision.

@@ -79,6 +79,34 @@ PR: not opened
 
 - None for P2.3. Continue with the next planned backlog item after review.
 
+## 2026-08-12 02:30 Europe/Berlin | Record P2.3 pull request
+
+Status: completed
+Branch: `feat/angular-adapter`
+PR: #30
+
+### Scope
+
+- Correct the P2.3 handoff after publishing the completed branch for review.
+
+### Changes
+
+- Opened [PR #30](https://github.com/kas-labs/vii/pull/30) for the Angular adapter implementation.
+- GitHub reports the PR as mergeable with `main`; required checks are queued.
+
+### Validation
+
+- `git diff --check`: passed after the handoff update.
+- PR checks: queued at handoff time; local `pnpm validate` had already passed.
+
+### Architecture / compatibility
+
+- No runtime or package changes; this entry only records the review handoff.
+
+### Remaining / recovery
+
+- Review and merge PR #30 after GitHub checks complete.
+
 ## 2026-08-12 02:00 Europe/Berlin | Add public-repository security workflows
 
 Status: completed

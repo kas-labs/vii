@@ -1,6 +1,15 @@
 export { detectProject } from "./detect-project.js";
+export { initProject } from "./init-project.js";
 export {
   ProjectDetectionError,
+  type InitOptions,
+  type InitPhase,
+  type InitPlan,
+  type InitPlannedFile,
+  type InitReport,
+  type InitReportStatus,
+  type InitResult,
+  type InitValidation,
   type DetectionConfidence,
   type DetectionConflict,
   type DetectionEvidence,

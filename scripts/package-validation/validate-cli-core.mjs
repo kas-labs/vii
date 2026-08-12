@@ -8,7 +8,7 @@ import { prepareConsumer } from "./consumer.mjs";
 
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = path.resolve(scriptDirectory, "../..");
-const fixtureDirectory = path.join(repositoryRoot, "fixtures/cli-detection");
+const fixtureDirectory = path.join(repositoryRoot, "fixtures/cli-init");
 const pnpm = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 const temporaryRoot = await mkdtemp(path.join(os.tmpdir(), "vii-cli-pack-check-"));
 const artifactDirectory = path.join(temporaryRoot, "artifact");
@@ -43,6 +43,10 @@ try {
       "package/dist/detect-project.d.ts.map",
       "package/dist/detect-project.js",
       "package/dist/detect-project.js.map",
+      "package/dist/init-project.d.ts",
+      "package/dist/init-project.d.ts.map",
+      "package/dist/init-project.js",
+      "package/dist/init-project.js.map",
       "package/dist/index.d.ts",
       "package/dist/index.d.ts.map",
       "package/dist/index.js",
@@ -77,6 +81,8 @@ try {
   const consumer = await import(path.join(consumerDirectory, "dist/main.js"));
   assert.equal(consumer.detectedPackageManager, "pnpm");
   assert.deepEqual(consumer.detectedViiPackages, ["@vii/cli-core"]);
+  assert.equal(consumer.initStatus, "dry-run");
+  assert.deepEqual(consumer.initFiles, ["vii.config.ts"]);
   console.log("Packed CLI Core artifact with clean consumer validated.");
 } finally {
   await rm(temporaryRoot, { recursive: true, force: true });

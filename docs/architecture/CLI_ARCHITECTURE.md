@@ -10,9 +10,10 @@ The CLI reduces setup complexity. It does not replace package managers, general-
 
 Vii may use those systems through adapters while preserving one Vii command and planning model.
 
-The initial private implementation is `@vii/cli-core`, which currently provides the read-only project
-detection boundary described in `PROJECT_DETECTION.md`. Terminal parsing, mutation commands, and
-package-manager execution remain future layers over this engine.
+The initial private implementation is `@vii/cli-core`, which provides the read-only project
+detection boundary described in `PROJECT_DETECTION.md` and the first deterministic `initProject`
+engine operation. Terminal parsing, package-manager execution, and the full `@vii/cli` package
+remain future layers over this engine.
 
 ## Entry points
 
@@ -100,6 +101,12 @@ Mutating commands support, where applicable:
 - `--no-color`.
 
 The CLI must not silently overwrite modified files or write outside the resolved project root.
+
+The initial `initProject` operation creates at most one root-level `vii.config.ts` containing the
+detected framework marker. It uses the shared detector as Analyze, returns the exact file plan for
+Preview, applies only a missing file, validates the resulting bytes, and reports the complete
+lifecycle. `--dry-run` is represented by the engine's `dryRun` option until a terminal parser exists.
+It does not install dependencies, execute project configuration, or resolve ambiguous detection.
 
 ## Shared CLI engine
 

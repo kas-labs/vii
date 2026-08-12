@@ -639,3 +639,48 @@ PR: #26 (merged)
 ### Remaining / recovery
 
 - None for P1.8. The next planned backlog item is P1.9 performance baselines.
+
+## 2026-08-12 12:03 CEST | Implement P3.2 vii init
+
+Status: completed
+Branch: `feat/cli-init`
+PR: not opened
+
+### Scope
+
+- Implement the minimal deterministic `vii init` engine slice on the shared CLI Core detection
+  boundary without starting the terminal `@vii/cli` package or P3.5 output protocol.
+
+### Changes
+
+- Added `initProject(root, { dryRun })` with the Analyze, Plan, Preview, Apply, Validate, Report
+  lifecycle and typed plan/report/validation results.
+- Init creates at most one root-level `vii.config.ts` with the detected framework marker, returns
+  the exact changed-file list, supports dry-run, and is idempotent.
+- Apply is blocked for ambiguous detection, changed local config, and config symlinks; no project
+  configuration is executed, no dependency is installed, and no network or secret access was added.
+- Added TDD coverage for dry-run, apply/idempotency, local-change protection, mixed-framework
+  ambiguity, config non-execution, and project-root symlink confinement.
+- Added a packed `fixtures/cli-init` consumer and updated CLI architecture, project detection,
+  package README, and durable project state documentation.
+
+### Validation
+
+- `pnpm --filter @vii/cli-core test`: passed, 13 tests.
+- Focused CLI Core lint, typecheck, and build: passed.
+- `pnpm pack:check`: passed, including packed CLI Core init consumer.
+- `pnpm validate`: passed with network-enabled clean-consumer installs.
+- `git diff --check`: passed.
+
+### Architecture / compatibility
+
+- The private experimental `@vii/cli-core` API is extended; RFCs 0006 and 0007 remain Draft and
+  the terminal CLI, package-manager execution, monorepo selection, and versioned JSON protocol are
+  deferred.
+- Filesystem writes are root-confined to the fixed config target and use create-only semantics;
+  dry-run has no writes. No Core runtime, framework adapter, dependency, telemetry, or package
+  installation behavior changed.
+
+### Remaining / recovery
+
+- Open the review PR after the final diff audit. No implementation work remains for this slice.

@@ -1069,7 +1069,7 @@ PR: [#40](https://github.com/kas-labs/vii/pull/40) open
 
 Status: completed locally
 Branch: `docs/security-diagnostics-contract`
-PR: pending creation
+PR: [#41](https://github.com/kas-labs/vii/pull/41) open
 
 ### Scope
 
@@ -1100,5 +1100,5 @@ PR: pending creation
 
 ### Remaining / recovery
 
-- Commit, push, and open the RFC proposal PR. Do not implement or merge the API without an accepted
-  RFC decision and explicit review.
+- PR #41 is open; monitor review and required checks. Do not implement or merge the API without an
+  accepted RFC decision and explicit review.

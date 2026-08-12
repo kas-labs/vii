@@ -948,7 +948,7 @@ PR: [#37](https://github.com/kas-labs/vii/pull/37) open
 
 Status: completed
 Branch: `feat/diagnostics-scope-ownership`
-PR: not opened
+PR: [#38](https://github.com/kas-labs/vii/pull/38) open
 
 ### Scope
 
@@ -981,5 +981,4 @@ PR: not opened
 
 ### Remaining / recovery
 
-- Commit the focused change, push `feat/diagnostics-scope-ownership`, and open the review PR. Do not
-  merge without explicit approval.
+- PR #38 is open; monitor review and required checks. Do not merge without explicit approval.

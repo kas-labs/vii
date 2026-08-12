@@ -899,3 +899,48 @@ PR: [#36](https://github.com/kas-labs/vii/pull/36) open
 ### Remaining / recovery
 
 - PR #36 is open; monitor review and required checks. Do not merge without explicit approval.
+
+## 2026-08-12 17:26 CEST | Implement P3.6 diagnostic trace export
+
+Status: completed
+Branch: `feat/diagnostic-trace-export`
+PR: not opened
+
+### Scope
+
+- Add the minimal Core export foundation for the versioned diagnostic trace format described by
+  `docs/architecture/DIAGNOSTICS_PROTOCOL.md`.
+- Record that P3.5 PR #36 merged successfully and that local `main` was synchronized before this
+  focused branch was created.
+
+### Changes
+
+- Added `Diagnostics.exportTrace()` and the experimental `DiagnosticTrace` type with the
+  `vii.trace` version `0.1` envelope, JSON-safe event snapshots, and dropped-event count.
+- Preserved the existing bounded ring buffer and value-free diagnostic boundary; trace timestamp
+  failures fall back safely without affecting runtime behavior.
+- Added public Core tests, Vanilla fixture coverage, packed clean-consumer assertions, and updated
+  the diagnostics protocol, Core README, and durable project state.
+- Kept file/network/telemetry/Devtools transports, custom redaction policies, and external schema
+  compatibility out of scope.
+
+### Validation
+
+- Core focused tests: passed, 48 tests across 7 files.
+- Core and Vanilla fixture lint, typecheck, build, and tests: passed.
+- `pnpm pack:check`: passed with Core, React, Angular, Vue, and CLI Core clean consumers.
+- `pnpm validate`: passed, including format, lint, typecheck, tests, build, and pack checks.
+- `git diff --check`: passed before commit.
+
+### Architecture / compatibility
+
+- Core remains framework-agnostic and has no new runtime dependency or transport boundary.
+- `vii.trace` remains Draft/experimental; no stable external schema, file export, network sink, or
+  Devtools contract is claimed.
+- The trace contains existing redacted diagnostic metadata and bounded events, not State values,
+  secrets, source code, or network payloads.
+
+### Remaining / recovery
+
+- Commit the focused change, push `feat/diagnostic-trace-export`, and open the review PR. Do not
+  merge without explicit approval.

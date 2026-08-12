@@ -9,6 +9,7 @@ export { createDiagnostics } from "./diagnostics.js";
 export type {
   DiagnosticEvent,
   DiagnosticSink,
+  DiagnosticTrace,
   Diagnostics,
   DiagnosticsMode,
   DiagnosticsOptions,

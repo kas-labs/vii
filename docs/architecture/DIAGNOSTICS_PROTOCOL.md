@@ -160,6 +160,12 @@ Exported traces should use an open versioned structure:
 
 Exports must support redaction and size limits.
 
+The P3.6 Core foundation exposes `diagnostics.exportTrace()` as a JSON-safe snapshot of the
+collector's bounded ring buffer. It uses `protocol: "vii.trace"` and `version: "0.1"`, includes
+`createdAt`, `events`, and `droppedEvents`, and inherits Core's value-free event boundary. It does
+not write files, connect transports, or add a Devtools/runtime dependency; file export, custom
+redaction policies, and external schema compatibility remain deferred.
+
 ## Diagnostic sinks
 
 Potential sink contract:

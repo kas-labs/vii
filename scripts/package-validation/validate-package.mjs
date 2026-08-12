@@ -196,6 +196,9 @@ try {
     2,
     "packed Vanilla consumer should keep State usable after Scope disposal",
   );
+  assert.equal(consumer.diagnosticTraceProtocol, "vii.trace");
+  assert.equal(consumer.diagnosticTraceVersion, "0.1");
+  assert.deepEqual(consumer.diagnosticTraceEventTypes, ["state.created", "state.updated"]);
 
   await prepareConsumer({
     directory: reactConsumerDirectory,

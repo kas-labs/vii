@@ -3,6 +3,9 @@ import {
   batchedObservedValues,
   batchedValue,
   countValue,
+  diagnosticTraceEventTypes,
+  diagnosticTraceProtocol,
+  diagnosticTraceVersion,
   doubledValue,
   observedValues,
   scopedFinalValue,
@@ -29,4 +32,10 @@ test("Vanilla fixture batches writes from Core", () => {
 test("Vanilla fixture disposes Scope-owned subscriptions from Core", () => {
   expect(scopedObservedValues).toEqual([1]);
   expect(scopedFinalValue).toBe(2);
+});
+
+test("Vanilla fixture exports a versioned diagnostics trace from Core", () => {
+  expect(diagnosticTraceProtocol).toBe("vii.trace");
+  expect(diagnosticTraceVersion).toBe("0.1");
+  expect(diagnosticTraceEventTypes).toEqual(["state.created", "state.updated"]);
 });

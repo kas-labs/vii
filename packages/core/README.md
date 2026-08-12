@@ -94,10 +94,12 @@ diagnostics.run(() => {
 });
 
 diagnostics.getEvents();
+diagnostics.exportTrace();
 ```
 
 The collector uses a bounded ring buffer and reports dropped event counts. `off`, `development`,
 and `production-safe` modes are supported; diagnostics sinks are observers and cannot break runtime
-updates. Core events contain identifiers, versions, counts, and lifecycle metadata, not State values.
-The diagnostics protocol is experimental and does not add network, telemetry, or Devtools
-dependencies.
+updates. `exportTrace()` returns the current bounded snapshot in the versioned `vii.trace` `0.1`
+envelope with its dropped-event count. Core events contain identifiers, versions, counts, and
+lifecycle metadata, not State values. The diagnostics protocol is experimental and does not add
+network, telemetry, or Devtools dependencies.

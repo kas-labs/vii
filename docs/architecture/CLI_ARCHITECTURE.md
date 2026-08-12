@@ -10,6 +10,10 @@ The CLI reduces setup complexity. It does not replace package managers, general-
 
 Vii may use those systems through adapters while preserving one Vii command and planning model.
 
+The initial private implementation is `@vii/cli-core`, which currently provides the read-only project
+detection boundary described in `PROJECT_DETECTION.md`. Terminal parsing, mutation commands, and
+package-manager execution remain future layers over this engine.
+
 ## Entry points
 
 Recommended user-facing commands:

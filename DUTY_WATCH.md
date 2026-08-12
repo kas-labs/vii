@@ -37,6 +37,47 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-12 02:56 Europe/Berlin | Implement P3.1 project detection
+
+Status: completed
+Branch: `feat/project-detection`
+PR: not opened
+
+### Scope
+
+- Implement the first read-only project and package-manager detection slice for the planned CLI
+  foundation.
+
+### Changes
+
+- Added private `@vii/cli-core` with `detectProject(root)` and typed evidence, confidence, conflicts,
+  framework/runtime/workspace/language/rendering, and installed Vii package results.
+- Detects npm, pnpm, Yarn, and Bun lockfiles/package-manager metadata without executing project config,
+  installing packages, reading secrets, mutating files, or accessing the network.
+- Added React/SSR, Angular, Vue, Vanilla, Nx mixed-workspace, conflicting-lockfile, malformed-manifest,
+  invalid-root, and read-only behavior tests.
+- Added a packed CLI Core clean consumer and wired it into `pnpm pack:check`; documented the provisional
+  root-level boundary and deferred monorepo project selection.
+
+### Validation
+
+- CLI Core lint, typecheck, tests (8), and build: passed.
+- `pnpm pack:check`: passed for Core, React, Angular, Vue, and CLI Core clean consumers.
+- `pnpm validate`: passed; 10 Nx projects and 14 test/build dependency tasks.
+- `git diff --check`: passed.
+
+### Architecture / compatibility
+
+- CLI Core is a private experimental Node tool package; Core remains free of CLI/filesystem imports.
+- Detection is read-only and evidence-based. No shell, process execution, network, telemetry, config
+  evaluation, package installation, or mutation was added.
+- RFCs 0006/0007 remain Draft. Nested monorepo project enumeration/selection and terminal command
+  parsing are intentionally deferred to later CLI slices.
+
+### Remaining / recovery
+
+- None for the P3.1 detector slice. Open a review PR after the final local audit.
+
 ## 2026-08-12 02:42 Europe/Berlin | Implement P2.4 Vue adapter
 
 Status: completed

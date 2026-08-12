@@ -40,6 +40,11 @@ equality, and batching semantics and is validated with an Angular 22 clean consu
 The private Vue adapter exposes `useVii` as a readonly shallow ref tied to the current effect scope
 and `createViiRef` for explicit disposal outside a Vue scope; it preserves Core selection, equality,
 and batching semantics and is validated with a Vue 3.5 clean consumer.
+The private `@vii/cli-core` package now provides read-only root project detection with evidence,
+confidence, conflict reporting, package-manager/framework/runtime/workspace/language/rendering
+classification, and installed Vii package discovery. It does not execute configuration, install
+dependencies, mutate files, read secret values, or access the network; its root-level monorepo
+selection remains provisional while RFCs 0006 and 0007 are Draft.
 
 ## Repository operating model
 
@@ -82,7 +87,8 @@ The focused adapter command is `pnpm --filter @vii/adapter-testing test`; the fu
 in `pnpm validate`. React adapter checks also include `pnpm --filter @vii/react test` and the packed
 React clean-consumer fixture. Angular adapter checks include `pnpm --filter @vii/angular test` and
 the packed Angular clean-consumer fixture. Vue adapter checks include `pnpm --filter @vii/vue test`
-and the packed Vue clean-consumer fixture.
+and the packed Vue clean-consumer fixture. CLI foundation checks include
+`pnpm --filter @vii/cli-core test` and the packed CLI Core clean-consumer fixture.
 
 Repository governance CI additionally checks branch naming and forbidden authorship/tool-attribution metadata for pull requests and their commits.
 The public repository also runs CodeQL analysis for JavaScript/TypeScript and GitHub Actions workflows,

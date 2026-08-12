@@ -37,6 +37,48 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-12 02:25 Europe/Berlin | Implement P2.3 Angular adapter
+
+Status: completed
+Branch: `feat/angular-adapter`
+PR: not opened
+
+### Scope
+
+- Add the planned private Angular Signals adapter on top of the Core readable-state contract.
+
+### Changes
+
+- Added `@vii/angular` with `viiSignal` for injection-context usage and `createViiSignal` for explicit
+  lifecycle ownership outside an injection context.
+- Bound adapter subscriptions to `DestroyRef`, while preserving Core snapshot, selector, equality, and
+  batching semantics.
+- Added Angular fixture and extended packed-consumer validation to cover Core, React, and Angular
+  artifacts in clean consumers.
+- Recorded the provisional Angular compatibility and SSR/hydration boundaries in adapter docs and
+  project state.
+
+### Validation
+
+- Angular lint, typecheck, tests (7), and build: passed.
+- Angular fixture lint, typecheck, test, and build: passed.
+- `pnpm pack:check`: passed for Core, React, and Angular packed artifacts with clean consumers.
+- `pnpm validate`: passed.
+- `git diff --check`: passed.
+
+### Architecture / compatibility
+
+- Core has no Angular dependency; Angular remains an adapter-edge peer dependency and the adapter is
+  private/experimental while RFC 0005 is Draft.
+- `DestroyRef` owns injection-context cleanup; explicit handles own cleanup for SSR or other external
+  lifecycles. No runtime network, telemetry, or automatic installation was added.
+- Packed consumer proof currently targets Angular 22.1.1. Hydration-specific behavior is not yet part
+  of the provisional adapter contract.
+
+### Remaining / recovery
+
+- None for P2.3. Continue with the next planned backlog item after review.
+
 ## 2026-08-12 02:00 Europe/Berlin | Add public-repository security workflows
 
 Status: completed

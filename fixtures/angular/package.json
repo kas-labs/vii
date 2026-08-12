@@ -1,0 +1,20 @@
+{
+  "name": "@vii/angular-fixture",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "lint": "eslint src test",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run --config ../../vitest.config.ts",
+    "build": "tsc -p tsconfig.build.json"
+  },
+  "dependencies": {
+    "@angular/compiler": "22.1.1",
+    "@angular/core": "22.1.1",
+    "@vii/angular": "workspace:*",
+    "@vii/core": "workspace:*",
+    "rxjs": "7.8.2",
+    "zone.js": "0.16.0"
+  }
+}

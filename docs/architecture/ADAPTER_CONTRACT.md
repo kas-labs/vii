@@ -123,6 +123,12 @@ Requirements:
 - optional RxJS interop;
 - no requirement to wrap every store in an Angular service.
 
+The initial private implementation lives in `packages/angular`. `viiSignal` creates a readonly
+Angular Signal and binds the Core subscription to the current `DestroyRef`; `createViiSignal` returns
+an explicit `{ signal, dispose }` handle for request or non-injection lifecycles. Selector and custom
+equality options remain at the adapter edge while Core owns snapshot, batching, and subscription
+semantics.
+
 ## Vue direction
 
 The Vue adapter should expose readonly shallow reactive values and avoid double deep-proxy reactivity.

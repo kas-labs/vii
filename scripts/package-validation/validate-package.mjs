@@ -1,19 +1,22 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { cp, mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { prepareConsumer } from "./consumer.mjs";
 
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = path.resolve(scriptDirectory, "../..");
 const fixtureDirectory = path.join(repositoryRoot, "fixtures/vanilla");
 const reactFixtureDirectory = path.join(repositoryRoot, "fixtures/react");
+const angularFixtureDirectory = path.join(repositoryRoot, "fixtures/angular");
 const pnpm = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 const temporaryRoot = await mkdtemp(path.join(os.tmpdir(), "vii-pack-check-"));
 const artifactDirectory = path.join(temporaryRoot, "artifact");
 const consumerDirectory = path.join(temporaryRoot, "consumer");
 const reactConsumerDirectory = path.join(temporaryRoot, "react-consumer");
+const angularConsumerDirectory = path.join(temporaryRoot, "angular-consumer");
 
 function run(command, args, cwd = repositoryRoot) {
   execFileSync(command, args, {
@@ -39,24 +42,29 @@ try {
   await mkdir(artifactDirectory, { recursive: true });
   await mkdir(consumerDirectory, { recursive: true });
   await mkdir(reactConsumerDirectory, { recursive: true });
+  await mkdir(angularConsumerDirectory, { recursive: true });
 
   run(pnpm, ["--filter", "@vii/core", "build"]);
   run(pnpm, ["--filter", "@vii/react", "build"]);
+  run(pnpm, ["--filter", "@vii/angular", "build"]);
   run(pnpm, ["--filter", "@vii/core", "pack", "--pack-destination", artifactDirectory]);
   run(pnpm, ["--filter", "@vii/react", "pack", "--pack-destination", artifactDirectory]);
+  run(pnpm, ["--filter", "@vii/angular", "pack", "--pack-destination", artifactDirectory]);
 
   const artifactNames = await readdir(artifactDirectory);
-  assert.equal(artifactNames.length, 2, "expected Core and React package artifacts");
+  assert.equal(artifactNames.length, 3, "expected Core, React, and Angular package artifacts");
   const artifactPaths = new Map(
     artifactNames.map((name) => [
-      name.startsWith("vii-core-") ? "core" : "react",
+      name.startsWith("vii-core-") ? "core" : name.startsWith("vii-react-") ? "react" : "angular",
       path.join(artifactDirectory, name),
     ]),
   );
   const coreArtifactPath = artifactPaths.get("core");
   const reactArtifactPath = artifactPaths.get("react");
+  const angularArtifactPath = artifactPaths.get("angular");
   assert.ok(coreArtifactPath, "expected a Core package artifact");
   assert.ok(reactArtifactPath, "expected a React package artifact");
+  assert.ok(angularArtifactPath, "expected an Angular package artifact");
   const expectedCoreEntries = new Set([
     "package/README.md",
     "package/dist/batch.d.ts",
@@ -114,42 +122,31 @@ try {
     ]),
     "React",
   );
+  assertPackageEntries(
+    angularArtifactPath,
+    new Set([
+      "package/README.md",
+      "package/dist/index.d.ts",
+      "package/dist/index.d.ts.map",
+      "package/dist/index.js",
+      "package/dist/index.js.map",
+      "package/package.json",
+    ]),
+    "Angular",
+  );
 
-  await cp(path.join(fixtureDirectory, "src"), path.join(consumerDirectory, "src"), {
-    recursive: true,
+  await prepareConsumer({
+    directory: consumerDirectory,
+    fixtureDirectory,
+    packageJson: {
+      name: "vii-packed-consumer",
+      private: true,
+      type: "module",
+      dependencies: { "@vii/core": `file:${coreArtifactPath}` },
+    },
+    repositoryRoot,
+    pnpm,
   });
-  await writeFile(
-    path.join(consumerDirectory, "package.json"),
-    JSON.stringify(
-      {
-        name: "vii-packed-consumer",
-        private: true,
-        type: "module",
-        dependencies: { "@vii/core": `file:${coreArtifactPath}` },
-      },
-      null,
-      2,
-    ),
-  );
-  await writeFile(
-    path.join(consumerDirectory, "tsconfig.json"),
-    JSON.stringify(
-      {
-        extends: path.join(repositoryRoot, "tsconfig.base.json"),
-        compilerOptions: {
-          noEmit: false,
-          outDir: "dist",
-          rootDir: "src",
-        },
-        include: ["src/**/*.ts"],
-      },
-      null,
-      2,
-    ),
-  );
-
-  run(pnpm, ["install", "--ignore-scripts", "--no-frozen-lockfile"], consumerDirectory);
-  run(pnpm, ["exec", "tsc", "-p", path.join(consumerDirectory, "tsconfig.json")]);
   const consumer = await import(path.join(consumerDirectory, "dist/main.js"));
   assert.equal(consumer.countValue, 2, "packed Vanilla consumer should read and write State");
   assert.deepEqual(
@@ -175,57 +172,60 @@ try {
     "packed Vanilla consumer should keep State usable after Scope disposal",
   );
 
-  await cp(path.join(reactFixtureDirectory, "src"), path.join(reactConsumerDirectory, "src"), {
-    recursive: true,
+  await prepareConsumer({
+    directory: reactConsumerDirectory,
+    fixtureDirectory: reactFixtureDirectory,
+    packageJson: {
+      name: "vii-packed-react-consumer",
+      private: true,
+      type: "module",
+      dependencies: {
+        "@vii/core": `file:${coreArtifactPath}`,
+        "@vii/react": `file:${reactArtifactPath}`,
+        react: "19.2.8",
+        "react-dom": "19.2.8",
+      },
+      devDependencies: {
+        "@types/react": "19.2.17",
+        "@types/react-dom": "19.2.3",
+      },
+    },
+    repositoryRoot,
+    pnpm,
   });
-  await writeFile(
-    path.join(reactConsumerDirectory, "package.json"),
-    JSON.stringify(
-      {
-        name: "vii-packed-react-consumer",
-        private: true,
-        type: "module",
-        dependencies: {
-          "@vii/core": `file:${coreArtifactPath}`,
-          "@vii/react": `file:${reactArtifactPath}`,
-          react: "19.2.8",
-          "react-dom": "19.2.8",
-        },
-        devDependencies: {
-          "@types/react": "19.2.17",
-          "@types/react-dom": "19.2.3",
-        },
-      },
-      null,
-      2,
-    ),
-  );
-  await writeFile(
-    path.join(reactConsumerDirectory, "tsconfig.json"),
-    JSON.stringify(
-      {
-        extends: path.join(repositoryRoot, "tsconfig.base.json"),
-        compilerOptions: {
-          noEmit: false,
-          outDir: "dist",
-          rootDir: "src",
-        },
-        include: ["src/**/*.ts"],
-      },
-      null,
-      2,
-    ),
-  );
-
-  run(pnpm, ["install", "--ignore-scripts", "--no-frozen-lockfile"], reactConsumerDirectory);
-  run(pnpm, ["exec", "tsc", "-p", path.join(reactConsumerDirectory, "tsconfig.json")]);
   const reactConsumer = await import(path.join(reactConsumerDirectory, "dist/main.js"));
   assert.equal(
     reactConsumer.renderedMarkup,
     '<span data-value="2">2</span>',
     "packed React consumer should render the Core server snapshot",
   );
-  console.log("Packed Core and React artifacts with clean consumers validated.");
+
+  await prepareConsumer({
+    directory: angularConsumerDirectory,
+    fixtureDirectory: angularFixtureDirectory,
+    packageJson: {
+      name: "vii-packed-angular-consumer",
+      private: true,
+      type: "module",
+      dependencies: {
+        "@angular/compiler": "22.1.1",
+        "@angular/core": "22.1.1",
+        "@vii/angular": `file:${angularArtifactPath}`,
+        "@vii/core": `file:${coreArtifactPath}`,
+        rxjs: "7.8.2",
+        "zone.js": "0.16.0",
+      },
+    },
+    repositoryRoot,
+    pnpm,
+  });
+  const angularConsumer = await import(path.join(angularConsumerDirectory, "dist/main.js"));
+  assert.equal(
+    angularConsumer.renderedValue,
+    2,
+    "packed Angular consumer should read a Core-backed signal",
+  );
+  console.log("Packed Core, React, and Angular artifacts with clean consumers validated.");
 } finally {
   await rm(temporaryRoot, { recursive: true, force: true });
 }

@@ -1,0 +1,40 @@
+{
+  "name": "@vii/angular",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Experimental Angular adapter for the Vii Core external-store contract.",
+  "files": [
+    "dist",
+    "README.md",
+    "package.json"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "sideEffects": false,
+  "scripts": {
+    "lint": "eslint src test",
+    "typecheck": "tsc -p tsconfig.test.json",
+    "test": "vitest run --config ../../vitest.config.ts",
+    "build": "tsc -p tsconfig.build.json"
+  },
+  "peerDependencies": {
+    "@angular/core": ">=17.0.0",
+    "@vii/core": ">=0.0.0"
+  },
+  "devDependencies": {
+    "@angular/compiler": "22.1.1",
+    "@angular/core": "22.1.1",
+    "@vii/core": "workspace:*",
+    "rxjs": "7.8.2",
+    "zone.js": "0.16.0"
+  },
+  "vii": {
+    "stability": "experimental",
+    "runtime": "angular-adapter"
+  }
+}

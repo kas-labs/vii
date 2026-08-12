@@ -17,6 +17,7 @@ This directory is the primary map for Vii product, architecture, security, gover
 11. [Public Website and Documentation Lifecycle](website/PUBLIC_WEBSITE_AND_DOCUMENTATION_LIFECYCLE.md)
 12. [Implementation Roadmap](roadmap/IMPLEMENTATION_ROADMAP.md)
 13. [Foundation Coverage Audit](roadmap/FOUNDATION_COVERAGE_AUDIT.md)
+14. [Ecosystem Capability Strategy](strategy/ECOSYSTEM_CAPABILITY_STRATEGY.md)
 
 ## Current implementation focus
 
@@ -32,6 +33,8 @@ repository foundation
 ```
 
 Native components, the application framework, SSR, native build orchestration, Nx integration, desktop, and mobile remain Research or Vision until prerequisites and evidence exist.
+
+Form, HTTP, native template control flow, and Vii-specific testing helpers now have explicit Research directions. Those documents define boundaries and graduation criteria; they do not mean the packages or syntax are implemented or supported.
 
 Intentloom integration begins as a documentation, policy, and task-context layer. It must not delay the first Core package or become a runtime dependency.
 
@@ -55,6 +58,7 @@ Developers and agents should read these guides together with the architecture do
 
 - `strategy/PRODUCT_VISION.md`
 - `strategy/PRODUCT_BOUNDARIES.md`
+- `strategy/ECOSYSTEM_CAPABILITY_STRATEGY.md`, how Vii learns from mature ecosystems while owning only Vii-specific semantics and keeping lower-level engines replaceable.
 
 ## Architecture
 
@@ -68,12 +72,14 @@ Developers and agents should read these guides together with the architecture do
 - `architecture/PLATFORM_CAPABILITIES.md`
 - `architecture/MONOREPO_BOOTSTRAP.md`
 
-### State, lifecycle, and diagnostics
+### State, lifecycle, diagnostics, and application modules
 
 - `architecture/STATE_ARCHITECTURE.md`
 - `architecture/REACTIVITY_AND_STREAMS.md`
 - `architecture/SCOPE_AND_RESOURCES.md`
 - `architecture/DIAGNOSTICS_PROTOCOL.md`
+- `architecture/FORM_ARCHITECTURE.md`, Research direction for a signal-first, typed, framework-agnostic Form module.
+- `architecture/HTTP_CLIENT.md`, Research direction for a small Fetch-first transport layer separate from Query.
 
 ### Adapters and tooling
 
@@ -85,6 +91,7 @@ Developers and agents should read these guides together with the architecture do
 ### Native component and application research
 
 - `architecture/COMPONENT_MODEL.md`
+- `architecture/TEMPLATE_CONTROL_FLOW.md`, Research semantics for conditional branches, keyed repetition, empty states, and switch-like template control flow.
 - `architecture/APPLICATION_FRAMEWORK.md`
 
 These documents describe a future direction, not current implementation support.
@@ -99,6 +106,28 @@ These documents describe a future direction, not current implementation support.
 
 - `architecture/SERVER_FOUNDATION.md`
 - `architecture/DESKTOP_MOBILE_RESEARCH.md`
+
+## Ecosystem capability research
+
+Vii uses an evidence-first capability rule:
+
+```text
+own Vii semantics
+reuse mature engines
+keep boundaries replaceable
+prove value through real consumers
+```
+
+Current explicit research tracks are:
+
+- Form, informed by Angular Signal Forms, TanStack Form, React Hook Form, Vue, and VeeValidate while defining its own Vii semantics;
+- HTTP, informed by Fetch, Angular HttpClient, Axios, and small Fetch clients while remaining separate from Query;
+- native template control flow, comparing block, directive, and TSX/JavaScript authoring while sharing one compiler/runtime semantic model;
+- Vii-specific testing intelligence over mature test runners rather than a new general-purpose runner;
+- Vite/Rolldown as the first native build research direction, with Bun and Rspack as optional adapters or compatibility targets;
+- meta-framework research such as Analog for orchestration and DX lessons rather than runtime dependency or API copying.
+
+Research documents do not create packages, syntax guarantees, runtime dependencies, or support promises.
 
 ## Intentloom and agent engineering
 
@@ -151,7 +180,7 @@ The Security Architecture defines intended controls. The Threat Model defines pr
 - `roadmap/DEFINITION_OF_DONE.md`
 - `roadmap/FOUNDATION_COVERAGE_AUDIT.md`
 
-The root `/ROADMAP.md` provides the public phase overview.
+The root `/ROADMAP.md` provides the public phase overview. Cross-phase capability research is intentionally separated from committed implementation milestones.
 
 ## Quality
 
@@ -186,6 +215,8 @@ The root `/ROADMAP.md` provides the public phase overview.
 ### Public website and documentation direction
 
 - RFC 0022: Public Website and Documentation Lifecycle
+
+The Form, HTTP, testing, and template-control-flow documents are Research inputs. They are intentionally not presented as accepted RFCs.
 
 These proposals remain Proposed. Implementation and support claims require accepted decisions, milestones, tests, fixtures, and releases.
 

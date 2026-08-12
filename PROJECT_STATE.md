@@ -16,7 +16,9 @@ Current architectural priorities include:
 - evidence-backed performance and compatibility claims;
 - thin framework adapters;
 - first-class diagnostics without hidden telemetry;
-- public API stability through RFC/ADR governance.
+- public API stability through RFC/ADR governance;
+- ownership of Vii-specific semantics while mature build, test, browser, and package-management engines remain replaceable infrastructure;
+- explicit Research tracks for a State/Scope-backed Form module, a Fetch-first HTTP transport separate from Query, and native template control-flow semantics.
 
 The current implementation includes the State Core surface through P1.9, the initial P2.1 shared
 adapter compliance suite, the initial P2.2 React adapter, the initial P2.3 Angular adapter, and the
@@ -70,6 +72,18 @@ and structural counts remain available.
 Structured security diagnostics remain a proposed follow-up contract in RFC 0023; no security-event
 recording API or enforcement behavior is implemented until that RFC is accepted and a real producer
 validates the boundary.
+
+The durable ecosystem research direction now separates capability ownership from tool ownership.
+Form research targets a small headless module that reuses Vii State, Scope, diagnostics, and thin
+framework adapters. HTTP research targets a small Fetch-first request/response transport and remains
+separate from Query cache and server-state semantics. Native template control flow belongs only to
+the future compiler/component program: conditionals, keyed repetition, empty states, and switch-like
+branches should share one Component IR and lifecycle model, while the exact source syntax remains
+unselected until prototypes justify it. Vitest remains the canonical repository test runner while it
+meets Vii needs; future Vii testing work should add domain-specific assertions, fixtures, and
+compliance utilities instead of recreating a general-purpose runner. Vite/Rolldown remain the first
+native build research direction, with Bun and Rspack treated as optional adapters or compatibility
+targets rather than Core dependencies.
 
 ## Repository operating model
 
@@ -134,6 +148,10 @@ Use the following ownership model rather than duplicating rules:
 - per-task handoff: `DUTY_WATCH.md`;
 - code quality and architecture baseline: `docs/governance/CODE_QUALITY_STANDARDS.md`;
 - product boundaries: `docs/strategy/PRODUCT_BOUNDARIES.md`;
+- ecosystem capability ownership and reuse rule: `docs/strategy/ECOSYSTEM_CAPABILITY_STRATEGY.md`;
+- Form research: `docs/architecture/FORM_ARCHITECTURE.md`;
+- HTTP transport research: `docs/architecture/HTTP_CLIENT.md`;
+- native template control-flow research: `docs/architecture/TEMPLATE_CONTROL_FLOW.md`;
 - API compatibility: `docs/governance/API_STABILITY.md`;
 - RFC process: `docs/governance/RFC_PROCESS.md`;
 - ADR process: `docs/governance/ADR_PROCESS.md`;

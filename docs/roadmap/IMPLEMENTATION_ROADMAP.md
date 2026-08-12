@@ -12,12 +12,14 @@ The roadmap is evidence-driven. A phase is complete only when its exit criteria 
 2. Validate architecture through real consumers.
 3. Do not begin a major module before its prerequisites are stable.
 4. Prefer thin adapters over duplicated implementations.
-5. Treat diagnostics, security, testing, documentation, packaging, migrations, and agent governance as product work.
+5. Treat diagnostics, security, testing, documentation, packaging, migrations, accessibility, and agent governance as product work.
 6. Keep research work separate from committed delivery.
 7. Do not confuse multiple authoring profiles with multiple runtime models.
 8. Do not build a general-purpose bundler before Vii-specific compiler value is proven.
-9. Keep Intentloom, InLoom, agents, and AI providers outside the Vii production runtime.
-10. Preserve human authority over architecture, security, governance, and releases.
+9. Do not build a general-purpose test runner while mature engines meet Vii requirements; add Vii-specific testing intelligence instead.
+10. Reuse mature engines behind replaceable boundaries when they do not compromise Vii semantics.
+11. Keep Intentloom, InLoom, agents, and AI providers outside the Vii production runtime.
+12. Preserve human authority over architecture, security, governance, and releases.
 
 ## Phase sequence
 
@@ -60,7 +62,7 @@ Goals:
 - implement structured diagnostics hooks;
 - publish a Vanilla TypeScript example;
 - establish memory, security, and behavior contract tests;
-- preserve clear boundaries between State, Query, Resource, and Stream concerns.
+- preserve clear boundaries between State, Query, Form, HTTP, Resource, and Stream concerns.
 
 Exit criteria:
 
@@ -77,6 +79,8 @@ Out of scope:
 - native renderer;
 - `.vii` compiler;
 - Query cache;
+- Form engine;
+- HTTP client;
 - mandatory RxJS;
 - deep proxy Store;
 - reducer or dispatch architecture;
@@ -142,6 +146,7 @@ Goals:
 - gather external alpha feedback;
 - simplify APIs based on evidence;
 - confirm memory, packaging, type-check, and security behavior in a larger project;
+- identify real Form and transport pain rather than designing those modules from demos alone;
 - evaluate whether agent context and task policies reduce or increase review cost.
 
 Exit criteria:
@@ -153,6 +158,94 @@ Exit criteria:
 - malicious fixtures cover the supported adapters and project patterns;
 - agent-assisted tasks preserve provenance and deterministic evidence where used.
 
+## Cross-phase capability research
+
+Status: Research
+
+This work may run in parallel only when it does not destabilize committed work. Architecture documents and prototypes are allowed; package creation and support claims require the normal roadmap and governance gates.
+
+### Form research track
+
+Prerequisites to begin meaningful prototype work:
+
+- State and Scope contracts are stable enough to model field ownership;
+- at least one real application contains non-trivial forms;
+- the adapter compliance model is usable for React, Angular, and Vue experiments.
+
+Research goals:
+
+- signal-first typed field tree;
+- granular field state;
+- sync and async validation;
+- cancellation and debounce semantics;
+- schema-provider neutrality;
+- input/output transformations;
+- nested object, array, dynamic, and multi-step forms;
+- submission lifecycle and server-field errors;
+- framework-neutral semantics with thin adapters;
+- accessibility and native HTML integration;
+- diagnostics without sensitive values;
+- bundle, memory, update-count, and type-check evidence.
+
+Primary architecture: `docs/architecture/FORM_ARCHITECTURE.md`.
+
+A Form implementation milestone should be proposed only after research demonstrates meaningful value over using an existing form library directly.
+
+### HTTP research track
+
+Prerequisites to begin meaningful prototype work:
+
+- Query's transport boundary is understood well enough to prevent duplication;
+- real applications demonstrate repeated request-layer boilerplate;
+- platform compatibility and server isolation requirements are explicit.
+
+Research goals:
+
+- Fetch-first transport;
+- configured clients and deterministic overrides;
+- functional middleware;
+- local request context;
+- AbortSignal cancellation;
+- timeout semantics;
+- runtime response decoding;
+- stable transport errors;
+- retries disabled by default;
+- SSR isolation and security boundaries;
+- browser, Node, Bun, and Deno fixtures when support is claimed;
+- production-safe diagnostics.
+
+Primary architecture: `docs/architecture/HTTP_CLIENT.md`.
+
+Vii HTTP must remain transport. It must not become another Query cache or server framework.
+
+### Toolchain and test research track
+
+Goals:
+
+- continue using Vitest as the canonical repository test runner while it satisfies project requirements;
+- prototype Vii-specific matchers, fixtures, and compliance utilities before considering a `@vii/testing` package;
+- use browser automation for browser-level evidence instead of building a browser runner;
+- keep Vite/Rolldown as the first native build research direction;
+- keep Bun and Rspack replaceable optional adapters or compatibility targets;
+- study Analog and other meta-frameworks for orchestration, not as dependencies or APIs to copy.
+
+Primary strategy: `docs/strategy/ECOSYSTEM_CAPABILITY_STRATEGY.md`.
+
+### Native template control-flow research track
+
+This research belongs to the native component/compiler program and must not introduce template semantics into Core or framework adapters.
+
+Goals:
+
+- define control-flow IR for conditionals, keyed repetition, empty states, and switch-like branches;
+- prove Scope creation and disposal for branches and repeated items;
+- preserve stable list identity, focus, local state, and Resources;
+- compare block, directive, and JavaScript/TSX authoring styles;
+- evaluate syntax tooling, source maps, accessibility, SSR/hydration, and security;
+- avoid committing to Angular-style `@` syntax until prototypes show it is the best Vii syntax.
+
+Primary architecture: `docs/architecture/TEMPLATE_CONTROL_FLOW.md`.
+
 ### Phase 5: Vii Query
 
 Status: Planned
@@ -163,6 +256,7 @@ Goals:
 - framework-neutral Query Core;
 - diagnostics and hydration foundations;
 - integration with State without making State depend on Query;
+- explicit transport contract so Query can use Vii HTTP, native Fetch, or another user-supplied client;
 - secure serialization and server-data boundaries.
 
 ### Phase 6: Vii UI and Registry foundation
@@ -192,6 +286,8 @@ Goals:
 - typed transport contract prototype;
 - validation, authorization, CSRF, SSRF, filesystem, command, upload, and serialization policies.
 
+This phase may provide compatibility evidence to Vii HTTP research, but it does not require an HTTP package to exist.
+
 ### Phase 8: Native component research
 
 Status: Research
@@ -211,6 +307,7 @@ Goals:
 - programmatic TypeScript prototype;
 - one Component IR;
 - fine-grained bindings;
+- first-class template control-flow IR;
 - Component Scope and Resource ownership;
 - accessibility and security compiler diagnostics;
 - source maps and IDE feasibility.
@@ -218,7 +315,8 @@ Goals:
 Exit evidence:
 
 - all profiles share one runtime contract;
-- lifecycle and diagnostics are equivalent;
+- lifecycle, control flow, and diagnostics are equivalent;
+- conditional and keyed-list compiler fixtures work;
 - malicious template fixtures pass;
 - performance and memory benefits are measured;
 - tooling quality is sufficient for further investment.
@@ -248,6 +346,8 @@ Exit evidence:
 - build speed, memory, bundle size, and runtime memory are measured;
 - Vii build orchestration provides value beyond a thin Vite preset.
 
+Vii does not create a replacement bundler or Vitest-equivalent merely to own the entire toolchain.
+
 ### Phase 10: Vii Application Framework
 
 Status: Vision
@@ -262,7 +362,8 @@ Potential goals:
 - explicit hybrid route rules;
 - typed loaders and server functions;
 - security header generation;
-- deployment adapters.
+- deployment adapters;
+- cohesive `vii dev`, `vii build`, `vii test`, and `vii check` commands over replaceable engines when justified.
 
 This phase advances only if the native runtime provides a clear advantage beyond existing framework adapters.
 
@@ -272,10 +373,10 @@ Status: Vision
 
 Potential work:
 
-- Forms;
+- advanced Form integrations if Form graduates;
+- advanced HTTP and server integrations if HTTP graduates;
 - advanced Devtools;
 - desktop and mobile packages;
-- advanced Server integrations;
 - additional UI components;
 - Stream module and RxJS interop;
 - partial hydration or islands research;
@@ -290,14 +391,14 @@ Protected architecture, security, governance, and release decisions remain human
 
 ## Phase gate rule
 
-A phase may begin in parallel only when:
+A phase or research track may begin in parallel only when:
 
 - it does not destabilize committed work;
 - it has a named owner;
 - its dependencies are explicit;
 - it is clearly marked as Research, Planned, or Vision;
 - it cannot be mistaken for supported production functionality;
-- its security and privacy boundaries are identified;
+- its security, privacy, and accessibility boundaries are identified;
 - its output can be deleted without blocking committed work;
 - agent permissions and context boundaries are defined where automation is used.
 
@@ -306,10 +407,12 @@ A phase may begin in parallel only when:
 Research should stop or be deferred when:
 
 - measured benefit does not justify complexity;
-- compatibility or security cannot meet published gates;
+- compatibility, accessibility, or security cannot meet published gates;
 - tooling quality would create an unacceptable developer experience;
 - maintenance capacity is missing;
+- an existing mature library or engine solves the validated need without losing important Vii semantics;
 - existing framework adapters already solve the validated user need;
+- committed Core or adapter delivery is being delayed;
 - agent host enforcement is insufficient;
 - context provenance or privacy cannot meet policy;
 - automation adds more review cost than value.

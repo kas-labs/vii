@@ -86,7 +86,7 @@ UI, adapters, and CLI work also belong to later implementation tasks.
 Diagnostics are opt-in, structured, bounded, and value-free by default:
 
 ```ts
-const diagnostics = createDiagnostics({ maxEvents: 100 });
+const diagnostics = createDiagnostics({ maxEvents: 100, traceId: "checkout" });
 
 diagnostics.run(() => {
   const count = state(0);
@@ -101,5 +101,6 @@ The collector uses a bounded ring buffer and reports dropped event counts. `off`
 and `production-safe` modes are supported; diagnostics sinks are observers and cannot break runtime
 updates. `exportTrace()` returns the current bounded snapshot in the versioned `vii.trace` `0.1`
 envelope with its dropped-event count. Core events contain identifiers, versions, counts, and
-lifecycle metadata, not State values. The diagnostics protocol is experimental and does not add
-network, telemetry, or Devtools dependencies.
+lifecycle metadata, not State values. An explicit `traceId` option is copied to events and exports
+for correlation; no trace context is inferred or propagated automatically. The diagnostics protocol
+is experimental and does not add network, telemetry, or Devtools dependencies.

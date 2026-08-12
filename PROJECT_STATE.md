@@ -62,6 +62,8 @@ versioned `vii.trace` `0.1` envelope; it preserves the bounded value-free event 
 event count without adding file, network, telemetry, or Devtools behavior.
 Scope ownership events also preserve optional scope names and parent scope identifiers so exported
 traces can inspect the ownership tree without exposing values or granting mutation authority.
+Diagnostics collectors may also receive an explicit optional `traceId`, which is copied to events
+and trace exports for correlation without automatic async propagation or authorization semantics.
 
 ## Repository operating model
 

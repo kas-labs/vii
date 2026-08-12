@@ -166,6 +166,10 @@ collector's bounded ring buffer. It uses `protocol: "vii.trace"` and `version: "
 not write files, connect transports, or add a Devtools/runtime dependency; file export, custom
 redaction policies, and external schema compatibility remain deferred.
 
+Core also accepts an optional `traceId` when creating a diagnostics collector. When supplied, the
+identifier is copied to each event and the exported trace envelope for correlation. It is not
+inferred, propagated across asynchronous boundaries, or treated as an authorization token.
+
 ## Diagnostic sinks
 
 Potential sink contract:

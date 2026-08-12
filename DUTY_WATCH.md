@@ -1064,3 +1064,41 @@ PR: [#40](https://github.com/kas-labs/vii/pull/40) open
 ### Remaining / recovery
 
 - PR #40 is open; monitor review and required checks. Do not merge without explicit approval.
+
+## 2026-08-12 18:45 CEST | Propose structured security diagnostics contract
+
+Status: completed locally
+Branch: `docs/security-diagnostics-contract`
+PR: [#41](https://github.com/kas-labs/vii/pull/41) open
+
+### Scope
+
+- Continue Phase 3 with the governance-required design slice for structured security diagnostics.
+- Record that PR #40 merged and local `main` was synchronized before this focused branch was created.
+
+### Changes
+
+- Added proposed RFC 0023 defining a finite `security.event` payload, fifteen candidate security
+  codes, bounded development metadata, production-safe omission, and the no-raw-payload boundary.
+- Linked the proposal from the diagnostics architecture and durable project state.
+- Kept the change documentation-only: no public API, runtime behavior, security enforcement,
+  terminal CLI, transport, telemetry, or dependency changes were made.
+
+### Validation
+
+- Documentation links and terminology reviewed against RFC 0004, RFC 0020, API stability policy,
+  diagnostics protocol, and current Core behavior.
+- `git diff --check` passed before commit.
+- No code tests were required because this slice proposes an API and intentionally adds no code.
+
+### Architecture / security / compatibility
+
+- RFC 0023 remains Proposed and experimental; it does not stabilize RFC 0020 or the diagnostics
+  protocol. Implementation must wait for an accepted decision and a real producer.
+- The proposed contract excludes raw input, credentials, complete malicious payloads, and mutation
+  authority; production-safe redaction is defense in depth.
+
+### Remaining / recovery
+
+- PR #41 is open; monitor review and required checks. Do not implement or merge the API without an
+  accepted RFC decision and explicit review.

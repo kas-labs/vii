@@ -67,6 +67,9 @@ and trace exports for correlation without automatic async propagation or authori
 In `production-safe` mode, Core omits that caller-provided correlation identifier and redacts
 caller-provided scope names before buffering, sinking, or exporting events; generated identifiers
 and structural counts remain available.
+Structured security diagnostics remain a proposed follow-up contract in RFC 0023; no security-event
+recording API or enforcement behavior is implemented until that RFC is accepted and a real producer
+validates the boundary.
 
 ## Repository operating model
 

@@ -639,3 +639,117 @@ PR: #26 (merged)
 ### Remaining / recovery
 
 - None for P1.8. The next planned backlog item is P1.9 performance baselines.
+
+## 2026-08-12 12:03 CEST | Implement P3.2 vii init
+
+Status: completed
+Branch: `feat/cli-init`
+PR: not opened
+
+### Scope
+
+- Implement the minimal deterministic `vii init` engine slice on the shared CLI Core detection
+  boundary without starting the terminal `@vii/cli` package or P3.5 output protocol.
+
+### Changes
+
+- Added `initProject(root, { dryRun })` with the Analyze, Plan, Preview, Apply, Validate, Report
+  lifecycle and typed plan/report/validation results.
+- Init creates at most one root-level `vii.config.ts` with the detected framework marker, returns
+  the exact changed-file list, supports dry-run, and is idempotent.
+- Apply is blocked for ambiguous detection, changed local config, and config symlinks; no project
+  configuration is executed, no dependency is installed, and no network or secret access was added.
+- Added TDD coverage for dry-run, apply/idempotency, local-change protection, mixed-framework
+  ambiguity, config non-execution, and project-root symlink confinement.
+- Added a packed `fixtures/cli-init` consumer and updated CLI architecture, project detection,
+  package README, and durable project state documentation.
+
+### Validation
+
+- `pnpm --filter @vii/cli-core test`: passed, 13 tests.
+- Focused CLI Core lint, typecheck, and build: passed.
+- `pnpm pack:check`: passed, including packed CLI Core init consumer.
+- `pnpm validate`: passed with network-enabled clean-consumer installs.
+- `git diff --check`: passed.
+
+### Architecture / compatibility
+
+- The private experimental `@vii/cli-core` API is extended; RFCs 0006 and 0007 remain Draft and
+  the terminal CLI, package-manager execution, monorepo selection, and versioned JSON protocol are
+  deferred.
+- Filesystem writes are root-confined to the fixed config target and use create-only semantics;
+  dry-run has no writes. No Core runtime, framework adapter, dependency, telemetry, or package
+  installation behavior changed.
+
+### Remaining / recovery
+
+- Open the review PR after the final diff audit. No implementation work remains for this slice.
+
+## 2026-08-12 12:05 CEST | Record P3.2 pull request
+
+Status: completed
+Branch: `feat/cli-init`
+PR: #33
+
+### Scope
+
+- Record the completed P3.2 review handoff after publishing the implementation branch.
+
+### Changes
+
+- Opened [PR #33](https://github.com/kas-labs/vii/pull/33) with the deterministic CLI Core init engine,
+  tests, packed fixture, and security/filesystem/documentation impact.
+- The PR was created after local focused checks, `pnpm pack:check`, `pnpm validate`, and
+  `git diff --check` passed.
+
+### Validation
+
+- GitHub PR created successfully; checks are pending their initial evaluation.
+- No additional source validation was needed after the documentation-only handoff.
+
+### Architecture / compatibility
+
+- No runtime or package behavior changes beyond the completed P3.2 implementation; this entry only
+  records the review handoff.
+
+### Remaining / recovery
+
+- Review and merge PR #33 after GitHub checks complete.
+
+## 2026-08-12 13:04 CEST | Fix P3.2 CodeQL filesystem race
+
+Status: completed
+Branch: `feat/cli-init`
+PR: #33
+
+### Scope
+
+- Resolve the CodeQL high-severity potential filesystem race reported on PR #33.
+
+### Changes
+
+- Replaced the `lstat` → `readFile` path check with one `open`/file-handle read using
+  `O_NOFOLLOW`, so inspection and content read operate on the same filesystem object.
+- Reused the safe inspection path during post-apply validation and preserved create-only `wx`
+  application semantics.
+- Kept explicit symlink blocking through `ELOOP` and added an assertion that applied config
+  validation succeeds.
+
+### Validation
+
+- `pnpm --filter @vii/cli-core test`: passed, 13 tests.
+- Focused CLI Core lint, typecheck, and build: passed.
+- `git diff --check`: passed.
+- `pnpm pack:check`: passed with packed Core, React, Angular, Vue, and CLI init consumers.
+- `pnpm validate`: passed with format, lint, typecheck, tests, builds, and pack checks.
+
+### Architecture / compatibility
+
+- No package boundary, dependency, runtime Core, or public support-tier change.
+- Filesystem reads now use descriptor-bound, no-follow semantics on the supported Node filesystem
+  path; no project configuration execution or dependency installation was added.
+
+### Remaining / recovery
+
+- None. The fix is pushed and PR #33 CodeQL, Validate, Governance, and Dependency Review checks
+  are green.

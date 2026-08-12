@@ -113,6 +113,12 @@ It must not:
 - connect to external services;
 - evaluate untrusted configuration code without an explicit safe strategy.
 
+The first mutating consumer, `initProject`, calls detection as its Analyze phase. It does not
+reinterpret detection signals: conflicts and mixed/unknown frameworks block Apply, while a dry-run
+returns the planned root-level `vii.config.ts` without writing it. Existing changed config files
+and config symlinks are reported as conflicts so project-root confinement and local ownership remain
+explicit.
+
 ## Machine-readable result
 
 ```bash

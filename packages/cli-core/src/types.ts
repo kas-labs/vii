@@ -52,6 +52,45 @@ export interface DetectedProject {
 
 export type ProjectDetectionErrorCode = "invalid-root" | "unreadable-root";
 
+export type InitPhase = "analyze" | "plan" | "preview" | "apply" | "validate" | "report";
+export type InitReportStatus = "dry-run" | "applied" | "unchanged" | "blocked";
+
+export interface InitOptions {
+  readonly dryRun?: boolean;
+}
+
+export interface InitPlannedFile {
+  readonly action: "create";
+  readonly content: string;
+  readonly path: string;
+}
+
+export interface InitPlan {
+  readonly conflicts: readonly string[];
+  readonly files: readonly InitPlannedFile[];
+}
+
+export interface InitValidation {
+  readonly errors: readonly string[];
+  readonly files: readonly string[];
+  readonly passed: boolean;
+}
+
+export interface InitReport {
+  readonly files: readonly string[];
+  readonly message: string;
+  readonly status: InitReportStatus;
+}
+
+export interface InitResult {
+  readonly applied: boolean;
+  readonly detection: DetectedProject;
+  readonly phases: readonly InitPhase[];
+  readonly plan: InitPlan;
+  readonly report: InitReport;
+  readonly validation: InitValidation;
+}
+
 export class ProjectDetectionError extends Error {
   readonly code: ProjectDetectionErrorCode;
 

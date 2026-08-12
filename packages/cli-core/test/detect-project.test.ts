@@ -1,8 +1,128 @@
-import { mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { expect, test } from "vitest";
-import { detectProject } from "../src/index.js";
+import { detectProject, initProject } from "../src/index.js";
+
+test("initProject dry-run reports the exact config file without mutating the project", async () => {
+  const root = await createFixture({
+    "package.json": JSON.stringify({ dependencies: { react: "19.0.0" } }),
+    "pnpm-lock.yaml": "lockfileVersion: '9.0'\n",
+    "next.config.js": "throw new Error('must not execute');\n",
+    "tsconfig.json": "{}\n",
+  });
+
+  try {
+    const result = await initProject(root, { dryRun: true });
+
+    expect(result.phases).toEqual(["analyze", "plan", "preview", "apply", "validate", "report"]);
+    expect(result.report.status).toBe("dry-run");
+    expect(result.report.files).toEqual(["vii.config.ts"]);
+    expect(result.plan.files.map((file) => file.path)).toEqual(["vii.config.ts"]);
+    expect(result.validation.passed).toBe(true);
+    await expect(readFile(path.join(root, "vii.config.ts"), "utf8")).rejects.toMatchObject({
+      code: "ENOENT",
+    });
+  } finally {
+    await removeFixture(root);
+  }
+});
+
+test("initProject applies one deterministic config and is idempotent", async () => {
+  const root = await createFixture({
+    "package.json": JSON.stringify({ dependencies: { vue: "3.5.0" } }),
+    "bun.lock": "lockfile\n",
+    "tsconfig.json": "{}\n",
+  });
+
+  try {
+    const first = await initProject(root);
+    const content = await readFile(path.join(root, "vii.config.ts"), "utf8");
+    const second = await initProject(root);
+
+    expect(first.applied).toBe(true);
+    expect(first.report).toMatchObject({ status: "applied", files: ["vii.config.ts"] });
+    expect(first.validation.passed).toBe(true);
+    expect(content).toContain('"framework": "vue"');
+    expect(second.applied).toBe(false);
+    expect(second.report).toMatchObject({ status: "unchanged", files: [] });
+    expect(await readFile(path.join(root, "vii.config.ts"), "utf8")).toBe(content);
+  } finally {
+    await removeFixture(root);
+  }
+});
+
+test("initProject does not overwrite a locally changed config", async () => {
+  const localConfig = "export default { framework: 'custom' };\n";
+  const root = await createFixture({
+    "package.json": JSON.stringify({ dependencies: { react: "19.0.0" } }),
+    "package-lock.json": "lockfile\n",
+    "tsconfig.json": "{}\n",
+    "vii.config.ts": localConfig,
+  });
+
+  try {
+    const result = await initProject(root);
+
+    expect(result.applied).toBe(false);
+    expect(result.report.status).toBe("blocked");
+    expect(result.plan.files).toEqual([]);
+    expect(result.plan.conflicts).toContain("vii.config.ts already exists with local changes");
+    expect(await readFile(path.join(root, "vii.config.ts"), "utf8")).toBe(localConfig);
+  } finally {
+    await removeFixture(root);
+  }
+});
+
+test("initProject blocks ambiguous detection without mutation", async () => {
+  const root = await createFixture({
+    "package.json": JSON.stringify({
+      dependencies: { "@angular/core": "20.0.0", react: "19.0.0" },
+    }),
+    "pnpm-lock.yaml": "lockfileVersion: '9.0'\n",
+    "tsconfig.json": "{}\n",
+  });
+
+  try {
+    const result = await initProject(root, { dryRun: true });
+
+    expect(result.detection.framework).toBe("mixed");
+    expect(result.report.status).toBe("blocked");
+    expect(result.report.files).toEqual([]);
+    expect(result.validation.passed).toBe(false);
+    await expect(readFile(path.join(root, "vii.config.ts"), "utf8")).rejects.toMatchObject({
+      code: "ENOENT",
+    });
+  } finally {
+    await removeFixture(root);
+  }
+});
+
+test("initProject refuses a config symlink that escapes the project root", async () => {
+  const root = await createFixture({
+    "package.json": JSON.stringify({ dependencies: { vue: "3.5.0" } }),
+    "pnpm-lock.yaml": "lockfileVersion: '9.0'\n",
+    "tsconfig.json": "{}\n",
+  });
+  const outsideRoot = await mkdtemp(path.join(os.tmpdir(), "vii-init-outside-"));
+  const outsideConfig = path.join(outsideRoot, "config.ts");
+  const localConfig = "export default { framework: 'outside' };\n";
+  await writeFile(outsideConfig, localConfig);
+  await symlink(outsideConfig, path.join(root, "vii.config.ts"));
+
+  try {
+    const result = await initProject(root);
+
+    expect(result.report.status).toBe("blocked");
+    expect(result.plan.conflicts).toContain(
+      "vii.config.ts is a symbolic link and cannot be changed safely",
+    );
+    expect(await readFile(outsideConfig, "utf8")).toBe(localConfig);
+  } finally {
+    await removeFixture(root);
+    await removeFixture(outsideRoot);
+  }
+});
 
 test("detectProject identifies supported package managers from lockfiles", async () => {
   const cases = [

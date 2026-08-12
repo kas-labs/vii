@@ -758,7 +758,7 @@ PR: #33
 
 Status: completed
 Branch: `feat/cli-add-state`
-PR: not opened
+PR: #34
 
 ### Scope
 
@@ -801,6 +801,5 @@ PR: not opened
 
 ### Remaining / recovery
 
-- Run the final diff audit, commit the focused change, push `feat/cli-add-state`, and open the review
-  PR with security, compatibility, filesystem, dry-run, and documentation impact. Do not merge without
-  explicit approval.
+- PR #34 is open with security, compatibility, filesystem, dry-run, and documentation impact
+  recorded. Review the GitHub checks and merge only with explicit approval.

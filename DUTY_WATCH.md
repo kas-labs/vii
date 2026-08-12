@@ -80,6 +80,34 @@ PR: not opened
 
 - None for P2.4. Open a review PR after the final local audit.
 
+## 2026-08-12 02:43 Europe/Berlin | Record P2.4 pull request
+
+Status: completed
+Branch: `feat/vue-adapter`
+PR: #31
+
+### Scope
+
+- Correct the P2.4 handoff after publishing the completed branch for review.
+
+### Changes
+
+- Opened [PR #31](https://github.com/kas-labs/vii/pull/31) for the Vue adapter implementation.
+- GitHub reports the PR as mergeable with `main`; required checks are in progress.
+
+### Validation
+
+- `git diff --check`: passed after the handoff update.
+- PR checks: in progress at handoff time; local `pnpm validate` had already passed.
+
+### Architecture / compatibility
+
+- No runtime or package changes; this entry only records the review handoff.
+
+### Remaining / recovery
+
+- Review and merge PR #31 after GitHub checks complete.
+
 ## 2026-08-12 02:25 Europe/Berlin | Implement P2.3 Angular adapter
 
 Status: completed

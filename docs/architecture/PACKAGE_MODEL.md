@@ -26,11 +26,14 @@ Examples:
 
 - `@vii/query`
 - `@vii/form`
+- `@vii/http`
 - `@vii/router`
 - `@vii/stream`
 - `@vii/ui`
 
 Modules do not silently become part of every client bundle.
+
+Form is a candidate State/Scope-backed application module. HTTP is a candidate Fetch-first transport module. Both remain subject to their architecture research, package proposal requirements, real-consumer evidence, and roadmap gates before publication or support claims.
 
 ## Native framework
 
@@ -75,6 +78,8 @@ Examples:
 - `@vii/nx`
 
 Tool packages may be privileged and require explicit filesystem, process, network, and environment security review.
+
+`@vii/testing` is a possible Vii-specific assertion, fixture, and compliance layer. It is not a commitment to build a new general-purpose test runner while mature runners such as Vitest satisfy the repository's needs.
 
 ## Distribution
 
@@ -156,18 +161,24 @@ They do not justify separate State, Scope, lifecycle, or application-framework p
 
 One compiler family may provide format-specific frontends that lower into a shared Component IR.
 
-## State, Query, Resource, and Stream packages
+Template control-flow syntax may differ between native templates and TSX, but conditional branches, keyed repetition, Scope ownership, disposal, and renderer behavior must lower to one control-flow semantic model.
+
+## State, Query, Form, HTTP, Resource, and Stream packages
 
 The package model preserves conceptual separation:
 
 ```text
 @vii/state    current values and dependency graph
-@vii/query    cached remote state
+@vii/query    cached remote state and server-state lifecycle
+@vii/form     form field state, validation, and submission lifecycle
+@vii/http     request/response transport and middleware
 @vii/stream   optional event streams
 @vii/rxjs     optional RxJS interop
 ```
 
 Resource ownership belongs to shared Scope foundations and relevant modules rather than a universal async abstraction that absorbs every use case.
+
+Query may use Vii HTTP, native Fetch, or another user-provided transport. HTTP must not silently become a second Query cache, and Form must not own network transport or server-state caching.
 
 ## Build packages
 
@@ -212,7 +223,7 @@ remote distribution client
 AI integration
 ```
 
-Build-time executables, native bridges, distribution clients, and AI integrations require stronger permission and threat review than passive runtime-neutral libraries.
+Build-time executables, native bridges, distribution clients, network transports, and AI integrations require stronger permission and threat review than passive runtime-neutral libraries.
 
 ## Naming
 

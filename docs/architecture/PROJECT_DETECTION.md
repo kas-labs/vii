@@ -8,6 +8,12 @@ Vii CLI must integrate with existing applications without guessing destructively
 
 Project detection produces a structured, explainable result that can be reviewed by users, tests, CI, InLoom, or other tools.
 
+The initial private implementation lives in `packages/cli-core` and exposes the asynchronous,
+read-only `detectProject(root)` function. It reports root-level evidence for package manager,
+framework, runtime, workspace, language, rendering, installed Vii packages, confidence, and
+conflicts. It deliberately does not enumerate or select nested monorepo projects yet; mixed roots
+remain explicit conflicts for a later CLI selection surface.
+
 ## Detection output
 
 ```ts

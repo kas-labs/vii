@@ -1028,7 +1028,7 @@ PR: [#39](https://github.com/kas-labs/vii/pull/39) open
 
 Status: completed locally
 Branch: `feat/diagnostics-production-safe`
-PR: pending creation
+PR: [#40](https://github.com/kas-labs/vii/pull/40) open
 
 ### Scope
 
@@ -1063,4 +1063,4 @@ PR: pending creation
 
 ### Remaining / recovery
 
-- Commit, push, and open the focused PR. Do not merge without explicit approval.
+- PR #40 is open; monitor review and required checks. Do not merge without explicit approval.

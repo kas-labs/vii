@@ -111,6 +111,12 @@ operations do not install dependencies, execute project configuration, mutate pa
 or resolve ambiguous detection. `addState` also requires an existing non-symlink `src` directory
 to keep its changed-file list exact and its write root-confined.
 
+`doctorProject` is the initial read-only doctor engine operation. It uses the shared detector as
+Analyze, validates diagnostic severity, and reports healthy, attention, or blocked findings without
+an Apply phase. It does not execute configuration, install dependencies, change files, read secret
+values, or access the network. Its typed result is private experimental plumbing; terminal parsing
+and the versioned `--json` protocol remain deferred to P3.5.
+
 ## Shared CLI engine
 
 Terminal commands, IDE integrations, InLoom agents, and Nx generators must use one underlying deterministic engine.

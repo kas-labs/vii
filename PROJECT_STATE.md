@@ -51,7 +51,10 @@ planned file paths, are idempotent, and block ambiguous detection, local changes
 Neither operation executes configuration, installs dependencies, changes package manifests, reads
 secret values, or accesses the network. The terminal `@vii/cli`, package-manager execution, state
 generator options, and root-level monorepo selection remain provisional while RFCs 0006 and 0007
-are Draft.
+are Draft. The read-only `doctorProject` engine operation uses the detector as Analyze and reports
+healthy, attention, or blocked findings for detection conflicts, missing Vii Core/framework/Nx
+integration, ambiguous rendering, and incomplete safe metadata. It does not execute configuration,
+install dependencies, mutate files, read secrets, or define the versioned P3.5 JSON protocol.
 
 ## Repository operating model
 
@@ -96,7 +99,8 @@ React clean-consumer fixture. Angular adapter checks include `pnpm --filter @vii
 the packed Angular clean-consumer fixture. Vue adapter checks include `pnpm --filter @vii/vue test`
 and the packed Vue clean-consumer fixture. CLI foundation checks include
 `pnpm --filter @vii/cli-core test` and the packed CLI Core detection/init/add-state clean-consumer
-fixture, which installs packed `@vii/core` and `@vii/cli-core` artifacts together.
+fixture, which installs packed `@vii/core` and `@vii/cli-core` artifacts together and exercises
+read-only doctor reporting.
 
 Repository governance CI additionally checks branch naming and forbidden authorship/tool-attribution metadata for pull requests and their commits.
 The public repository also runs CodeQL analysis for JavaScript/TypeScript and GitHub Actions workflows,

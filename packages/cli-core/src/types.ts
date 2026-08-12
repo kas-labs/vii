@@ -129,6 +129,45 @@ export interface AddStateResult {
   readonly validation: AddStateValidation;
 }
 
+export type DoctorPhase = "analyze" | "validate" | "report";
+export type DoctorSeverity = "error" | "warning" | "info";
+export type DoctorStatus = "healthy" | "attention" | "blocked";
+export type DoctorFindingCode =
+  | "detection-conflict"
+  | "framework-unknown"
+  | "package-manager-unknown"
+  | "language-unknown"
+  | "vii-core-missing"
+  | "adapter-missing"
+  | "nx-integration-missing"
+  | "rendering-ambiguous";
+
+export interface DoctorFinding {
+  readonly code: DoctorFindingCode;
+  readonly message: string;
+  readonly severity: DoctorSeverity;
+  readonly sources: readonly string[];
+}
+
+export interface DoctorValidation {
+  readonly errors: readonly string[];
+  readonly passed: boolean;
+}
+
+export interface DoctorReport {
+  readonly findings: readonly DoctorFinding[];
+  readonly message: string;
+  readonly status: DoctorStatus;
+}
+
+export interface DoctorResult {
+  readonly detection: DetectedProject;
+  readonly findings: readonly DoctorFinding[];
+  readonly phases: readonly DoctorPhase[];
+  readonly report: DoctorReport;
+  readonly validation: DoctorValidation;
+}
+
 export class ProjectDetectionError extends Error {
   readonly code: ProjectDetectionErrorCode;
 

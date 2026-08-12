@@ -2,7 +2,156 @@ import { mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile } from "node:
 import os from "node:os";
 import path from "node:path";
 import { expect, test } from "vitest";
-import { addState, detectProject, initProject } from "../src/index.js";
+import { addState, detectProject, doctorProject, initProject } from "../src/index.js";
+
+test("doctorProject reports a healthy Vii React project without mutation", async () => {
+  const root = await createFixture({
+    "package.json": JSON.stringify({
+      dependencies: {
+        "@vii/core": "0.0.0",
+        "@vii/react": "0.0.0",
+        react: "19.0.0",
+      },
+    }),
+    "package-lock.json": "lockfile\n",
+    "src/main.ts": "export {};\n",
+    "tsconfig.json": "{}\n",
+  });
+  const filesBefore = [...(await readdir(root))].sort();
+
+  try {
+    const result = await doctorProject(root);
+
+    expect(result.phases).toEqual(["analyze", "validate", "report"]);
+    expect(result.report.status).toBe("healthy");
+    expect(result.report.findings).toEqual([]);
+    expect(result.detection.framework).toBe("react");
+    expect(result.validation.passed).toBe(true);
+    expect([...(await readdir(root))].sort()).toEqual(filesBefore);
+  } finally {
+    await removeFixture(root);
+  }
+});
+
+test("doctorProject reports detection conflicts as blocking findings", async () => {
+  const root = await createFixture({
+    "package.json": JSON.stringify({
+      dependencies: { "@vii/core": "0.0.0", "@vii/react": "0.0.0", react: "19.0.0" },
+    }),
+    "package-lock.json": "lockfile\n",
+    "src/main.ts": "export {};\n",
+    "tsconfig.json": "{}\n",
+    "yarn.lock": "lockfile\n",
+  });
+
+  try {
+    const result = await doctorProject(root);
+
+    expect(result.report.status).toBe("blocked");
+    expect(result.report.findings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "detection-conflict", severity: "error" }),
+      ]),
+    );
+    expect(result.validation.passed).toBe(false);
+  } finally {
+    await removeFixture(root);
+  }
+});
+
+test("doctorProject reports a missing framework adapter for review", async () => {
+  const root = await createFixture({
+    "package.json": JSON.stringify({
+      dependencies: { "@vii/core": "0.0.0", react: "19.0.0" },
+    }),
+    "package-lock.json": "lockfile\n",
+    "src/main.ts": "export {};\n",
+    "tsconfig.json": "{}\n",
+  });
+
+  try {
+    const result = await doctorProject(root);
+
+    expect(result.report.status).toBe("attention");
+    expect(result.report.findings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "adapter-missing", severity: "warning" }),
+      ]),
+    );
+    expect(result.validation.passed).toBe(true);
+  } finally {
+    await removeFixture(root);
+  }
+});
+
+test("doctorProject blocks a Vii adapter without Core", async () => {
+  const root = await createFixture({
+    "package.json": JSON.stringify({
+      dependencies: { "@vii/react": "0.0.0", react: "19.0.0" },
+    }),
+    "package-lock.json": "lockfile\n",
+    "src/main.ts": "export {};\n",
+    "tsconfig.json": "{}\n",
+  });
+
+  try {
+    const result = await doctorProject(root);
+
+    expect(result.report.status).toBe("blocked");
+    expect(result.report.findings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "vii-core-missing", severity: "error" }),
+      ]),
+    );
+    expect(result.validation.errors).toContain(
+      "Vii packages are declared but @vii/core is missing",
+    );
+  } finally {
+    await removeFixture(root);
+  }
+});
+
+test("doctorProject does not execute project configuration files", async () => {
+  const root = await createFixture({
+    "package.json": JSON.stringify({
+      dependencies: { "@vii/core": "0.0.0", "@vii/react": "0.0.0", react: "19.0.0" },
+    }),
+    "next.config.js": "throw new Error('must not execute');\n",
+    "package-lock.json": "lockfile\n",
+    "src/main.ts": "export {};\n",
+    "tsconfig.json": "{}\n",
+  });
+
+  try {
+    await expect(doctorProject(root)).resolves.toMatchObject({ report: { status: "attention" } });
+  } finally {
+    await removeFixture(root);
+  }
+});
+
+test("doctorProject reports missing Nx integration without mutation", async () => {
+  const root = await createFixture({
+    "nx.json": "{}\n",
+    "package.json": JSON.stringify({ dependencies: { "@vii/core": "0.0.0" } }),
+    "pnpm-lock.yaml": "lockfileVersion: '9.0'\n",
+    "src/main.ts": "export {};\n",
+    "tsconfig.json": "{}\n",
+  });
+
+  try {
+    const result = await doctorProject(root);
+
+    expect(result.report.status).toBe("attention");
+    expect(result.report.findings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "nx-integration-missing", severity: "warning" }),
+      ]),
+    );
+    expect(result.detection.workspace).toBe("nx");
+  } finally {
+    await removeFixture(root);
+  }
+});
 
 test("addState dry-run reports one state file without mutation", async () => {
   const root = await createFixture({

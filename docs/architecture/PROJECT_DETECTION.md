@@ -121,6 +121,13 @@ existing `src` directory is safe. Neither operation installs dependencies or cha
 manifests. Existing changed files and symlinks are reported as conflicts so project-root
 confinement and local ownership remain explicit.
 
+The read-only `doctorProject` consumer uses the same detection result to report explainable
+diagnostics. Detection conflicts are blocking findings; unknown framework, package manager, or
+language metadata is reported for review; and existing Vii package declarations are checked for
+Core, framework adapter, and Nx integration gaps. Doctor never executes project configuration or
+mutates the detected root. Its typed result is not the versioned machine-readable protocol planned
+for P3.5.
+
 ## Machine-readable result
 
 ```bash

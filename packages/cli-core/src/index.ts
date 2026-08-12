@@ -1,4 +1,5 @@
 export { detectProject } from "./detect-project.js";
+export { doctorProject } from "./doctor-project.js";
 export { initProject } from "./init-project.js";
 export { addState } from "./add-state.js";
 export {
@@ -23,6 +24,14 @@ export {
   type DetectionEvidence,
   type DetectedProject,
   type DetectedWorkspaceProject,
+  type DoctorFinding,
+  type DoctorFindingCode,
+  type DoctorPhase,
+  type DoctorReport,
+  type DoctorResult,
+  type DoctorSeverity,
+  type DoctorStatus,
+  type DoctorValidation,
   type PackageManager,
   type ProjectDetectionErrorCode,
   type ProjectFramework,

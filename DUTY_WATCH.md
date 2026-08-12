@@ -904,7 +904,7 @@ PR: [#36](https://github.com/kas-labs/vii/pull/36) open
 
 Status: completed
 Branch: `feat/diagnostic-trace-export`
-PR: not opened
+PR: [#37](https://github.com/kas-labs/vii/pull/37) open
 
 ### Scope
 
@@ -942,5 +942,4 @@ PR: not opened
 
 ### Remaining / recovery
 
-- Commit the focused change, push `feat/diagnostic-trace-export`, and open the review PR. Do not
-  merge without explicit approval.
+- PR #37 is open; monitor review and required checks. Do not merge without explicit approval.

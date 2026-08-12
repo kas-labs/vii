@@ -41,7 +41,7 @@ PR: <number or not opened>
 
 Status: completed
 Branch: `feat/project-detection`
-PR: not opened
+PR: [#36](https://github.com/kas-labs/vii/pull/36) open
 
 ### Scope
 
@@ -898,5 +898,4 @@ PR: not opened
 
 ### Remaining / recovery
 
-- Commit the focused change, push `feat/cli-machine-output`, and open the review PR. Do not merge
-  without explicit approval.
+- PR #36 is open; monitor review and required checks. Do not merge without explicit approval.

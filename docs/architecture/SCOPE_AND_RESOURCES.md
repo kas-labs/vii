@@ -135,6 +135,10 @@ Scopes should expose metadata such as:
 - retained child scopes;
 - last known cause.
 
+Core diagnostic `scope.created` events currently include the generated scope identifier, optional
+scope name, and optional `parentScopeId`. This is an observational ownership edge for trace
+inspection; it does not expose application values or grant consumers lifecycle mutation authority.
+
 Values and secrets are excluded by default.
 
 ## Memory analysis

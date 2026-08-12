@@ -199,6 +199,10 @@ try {
   assert.equal(consumer.diagnosticTraceProtocol, "vii.trace");
   assert.equal(consumer.diagnosticTraceVersion, "0.1");
   assert.deepEqual(consumer.diagnosticTraceEventTypes, ["state.created", "state.updated"]);
+  assert.deepEqual(consumer.diagnosticScopePayloads, [
+    { scopeId: "scope-1", name: "application" },
+    { scopeId: "scope-2", name: "checkout", parentScopeId: "scope-1" },
+  ]);
 
   await prepareConsumer({
     directory: reactConsumerDirectory,

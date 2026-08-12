@@ -3,6 +3,7 @@ import {
   batchedObservedValues,
   batchedValue,
   countValue,
+  diagnosticScopePayloads,
   diagnosticTraceEventTypes,
   diagnosticTraceProtocol,
   diagnosticTraceVersion,
@@ -38,4 +39,8 @@ test("Vanilla fixture exports a versioned diagnostics trace from Core", () => {
   expect(diagnosticTraceProtocol).toBe("vii.trace");
   expect(diagnosticTraceVersion).toBe("0.1");
   expect(diagnosticTraceEventTypes).toEqual(["state.created", "state.updated"]);
+  expect(diagnosticScopePayloads).toEqual([
+    { scopeId: "scope-1", name: "application" },
+    { scopeId: "scope-2", name: "checkout", parentScopeId: "scope-1" },
+  ]);
 });

@@ -808,7 +808,7 @@ PR: #34
 
 Status: completed
 Branch: `feat/cli-doctor`
-PR: not opened
+PR: #35
 
 ### Scope
 
@@ -850,5 +850,5 @@ PR: not opened
 
 ### Remaining / recovery
 
-- Commit the focused implementation, push `feat/cli-doctor`, and open the review PR with security,
-  compatibility, filesystem, privacy, and documentation impact. Do not merge without explicit approval.
+- PR #35 is open with security, compatibility, filesystem, privacy, and documentation impact
+  recorded. Review the GitHub checks and merge only with explicit approval.

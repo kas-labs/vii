@@ -684,3 +684,34 @@ PR: not opened
 ### Remaining / recovery
 
 - Open the review PR after the final diff audit. No implementation work remains for this slice.
+
+## 2026-08-12 12:05 CEST | Record P3.2 pull request
+
+Status: completed
+Branch: `feat/cli-init`
+PR: #33
+
+### Scope
+
+- Record the completed P3.2 review handoff after publishing the implementation branch.
+
+### Changes
+
+- Opened [PR #33](https://github.com/kas-labs/vii/pull/33) with the deterministic CLI Core init engine,
+  tests, packed fixture, and security/filesystem/documentation impact.
+- The PR was created after local focused checks, `pnpm pack:check`, `pnpm validate`, and
+  `git diff --check` passed.
+
+### Validation
+
+- GitHub PR created successfully; checks are pending their initial evaluation.
+- No additional source validation was needed after the documentation-only handoff.
+
+### Architecture / compatibility
+
+- No runtime or package behavior changes beyond the completed P3.2 implementation; this entry only
+  records the review handoff.
+
+### Remaining / recovery
+
+- Review and merge PR #33 after GitHub checks complete.

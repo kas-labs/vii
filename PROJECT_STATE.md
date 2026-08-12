@@ -57,6 +57,9 @@ integration, ambiguous rendering, and incomplete safe metadata. It does not exec
 install dependencies, mutate files, or read secrets. The P3.5 engine foundation now wraps `init`,
 `add state`, and `doctor` results in a versioned `vii.cli` version-1 envelope; terminal parsing,
 streaming, and external schema compatibility remain provisional.
+The Core diagnostics collector also exposes an experimental `exportTrace()` snapshot using the
+versioned `vii.trace` `0.1` envelope; it preserves the bounded value-free event buffer and dropped
+event count without adding file, network, telemetry, or Devtools behavior.
 
 ## Repository operating model
 

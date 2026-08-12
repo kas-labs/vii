@@ -1193,3 +1193,45 @@ PR: [#44](https://github.com/kas-labs/vii/pull/44) open
 ### Remaining / recovery
 
 - PR #44 checks are pending/in progress; do not merge without separate explicit approval.
+
+## 2026-08-13 02:05 CEST | Patch transitive development dependency alerts
+
+Status: completed
+Branch: `security/update-transitive-alerts`
+PR: [#45](https://github.com/kas-labs/vii/pull/45) open
+
+### Scope
+
+- Patch the six open Dependabot alerts for development-only transitive `axios` and
+  `brace-expansion` resolutions without changing runtime dependencies or Vii APIs.
+
+### Changes
+
+- Added root pnpm overrides for `axios@1.18.0` and `brace-expansion@5.0.9`. The latter is newer
+  than the first patched version reported for alert #4 and also addresses two newer high-severity
+  `brace-expansion` advisories found by the current npm audit database.
+- Regenerated `pnpm-lock.yaml`; all affected Nx, ESLint, and TypeScript ESLint paths now resolve
+  to the patched versions.
+- Recorded the durable development dependency posture in `PROJECT_STATE.md`.
+
+### Validation
+
+- `pnpm install --frozen-lockfile`: passed with patched resolutions installed locally.
+- `pnpm why axios --recursive` and `pnpm why brace-expansion --recursive`: passed; only
+  `axios@1.18.0` and `brace-expansion@5.0.9` remain in the dependency graph.
+- `pnpm audit --audit-level=high`: passed; no known high-severity vulnerabilities remain.
+- Focused `pnpm lint`, `pnpm typecheck`, `pnpm test`, and `pnpm build`: passed.
+- `pnpm pack:check`: passed with clean Core, React, Angular, Vue, and CLI Core consumers.
+- `pnpm validate`: passed; `git diff --check`: passed.
+
+### Security / compatibility
+
+- The alerts are development-scope transitive dependencies; no Vii runtime package, public API,
+  diagnostics contract, filesystem behavior, network behavior, or telemetry behavior changed.
+- No RFC status or security diagnostics API changed. PR must not be merged without separate explicit
+  approval.
+
+### Remaining / recovery
+
+- The atomic commit is `cb468d0`; the branch is pushed and PR #45 is open. Do not merge without
+  separate explicit approval.

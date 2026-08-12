@@ -78,6 +78,35 @@ PR: not opened
 
 - None for the P3.1 detector slice. Open a review PR after the final local audit.
 
+## 2026-08-12 02:58 Europe/Berlin | Record P3.1 pull request
+
+Status: completed
+Branch: `feat/project-detection`
+PR: #32
+
+### Scope
+
+- Correct the P3.1 handoff after publishing the completed branch for review.
+
+### Changes
+
+- Opened [PR #32](https://github.com/kas-labs/vii/pull/32) for the read-only project detection
+  implementation.
+- GitHub reports the PR as mergeable with `main`; required checks are in progress.
+
+### Validation
+
+- `git diff --check`: passed after the handoff update.
+- PR checks: in progress at handoff time; local `pnpm validate` had already passed.
+
+### Architecture / compatibility
+
+- No runtime or package behavior changes; this entry only records the review handoff.
+
+### Remaining / recovery
+
+- Review and merge PR #32 after GitHub checks complete.
+
 ## 2026-08-12 02:42 Europe/Berlin | Implement P2.4 Vue adapter
 
 Status: completed

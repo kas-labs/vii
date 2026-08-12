@@ -76,6 +76,10 @@ in `pnpm validate`. React adapter checks also include `pnpm --filter @vii/react 
 React clean-consumer fixture.
 
 Repository governance CI additionally checks branch naming and forbidden authorship/tool-attribution metadata for pull requests and their commits.
+The public repository also runs CodeQL analysis for JavaScript/TypeScript and GitHub Actions workflows,
+plus Dependency Review on pull requests. Third-party review apps remain optional external integrations
+and are not part of the Vii runtime or repository-required toolchain. GitHub vulnerability alerts are
+enabled so the dependency graph can power Dependency Review.
 
 ## Source-of-truth documents
 

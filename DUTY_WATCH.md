@@ -37,6 +37,46 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-12 02:00 Europe/Berlin | Add public-repository security workflows
+
+Status: completed
+Branch: `ci/code-quality-pipelines`
+PR: #29
+
+### Scope
+
+- Add free GitHub-native code quality and dependency security checks now that the repository is public.
+
+### Changes
+
+- Added `.github/workflows/codeql.yml` for weekly and main/PR CodeQL analysis of JavaScript/TypeScript
+  and GitHub Actions workflow code using the extended security query suite.
+- Added `.github/workflows/dependency-review.yml` to block pull requests that introduce high- or
+  critical-severity dependency vulnerabilities.
+- Recorded the public-repository security validation surface in `PROJECT_STATE.md`.
+
+### Validation
+
+- `pnpm exec prettier --check .github/workflows/codeql.yml .github/workflows/dependency-review.yml`:
+  passed.
+- `pnpm validate`: passed; 46 Core tests, 5 Vanilla tests, builds, and packed Core consumer
+  validation.
+- `git diff --check`: passed after conflict resolution.
+- GitHub PR checks: passed — Validate, Governance, CodeQL (Actions), CodeQL (JavaScript/TypeScript),
+  and Dependency Review.
+
+### Architecture / compatibility
+
+- No runtime, package, public API, dependency, SSR, or migration changes.
+- CodeQL and Dependency Review run only in GitHub Actions and do not add production dependencies or
+  network behavior to Vii packages.
+- CodeRabbit-style third-party review remains an optional GitHub App installation; it is not enabled by
+  repository files alone and is intentionally not represented as a required check here.
+
+### Remaining / recovery
+
+- None for CI workflow setup. Continue with P2.3 Angular adapter work after review/merge.
+
 ## 2026-08-12 01:42 Europe/Berlin | Implement P2.2 React adapter
 
 Status: completed

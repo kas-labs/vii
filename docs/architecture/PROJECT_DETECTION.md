@@ -125,8 +125,9 @@ The read-only `doctorProject` consumer uses the same detection result to report 
 diagnostics. Detection conflicts are blocking findings; unknown framework, package manager, or
 language metadata is reported for review; and existing Vii package declarations are checked for
 Core, framework adapter, and Nx integration gaps. Doctor never executes project configuration or
-mutates the detected root. Its typed result is not the versioned machine-readable protocol planned
-for P3.5.
+mutates the detected root. Its typed result can be wrapped by the P3.5 `vii.cli` version-1 engine
+envelope without exposing source contents or secrets; terminal `--json` parsing and external schema
+compatibility remain deferred.
 
 ## Machine-readable result
 
@@ -134,7 +135,9 @@ for P3.5.
 vii info --json
 ```
 
-The JSON format should be versioned so IDEs and CI can depend on it.
+The engine foundation uses a versioned `vii.cli` envelope (version `1`) for `init`, `add state`, and
+`doctor`. The terminal `--json` command surface and external schema compatibility remain deferred
+until the protocol is accepted.
 
 ## Testing
 

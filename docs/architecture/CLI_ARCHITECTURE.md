@@ -114,8 +114,10 @@ to keep its changed-file list exact and its write root-confined.
 `doctorProject` is the initial read-only doctor engine operation. It uses the shared detector as
 Analyze, validates diagnostic severity, and reports healthy, attention, or blocked findings without
 an Apply phase. It does not execute configuration, install dependencies, change files, read secret
-values, or access the network. Its typed result is private experimental plumbing; terminal parsing
-and the versioned `--json` protocol remain deferred to P3.5.
+values, or access the network. The P3.5 engine foundation now wraps `init`, `add state`, and `doctor`
+results in a versioned `vii.cli` protocol envelope with exact plans, findings, validation, and
+status. Terminal parsing, streaming, schema publication, and external compatibility guarantees
+remain deferred.
 
 ## Shared CLI engine
 

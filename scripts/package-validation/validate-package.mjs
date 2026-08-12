@@ -204,6 +204,8 @@ try {
     { scopeId: "scope-1", name: "application" },
     { scopeId: "scope-2", name: "checkout", parentScopeId: "scope-1" },
   ]);
+  assert.equal(consumer.productionSafeTraceId, undefined);
+  assert.deepEqual(consumer.productionSafeScopePayloads, [{ scopeId: "scope-1" }]);
 
   await prepareConsumer({
     directory: reactConsumerDirectory,

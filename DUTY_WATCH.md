@@ -1023,3 +1023,44 @@ PR: [#39](https://github.com/kas-labs/vii/pull/39) open
 ### Remaining / recovery
 
 - PR #39 is open; monitor review and required checks. Do not merge without explicit approval.
+
+## 2026-08-12 18:32 CEST | Harden production-safe diagnostics redaction
+
+Status: completed locally
+Branch: `feat/diagnostics-production-safe`
+PR: pending creation
+
+### Scope
+
+- Implement the next narrow Phase 3 diagnostics slice: make the existing `production-safe` mode
+  redact caller-provided identifiers before any diagnostic observer can receive them.
+- Record that PR #39 merged and local `main` was synchronized before this focused branch was created.
+
+### Changes
+
+- Omit the optional caller-provided `traceId` in production-safe events and trace envelopes.
+- Omit caller-provided scope names from `scope.created` payloads in production-safe mode while
+  preserving generated IDs, parent ownership, and structural counts.
+- Added Core public behavior coverage, Vanilla fixture coverage, packed clean-consumer assertions,
+  and updated the diagnostics protocol, Core README, and durable project state.
+
+### Validation
+
+- Core focused lint, typecheck, build, and tests passed: 52 tests across 9 files.
+- Vanilla fixture focused lint, typecheck, and tests passed: 7 tests.
+- `pnpm pack:check` passed with Core, React, Angular, Vue, and CLI Core clean consumers.
+- `pnpm validate` passed, including format, lint, typecheck, tests, builds, and packed validation.
+- `git diff --check` passed before commit.
+
+### Architecture / security / compatibility
+
+- Redaction happens before the in-memory buffer, diagnostic sink, and trace export; sink behavior
+  remains observational and cannot affect runtime state.
+- Core remains framework-agnostic with no new dependency, transport, network, telemetry, or Devtools
+  behavior. State values and secrets remain outside the default event payload boundary.
+- The experimental `vii.trace` protocol remains Draft; no stable schema or automatic context
+  propagation is introduced.
+
+### Remaining / recovery
+
+- Commit, push, and open the focused PR. Do not merge without explicit approval.

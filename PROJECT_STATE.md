@@ -64,6 +64,9 @@ Scope ownership events also preserve optional scope names and parent scope ident
 traces can inspect the ownership tree without exposing values or granting mutation authority.
 Diagnostics collectors may also receive an explicit optional `traceId`, which is copied to events
 and trace exports for correlation without automatic async propagation or authorization semantics.
+In `production-safe` mode, Core omits that caller-provided correlation identifier and redacts
+caller-provided scope names before buffering, sinking, or exporting events; generated identifiers
+and structural counts remain available.
 
 ## Repository operating model
 

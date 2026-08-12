@@ -10,6 +10,8 @@ import {
   diagnosticTraceVersion,
   doubledValue,
   observedValues,
+  productionSafeScopePayloads,
+  productionSafeTraceId,
   scopedFinalValue,
   scopedObservedValues,
 } from "../src/main.js";
@@ -45,4 +47,9 @@ test("Vanilla fixture exports a versioned diagnostics trace from Core", () => {
     { scopeId: "scope-1", name: "application" },
     { scopeId: "scope-2", name: "checkout", parentScopeId: "scope-1" },
   ]);
+});
+
+test("Vanilla fixture preserves production-safe diagnostics redaction from Core", () => {
+  expect(productionSafeTraceId).toBeUndefined();
+  expect(productionSafeScopePayloads).toEqual([{ scopeId: "scope-1" }]);
 });

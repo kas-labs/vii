@@ -73,7 +73,7 @@ export function createDiagnostics(options: DiagnosticsOptions = {}): Diagnostics
 
   const events: DiagnosticEvent[] = [];
   const clock = options.clock ?? Date.now;
-  const traceId = options.traceId;
+  const traceId = mode === "production-safe" ? undefined : options.traceId;
   const sink = options.sink;
   let nextEventId = 1;
   let nextEntityId = 1;
@@ -134,7 +134,7 @@ export function createDiagnostics(options: DiagnosticsOptions = {}): Diagnostics
         timestamp,
         ...(traceId === undefined ? {} : { traceId }),
         package: "@vii/core",
-        payload: Object.freeze({ ...payload }),
+        payload: Object.freeze(redactPayload(mode, type, payload)),
         ...(causeId === undefined ? {} : { causeId }),
       };
 
@@ -155,4 +155,18 @@ export function createDiagnostics(options: DiagnosticsOptions = {}): Diagnostics
   };
 
   return diagnostics;
+}
+
+function redactPayload(
+  mode: DiagnosticsMode,
+  type: string,
+  payload: Readonly<Record<string, unknown>>,
+): Readonly<Record<string, unknown>> {
+  if (mode !== "production-safe" || type !== "scope.created" || !("name" in payload)) {
+    return { ...payload };
+  }
+
+  const redactedPayload = { ...payload };
+  delete redactedPayload["name"];
+  return redactedPayload;
 }

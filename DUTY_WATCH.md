@@ -987,7 +987,7 @@ PR: [#38](https://github.com/kas-labs/vii/pull/38) open
 
 Status: completed
 Branch: `feat/diagnostics-trace-context`
-PR: not opened
+PR: [#39](https://github.com/kas-labs/vii/pull/39) open
 
 ### Scope
 
@@ -1022,5 +1022,4 @@ PR: not opened
 
 ### Remaining / recovery
 
-- Commit the focused change, push `feat/diagnostics-trace-context`, and open the review PR. Do not
-  merge without explicit approval.
+- PR #39 is open; monitor review and required checks. Do not merge without explicit approval.

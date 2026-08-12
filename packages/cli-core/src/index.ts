@@ -3,6 +3,13 @@ export { doctorProject } from "./doctor-project.js";
 export { initProject } from "./init-project.js";
 export { addState } from "./add-state.js";
 export {
+  inspectTrace,
+  type TraceInspection,
+  type TraceInspectionEvent,
+  type TraceInspectionEventType,
+  type TraceInspectionInput,
+} from "./trace-inspection.js";
+export {
   CLI_MACHINE_OUTPUT_PROTOCOL,
   CLI_MACHINE_OUTPUT_VERSION,
   createMachineOutput,

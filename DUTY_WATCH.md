@@ -1150,3 +1150,46 @@ PR: [#43](https://github.com/kas-labs/vii/pull/43) open
 - Do not implement `recordSecurity` or merge a security diagnostics API before those governance and
   consumer prerequisites exist.
 - PR #43 checks are pending/in progress; do not merge without the separate explicit decision.
+
+## 2026-08-13 01:15 CEST | Implement P3.7 read-only trace inspection consumer
+
+Status: completed
+Branch: `feat/cli-trace-inspection`
+PR: [#44](https://github.com/kas-labs/vii/pull/44) open
+
+### Scope
+
+- Add the smallest Phase 3 CLI inspection engine slice over the existing experimental Core
+  `vii.trace` `0.1` producer after PR #43 merged.
+
+### Changes
+
+- Added pure `@vii/cli-core` `inspectTrace(trace)` with protocol/version validation and a metadata-only
+  summary of total events, dropped events, and deterministic first-seen event-type counts.
+- Added public behavior coverage for aggregation, payload exclusion, unsupported protocol/version,
+  invalid event types, and invalid dropped-event counts.
+- Added the packed CLI Core consumer path: a clean fixture creates a Core trace, inspects it through
+  packed CLI Core, and validates the resulting summary and package contents.
+- Updated CLI, diagnostics, Core state, and CLI Core documentation. RFC 0004 remains Draft; RFC 0023
+  remains Proposed; no `recordSecurity` or security enforcement API was added.
+
+### Validation
+
+- Focused CLI Core lint, typecheck, test, and build: passed; 34 tests across 3 files.
+- `pnpm pack:check`: passed; Core, React, Angular, Vue, and CLI Core packed clean consumers passed,
+  including the new Core trace → CLI Core inspection path.
+- `pnpm validate`: passed, including format, lint, typecheck, tests, builds, and pack validation.
+- `git diff --check`: passed before staging the final review changes.
+
+### Architecture / compatibility
+
+- CLI Core remains an existing private experimental package with no new runtime dependency; the
+  structural trace input keeps the CLI inspection seam independent from Core implementation modules.
+- Inspection is synchronous, read-only, value-free in its output, and performs no file, network,
+  telemetry, configuration execution, arbitrary code execution, or project mutation.
+- The terminal `vii inspect` command, external trace schema compatibility, custom redaction policy,
+  and security diagnostics API remain out of scope.
+
+### Remaining / recovery
+
+- PR #44 checks are pending/in progress; do not merge without separate explicit approval.

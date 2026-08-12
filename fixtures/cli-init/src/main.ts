@@ -7,8 +7,10 @@ import {
   detectProject,
   doctorProject,
   initProject,
+  inspectTrace,
   stringifyMachineOutput,
 } from "@vii/cli-core";
+import { createDiagnostics, state } from "@vii/core";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const detection = await detectProject(root);
@@ -18,6 +20,12 @@ const doctorResult = await doctorProject(root);
 const initOutput = createMachineOutput("init", result);
 const stateOutput = createMachineOutput("add state", stateResult);
 const doctorOutput = createMachineOutput("doctor", doctorResult);
+const diagnostics = createDiagnostics({ clock: () => 123 });
+diagnostics.run(() => {
+  const count = state(0);
+  count.set(1);
+});
+const traceInspection = inspectTrace(diagnostics.exportTrace());
 
 export const detectedPackageManager = detection.packageManager;
 export const detectedViiPackages = detection.installedViiPackages;
@@ -38,3 +46,6 @@ export const machineOutputVersions = [
   doctorOutput.version,
 ];
 export const machineOutputJsonRoundTrip = JSON.parse(stringifyMachineOutput(doctorOutput));
+export const traceInspectionEventCount = traceInspection.eventCount;
+export const traceInspectionDroppedEvents = traceInspection.droppedEvents;
+export const traceInspectionEventTypes = traceInspection.eventTypes;

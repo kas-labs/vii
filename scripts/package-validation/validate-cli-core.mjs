@@ -62,6 +62,10 @@ try {
       "package/dist/machine-output.d.ts.map",
       "package/dist/machine-output.js",
       "package/dist/machine-output.js.map",
+      "package/dist/trace-inspection.d.ts",
+      "package/dist/trace-inspection.d.ts.map",
+      "package/dist/trace-inspection.js",
+      "package/dist/trace-inspection.js.map",
       "package/dist/init-project.d.ts",
       "package/dist/init-project.d.ts.map",
       "package/dist/init-project.js",
@@ -113,6 +117,12 @@ try {
   assert.deepEqual(consumer.machineOutputVersions, [1, 1, 1]);
   assert.equal(consumer.machineOutputJsonRoundTrip.protocol, "vii.cli");
   assert.equal(consumer.machineOutputJsonRoundTrip.command, "doctor");
+  assert.equal(consumer.traceInspectionEventCount, 2);
+  assert.equal(consumer.traceInspectionDroppedEvents, 0);
+  assert.deepEqual(consumer.traceInspectionEventTypes, [
+    { type: "state.created", count: 1 },
+    { type: "state.updated", count: 1 },
+  ]);
   console.log("Packed CLI Core artifact with clean consumer validated.");
 } finally {
   await rm(temporaryRoot, { recursive: true, force: true });

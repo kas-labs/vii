@@ -1,4 +1,5 @@
-import { lstat, readFile, writeFile } from "node:fs/promises";
+import { constants } from "node:fs";
+import { open, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { detectProject } from "./detect-project.js";
 import type {
@@ -73,17 +74,20 @@ async function inspectTarget(
   target: string,
   expectedContent: string,
 ): Promise<"missing" | "same" | "different" | "symlink"> {
+  let handle;
   try {
-    const metadata = await lstat(target);
-    if (metadata.isSymbolicLink()) {
-      return "symlink";
-    }
-    return (await readFile(target, "utf8")) === expectedContent ? "same" : "different";
+    handle = await open(target, constants.O_RDONLY | constants.O_NOFOLLOW);
+    return (await handle.readFile("utf8")) === expectedContent ? "same" : "different";
   } catch (error) {
     if (isMissingFile(error)) {
       return "missing";
     }
+    if (isSymlink(error)) {
+      return "symlink";
+    }
     return "different";
+  } finally {
+    await handle?.close();
   }
 }
 
@@ -116,14 +120,10 @@ async function validateTarget(
   if (dryRun && plan.files.length > 0) {
     return { errors: [], files: plan.files.map((file) => file.path), passed: true };
   }
-  try {
-    const actualContent = await readFile(target, "utf8");
-    return actualContent === expectedContent
-      ? { errors: [], files: [], passed: true }
-      : { errors: [`${configFile} failed validation`], files: [], passed: false };
-  } catch {
-    return { errors: [`${configFile} is missing after apply`], files: [], passed: false };
-  }
+  const inspection = await inspectTarget(target, expectedContent);
+  return inspection === "same"
+    ? { errors: [], files: [], passed: true }
+    : { errors: [`${configFile} failed validation`], files: [], passed: false };
 }
 
 function createMessage(
@@ -143,4 +143,8 @@ function createMessage(
 
 function isMissingFile(error: unknown): boolean {
   return typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT";
+}
+
+function isSymlink(error: unknown): boolean {
+  return typeof error === "object" && error !== null && "code" in error && error.code === "ELOOP";
 }

@@ -42,6 +42,7 @@ test("initProject applies one deterministic config and is idempotent", async () 
 
     expect(first.applied).toBe(true);
     expect(first.report).toMatchObject({ status: "applied", files: ["vii.config.ts"] });
+    expect(first.validation.passed).toBe(true);
     expect(content).toContain('"framework": "vue"');
     expect(second.applied).toBe(false);
     expect(second.report).toMatchObject({ status: "unchanged", files: [] });

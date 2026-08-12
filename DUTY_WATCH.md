@@ -715,3 +715,40 @@ PR: #33
 ### Remaining / recovery
 
 - Review and merge PR #33 after GitHub checks complete.
+
+## 2026-08-12 13:04 CEST | Fix P3.2 CodeQL filesystem race
+
+Status: completed
+Branch: `feat/cli-init`
+PR: #33
+
+### Scope
+
+- Resolve the CodeQL high-severity potential filesystem race reported on PR #33.
+
+### Changes
+
+- Replaced the `lstat` → `readFile` path check with one `open`/file-handle read using
+  `O_NOFOLLOW`, so inspection and content read operate on the same filesystem object.
+- Reused the safe inspection path during post-apply validation and preserved create-only `wx`
+  application semantics.
+- Kept explicit symlink blocking through `ELOOP` and added an assertion that applied config
+  validation succeeds.
+
+### Validation
+
+- `pnpm --filter @vii/cli-core test`: passed, 13 tests.
+- Focused CLI Core lint, typecheck, and build: passed.
+- `git diff --check`: passed.
+- `pnpm pack:check`: passed with packed Core, React, Angular, Vue, and CLI init consumers.
+- `pnpm validate`: passed with format, lint, typecheck, tests, builds, and pack checks.
+
+### Architecture / compatibility
+
+- No package boundary, dependency, runtime Core, or public support-tier change.
+- Filesystem reads now use descriptor-bound, no-follow semantics on the supported Node filesystem
+  path; no project configuration execution or dependency installation was added.
+
+### Remaining / recovery
+
+- Push the fix and confirm the CodeQL check on PR #33.

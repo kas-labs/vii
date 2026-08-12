@@ -58,6 +58,10 @@ try {
       "package/dist/doctor-project.d.ts.map",
       "package/dist/doctor-project.js",
       "package/dist/doctor-project.js.map",
+      "package/dist/machine-output.d.ts",
+      "package/dist/machine-output.d.ts.map",
+      "package/dist/machine-output.js",
+      "package/dist/machine-output.js.map",
       "package/dist/init-project.d.ts",
       "package/dist/init-project.d.ts.map",
       "package/dist/init-project.js",
@@ -105,6 +109,10 @@ try {
   assert.deepEqual(consumer.addStateFiles, ["src/state.ts"]);
   assert.equal(consumer.doctorStatus, "healthy");
   assert.deepEqual(consumer.doctorFindingCodes, []);
+  assert.deepEqual(consumer.machineOutputProtocols, ["vii.cli", "vii.cli", "vii.cli"]);
+  assert.deepEqual(consumer.machineOutputVersions, [1, 1, 1]);
+  assert.equal(consumer.machineOutputJsonRoundTrip.protocol, "vii.cli");
+  assert.equal(consumer.machineOutputJsonRoundTrip.command, "doctor");
   console.log("Packed CLI Core artifact with clean consumer validated.");
 } finally {
   await rm(temporaryRoot, { recursive: true, force: true });

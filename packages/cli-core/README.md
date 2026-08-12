@@ -22,8 +22,12 @@ detection. Its report returns the exact planned file path.
 healthy, attention, or blocked status with explainable findings for detection conflicts, missing
 Vii Core or framework adapters, missing Nx integration, ambiguous rendering, and incomplete safe
 metadata. It never executes project configuration, installs dependencies, changes files, or reads
-secret values. The typed result is an experimental engine boundary, not the versioned P3.5 JSON
-protocol or a terminal command.
+secret values.
+
+`createMachineOutput(command, result)` wraps the `init`, `add state`, and `doctor` engine results in
+the versioned `vii.cli` protocol envelope (version `1`). `stringifyMachineOutput` serializes that
+JSON-safe object. This is the P3.5 engine foundation; terminal parsing, streaming, schema publication,
+and external compatibility guarantees remain deferred.
 
 Detection does not install dependencies, execute project configuration, read secret values, mutate
 files, invoke shell commands, or access the network. The package is private and experimental while

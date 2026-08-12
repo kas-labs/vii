@@ -54,7 +54,9 @@ generator options, and root-level monorepo selection remain provisional while RF
 are Draft. The read-only `doctorProject` engine operation uses the detector as Analyze and reports
 healthy, attention, or blocked findings for detection conflicts, missing Vii Core/framework/Nx
 integration, ambiguous rendering, and incomplete safe metadata. It does not execute configuration,
-install dependencies, mutate files, read secrets, or define the versioned P3.5 JSON protocol.
+install dependencies, mutate files, or read secrets. The P3.5 engine foundation now wraps `init`,
+`add state`, and `doctor` results in a versioned `vii.cli` version-1 envelope; terminal parsing,
+streaming, and external schema compatibility remain provisional.
 
 ## Repository operating model
 
@@ -100,7 +102,7 @@ the packed Angular clean-consumer fixture. Vue adapter checks include `pnpm --fi
 and the packed Vue clean-consumer fixture. CLI foundation checks include
 `pnpm --filter @vii/cli-core test` and the packed CLI Core detection/init/add-state clean-consumer
 fixture, which installs packed `@vii/core` and `@vii/cli-core` artifacts together and exercises
-read-only doctor reporting.
+read-only doctor reporting plus the versioned machine-output envelope.
 
 Repository governance CI additionally checks branch naming and forbidden authorship/tool-attribution metadata for pull requests and their commits.
 The public repository also runs CodeQL analysis for JavaScript/TypeScript and GitHub Actions workflows,

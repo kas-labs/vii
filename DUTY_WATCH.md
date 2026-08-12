@@ -41,7 +41,7 @@ PR: <number or not opened>
 
 Status: completed
 Branch: `feat/project-detection`
-PR: not opened
+PR: #32
 
 ### Scope
 
@@ -852,3 +852,50 @@ PR: #35
 
 - PR #35 is open with security, compatibility, filesystem, privacy, and documentation impact
   recorded. Review the GitHub checks and merge only with explicit approval.
+
+## 2026-08-12 17:01 CEST | Implement P3.5 machine-readable CLI output
+
+Status: completed
+Branch: `feat/cli-machine-output`
+PR: [#36](https://github.com/kas-labs/vii/pull/36) open
+
+### Scope
+
+- Implement the minimal versioned machine-readable output foundation for existing CLI Core engine
+  operations without starting the terminal `@vii/cli`, streaming protocol, or schema publication.
+
+### Changes
+
+- Added `createMachineOutput` and `stringifyMachineOutput` with the `vii.cli` protocol envelope at
+  version `1` for `init`, `add state`, and `doctor`.
+- Mutation outputs preserve exact planned file paths, actions, generated content, conflicts, report
+  status, lifecycle phases, and validation results. Doctor output preserves findings, sources,
+  report status, lifecycle phases, and validation results.
+- Kept output JSON-safe and metadata-only at the detection boundary; no source uploads, secrets,
+  network calls, dependency installation, terminal parsing, or additional project mutation was added.
+- Split machine-output tests into a focused file and extended the packed clean consumer to verify
+  protocol/version values and JSON round-trip behavior from the packed CLI Core artifact.
+- Updated CLI architecture, project detection guidance, package README, project state, and fixture
+  documentation. Full external protocol compatibility remains provisional while RFCs 0006 and 0007
+  are Draft.
+
+### Validation
+
+- `pnpm --filter @vii/cli-core test`: passed, 29 tests across 2 files.
+- Focused CLI Core lint, typecheck, and build: passed.
+- Packed CLI Core clean consumer: passed with network-enabled installation.
+- `pnpm pack:check`: passed with network-enabled clean consumers for Core, React, Angular, Vue, and
+  CLI Core.
+- `pnpm validate`: passed, including format, lint, typecheck, tests, build, and pack checks.
+- `git diff --check`: passed after the final validation run.
+
+### Architecture / compatibility
+
+- The private experimental `@vii/cli-core` API now exposes a versioned engine envelope, but this is
+  not a stable CLI contract, terminal `--json` parser, streaming format, or published schema.
+- Output includes generated plan content for existing mutation plans and detection metadata/findings;
+  it does not execute code or broaden filesystem/network boundaries.
+
+### Remaining / recovery
+
+- PR #36 is open; monitor review and required checks. Do not merge without explicit approval.

@@ -3,6 +3,17 @@ export { doctorProject } from "./doctor-project.js";
 export { initProject } from "./init-project.js";
 export { addState } from "./add-state.js";
 export {
+  CLI_MACHINE_OUTPUT_PROTOCOL,
+  CLI_MACHINE_OUTPUT_VERSION,
+  createMachineOutput,
+  stringifyMachineOutput,
+  type MachineCommand,
+  type MachineDoctorOutput,
+  type MachineMutationOutput,
+  type MachineMutationStatus,
+  type MachineOutput,
+} from "./machine-output.js";
+export {
   ProjectDetectionError,
   type AddStateOptions,
   type AddStatePlan,

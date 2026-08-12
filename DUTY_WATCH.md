@@ -37,6 +37,77 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-12 02:42 Europe/Berlin | Implement P2.4 Vue adapter
+
+Status: completed
+Branch: `feat/vue-adapter`
+PR: not opened
+
+### Scope
+
+- Add the planned private Vue Composition API adapter on top of the Core readable-state contract.
+
+### Changes
+
+- Added `@vii/vue` with `useVii` for Vue effect-scope lifecycle ownership and `createViiRef` for
+  explicit disposal outside a Vue scope.
+- Exposed readonly shallow refs with selector and equality support while preserving Core snapshots,
+  batching, and subscription semantics.
+- Added a Vue packed-consumer fixture and extended package validation to cover Core, React, Angular,
+  and Vue artifacts in clean consumers.
+- Recorded the provisional Vue compatibility and SSR/hydration boundaries in adapter docs and
+  project state.
+
+### Validation
+
+- Vue lint, typecheck, tests (8), and build: passed.
+- Vue fixture lint, typecheck, test, and build: passed.
+- `pnpm pack:check`: passed for Core, React, Angular, and Vue packed artifacts with clean consumers.
+- `pnpm validate`: passed.
+- `git diff --check`: passed.
+
+### Architecture / compatibility
+
+- Core has no Vue dependency; Vue remains an adapter-edge peer dependency and the adapter is
+  private/experimental while RFC 0005 is Draft.
+- Vue effect-scope disposal owns composable cleanup; explicit handles own cleanup for SSR or other
+  external lifecycles. No deep proxy wrapping, global singleton, runtime network, or telemetry was
+  added.
+- Packed consumer proof currently targets Vue 3.5.41. Hydration-specific behavior is not yet part of
+  the provisional adapter contract.
+
+### Remaining / recovery
+
+- None for P2.4. Open a review PR after the final local audit.
+
+## 2026-08-12 02:43 Europe/Berlin | Record P2.4 pull request
+
+Status: completed
+Branch: `feat/vue-adapter`
+PR: #31
+
+### Scope
+
+- Correct the P2.4 handoff after publishing the completed branch for review.
+
+### Changes
+
+- Opened [PR #31](https://github.com/kas-labs/vii/pull/31) for the Vue adapter implementation.
+- GitHub reports the PR as mergeable with `main`; required checks are in progress.
+
+### Validation
+
+- `git diff --check`: passed after the handoff update.
+- PR checks: in progress at handoff time; local `pnpm validate` had already passed.
+
+### Architecture / compatibility
+
+- No runtime or package changes; this entry only records the review handoff.
+
+### Remaining / recovery
+
+- Review and merge PR #31 after GitHub checks complete.
+
 ## 2026-08-12 02:25 Europe/Berlin | Implement P2.3 Angular adapter
 
 Status: completed

@@ -1,0 +1,17 @@
+{
+  "name": "@vii/vue-fixture",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "lint": "eslint src test",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run --config ../../vitest.config.ts",
+    "build": "tsc -p tsconfig.build.json"
+  },
+  "dependencies": {
+    "@vii/core": "workspace:*",
+    "@vii/vue": "workspace:*",
+    "vue": "3.5.41"
+  }
+}

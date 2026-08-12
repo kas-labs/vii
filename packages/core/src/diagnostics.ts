@@ -5,6 +5,7 @@ export interface DiagnosticEvent {
   id: string;
   type: string;
   timestamp: number;
+  traceId?: string;
   package: "@vii/core";
   causeId?: string;
   payload: Readonly<Record<string, unknown>>;
@@ -20,11 +21,13 @@ export interface DiagnosticTrace {
   createdAt: string;
   events: readonly DiagnosticEvent[];
   droppedEvents: number;
+  traceId?: string;
 }
 
 export interface DiagnosticsOptions {
   mode?: DiagnosticsMode;
   maxEvents?: number;
+  traceId?: string;
   sink?: DiagnosticSink;
   clock?: () => number;
 }
@@ -70,6 +73,7 @@ export function createDiagnostics(options: DiagnosticsOptions = {}): Diagnostics
 
   const events: DiagnosticEvent[] = [];
   const clock = options.clock ?? Date.now;
+  const traceId = options.traceId;
   const sink = options.sink;
   let nextEventId = 1;
   let nextEntityId = 1;
@@ -104,6 +108,7 @@ export function createDiagnostics(options: DiagnosticsOptions = {}): Diagnostics
         createdAt,
         events: Object.freeze(events.slice()),
         droppedEvents,
+        ...(traceId === undefined ? {} : { traceId }),
       };
     },
     clear: () => {
@@ -127,6 +132,7 @@ export function createDiagnostics(options: DiagnosticsOptions = {}): Diagnostics
         id: `diagnostic-${nextEventId++}`,
         type,
         timestamp,
+        ...(traceId === undefined ? {} : { traceId }),
         package: "@vii/core",
         payload: Object.freeze({ ...payload }),
         ...(causeId === undefined ? {} : { causeId }),

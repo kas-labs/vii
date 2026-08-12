@@ -28,7 +28,7 @@ scopedCount.set(1);
 scope.dispose();
 scopedCount.set(2);
 
-const diagnostics = createDiagnostics({ clock: () => 123 });
+const diagnostics = createDiagnostics({ clock: () => 123, traceId: "vanilla" });
 diagnostics.run(() => {
   const diagnosticCount = state(0);
   diagnosticCount.set(1);
@@ -51,6 +51,7 @@ export const scopedFinalValue = scopedCount.get();
 export const scopedObservedValues = scopedObserved;
 export const diagnosticTraceProtocol = diagnosticTrace.protocol;
 export const diagnosticTraceVersion = diagnosticTrace.version;
+export const diagnosticTraceId = diagnosticTrace.traceId;
 export const diagnosticTraceEventTypes = diagnosticTrace.events.map((event) => event.type);
 export const diagnosticScopePayloads = ownershipTrace.events
   .filter((event) => event.type === "scope.created")

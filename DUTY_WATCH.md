@@ -982,3 +982,45 @@ PR: [#38](https://github.com/kas-labs/vii/pull/38) open
 ### Remaining / recovery
 
 - PR #38 is open; monitor review and required checks. Do not merge without explicit approval.
+
+## 2026-08-12 18:05 CEST | Implement diagnostic trace correlation metadata
+
+Status: completed
+Branch: `feat/diagnostics-trace-context`
+PR: not opened
+
+### Scope
+
+- Add the minimal explicit trace correlation metadata required by the Draft diagnostics protocol
+  after the merged scope ownership slice.
+- Record that PR #38 merged and local `main` was synchronized before this focused branch was created.
+
+### Changes
+
+- Added optional `traceId` to `DiagnosticsOptions`, diagnostic events, and the `vii.trace` export
+  envelope.
+- Preserved backward compatibility by omitting trace metadata when no `traceId` is supplied; no
+  automatic async propagation or authorization semantics were introduced.
+- Added Core tests, Vanilla fixture coverage, packed clean-consumer assertions, README/protocol
+  documentation, and durable project state updates.
+
+### Validation
+
+- Core tests: passed, 51 tests across 9 files.
+- Core and Vanilla fixture lint, typecheck, build, and tests: passed. The final fixture check ran
+  sequentially after Core build to avoid a local stale-dist race from parallel focused commands.
+- `pnpm pack:check`: passed with Core, React, Angular, Vue, and CLI Core clean consumers.
+- `pnpm validate`: passed, including format, lint, typecheck, tests, build, and pack checks.
+- `git diff --check`: passed before commit.
+
+### Architecture / compatibility
+
+- Trace correlation is explicit observational metadata; Core remains framework-agnostic and does not
+  add context propagation, transport, network, telemetry, or Devtools dependencies.
+- The value-free privacy boundary remains unchanged. The optional identifier is not an auth token.
+- `vii.trace` and correlation fields remain experimental while the diagnostics protocol is Draft.
+
+### Remaining / recovery
+
+- Commit the focused change, push `feat/diagnostics-trace-context`, and open the review PR. Do not
+  merge without explicit approval.

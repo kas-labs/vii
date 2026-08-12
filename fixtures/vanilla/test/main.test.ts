@@ -4,6 +4,7 @@ import {
   batchedValue,
   countValue,
   diagnosticScopePayloads,
+  diagnosticTraceId,
   diagnosticTraceEventTypes,
   diagnosticTraceProtocol,
   diagnosticTraceVersion,
@@ -38,6 +39,7 @@ test("Vanilla fixture disposes Scope-owned subscriptions from Core", () => {
 test("Vanilla fixture exports a versioned diagnostics trace from Core", () => {
   expect(diagnosticTraceProtocol).toBe("vii.trace");
   expect(diagnosticTraceVersion).toBe("0.1");
+  expect(diagnosticTraceId).toBe("vanilla");
   expect(diagnosticTraceEventTypes).toEqual(["state.created", "state.updated"]);
   expect(diagnosticScopePayloads).toEqual([
     { scopeId: "scope-1", name: "application" },

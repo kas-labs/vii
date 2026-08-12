@@ -11,12 +11,14 @@ const repositoryRoot = path.resolve(scriptDirectory, "../..");
 const fixtureDirectory = path.join(repositoryRoot, "fixtures/vanilla");
 const reactFixtureDirectory = path.join(repositoryRoot, "fixtures/react");
 const angularFixtureDirectory = path.join(repositoryRoot, "fixtures/angular");
+const vueFixtureDirectory = path.join(repositoryRoot, "fixtures/vue");
 const pnpm = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 const temporaryRoot = await mkdtemp(path.join(os.tmpdir(), "vii-pack-check-"));
 const artifactDirectory = path.join(temporaryRoot, "artifact");
 const consumerDirectory = path.join(temporaryRoot, "consumer");
 const reactConsumerDirectory = path.join(temporaryRoot, "react-consumer");
 const angularConsumerDirectory = path.join(temporaryRoot, "angular-consumer");
+const vueConsumerDirectory = path.join(temporaryRoot, "vue-consumer");
 
 function run(command, args, cwd = repositoryRoot) {
   execFileSync(command, args, {
@@ -43,28 +45,39 @@ try {
   await mkdir(consumerDirectory, { recursive: true });
   await mkdir(reactConsumerDirectory, { recursive: true });
   await mkdir(angularConsumerDirectory, { recursive: true });
+  await mkdir(vueConsumerDirectory, { recursive: true });
 
   run(pnpm, ["--filter", "@vii/core", "build"]);
   run(pnpm, ["--filter", "@vii/react", "build"]);
   run(pnpm, ["--filter", "@vii/angular", "build"]);
+  run(pnpm, ["--filter", "@vii/vue", "build"]);
   run(pnpm, ["--filter", "@vii/core", "pack", "--pack-destination", artifactDirectory]);
   run(pnpm, ["--filter", "@vii/react", "pack", "--pack-destination", artifactDirectory]);
   run(pnpm, ["--filter", "@vii/angular", "pack", "--pack-destination", artifactDirectory]);
+  run(pnpm, ["--filter", "@vii/vue", "pack", "--pack-destination", artifactDirectory]);
 
   const artifactNames = await readdir(artifactDirectory);
-  assert.equal(artifactNames.length, 3, "expected Core, React, and Angular package artifacts");
+  assert.equal(artifactNames.length, 4, "expected Core, React, Angular, and Vue package artifacts");
   const artifactPaths = new Map(
     artifactNames.map((name) => [
-      name.startsWith("vii-core-") ? "core" : name.startsWith("vii-react-") ? "react" : "angular",
+      name.startsWith("vii-core-")
+        ? "core"
+        : name.startsWith("vii-react-")
+          ? "react"
+          : name.startsWith("vii-angular-")
+            ? "angular"
+            : "vue",
       path.join(artifactDirectory, name),
     ]),
   );
   const coreArtifactPath = artifactPaths.get("core");
   const reactArtifactPath = artifactPaths.get("react");
   const angularArtifactPath = artifactPaths.get("angular");
+  const vueArtifactPath = artifactPaths.get("vue");
   assert.ok(coreArtifactPath, "expected a Core package artifact");
   assert.ok(reactArtifactPath, "expected a React package artifact");
   assert.ok(angularArtifactPath, "expected an Angular package artifact");
+  assert.ok(vueArtifactPath, "expected a Vue package artifact");
   const expectedCoreEntries = new Set([
     "package/README.md",
     "package/dist/batch.d.ts",
@@ -133,6 +146,18 @@ try {
       "package/package.json",
     ]),
     "Angular",
+  );
+  assertPackageEntries(
+    vueArtifactPath,
+    new Set([
+      "package/README.md",
+      "package/dist/index.d.ts",
+      "package/dist/index.d.ts.map",
+      "package/dist/index.js",
+      "package/dist/index.js.map",
+      "package/package.json",
+    ]),
+    "Vue",
   );
 
   await prepareConsumer({
@@ -225,7 +250,26 @@ try {
     2,
     "packed Angular consumer should read a Core-backed signal",
   );
-  console.log("Packed Core, React, and Angular artifacts with clean consumers validated.");
+
+  await prepareConsumer({
+    directory: vueConsumerDirectory,
+    fixtureDirectory: vueFixtureDirectory,
+    packageJson: {
+      name: "vii-packed-vue-consumer",
+      private: true,
+      type: "module",
+      dependencies: {
+        "@vii/core": `file:${coreArtifactPath}`,
+        "@vii/vue": `file:${vueArtifactPath}`,
+        vue: "3.5.41",
+      },
+    },
+    repositoryRoot,
+    pnpm,
+  });
+  const vueConsumer = await import(path.join(vueConsumerDirectory, "dist/main.js"));
+  assert.equal(vueConsumer.renderedValue, 2, "packed Vue consumer should read a Core-backed ref");
+  console.log("Packed Core, React, Angular, and Vue artifacts with clean consumers validated.");
 } finally {
   await rm(temporaryRoot, { recursive: true, force: true });
 }

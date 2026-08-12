@@ -148,6 +148,11 @@ Requirements:
 - no automatic global singleton;
 - no deep wrapping of Vii-managed values.
 
+The initial private implementation lives in `packages/vue`. `useVii` returns a readonly shallow ref
+and binds the Core subscription to the current Vue effect scope; `createViiRef` returns an explicit
+`{ ref, dispose }` handle for SSR or other non-scope lifecycles. Selector and custom equality options
+remain at the adapter edge while Core owns snapshot, batching, and subscription semantics.
+
 ## Vanilla direction
 
 Vanilla TypeScript is the reference proof that Vii Core is framework-independent.

@@ -19,7 +19,8 @@ Current architectural priorities include:
 - public API stability through RFC/ADR governance.
 
 The current implementation includes the State Core surface through P1.9, the initial P2.1 shared
-adapter compliance suite, the initial P2.2 React adapter, and the initial P2.3 Angular adapter: State reads/writes and subscriptions,
+adapter compliance suite, the initial P2.2 React adapter, the initial P2.3 Angular adapter, and the
+initial P2.4 Vue adapter: State reads/writes and subscriptions,
 re-entrant updates, Computed, Batch, Scope ownership/disposal, bounded opt-in Diagnostics, and a
 reproducible local performance baseline suite. These APIs remain experimental.
 The Vanilla consumer fixture exercises State, Computed, Batch, and Scope, and the package-validation
@@ -36,6 +37,9 @@ is validated in a clean consumer fixture alongside the packed Core artifact.
 The private Angular adapter exposes `viiSignal` for injection-context lifecycle ownership and
 `createViiSignal` for explicit disposal outside an Angular lifecycle; it preserves Core selection,
 equality, and batching semantics and is validated with an Angular 22 clean consumer.
+The private Vue adapter exposes `useVii` as a readonly shallow ref tied to the current effect scope
+and `createViiRef` for explicit disposal outside a Vue scope; it preserves Core selection, equality,
+and batching semantics and is validated with a Vue 3.5 clean consumer.
 
 ## Repository operating model
 
@@ -77,7 +81,8 @@ The focused Core performance command is `pnpm benchmark:core`; it records raw re
 The focused adapter command is `pnpm --filter @vii/adapter-testing test`; the full suite is included
 in `pnpm validate`. React adapter checks also include `pnpm --filter @vii/react test` and the packed
 React clean-consumer fixture. Angular adapter checks include `pnpm --filter @vii/angular test` and
-the packed Angular clean-consumer fixture.
+the packed Angular clean-consumer fixture. Vue adapter checks include `pnpm --filter @vii/vue test`
+and the packed Vue clean-consumer fixture.
 
 Repository governance CI additionally checks branch naming and forbidden authorship/tool-attribution metadata for pull requests and their commits.
 The public repository also runs CodeQL analysis for JavaScript/TypeScript and GitHub Actions workflows,

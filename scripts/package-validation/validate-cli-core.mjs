@@ -54,6 +54,10 @@ try {
       "package/dist/add-state.d.ts.map",
       "package/dist/add-state.js",
       "package/dist/add-state.js.map",
+      "package/dist/doctor-project.d.ts",
+      "package/dist/doctor-project.d.ts.map",
+      "package/dist/doctor-project.js",
+      "package/dist/doctor-project.js.map",
       "package/dist/init-project.d.ts",
       "package/dist/init-project.d.ts.map",
       "package/dist/init-project.js",
@@ -99,6 +103,8 @@ try {
   assert.deepEqual(consumer.initFiles, ["vii.config.ts"]);
   assert.equal(consumer.addStateStatus, "dry-run");
   assert.deepEqual(consumer.addStateFiles, ["src/state.ts"]);
+  assert.equal(consumer.doctorStatus, "healthy");
+  assert.deepEqual(consumer.doctorFindingCodes, []);
   console.log("Packed CLI Core artifact with clean consumer validated.");
 } finally {
   await rm(temporaryRoot, { recursive: true, force: true });

@@ -18,6 +18,13 @@ The operation is root-confined, only creates a missing state file beneath an exi
 `src` directory, and blocks local changes, symlinks, missing source directories, and ambiguous
 detection. Its report returns the exact planned file path.
 
+`doctorProject(root)` performs read-only Analyze → Validate → Report diagnostics. It reports
+healthy, attention, or blocked status with explainable findings for detection conflicts, missing
+Vii Core or framework adapters, missing Nx integration, ambiguous rendering, and incomplete safe
+metadata. It never executes project configuration, installs dependencies, changes files, or reads
+secret values. The typed result is an experimental engine boundary, not the versioned P3.5 JSON
+protocol or a terminal command.
+
 Detection does not install dependencies, execute project configuration, read secret values, mutate
 files, invoke shell commands, or access the network. The package is private and experimental while
 RFC 0006 and RFC 0007 remain Draft; its result shape may change before a terminal CLI or machine-

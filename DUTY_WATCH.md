@@ -803,3 +803,52 @@ PR: #34
 
 - PR #34 is open with security, compatibility, filesystem, dry-run, and documentation impact
   recorded. Review the GitHub checks and merge only with explicit approval.
+
+## 2026-08-12 16:42 CEST | Implement P3.4 vii doctor
+
+Status: completed
+Branch: `feat/cli-doctor`
+PR: not opened
+
+### Scope
+
+- Implement the minimal read-only `vii doctor` engine slice on the shared CLI Core detection
+  boundary without starting the terminal CLI or P3.5 versioned JSON protocol.
+
+### Changes
+
+- Added `doctorProject(root)` with the Analyze → Validate → Report lifecycle and typed
+  healthy/attention/blocked reports.
+- Added explainable findings for detection conflicts, unknown framework/package manager/language,
+  missing `@vii/core`, missing React/Angular/Vue adapters, missing Nx integration, and ambiguous
+  client/SSR markers.
+- Kept diagnostics read-only: no project configuration execution, dependency installation, network,
+  secret reads, package-manifest mutation, or automatic repair behavior.
+- Added TDD coverage for healthy projects, blocking conflicts, missing adapters/Core, non-executed
+  configuration, Nx integration review, and packed clean-consumer behavior. CLI Core now has 26 tests.
+- Updated CLI architecture, project detection guidance, package README, project state, and packed
+  fixture validation. P3.5 machine-readable output, terminal parser, Dependabot alerts, and repair
+  commands remain out of scope.
+
+### Validation
+
+- `pnpm --filter @vii/cli-core test`: passed, 26 tests.
+- Focused CLI Core lint, typecheck, and build: passed.
+- Packed CLI Core clean consumer: passed with network-enabled installation.
+- `pnpm pack:check`: passed with network-enabled clean consumers for Core, React, Angular, Vue, and
+  CLI Core.
+- `pnpm validate`: passed with format, lint, typecheck, tests, builds, and pack checks.
+- `git diff --check`: passed.
+
+### Architecture / compatibility
+
+- The private experimental `@vii/cli-core` API is extended with `doctorProject`; RFCs 0006 and 0007
+  remain Draft and no stable CLI or JSON protocol is claimed.
+- Doctor consumes the existing read-only detector and does not add a runtime dependency or a new
+  filesystem mutation boundary. Findings contain metadata, messages, and sources, not source or
+  secret values.
+
+### Remaining / recovery
+
+- Commit the focused implementation, push `feat/cli-doctor`, and open the review PR with security,
+  compatibility, filesystem, privacy, and documentation impact. Do not merge without explicit approval.

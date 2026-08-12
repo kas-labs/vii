@@ -30,6 +30,27 @@ importers:
         specifier: 4.1.10
         version: 4.1.10(yaml@2.9.0)
 
+  fixtures/angular:
+    dependencies:
+      '@angular/compiler':
+        specifier: 22.1.1
+        version: 22.1.1
+      '@angular/core':
+        specifier: 22.1.1
+        version: 22.1.1(@angular/compiler@22.1.1)(rxjs@7.8.2)(zone.js@0.16.0)
+      '@vii/angular':
+        specifier: workspace:*
+        version: link:../../packages/angular
+      '@vii/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      rxjs:
+        specifier: 7.8.2
+        version: 7.8.2
+      zone.js:
+        specifier: 0.16.0
+        version: 0.16.0
+
   fixtures/react:
     dependencies:
       '@vii/core':
@@ -64,6 +85,24 @@ importers:
         specifier: workspace:*
         version: link:../core
 
+  packages/angular:
+    devDependencies:
+      '@angular/compiler':
+        specifier: 22.1.1
+        version: 22.1.1
+      '@angular/core':
+        specifier: 22.1.1
+        version: 22.1.1(@angular/compiler@22.1.1)(rxjs@7.8.2)(zone.js@0.16.0)
+      '@vii/core':
+        specifier: workspace:*
+        version: link:../core
+      rxjs:
+        specifier: 7.8.2
+        version: 7.8.2
+      zone.js:
+        specifier: 0.16.0
+        version: 0.16.0
+
   packages/core: {}
 
   packages/react:
@@ -91,6 +130,23 @@ importers:
         version: 19.2.8(react@19.2.8)
 
 packages:
+
+  '@angular/compiler@22.1.1':
+    resolution: {integrity: sha512-UfQZALwewk+WyE5fqrXT3CK0sxWXre4XojAvUdFQSZsVHTZEM1QD4FncuePa44I6BQMhfqQUvYNlqFnev4WOQg==}
+    engines: {node: ^22.22.3 || ^24.15.0 || >=26.0.0}
+
+  '@angular/core@22.1.1':
+    resolution: {integrity: sha512-QFZNFzyFw9l1B1D7NCEU3YiLLBnMSejyp9mzJrzZ9vzc70BsewikcLFwuj+qqleqFmi5VW3f9GFNgwUq8dWGAg==}
+    engines: {node: ^22.22.3 || ^24.15.0 || >=26.0.0}
+    peerDependencies:
+      '@angular/compiler': 22.1.1
+      rxjs: ^6.5.3 || ^7.4.0
+      zone.js: ~0.15.0 || ~0.16.0
+    peerDependenciesMeta:
+      '@angular/compiler':
+        optional: true
+      zone.js:
+        optional: true
 
   '@emnapi/core@1.4.5':
     resolution: {integrity: sha512-XsLw1dEOpkSX/WucdqUhPWP7hDxSvZiY+fsUC14h+FtQ2Ifni4znbBt8punRX+Uj2JG/uDb8nEHVKvrVlvdZ5Q==}
@@ -1117,6 +1173,9 @@ packages:
     engines: {node: ^20.19.0 || >=22.12.0}
     hasBin: true
 
+  rxjs@7.8.2:
+    resolution: {integrity: sha512-dhKf903U/PQZY6boNNtAGdWbG85WAbjT/1xYoZIC7FAY0yWapOBQVsVrDl58W86//e1VpMNBtRV4MaXfdMySFA==}
+
   safe-buffer@5.2.1:
     resolution: {integrity: sha512-rp3So07KcdmmKbGvgaNxQSJr7bGVSVk5S9Eq1F+ppbRo70+YeaDxkw5Dd8NPN+GD6bjnYm2VuPuCXmpuYvmCXQ==}
 
@@ -1371,7 +1430,22 @@ packages:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
     engines: {node: '>=10'}
 
+  zone.js@0.16.0:
+    resolution: {integrity: sha512-LqLPpIQANebrlxY6jKcYKdgN5DTXyyHAKnnWWjE5pPfEQ4n7j5zn7mOEEpwNZVKGqx3kKKmvplEmoBrvpgROTA==}
+
 snapshots:
+
+  '@angular/compiler@22.1.1':
+    dependencies:
+      tslib: 2.8.1
+
+  '@angular/core@22.1.1(@angular/compiler@22.1.1)(rxjs@7.8.2)(zone.js@0.16.0)':
+    dependencies:
+      rxjs: 7.8.2
+      tslib: 2.8.1
+    optionalDependencies:
+      '@angular/compiler': 22.1.1
+      zone.js: 0.16.0
 
   '@emnapi/core@1.4.5':
     dependencies:
@@ -2429,6 +2503,10 @@ snapshots:
       '@rolldown/binding-win32-arm64-msvc': 1.2.3
       '@rolldown/binding-win32-x64-msvc': 1.2.3
 
+  rxjs@7.8.2:
+    dependencies:
+      tslib: 2.8.1
+
   safe-buffer@5.2.1: {}
 
   scheduler@0.27.0: {}
@@ -2622,3 +2700,5 @@ snapshots:
       yargs-parser: 21.1.1
 
   yocto-queue@0.1.0: {}
+
+  zone.js@0.16.0: {}

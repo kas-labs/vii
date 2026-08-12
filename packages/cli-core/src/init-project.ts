@@ -1,7 +1,7 @@
-import { constants } from "node:fs";
-import { open, writeFile } from "node:fs/promises";
+import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import { detectProject } from "./detect-project.js";
+import { inspectExistingFile, type ExistingFileInspection } from "./project-files.js";
 import type {
   DetectedProject,
   InitOptions,
@@ -22,7 +22,7 @@ export async function initProject(
   const root = detection.root;
   const target = path.resolve(root, configFile);
   const expectedContent = createConfig(detection);
-  const inspection = await inspectTarget(target, expectedContent);
+  const inspection = await inspectExistingFile(target, expectedContent);
   const conflicts = createConflicts(detection, inspection);
   const files =
     inspection === "missing" && conflicts.length === 0 ? [createPlannedFile(expectedContent)] : [];
@@ -70,30 +70,9 @@ function createPlannedFile(content: string): InitPlannedFile {
   return { action: "create", content, path: configFile };
 }
 
-async function inspectTarget(
-  target: string,
-  expectedContent: string,
-): Promise<"missing" | "same" | "different" | "symlink"> {
-  let handle;
-  try {
-    handle = await open(target, constants.O_RDONLY | constants.O_NOFOLLOW);
-    return (await handle.readFile("utf8")) === expectedContent ? "same" : "different";
-  } catch (error) {
-    if (isMissingFile(error)) {
-      return "missing";
-    }
-    if (isSymlink(error)) {
-      return "symlink";
-    }
-    return "different";
-  } finally {
-    await handle?.close();
-  }
-}
-
 function createConflicts(
   detection: DetectedProject,
-  inspection: "missing" | "same" | "different" | "symlink",
+  inspection: ExistingFileInspection,
 ): readonly string[] {
   const conflicts = detection.conflicts.map((conflict) => conflict.message);
   if (detection.framework === "unknown" || detection.framework === "mixed") {
@@ -120,7 +99,7 @@ async function validateTarget(
   if (dryRun && plan.files.length > 0) {
     return { errors: [], files: plan.files.map((file) => file.path), passed: true };
   }
-  const inspection = await inspectTarget(target, expectedContent);
+  const inspection = await inspectExistingFile(target, expectedContent);
   return inspection === "same"
     ? { errors: [], files: [], passed: true }
     : { errors: [`${configFile} failed validation`], files: [], passed: false };
@@ -139,12 +118,4 @@ function createMessage(
   return status === "dry-run"
     ? `vii init would create ${files.length} file`
     : `vii init created ${files.length} file`;
-}
-
-function isMissingFile(error: unknown): boolean {
-  return typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT";
-}
-
-function isSymlink(error: unknown): boolean {
-  return typeof error === "object" && error !== null && "code" in error && error.code === "ELOOP";
 }

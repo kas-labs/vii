@@ -753,3 +753,53 @@ PR: #33
 
 - None. The fix is pushed and PR #33 CodeQL, Validate, Governance, and Dependency Review checks
   are green.
+
+## 2026-08-12 15:57 CEST | Implement P3.3 vii add state
+
+Status: completed
+Branch: `feat/cli-add-state`
+PR: #34
+
+### Scope
+
+- Implement the minimal deterministic `vii add state` engine slice on the shared CLI Core detection
+  boundary without starting the terminal `@vii/cli`, dependency installation, or P3.5 output protocol.
+
+### Changes
+
+- Added `addState(root, { dryRun })` with the Analyze, Plan, Preview, Apply, Validate, Report
+  lifecycle and typed plan/report/validation results.
+- The operation plans or creates exactly `src/state.ts` when `@vii/core` is already declared and
+  an existing non-symlink `src` directory is present. It is deterministic and idempotent, supports
+  dry-run without writes, reports exact file paths, and blocks ambiguous detection, missing Core,
+  missing/non-directory/symlink `src`, changed local state, and state symlinks.
+- Reused descriptor-bound `O_NOFOLLOW` file inspection for init and add-state validation; no project
+  config execution, dependency installation, package-manifest mutation, network access, or secret
+  reads were added.
+- Extended TDD/fixture coverage to 20 CLI Core tests and updated the packed clean consumer to install
+  packed Core and CLI Core artifacts and verify both init and add-state dry-run plans.
+- Updated CLI architecture, project detection, package README, package metadata, and durable project
+  state documentation. Dependabot alerts, terminal CLI, create-vii, doctor, and P3.5 remain out of
+  scope.
+
+### Validation
+
+- `pnpm --filter @vii/cli-core test`: passed, 20 tests.
+- Focused CLI Core lint, typecheck, and build: passed.
+- `pnpm pack:check`: passed with network-enabled clean consumers for Core, React, Angular, Vue, and
+  CLI Core.
+- `pnpm validate`: passed with format, lint, typecheck, tests, builds, and pack checks.
+- `git diff --check`: passed.
+
+### Architecture / compatibility
+
+- The private experimental `@vii/cli-core` API is extended with `addState`; RFCs 0006 and 0007
+  remain Draft, so the result shape and terminal command surface are not stable support promises.
+- Filesystem writes are restricted to the fixed `src/state.ts` target, use create-only semantics,
+  and require an existing source directory. Dry-run does not write. Local ownership and symlink
+  escapes are explicit conflicts; no package, runtime Core, adapter, or dependency behavior changed.
+
+### Remaining / recovery
+
+- PR #34 is open with security, compatibility, filesystem, dry-run, and documentation impact
+  recorded. Review the GitHub checks and merge only with explicit approval.

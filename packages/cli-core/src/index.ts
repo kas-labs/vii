@@ -1,7 +1,15 @@
 export { detectProject } from "./detect-project.js";
 export { initProject } from "./init-project.js";
+export { addState } from "./add-state.js";
 export {
   ProjectDetectionError,
+  type AddStateOptions,
+  type AddStatePlan,
+  type AddStatePlannedFile,
+  type AddStateReport,
+  type AddStateReportStatus,
+  type AddStateResult,
+  type AddStateValidation,
   type InitOptions,
   type InitPhase,
   type InitPlan,

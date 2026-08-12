@@ -12,6 +12,7 @@ const fixtureDirectory = path.join(repositoryRoot, "fixtures/cli-init");
 const pnpm = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 const temporaryRoot = await mkdtemp(path.join(os.tmpdir(), "vii-cli-pack-check-"));
 const artifactDirectory = path.join(temporaryRoot, "artifact");
+const coreArtifactDirectory = path.join(temporaryRoot, "core-artifact");
 const consumerDirectory = path.join(temporaryRoot, "consumer");
 
 function run(command, args, cwd = repositoryRoot) {
@@ -24,13 +25,19 @@ function run(command, args, cwd = repositoryRoot) {
 
 try {
   await mkdir(artifactDirectory, { recursive: true });
+  await mkdir(coreArtifactDirectory, { recursive: true });
   await mkdir(consumerDirectory, { recursive: true });
+  run(pnpm, ["--filter", "@vii/core", "build"]);
   run(pnpm, ["--filter", "@vii/cli-core", "build"]);
+  run(pnpm, ["--filter", "@vii/core", "pack", "--pack-destination", coreArtifactDirectory]);
   run(pnpm, ["--filter", "@vii/cli-core", "pack", "--pack-destination", artifactDirectory]);
 
   const artifactNames = await readdir(artifactDirectory);
   assert.equal(artifactNames.length, 1, "expected one CLI Core package artifact");
   const artifactPath = path.join(artifactDirectory, artifactNames[0]);
+  const coreArtifactNames = await readdir(coreArtifactDirectory);
+  assert.equal(coreArtifactNames.length, 1, "expected one Core package artifact");
+  const coreArtifactPath = path.join(coreArtifactDirectory, coreArtifactNames[0]);
   const entries = execFileSync("tar", ["-tzf", artifactPath], { encoding: "utf8" })
     .trim()
     .split("\n")
@@ -43,6 +50,10 @@ try {
       "package/dist/detect-project.d.ts.map",
       "package/dist/detect-project.js",
       "package/dist/detect-project.js.map",
+      "package/dist/add-state.d.ts",
+      "package/dist/add-state.d.ts.map",
+      "package/dist/add-state.js",
+      "package/dist/add-state.js.map",
       "package/dist/init-project.d.ts",
       "package/dist/init-project.d.ts.map",
       "package/dist/init-project.js",
@@ -72,17 +83,22 @@ try {
       private: true,
       type: "module",
       packageManager: "pnpm@10.12.4",
-      dependencies: { "@vii/cli-core": `file:${artifactPath}` },
       devDependencies: { "@types/node": "22.17.0" },
+      dependencies: {
+        "@vii/cli-core": `file:${artifactPath}`,
+        "@vii/core": `file:${coreArtifactPath}`,
+      },
     },
     repositoryRoot,
     pnpm,
   });
   const consumer = await import(path.join(consumerDirectory, "dist/main.js"));
   assert.equal(consumer.detectedPackageManager, "pnpm");
-  assert.deepEqual(consumer.detectedViiPackages, ["@vii/cli-core"]);
+  assert.deepEqual(consumer.detectedViiPackages, ["@vii/cli-core", "@vii/core"]);
   assert.equal(consumer.initStatus, "dry-run");
   assert.deepEqual(consumer.initFiles, ["vii.config.ts"]);
+  assert.equal(consumer.addStateStatus, "dry-run");
+  assert.deepEqual(consumer.addStateFiles, ["src/state.ts"]);
   console.log("Packed CLI Core artifact with clean consumer validated.");
 } finally {
   await rm(temporaryRoot, { recursive: true, force: true });

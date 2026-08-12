@@ -91,6 +91,44 @@ export interface InitResult {
   readonly validation: InitValidation;
 }
 
+export type AddStateReportStatus = "dry-run" | "applied" | "unchanged" | "blocked";
+
+export interface AddStateOptions {
+  readonly dryRun?: boolean;
+}
+
+export interface AddStatePlannedFile {
+  readonly action: "create";
+  readonly content: string;
+  readonly path: string;
+}
+
+export interface AddStatePlan {
+  readonly conflicts: readonly string[];
+  readonly files: readonly AddStatePlannedFile[];
+}
+
+export interface AddStateValidation {
+  readonly errors: readonly string[];
+  readonly files: readonly string[];
+  readonly passed: boolean;
+}
+
+export interface AddStateReport {
+  readonly files: readonly string[];
+  readonly message: string;
+  readonly status: AddStateReportStatus;
+}
+
+export interface AddStateResult {
+  readonly applied: boolean;
+  readonly detection: DetectedProject;
+  readonly phases: readonly InitPhase[];
+  readonly plan: AddStatePlan;
+  readonly report: AddStateReport;
+  readonly validation: AddStateValidation;
+}
+
 export class ProjectDetectionError extends Error {
   readonly code: ProjectDetectionErrorCode;
 

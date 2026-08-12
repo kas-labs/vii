@@ -29,6 +29,12 @@ the versioned `vii.cli` protocol envelope (version `1`). `stringifyMachineOutput
 JSON-safe object. This is the P3.5 engine foundation; terminal parsing, streaming, schema publication,
 and external compatibility guarantees remain deferred.
 
+`inspectTrace(trace)` is a pure, read-only consumer for the experimental Core `vii.trace` `0.1`
+envelope. It validates the protocol and version, then returns only event count, dropped-event count,
+and deterministic first-seen event-type counts. It never reads files, executes project code, exposes
+event payloads, or accesses the network. This private inspection engine does not make the terminal
+`vii inspect` command or an external trace schema stable.
+
 Detection does not install dependencies, execute project configuration, read secret values, mutate
 files, invoke shell commands, or access the network. The package is private and experimental while
 RFC 0006 and RFC 0007 remain Draft; its result shape may change before a terminal CLI or machine-

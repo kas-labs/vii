@@ -69,6 +69,11 @@ and trace exports for correlation without automatic async propagation or authori
 In `production-safe` mode, Core omits that caller-provided correlation identifier and redacts
 caller-provided scope names before buffering, sinking, or exporting events; generated identifiers
 and structural counts remain available.
+The existing private `@vii/cli-core` package now also provides a pure `inspectTrace()` consumer for
+in-memory `vii.trace` `0.1` snapshots. It validates the protocol/version and returns only deterministic
+event-type counts, total events, and dropped-event count; it does not read files, expose payloads,
+execute project code, access the network, mutate projects, or make the terminal `vii inspect` command
+or diagnostics schema stable.
 Structured security diagnostics remain a proposed follow-up contract in RFC 0023; no security-event
 recording API or enforcement behavior is implemented until that RFC is accepted and a real producer
 validates the boundary.

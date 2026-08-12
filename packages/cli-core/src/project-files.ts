@@ -1,4 +1,5 @@
-import { readdir, readFile, stat } from "node:fs/promises";
+import { constants } from "node:fs";
+import { open, readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { type DetectionConflict, type DetectionEvidence, ProjectDetectionError } from "./types.js";
 
@@ -18,6 +19,29 @@ export interface DetectionContext {
   readonly manifest: PackageManifest;
   readonly evidence: DetectionEvidence[];
   readonly conflicts: DetectionConflict[];
+}
+
+export type ExistingFileInspection = "missing" | "same" | "different" | "symlink";
+
+export async function inspectExistingFile(
+  target: string,
+  expectedContent: string,
+): Promise<ExistingFileInspection> {
+  let handle;
+  try {
+    handle = await open(target, constants.O_RDONLY | constants.O_NOFOLLOW);
+    return (await handle.readFile("utf8")) === expectedContent ? "same" : "different";
+  } catch (error) {
+    if (isFileMissing(error)) {
+      return "missing";
+    }
+    if (isSymlink(error)) {
+      return "symlink";
+    }
+    return "different";
+  } finally {
+    await handle?.close();
+  }
 }
 
 export async function readRootFiles(root: string): Promise<ReadonlySet<string>> {
@@ -84,4 +108,8 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
 
 function isFileMissing(error: unknown): boolean {
   return isRecord(error) && error["code"] === "ENOENT";
+}
+
+function isSymlink(error: unknown): boolean {
+  return isRecord(error) && error["code"] === "ELOOP";
 }

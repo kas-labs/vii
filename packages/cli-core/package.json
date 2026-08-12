@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Experimental read-only project detection engine for the Vii CLI.",
+  "description": "Experimental project detection and deterministic mutation engine for the Vii CLI.",
   "files": [
     "dist",
     "README.md",

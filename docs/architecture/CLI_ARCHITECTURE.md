@@ -10,10 +10,10 @@ The CLI reduces setup complexity. It does not replace package managers, general-
 
 Vii may use those systems through adapters while preserving one Vii command and planning model.
 
-The initial private implementation is `@vii/cli-core`, which provides the read-only project
-detection boundary described in `PROJECT_DETECTION.md` and the first deterministic `initProject`
-engine operation. Terminal parsing, package-manager execution, and the full `@vii/cli` package
-remain future layers over this engine.
+The initial private implementation is `@vii/cli-core`, which provides the project detection
+boundary described in `PROJECT_DETECTION.md` and deterministic `initProject` and `addState` engine
+operations. Terminal parsing, package-manager execution, and the full `@vii/cli` package remain
+future layers over this engine.
 
 ## Entry points
 
@@ -103,10 +103,13 @@ Mutating commands support, where applicable:
 The CLI must not silently overwrite modified files or write outside the resolved project root.
 
 The initial `initProject` operation creates at most one root-level `vii.config.ts` containing the
-detected framework marker. It uses the shared detector as Analyze, returns the exact file plan for
-Preview, applies only a missing file, validates the resulting bytes, and reports the complete
-lifecycle. `--dry-run` is represented by the engine's `dryRun` option until a terminal parser exists.
-It does not install dependencies, execute project configuration, or resolve ambiguous detection.
+detected framework marker. `addState` creates at most one `src/state.ts` and requires an existing
+`@vii/core` dependency. Both use the shared detector as Analyze, return exact file plans for
+Preview, apply only missing files, validate resulting bytes, and report the complete lifecycle.
+`--dry-run` is represented by the engine's `dryRun` option until a terminal parser exists. These
+operations do not install dependencies, execute project configuration, mutate package manifests,
+or resolve ambiguous detection. `addState` also requires an existing non-symlink `src` directory
+to keep its changed-file list exact and its write root-confined.
 
 ## Shared CLI engine
 
@@ -198,34 +201,34 @@ Runtime, package manager, build engine, and workspace manager are separate conce
 Candidate configuration:
 
 ```ts
-import { defineConfig } from '@vii/cli';
+import { defineConfig } from "@vii/cli";
 
 export default defineConfig({
-  framework: 'react',
+  framework: "react",
 
   paths: {
-    root: './src',
-    stores: './src/state',
-    queries: './src/queries',
-    components: './src/components',
+    root: "./src",
+    stores: "./src/state",
+    queries: "./src/queries",
+    components: "./src/components",
   },
 
   generators: {
     component: {
-      style: 'tsx',
+      style: "tsx",
       tests: true,
-      styles: 'css',
+      styles: "css",
       colocate: true,
     },
     store: {
-      style: 'functional',
+      style: "functional",
       tests: true,
     },
   },
 
   diagnostics: {
     enabled: true,
-    redact: ['auth.token'],
+    redact: ["auth.token"],
   },
 });
 ```

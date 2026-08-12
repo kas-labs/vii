@@ -42,13 +42,16 @@ and `createViiRef` for explicit disposal outside a Vue scope; it preserves Core 
 and batching semantics and is validated with a Vue 3.5 clean consumer.
 The private `@vii/cli-core` package now provides read-only root project detection with evidence,
 confidence, conflict reporting, package-manager/framework/runtime/workspace/language/rendering
-classification, and installed Vii package discovery. Its first mutating engine operation,
-`initProject`, uses that detector as Analyze and implements the deterministic Analyze, Plan, Preview,
-Apply, Validate, Report lifecycle. It can create one root-level `vii.config.ts` with the detected
-framework marker, supports dry-run, returns exact planned file paths, blocks ambiguous detection,
-local config changes, and config symlinks, and never executes configuration, installs dependencies,
-reads secret values, or accesses the network. The terminal `@vii/cli`, package-manager execution,
-and root-level monorepo selection remain provisional while RFCs 0006 and 0007 are Draft.
+classification, and installed Vii package discovery. Its deterministic mutation operations,
+`initProject` and `addState`, use that detector as Analyze and implement the Analyze, Plan, Preview,
+Apply, Validate, Report lifecycle. `initProject` can create one root-level `vii.config.ts` with the
+detected framework marker; `addState` can create one `src/state.ts` only when `@vii/core` is already
+declared and an existing non-symlink `src` directory is present. Both support dry-run, return exact
+planned file paths, are idempotent, and block ambiguous detection, local changes, and symlinks.
+Neither operation executes configuration, installs dependencies, changes package manifests, reads
+secret values, or accesses the network. The terminal `@vii/cli`, package-manager execution, state
+generator options, and root-level monorepo selection remain provisional while RFCs 0006 and 0007
+are Draft.
 
 ## Repository operating model
 
@@ -92,7 +95,8 @@ in `pnpm validate`. React adapter checks also include `pnpm --filter @vii/react 
 React clean-consumer fixture. Angular adapter checks include `pnpm --filter @vii/angular test` and
 the packed Angular clean-consumer fixture. Vue adapter checks include `pnpm --filter @vii/vue test`
 and the packed Vue clean-consumer fixture. CLI foundation checks include
-`pnpm --filter @vii/cli-core test` and the packed CLI Core detection/init clean-consumer fixture.
+`pnpm --filter @vii/cli-core test` and the packed CLI Core detection/init/add-state clean-consumer
+fixture, which installs packed `@vii/core` and `@vii/cli-core` artifacts together.
 
 Repository governance CI additionally checks branch naming and forbidden authorship/tool-attribution metadata for pull requests and their commits.
 The public repository also runs CodeQL analysis for JavaScript/TypeScript and GitHub Actions workflows,

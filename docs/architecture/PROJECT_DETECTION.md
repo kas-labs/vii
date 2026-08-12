@@ -19,15 +19,15 @@ remain explicit conflicts for a later CLI selection surface.
 ```ts
 interface DetectedProject {
   root: string;
-  workspace: 'single' | 'nx' | 'other-monorepo' | 'unknown';
-  framework: 'react' | 'angular' | 'vue' | 'vanilla' | 'mixed' | 'unknown';
-  runtime: 'browser' | 'node' | 'bun' | 'deno' | 'unknown';
-  packageManager: 'npm' | 'pnpm' | 'yarn' | 'bun' | 'unknown';
-  language: 'typescript' | 'javascript' | 'mixed';
-  rendering: 'client' | 'ssr' | 'static' | 'mixed' | 'unknown';
+  workspace: "single" | "nx" | "other-monorepo" | "unknown";
+  framework: "react" | "angular" | "vue" | "vanilla" | "mixed" | "unknown";
+  runtime: "browser" | "node" | "bun" | "deno" | "unknown";
+  packageManager: "npm" | "pnpm" | "yarn" | "bun" | "unknown";
+  language: "typescript" | "javascript" | "mixed";
+  rendering: "client" | "ssr" | "static" | "mixed" | "unknown";
   projects: DetectedWorkspaceProject[];
   evidence: DetectionEvidence[];
-  confidence: 'high' | 'medium' | 'low';
+  confidence: "high" | "medium" | "low";
   conflicts: DetectionConflict[];
 }
 ```
@@ -113,11 +113,13 @@ It must not:
 - connect to external services;
 - evaluate untrusted configuration code without an explicit safe strategy.
 
-The first mutating consumer, `initProject`, calls detection as its Analyze phase. It does not
-reinterpret detection signals: conflicts and mixed/unknown frameworks block Apply, while a dry-run
-returns the planned root-level `vii.config.ts` without writing it. Existing changed config files
-and config symlinks are reported as conflicts so project-root confinement and local ownership remain
-explicit.
+The first mutating consumers, `initProject` and `addState`, call detection as their Analyze phase.
+They do not reinterpret detection signals: conflicts and mixed/unknown frameworks block Apply,
+while a dry-run returns the planned file list without writing it. `initProject` plans the root-level
+`vii.config.ts`; `addState` plans `src/state.ts` only when `@vii/core` is already declared and the
+existing `src` directory is safe. Neither operation installs dependencies or changes package
+manifests. Existing changed files and symlinks are reported as conflicts so project-root
+confinement and local ownership remain explicit.
 
 ## Machine-readable result
 

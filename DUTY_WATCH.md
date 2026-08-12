@@ -751,4 +751,5 @@ PR: #33
 
 ### Remaining / recovery
 
-- Push the fix and confirm the CodeQL check on PR #33.
+- None. The fix is pushed and PR #33 CodeQL, Validate, Governance, and Dependency Review checks
+  are green.

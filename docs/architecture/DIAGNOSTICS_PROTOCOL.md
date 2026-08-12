@@ -77,6 +77,12 @@ later provide store and selector aliases when those higher-level modules exist.
 
 Query, UI, server, and platform families will be added by their own RFCs.
 
+Structured security diagnostics are proposed separately in
+[`RFC 0023`](../../rfcs/0023-security-diagnostics-event-contract.md). Until that RFC is accepted
+and implemented, Core does not expose a security-event recording API. The proposed boundary uses a
+finite code, surface, and reason in an immutable `security.event` payload and excludes raw input,
+credentials, complete malicious payloads, and other sensitive data by construction.
+
 ## Event envelope
 
 ```ts

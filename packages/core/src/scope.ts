@@ -32,12 +32,23 @@ export function createScope(
   options: ScopeOptions = {},
   inheritedDiagnostics?: DiagnosticsRuntime,
 ): Scope {
+  return createScopeInternal(options, inheritedDiagnostics, undefined);
+}
+
+function createScopeInternal(
+  options: ScopeOptions,
+  inheritedDiagnostics: DiagnosticsRuntime | undefined,
+  parentScopeId: string | undefined,
+): Scope {
   const diagnostics = inheritedDiagnostics ?? getActiveDiagnostics();
   const scopeId = diagnostics?.mode === "off" ? undefined : diagnostics?.allocateId("scope");
   const resources: OwnedResource[] = [];
   let disposed = false;
 
-  recordScopeEvent(diagnostics, "scope.created", scopeId, {});
+  recordScopeEvent(diagnostics, "scope.created", scopeId, {
+    ...(options.name === undefined ? {} : { name: options.name }),
+    ...(parentScopeId === undefined ? {} : { parentScopeId }),
+  });
 
   const assertActive = (): void => {
     if (disposed) {
@@ -112,7 +123,7 @@ export function createScope(
     use,
     createChild: (childOptions = {}): Scope => {
       assertActive();
-      const child = createScope(childOptions, diagnostics);
+      const child = createScopeInternal(childOptions, diagnostics, scopeId);
       use(child);
       return child;
     },

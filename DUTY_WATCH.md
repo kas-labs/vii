@@ -943,3 +943,43 @@ PR: [#37](https://github.com/kas-labs/vii/pull/37) open
 ### Remaining / recovery
 
 - PR #37 is open; monitor review and required checks. Do not merge without explicit approval.
+
+## 2026-08-12 17:38 CEST | Implement diagnostic scope ownership metadata
+
+Status: completed
+Branch: `feat/diagnostics-scope-ownership`
+PR: not opened
+
+### Scope
+
+- Extend the experimental diagnostics foundation with safe scope ownership metadata for trace
+  inspection after P3.6.
+- Record that PR #37 merged and local `main` was synchronized before this focused branch was created.
+
+### Changes
+
+- `scope.created` events now preserve optional scope `name` and `parentScopeId` alongside the
+  generated `scopeId`.
+- Added public Core coverage, Vanilla fixture coverage, packed clean-consumer assertions, and
+  ownership documentation.
+- Kept the change observational: no application values, secrets, new mutation authority, runtime
+  dependency, transport, network, telemetry, or Devtools behavior was added.
+
+### Validation
+
+- Core tests: passed, 49 tests across 8 files.
+- Core and Vanilla fixture lint, typecheck, build, and tests: passed.
+- `pnpm pack:check`: passed with Core, React, Angular, Vue, and CLI Core clean consumers.
+- `pnpm validate`: passed, including format, lint, typecheck, tests, build, and pack checks.
+- `git diff --check`: passed before commit.
+
+### Architecture / compatibility
+
+- Ownership edges remain experimental diagnostics metadata and inherit the value-free privacy
+  boundary; no stable external trace schema is claimed.
+- Core remains framework-agnostic, and scope disposal semantics remain unchanged and synchronous.
+
+### Remaining / recovery
+
+- Commit the focused change, push `feat/diagnostics-scope-ownership`, and open the review PR. Do not
+  merge without explicit approval.

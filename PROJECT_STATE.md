@@ -60,6 +60,8 @@ streaming, and external schema compatibility remain provisional.
 The Core diagnostics collector also exposes an experimental `exportTrace()` snapshot using the
 versioned `vii.trace` `0.1` envelope; it preserves the bounded value-free event buffer and dropped
 event count without adding file, network, telemetry, or Devtools behavior.
+Scope ownership events also preserve optional scope names and parent scope identifiers so exported
+traces can inspect the ownership tree without exposing values or granting mutation authority.
 
 ## Repository operating model
 

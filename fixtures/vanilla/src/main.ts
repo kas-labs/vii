@@ -34,6 +34,13 @@ diagnostics.run(() => {
   diagnosticCount.set(1);
 });
 const diagnosticTrace = diagnostics.exportTrace();
+const ownershipDiagnostics = createDiagnostics({ clock: () => 456 });
+ownershipDiagnostics.run(() => {
+  const applicationScope = createScope({ name: "application" });
+  applicationScope.createChild({ name: "checkout" });
+  applicationScope.dispose();
+});
+const ownershipTrace = ownershipDiagnostics.exportTrace();
 
 export const countValue = count.get();
 export const doubledValue = doubled.get();
@@ -45,3 +52,6 @@ export const scopedObservedValues = scopedObserved;
 export const diagnosticTraceProtocol = diagnosticTrace.protocol;
 export const diagnosticTraceVersion = diagnosticTrace.version;
 export const diagnosticTraceEventTypes = diagnosticTrace.events.map((event) => event.type);
+export const diagnosticScopePayloads = ownershipTrace.events
+  .filter((event) => event.type === "scope.created")
+  .map((event) => event.payload);

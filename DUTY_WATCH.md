@@ -1364,7 +1364,7 @@ PR: [#48](https://github.com/kas-labs/vii/pull/48) merged as `2e2279d5`
 
 Status: completed
 Branch: `docs/record-pr48-merge-status`
-PR: pending
+PR: [#49](https://github.com/kas-labs/vii/pull/49) draft
 
 ### Scope
 

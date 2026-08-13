@@ -1421,3 +1421,32 @@ Branch: `docs/phase3-next-slice-decision`
   0023 remain Proposed.
 - Resume implementation only after a separate governance decision or a concrete producer/consumer
   demonstrates a bounded Phase 3 contract that does not require speculative trace expansion.
+
+## 2026-08-14 01:47 CEST | Audit architecture stages and add React/Tauri engineering guardrails
+
+Status: completed
+Branch: `docs/desktop-engineering-guardrails`
+
+### Scope
+
+- Compare the proposed monolith-to-microfrontend evolution with Vii's actual repository structure.
+- Audit Tauri/Rust presence, duplicate tracked files, and current React/TypeScript/Tauri/Rust guidance.
+
+### Findings and changes
+
+- Vii is a small pnpm/Nx monorepo of Core, framework-adapter, CLI Core, and clean-consumer fixture
+  packages. It is not an application monolith, microfrontend host, or Tauri application; Tauri remains
+  Phase 7 Research and no `src-tauri`, Cargo, Rust, or Tauri configuration files exist.
+- Identical TypeScript configs are intentional local entry points for independently invoked Nx/package
+  typecheck and build targets. No tracked file was deleted because no duplicate was proven unused.
+- Added mandatory React/TypeScript and deferred Tauri 2/Rust clean-architecture guardrails to
+  `CODE_QUALITY_STANDARDS.md`, and linked them from `AGENTS.md`. The rules preserve Core/platform
+  dependency direction and require an accepted prototype slice before native code or capabilities.
+
+### Validation / recovery
+
+- `pnpm validate`: passed, including lint, typecheck, tests, builds, and packed Core, React, Angular,
+  Vue, and CLI Core clean consumers.
+- `git diff --check`: passed before commit.
+- Do not add a Tauri app, Rust package, capability manifest, or desktop API until an accepted Phase 7
+  research task defines its consumer, boundary, threat review, and validation fixture.

@@ -113,6 +113,14 @@ For runtime/core changes, explicitly consider:
 - diagnostics/observability impact;
 - packed package contents and consumer behavior.
 
+For React and TypeScript changes, apply the framework-edge rules in
+`docs/governance/CODE_QUALITY_STANDARDS.md`: components and Hooks stay pure, external-store
+subscriptions are lifecycle-safe, and strict types are not bypassed with broad assertions. Tauri 2
+and Rust remain Phase 7 Research: do not introduce `src-tauri`, Cargo manifests, capabilities, or
+native commands without an accepted platform slice and a real prototype consumer. When that work is
+approved, apply the Tauri/Rust boundary, capability, lifecycle, and validation rules in the same
+quality standard.
+
 For adapter changes, core behavior remains the source of truth. Adapters translate lifecycle and integration semantics without duplicating domain rules.
 
 For benchmark changes, document methodology, environment assumptions, warmup/repetition strategy, comparison scope, and limitations. Never present a benchmark as a universal claim.

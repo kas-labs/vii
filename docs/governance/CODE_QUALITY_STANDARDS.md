@@ -116,6 +116,55 @@ Do not introduce hidden mutable singleton state when scoped state can be explici
 - Adapter tests should prove cleanup, update behavior, ownership, and expected framework integration.
 - Keep adapters thin enough that framework upgrades can be isolated.
 
+### React and TypeScript
+
+- Components and Hooks must be pure: keep side effects out of render, call Hooks only at the top
+  level of React functions, and treat props, state, and Hook values as immutable render snapshots.
+- Bridge external stores with `useSyncExternalStore` or a documented equivalent that preserves stable
+  snapshots, selector equality, SSR behavior, and subscription cleanup. Test unmount and Strict Mode
+  behavior whenever an adapter owns subscriptions or event listeners.
+- Keep React at the adapter or application edge. Core contracts must not import React, React DOM, or
+  browser globals.
+- Keep TypeScript strict. Model state, command results, and lifecycle transitions with explicit
+  object and discriminated-union types; do not use `any`, broad casts, or assertions to bypass an
+  unclear boundary.
+
+### Tauri 2 and Rust research
+
+Tauri is a Phase 7 research target, not a current Vii runtime dependency. Do not add `src-tauri`,
+Cargo manifests, Tauri plugins, capabilities, or native commands without an accepted platform slice,
+a real prototype consumer, and the package/RFC evidence required by product boundaries.
+
+When a Tauri prototype is approved:
+
+- Keep Rust/Tauri code at the platform edge. Tauri commands translate typed IPC requests into
+  application/domain operations; reusable Vii contracts and domain logic must not depend on Tauri.
+- Treat every command and plugin permission as a privileged boundary. Validate untrusted frontend
+  input, return typed `Result` failures, avoid shell execution, keep filesystem scopes narrow and
+  root-confined, and never expose secrets through command or event payloads.
+- Grant capabilities per window/webview and per operation. Prefer named, minimal capability files;
+  do not rely on wildcard windows, broad home-directory scopes, or default plugin permissions without
+  a reviewed need. Overlapping capabilities merge their permissions, so review that composition.
+- Commands are suitable for typed request/response IPC; use typed channels only for genuinely
+  streaming data. In React, release every asynchronous Tauri event listener when its component or
+  owning Scope ends.
+- In Rust, propagate operational errors with `Result` instead of `unwrap` or `expect` at input, I/O,
+  IPC, and task boundaries. Do not block the async runtime; make shared state and lock ownership
+  explicit and never hold a synchronous lock across an `await`.
+- A Tauri/Rust change must run the relevant `cargo fmt --check`, `cargo clippy -- -D warnings`,
+  `cargo test`, Tauri build/package checks, capability review, and frontend lifecycle tests, in
+  addition to applicable Vii validation.
+
+Use the current official guidance as the implementation reference:
+
+- [React Rules](https://react.dev/reference/rules) and
+  [React with TypeScript](https://react.dev/learn/typescript);
+- [Tauri process model](https://v2.tauri.app/concept/process-model/),
+  [commands](https://v2.tauri.app/develop/calling-rust/),
+  [permissions](https://v2.tauri.app/security/permissions/), and
+  [capabilities](https://v2.tauri.app/security/capabilities/);
+- [Rust Clippy usage](https://doc.rust-lang.org/clippy/usage.html).
+
 ## 9. Performance, bundle, and memory evidence
 
 Performance is part of Vii's product thesis, so claims require evidence.

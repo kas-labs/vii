@@ -115,11 +115,7 @@ For runtime/core changes, explicitly consider:
 
 For React and TypeScript changes, apply the framework-edge rules in
 `docs/governance/CODE_QUALITY_STANDARDS.md`: components and Hooks stay pure, external-store
-subscriptions are lifecycle-safe, and strict types are not bypassed with broad assertions. Tauri 2
-and Rust remain Phase 7 Research: do not introduce `src-tauri`, Cargo manifests, capabilities, or
-native commands without an accepted platform slice and a real prototype consumer. When that work is
-approved, apply the Tauri/Rust boundary, capability, lifecycle, and validation rules in the same
-quality standard.
+subscriptions are lifecycle-safe, and strict types are not bypassed with broad assertions.
 
 For adapter changes, core behavior remains the source of truth. Adapters translate lifecycle and integration semantics without duplicating domain rules.
 

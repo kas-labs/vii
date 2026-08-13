@@ -1326,7 +1326,7 @@ PR: [#47](https://github.com/kas-labs/vii/pull/47) merged as `7c07c874`
 
 Status: completed
 Branch: `docs/phase3-next-slice-boundaries`
-PR: none
+PR: [#48](https://github.com/kas-labs/vii/pull/48) draft
 
 ### Scope
 

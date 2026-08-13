@@ -140,7 +140,9 @@ Repository governance CI additionally checks branch naming and forbidden authors
 The public repository also runs CodeQL analysis for JavaScript/TypeScript and GitHub Actions workflows,
 plus Dependency Review on pull requests. Third-party review apps remain optional external integrations
 and are not part of the Vii runtime or repository-required toolchain. GitHub vulnerability alerts are
-enabled so the dependency graph can power Dependency Review.
+enabled so the dependency graph can power Dependency Review. Development-only transitive resolutions
+pin `axios` to 1.18.0 and `brace-expansion` to 5.0.9 through pnpm overrides; runtime package
+dependencies and public Vii APIs are unaffected.
 
 ## Source-of-truth documents
 

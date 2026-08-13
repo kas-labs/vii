@@ -123,6 +123,10 @@ try {
     { type: "state.created", count: 1 },
     { type: "state.updated", count: 1 },
   ]);
+  assert.deepEqual(consumer.traceInspectionScopeGraph, {
+    scopes: [{ scopeId: "scope-1" }],
+    resources: [{ resourceId: "resource-2", scopeId: "scope-1" }],
+  });
   console.log("Packed CLI Core artifact with clean consumer validated.");
 } finally {
   await rm(temporaryRoot, { recursive: true, force: true });

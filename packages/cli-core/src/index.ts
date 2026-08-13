@@ -8,6 +8,9 @@ export {
   type TraceInspectionEvent,
   type TraceInspectionEventType,
   type TraceInspectionInput,
+  type TraceResourceNode,
+  type TraceScopeGraph,
+  type TraceScopeNode,
 } from "./trace-inspection.js";
 export {
   CLI_MACHINE_OUTPUT_PROTOCOL,

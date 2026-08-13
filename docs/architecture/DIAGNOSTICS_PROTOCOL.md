@@ -182,9 +182,11 @@ identifiers and structural counts remain available for inspection.
 The private `@vii/cli-core` `inspectTrace()` operation consumes an in-memory `vii.trace` `0.1`
 snapshot as a read-only Phase 3 inspection consumer. It validates the protocol/version and returns
 total events, dropped-event count, deterministic first-seen event-type counts, and a structural
-Scope/resource ownership graph. The graph contains only generated IDs and parent links; names,
-values, other payload fields, files, network, and mutation authority are outside its output
-interface. It does not stabilize the trace schema or introduce a terminal CLI command.
+Scope/resource ownership graph. The graph contains only generated IDs, parent links, lifecycle
+status, and resource disposal success; names, values, other payload fields, files, network, and
+mutation authority are outside its output interface. A bounded trace may contain a disposed node
+without its creation event; the inspector preserves that partial structural evidence. It does not
+stabilize the trace schema or introduce a terminal CLI command.
 
 ## Diagnostic sinks
 

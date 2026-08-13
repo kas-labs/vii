@@ -55,10 +55,61 @@ test("inspectTrace summarizes scope and resource ownership without names", () =>
   const inspection = inspectTrace(trace as Parameters<typeof inspectTrace>[0]);
 
   expect(inspection.scopeGraph).toEqual({
-    scopes: [{ scopeId: "scope-1" }, { scopeId: "scope-2", parentScopeId: "scope-1" }],
-    resources: [{ resourceId: "resource-1", scopeId: "scope-2" }],
+    scopes: [
+      { scopeId: "scope-1", status: "active" },
+      { scopeId: "scope-2", parentScopeId: "scope-1", status: "active" },
+    ],
+    resources: [{ resourceId: "resource-1", scopeId: "scope-2", status: "attached" }],
   });
   expect(JSON.stringify(inspection)).not.toContain("secret-");
+});
+
+test("inspectTrace reports disposed ownership nodes and resource success", () => {
+  const inspection = inspectTrace({
+    protocol: "vii.trace",
+    version: "0.1",
+    createdAt: "2026-08-13T00:00:00.000Z",
+    events: [
+      { type: "scope.created", payload: { scopeId: "scope-1" } },
+      { type: "resource.attached", payload: { scopeId: "scope-1", resourceId: "resource-1" } },
+      {
+        type: "resource.disposed",
+        payload: { scopeId: "scope-1", resourceId: "resource-1", succeeded: false },
+      },
+      { type: "scope.disposed", payload: { scopeId: "scope-1" } },
+    ],
+    droppedEvents: 0,
+  });
+
+  expect(inspection.scopeGraph).toEqual({
+    scopes: [{ scopeId: "scope-1", status: "disposed" }],
+    resources: [
+      { resourceId: "resource-1", scopeId: "scope-1", status: "disposed", succeeded: false },
+    ],
+  });
+});
+
+test("inspectTrace preserves disposal evidence when creation events were dropped", () => {
+  const inspection = inspectTrace({
+    protocol: "vii.trace",
+    version: "0.1",
+    createdAt: "2026-08-13T00:00:00.000Z",
+    events: [
+      {
+        type: "resource.disposed",
+        payload: { scopeId: "scope-1", resourceId: "resource-1", succeeded: true },
+      },
+      { type: "scope.disposed", payload: { scopeId: "scope-1" } },
+    ],
+    droppedEvents: 2,
+  });
+
+  expect(inspection.scopeGraph).toEqual({
+    scopes: [{ scopeId: "scope-1", status: "disposed" }],
+    resources: [
+      { resourceId: "resource-1", scopeId: "scope-1", status: "disposed", succeeded: true },
+    ],
+  });
 });
 
 test("inspectTrace rejects an unsupported trace version", () => {

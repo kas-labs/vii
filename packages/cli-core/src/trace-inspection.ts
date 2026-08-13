@@ -34,11 +34,14 @@ export interface TraceScopeGraph {
 export interface TraceScopeNode {
   readonly scopeId: string;
   readonly parentScopeId?: string;
+  readonly status: "active" | "disposed";
 }
 
 export interface TraceResourceNode {
   readonly resourceId: string;
   readonly scopeId: string;
+  readonly status: "attached" | "disposed";
+  readonly succeeded?: boolean;
 }
 
 export function inspectTrace(trace: TraceInspectionInput): TraceInspection {
@@ -53,8 +56,8 @@ export function inspectTrace(trace: TraceInspectionInput): TraceInspection {
   }
 
   const eventTypeCounts = new Map<string, number>();
-  const scopes: TraceScopeNode[] = [];
-  const resources: TraceResourceNode[] = [];
+  const scopes = new Map<string, TraceScopeNode>();
+  const resources = new Map<string, TraceResourceNode>();
 
   for (const event of trace.events) {
     if (typeof event.type !== "string" || event.type.trim().length === 0) {
@@ -63,9 +66,15 @@ export function inspectTrace(trace: TraceInspectionInput): TraceInspection {
     eventTypeCounts.set(event.type, (eventTypeCounts.get(event.type) ?? 0) + 1);
 
     if (event.type === "scope.created") {
-      scopes.push(readScopeNode(event.payload));
+      const scope = readScopeNode(event.payload);
+      scopes.set(scope.scopeId, scope);
     } else if (event.type === "resource.attached") {
-      resources.push(readResourceNode(event.payload));
+      const resource = readResourceNode(event.payload);
+      resources.set(resource.resourceId, resource);
+    } else if (event.type === "scope.disposed") {
+      recordDisposedScope(scopes, event.payload);
+    } else if (event.type === "resource.disposed") {
+      recordDisposedResource(resources, event.payload);
     }
   }
 
@@ -75,7 +84,10 @@ export function inspectTrace(trace: TraceInspectionInput): TraceInspection {
     eventCount: trace.events.length,
     droppedEvents: trace.droppedEvents,
     eventTypes: Array.from(eventTypeCounts, ([type, count]) => ({ type, count })),
-    scopeGraph: { scopes, resources },
+    scopeGraph: {
+      scopes: Array.from(scopes.values()),
+      resources: Array.from(resources.values()),
+    },
   };
 }
 
@@ -85,6 +97,7 @@ function readScopeNode(payload: Readonly<Record<string, unknown>> | undefined): 
 
   return {
     scopeId,
+    status: "active",
     ...(parentScopeId === undefined ? {} : { parentScopeId }),
   };
 }
@@ -95,7 +108,35 @@ function readResourceNode(
   return {
     resourceId: readRequiredString(payload, "resourceId", "resource"),
     scopeId: readRequiredString(payload, "scopeId", "resource"),
+    status: "attached",
   };
+}
+
+function recordDisposedScope(
+  scopes: Map<string, TraceScopeNode>,
+  payload: Readonly<Record<string, unknown>> | undefined,
+): void {
+  const scopeId = readRequiredString(payload, "scopeId", "scope");
+  const existing = scopes.get(scopeId);
+  scopes.set(scopeId, {
+    scopeId,
+    ...(existing?.parentScopeId === undefined ? {} : { parentScopeId: existing.parentScopeId }),
+    status: "disposed",
+  });
+}
+
+function recordDisposedResource(
+  resources: Map<string, TraceResourceNode>,
+  payload: Readonly<Record<string, unknown>> | undefined,
+): void {
+  const resourceId = readRequiredString(payload, "resourceId", "resource");
+  const scopeId = readRequiredString(payload, "scopeId", "resource");
+  const succeeded = payload?.["succeeded"];
+  if (typeof succeeded !== "boolean") {
+    throw new TypeError("Invalid diagnostics resource event payload");
+  }
+
+  resources.set(resourceId, { resourceId, scopeId, status: "disposed", succeeded });
 }
 
 function readRequiredString(

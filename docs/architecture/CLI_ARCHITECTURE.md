@@ -122,10 +122,11 @@ remain deferred.
 The private `inspectTrace(trace)` engine operation is the first read-only CLI inspection consumer.
 It accepts an in-memory experimental `vii.trace` `0.1` snapshot, validates its protocol/version, and
 returns deterministic event-type counts, total events, dropped-event count, and a structural graph
-of Scope IDs, parent Scope IDs, and attached resource IDs. Names, values, and other event payload
-fields are excluded from the result. It does not read files, execute configuration, mutate projects,
-access the network, or create a terminal `vii inspect` command. The trace protocol and inspection
-result remain provisional while RFC 0004 is Draft.
+of Scope IDs, parent Scope IDs, attached resource IDs, lifecycle status, and resource disposal
+success. Names, values, and other event payload fields are excluded from the result. It does not
+read files, execute configuration, mutate projects, access the network, or create a terminal
+`vii inspect` command. The trace protocol and inspection result remain provisional while RFC 0004
+is Draft.
 
 ## Shared CLI engine
 

@@ -1235,3 +1235,48 @@ PR: [#45](https://github.com/kas-labs/vii/pull/45) open
 
 - The atomic commit is `cb468d0`; the branch is pushed and PR #45 is open. Do not merge without
   separate explicit approval.
+
+## 2026-08-13 13:20 CEST | Inspect Scope ownership graph from traces
+
+Status: completed
+Branch: `feat/cli-scope-graph-inspection`
+PR: [#46](https://github.com/kas-labs/vii/pull/46) open
+
+### Scope
+
+- Extend the existing private `@vii/cli-core` read-only `inspectTrace()` consumer with the narrow
+  Phase 3 Scope/resource ownership graph slice supported by Core's existing diagnostics events.
+
+### Changes
+
+- Added deterministic `scopeGraph` output containing only Scope IDs, optional parent Scope IDs,
+  resource IDs, and their owning Scope IDs.
+- Added validation for malformed `scope.created` and `resource.attached` metadata while preserving
+  existing protocol, version, event-type, dropped-count, and payload-exclusion behavior.
+- Added a real Core Scope/resource trace to the packed CLI Core consumer fixture and asserted that
+  private Scope names do not cross the inspection output boundary.
+- Exported the focused inspection types and updated CLI, diagnostics, and durable project-state
+  documentation. RFC 0004 remains Draft; RFC 0020 and RFC 0023 remain Proposed.
+- Confirmed PR #45 merged as `2b542aa` with all six checks passing; Dependabot alerts #2, #4, #5,
+  #6, #9, and #11 are fixed.
+
+### Validation
+
+- One failing public-behavior test followed by minimal implementation: passed.
+- Focused CLI Core lint, typecheck, test, and build: passed; 36 tests across 3 files.
+- `pnpm pack:check`: passed with clean Core, React, Angular, Vue, and CLI Core consumers.
+- `pnpm validate`: passed with format, lint, typecheck, tests, builds, and pack validation.
+- `git diff --check`: passed.
+
+### Security / compatibility
+
+- Inspection is synchronous, read-only, in-memory, and metadata-only. Names, values, files, network,
+  telemetry, project mutation, arbitrary code execution, and terminal CLI behavior remain out of
+  scope.
+- No new package, runtime dependency, RFC status, security diagnostics API, or external trace schema
+  guarantee was added.
+
+### Remaining / recovery
+
+- The atomic commit is `c85a217`; the branch is pushed and PR #46 is open. Do not merge without
+  separate explicit approval.

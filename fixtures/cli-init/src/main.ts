@@ -10,7 +10,7 @@ import {
   inspectTrace,
   stringifyMachineOutput,
 } from "@vii/cli-core";
-import { createDiagnostics, state } from "@vii/core";
+import { createDiagnostics, createScope, state } from "@vii/core";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const detection = await detectProject(root);
@@ -26,6 +26,13 @@ diagnostics.run(() => {
   count.set(1);
 });
 const traceInspection = inspectTrace(diagnostics.exportTrace());
+const ownershipDiagnostics = createDiagnostics({ clock: () => 456 });
+ownershipDiagnostics.run(() => {
+  const scope = createScope({ name: "private-scope" });
+  scope.use(() => undefined);
+  scope.dispose();
+});
+const ownershipInspection = inspectTrace(ownershipDiagnostics.exportTrace());
 
 export const detectedPackageManager = detection.packageManager;
 export const detectedViiPackages = detection.installedViiPackages;
@@ -49,3 +56,4 @@ export const machineOutputJsonRoundTrip = JSON.parse(stringifyMachineOutput(doct
 export const traceInspectionEventCount = traceInspection.eventCount;
 export const traceInspectionDroppedEvents = traceInspection.droppedEvents;
 export const traceInspectionEventTypes = traceInspection.eventTypes;
+export const traceInspectionScopeGraph = ownershipInspection.scopeGraph;

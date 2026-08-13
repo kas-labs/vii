@@ -32,8 +32,9 @@ and external compatibility guarantees remain deferred.
 `inspectTrace(trace)` is a pure, read-only consumer for the experimental Core `vii.trace` `0.1`
 envelope. It validates the protocol and version, then returns only event count, dropped-event count,
 deterministic first-seen event-type counts, and a structural Scope/resource ownership graph. The
-graph contains only generated IDs and parent links; names, values, and other event payload fields
-are excluded. It never reads files, executes project code, or accesses the network. This private
+graph contains only generated IDs, parent links, lifecycle status, and resource disposal success;
+names, values, and other event payload fields are excluded. It never reads files, executes project
+code, or accesses the network. This private
 inspection engine does not make the terminal `vii inspect` command or an external trace schema
 stable.
 

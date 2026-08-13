@@ -1278,5 +1278,46 @@ PR: [#46](https://github.com/kas-labs/vii/pull/46) open
 
 ### Remaining / recovery
 
-- The atomic commit is `c85a217`; the branch is pushed and PR #46 is open. Do not merge without
+- The atomic commit was amended to `90fe460`; the branch was pushed and PR #46 merged as `ab6dc1a`
+  with all six checks passing. Do not infer merge permission for future PRs.
+
+## 2026-08-13 17:40 CEST | Inspect ownership lifecycle from bounded traces
+
+Status: completed
+Branch: `feat/cli-ownership-lifecycle-inspection`
+PR: [#47](https://github.com/kas-labs/vii/pull/47) open
+
+### Scope
+
+- Extend the existing private `@vii/cli-core` `inspectTrace()` ownership graph with lifecycle state
+  already emitted by Core's `scope.disposed` and `resource.disposed` events.
+
+### Changes
+
+- Added `active`/`disposed` Scope status and `attached`/`disposed` resource status to the structural
+  graph; disposed resources also expose the existing boolean disposal-success result.
+- Preserved parent links and resource ownership IDs while excluding names, values, and all other
+  payload fields.
+- Preserved disposal evidence when bounded traces have dropped the corresponding creation/attach
+  events, without reading files or inventing payload data.
+- Added TDD coverage, packed Core → CLI Core fixture assertions, and updated CLI/diagnostics/project
+  state documentation. RFC 0004 remains Draft; RFC 0020 and RFC 0023 remain Proposed.
+
+### Validation
+
+- One failing public-behavior test followed by minimal implementation: passed.
+- Focused CLI Core lint, typecheck, test, and build: passed; 38 tests across 3 files.
+- `pnpm pack:check`: passed with clean Core, React, Angular, Vue, and CLI Core consumers.
+- `pnpm validate`: passed with format, lint, typecheck, tests, builds, and pack validation.
+- `git diff --check`: passed.
+
+### Security / compatibility
+
+- Inspection remains synchronous, read-only, in-memory, metadata-only, and framework-agnostic.
+- No new package, runtime dependency, Core producer event, public security API, RFC status, terminal
+  CLI command, filesystem behavior, network, telemetry, or arbitrary code execution was added.
+
+### Remaining / recovery
+
+- The atomic commit is `8d5f420`; the branch is pushed and PR #47 is open. Do not merge without
   separate explicit approval.

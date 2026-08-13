@@ -124,8 +124,10 @@ try {
     { type: "state.updated", count: 1 },
   ]);
   assert.deepEqual(consumer.traceInspectionScopeGraph, {
-    scopes: [{ scopeId: "scope-1" }],
-    resources: [{ resourceId: "resource-2", scopeId: "scope-1" }],
+    scopes: [{ scopeId: "scope-1", status: "disposed" }],
+    resources: [
+      { resourceId: "resource-2", scopeId: "scope-1", status: "disposed", succeeded: true },
+    ],
   });
   console.log("Packed CLI Core artifact with clean consumer validated.");
 } finally {

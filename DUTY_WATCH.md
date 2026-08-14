@@ -1507,3 +1507,24 @@ PR: [#53](https://github.com/kas-labs/vii/pull/53) draft
 - Run `git diff --check` before commit and `pnpm validate` before publishing the PR.
 - The next implementation slice requires a real producer and consumer plus the RFC 0023 test and
   security evidence; do not treat acceptance as permission to expose a stable API.
+
+## 2026-08-15 01:24 CEST | Align diagnostics architecture with accepted RFC 0023
+
+Status: completed
+Branch: `docs/align-accepted-security-diagnostics`
+PR: [#54](https://github.com/kas-labs/vii/pull/54) draft
+
+### Scope
+
+- Remove the stale `Proposed` wording from the diagnostics architecture after RFC 0023 was accepted.
+
+### Findings and changes
+
+- `docs/architecture/DIAGNOSTICS_PROTOCOL.md` now describes RFC 0023 as accepted experimental
+  direction while preserving the real producer/consumer and implementation gate.
+- Core still exposes no security-event recording API; no runtime, public API, package, dependency,
+  transport, telemetry, or enforcement behavior changed.
+
+### Validation / recovery
+
+- Documentation-only change; run `git diff --check` and `pnpm validate` before publishing.

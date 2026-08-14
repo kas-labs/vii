@@ -116,6 +116,21 @@ Do not introduce hidden mutable singleton state when scoped state can be explici
 - Adapter tests should prove cleanup, update behavior, ownership, and expected framework integration.
 - Keep adapters thin enough that framework upgrades can be isolated.
 
+### React and TypeScript
+
+- Components and Hooks must be pure: keep side effects out of render, call Hooks only at the top
+  level of React functions, and treat props, state, and Hook values as immutable render snapshots.
+- Bridge external stores with `useSyncExternalStore` or a documented equivalent that preserves stable
+  snapshots, selector equality, SSR behavior, and subscription cleanup. Test unmount and Strict Mode
+  behavior whenever an adapter owns subscriptions or event listeners.
+- Keep React at the adapter or application edge. Core contracts must not import React, React DOM, or
+  browser globals.
+- Keep TypeScript strict. Model state, command results, and lifecycle transitions with explicit
+  object and discriminated-union types; do not use `any`, broad casts, or assertions to bypass an
+  unclear boundary.
+- Use [React Rules](https://react.dev/reference/rules) and
+  [React with TypeScript](https://react.dev/learn/typescript) as the implementation reference.
+
 ## 9. Performance, bundle, and memory evidence
 
 Performance is part of Vii's product thesis, so claims require evidence.

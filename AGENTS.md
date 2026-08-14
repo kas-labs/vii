@@ -113,6 +113,10 @@ For runtime/core changes, explicitly consider:
 - diagnostics/observability impact;
 - packed package contents and consumer behavior.
 
+For React and TypeScript changes, apply the framework-edge rules in
+`docs/governance/CODE_QUALITY_STANDARDS.md`: components and Hooks stay pure, external-store
+subscriptions are lifecycle-safe, and strict types are not bypassed with broad assertions.
+
 For adapter changes, core behavior remains the source of truth. Adapters translate lifecycle and integration semantics without duplicating domain rules.
 
 For benchmark changes, document methodology, environment assumptions, warmup/repetition strategy, comparison scope, and limitations. Never present a benchmark as a universal claim.

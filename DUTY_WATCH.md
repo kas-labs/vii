@@ -1512,7 +1512,7 @@ PR: [#53](https://github.com/kas-labs/vii/pull/53) draft
 
 Status: completed
 Branch: `docs/align-accepted-security-diagnostics`
-PR: not opened
+PR: [#54](https://github.com/kas-labs/vii/pull/54) draft
 
 ### Scope
 

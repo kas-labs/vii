@@ -1484,7 +1484,7 @@ Branch: `docs/record-pr51-merge-status`
 
 Status: completed
 Branch: `docs/accept-security-diagnostics-rfc`
-PR: not opened
+PR: [#53](https://github.com/kas-labs/vii/pull/53) draft
 
 ### Scope
 

@@ -1,3 +1,5 @@
+import type { Diagnostics } from "@vii/core";
+
 export type ProjectFramework = "react" | "angular" | "vue" | "vanilla" | "mixed" | "unknown";
 export type ProjectRuntime = "browser" | "node" | "bun" | "deno" | "unknown";
 export type PackageManager = "npm" | "pnpm" | "yarn" | "bun" | "unknown";
@@ -95,6 +97,7 @@ export type AddStateReportStatus = "dry-run" | "applied" | "unchanged" | "blocke
 
 export interface AddStateOptions {
   readonly dryRun?: boolean;
+  readonly diagnostics?: Pick<Diagnostics, "recordSecurity">;
 }
 
 export interface AddStatePlannedFile {

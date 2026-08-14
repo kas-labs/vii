@@ -26,6 +26,7 @@ export async function addState(
   const inspection = await inspectExistingFile(target, expectedContent);
   const sourceDirectory = await inspectSourceDirectory(path.dirname(target));
   const conflicts = createConflicts(detection, inspection, sourceDirectory);
+  recordSecurityConflict(options.diagnostics, inspection, sourceDirectory);
   const files =
     inspection === "missing" && sourceDirectory === "directory" && conflicts.length === 0
       ? [createPlannedFile(expectedContent)]
@@ -121,6 +122,25 @@ async function inspectSourceDirectory(sourceDirectory: string): Promise<SourceDi
 
 function isMissingError(error: unknown): boolean {
   return typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT";
+}
+
+function recordSecurityConflict(
+  diagnostics: AddStateOptions["diagnostics"],
+  inspection: ExistingFileInspection,
+  sourceDirectory: SourceDirectoryInspection,
+): void {
+  const field =
+    inspection === "symlink" ? stateFile : sourceDirectory === "symlink" ? "src" : undefined;
+  if (field === undefined) {
+    return;
+  }
+
+  diagnostics?.recordSecurity({
+    code: "VII-SEC-008",
+    surface: "path",
+    reason: "blocked",
+    field,
+  });
 }
 
 async function validateTarget(

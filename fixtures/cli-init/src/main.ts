@@ -1,5 +1,8 @@
 /// <reference types="node" />
 
+import { mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   addState,
@@ -9,6 +12,8 @@ import {
   initProject,
   inspectTrace,
   stringifyMachineOutput,
+  type AddStateResult,
+  type TraceInspection,
 } from "@vii/cli-core";
 import { createDiagnostics, createScope, state } from "@vii/core";
 
@@ -33,6 +38,26 @@ ownershipDiagnostics.run(() => {
   scope.dispose();
 });
 const ownershipInspection = inspectTrace(ownershipDiagnostics.exportTrace());
+const securityRoot = await mkdtemp(path.join(os.tmpdir(), "vii-packed-security-"));
+const securitySource = await mkdtemp(path.join(os.tmpdir(), "vii-packed-source-"));
+let securityResult: AddStateResult;
+let securityInspection: TraceInspection;
+try {
+  await writeFile(
+    path.join(securityRoot, "package.json"),
+    JSON.stringify({ dependencies: { "@vii/core": "0.0.0" } }),
+  );
+  await symlink(securitySource, path.join(securityRoot, "src"), "dir");
+  const securityDiagnostics = createDiagnostics({ clock: () => 789 });
+  securityResult = await addState(securityRoot, {
+    dryRun: true,
+    diagnostics: securityDiagnostics,
+  });
+  securityInspection = inspectTrace(securityDiagnostics.exportTrace());
+} finally {
+  await rm(securityRoot, { recursive: true, force: true });
+  await rm(securitySource, { recursive: true, force: true });
+}
 
 export const detectedPackageManager = detection.packageManager;
 export const detectedViiPackages = detection.installedViiPackages;
@@ -57,3 +82,5 @@ export const traceInspectionEventCount = traceInspection.eventCount;
 export const traceInspectionDroppedEvents = traceInspection.droppedEvents;
 export const traceInspectionEventTypes = traceInspection.eventTypes;
 export const traceInspectionScopeGraph = ownershipInspection.scopeGraph;
+export const securityProducerStatus = securityResult.report.status;
+export const securityInspectionEventTypes = securityInspection.eventTypes;

@@ -1528,3 +1528,34 @@ PR: [#54](https://github.com/kas-labs/vii/pull/54) draft
 ### Validation / recovery
 
 - Documentation-only change; run `git diff --check` and `pnpm validate` before publishing.
+
+## 2026-08-15 01:37 CEST | Implement first security diagnostics producer/consumer slice
+
+Status: completed
+Branch: `feat/security-diagnostics-producer`
+PR: draft PR link will be reported after publication; no merge approved
+
+### Scope
+
+- Implement the first narrow Phase 3 vertical slice enabled by accepted RFC 0023.
+- Use the existing `addState` symlink safety guard as the real producer and the existing read-only
+  `inspectTrace()` operation as the consumer.
+
+### Findings and changes
+
+- Added the experimental Core `Diagnostics.recordSecurity()` contract using finite code, surface,
+  and reason fields, the existing bounded event buffer, and production-safe redaction.
+- Added `VII-SEC-008` events for blocked `src` and `src/state.ts` symlinks when an explicit
+  diagnostics collector is supplied; safe dry-runs emit no security event.
+- Added Core, CLI Core, and packed artifact coverage. No new package, enforcement, transport,
+  telemetry, terminal CLI, or trace-schema redesign was introduced.
+- RFC 0023 remains Accepted, RFC 0004 remains Draft, and RFC 0020 remains Proposed.
+
+### Validation / recovery
+
+- Focused Core and CLI Core lint, typecheck, test, and build checks passed.
+- `pnpm format:check`, `pnpm validate`, `pnpm pack:check`, and `git diff --check` passed. The first
+  sandboxed `pnpm validate` attempt could not resolve registry hosts during clean-consumer setup;
+  the required validation was rerun successfully with network access.
+- The implementation is ready for one atomic Conventional Commit, push, and a draft PR. Do not
+  merge without separate explicit permission.

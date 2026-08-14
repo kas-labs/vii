@@ -78,11 +78,13 @@ later provide store and selector aliases when those higher-level modules exist.
 Query, UI, server, and platform families will be added by their own RFCs.
 
 Structured security diagnostics are defined by the accepted
-[`RFC 0023`](../../rfcs/0023-security-diagnostics-event-contract.md). Until a real security producer
-and consumer validate the boundary and implementation is approved, Core does not expose a
-security-event recording API. The accepted experimental boundary uses a finite code, surface, and
-reason in an immutable `security.event` payload and excludes raw input, credentials, complete
-malicious payloads, and other sensitive data by construction.
+[`RFC 0023`](../../rfcs/0023-security-diagnostics-event-contract.md). The first implementation
+slice exposes experimental `Diagnostics.recordSecurity()` and uses the existing `addState` path
+guard as a real producer for blocked `src` and `src/state.ts` symlinks. The existing read-only
+`inspectTrace()` operation is the demonstrated consumer: it counts the resulting `security.event`
+without interpreting or exposing security metadata. The boundary uses a finite code, surface, and
+reason in an immutable payload and excludes raw input, credentials, complete malicious payloads, and
+other sensitive data by construction. This does not stabilize the event or trace protocol.
 
 ## Event envelope
 

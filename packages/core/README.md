@@ -106,3 +106,10 @@ for correlation in development mode; it is omitted in `production-safe` mode and
 is inferred or propagated automatically. Production-safe `scope.created` events also omit
 caller-provided scope names. The diagnostics protocol is experimental and does not add network,
 telemetry, or Devtools dependencies.
+
+Security producers can record bounded, value-free events through the experimental
+`diagnostics.recordSecurity({ code, surface, reason, field?, route?, causeId? })` method. Core
+accepts only finite codes, surfaces, and reasons; development metadata is stripped of line breaks and
+capped at 128 characters, while `production-safe` omits `field`, `route`, and caller-provided trace
+correlation. The method uses the existing bounded buffer and sink, and does not enforce policies or
+send diagnostics anywhere.

@@ -235,3 +235,114 @@ test("diagnostics records equal State writes as skipped without values", () => {
   ]);
   expect(JSON.stringify(diagnostics.getEvents())).not.toContain("same-value");
 });
+
+test("diagnostics records a bounded security event without raw input", () => {
+  const diagnostics = createDiagnostics({ clock: () => 432 });
+
+  diagnostics.recordSecurity({
+    code: "VII-SEC-008",
+    surface: "path",
+    reason: "blocked",
+  });
+
+  expect(diagnostics.getEvents()).toEqual([
+    {
+      protocolVersion: "0.1",
+      id: "diagnostic-1",
+      type: "security.event",
+      timestamp: 432,
+      package: "@vii/core",
+      payload: {
+        code: "VII-SEC-008",
+        surface: "path",
+        reason: "blocked",
+      },
+    },
+  ]);
+});
+
+test("development security events normalize bounded metadata", () => {
+  const diagnostics = createDiagnostics({ clock: () => 433 });
+
+  diagnostics.recordSecurity({
+    code: "VII-SEC-001",
+    surface: "input",
+    reason: "rejected",
+    field: "profile\nname",
+    route: "/profile\r\nsettings",
+    causeId: "diagnostic-previous",
+  });
+
+  expect(diagnostics.getEvents()[0]).toEqual({
+    protocolVersion: "0.1",
+    id: "diagnostic-1",
+    type: "security.event",
+    timestamp: 433,
+    package: "@vii/core",
+    causeId: "diagnostic-previous",
+    payload: {
+      code: "VII-SEC-001",
+      surface: "input",
+      reason: "rejected",
+      field: "profilename",
+      route: "/profilesettings",
+    },
+  });
+});
+
+test("development security events cap optional metadata", () => {
+  const diagnostics = createDiagnostics();
+
+  diagnostics.recordSecurity({
+    code: "VII-SEC-001",
+    surface: "input",
+    reason: "rejected",
+    field: "x".repeat(129),
+  });
+
+  expect(diagnostics.getEvents()[0]?.payload["field"]).toBe("x".repeat(128));
+});
+
+test("production-safe security events omit optional metadata and trace correlation", () => {
+  const diagnostics = createDiagnostics({
+    mode: "production-safe",
+    traceId: "customer@example.com",
+    clock: () => 434,
+  });
+
+  diagnostics.recordSecurity({
+    code: "VII-SEC-011",
+    surface: "input",
+    reason: "rejected",
+    field: "email",
+    route: "/account",
+  });
+
+  expect(diagnostics.getEvents()[0]).toEqual({
+    protocolVersion: "0.1",
+    id: "diagnostic-1",
+    type: "security.event",
+    timestamp: 434,
+    package: "@vii/core",
+    payload: {
+      code: "VII-SEC-011",
+      surface: "input",
+      reason: "rejected",
+    },
+  });
+});
+
+test("off diagnostics do not record security events", () => {
+  const diagnostics = createDiagnostics({ mode: "off" });
+
+  diagnostics.recordSecurity({
+    code: "VII-SEC-009",
+    surface: "filesystem",
+    reason: "denied",
+    field: "secret",
+    route: "/private",
+  });
+
+  expect(diagnostics.getEvents()).toEqual([]);
+  expect(diagnostics.droppedEvents).toBe(0);
+});

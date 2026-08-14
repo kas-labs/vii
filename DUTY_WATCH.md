@@ -1479,3 +1479,31 @@ Branch: `docs/record-pr51-merge-status`
   consumer.
 - Start the next implementation branch only after a separate governance decision or demonstrated
   bounded consumer identifies a Phase 3 behavior that needs no speculative protocol expansion.
+
+## 2026-08-15 01:30 CEST | Accept RFC 0023 security diagnostics contract
+
+Status: completed
+Branch: `docs/accept-security-diagnostics-rfc`
+PR: not opened
+
+### Scope
+
+- Record the explicit governance decision requested for the bounded security diagnostics contract.
+- Keep the change documentation-only until a real security producer and consumer validate the boundary.
+
+### Findings and changes
+
+- RFC 0023 is now `Accepted` as an experimental, bounded, value-free, production-safe, read-only
+  contract direction.
+- RFC 0004 remains `Draft` and RFC 0020 remains `Proposed`; accepting RFC 0023 does not stabilize the
+  diagnostics protocol or accept the broader security architecture.
+- No `recordSecurity`, `security.event`, security enforcement, new package, runtime dependency,
+  transport, telemetry, or terminal CLI implementation was added.
+- Updated `PROJECT_STATE.md` to record the accepted direction and its producer/consumer gate.
+
+### Validation / recovery
+
+- Documentation-only change; no code tests were required.
+- Run `git diff --check` before commit and `pnpm validate` before publishing the PR.
+- The next implementation slice requires a real producer and consumer plus the RFC 0023 test and
+  security evidence; do not treat acceptance as permission to expose a stable API.

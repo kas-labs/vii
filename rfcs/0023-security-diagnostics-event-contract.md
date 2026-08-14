@@ -1,6 +1,6 @@
 # RFC 0023: Security Diagnostics Event Contract
 
-- Status: Proposed
+- Status: Accepted
 - Authors: Kas Labs
 - Created: 2026-08-12
 
@@ -10,6 +10,17 @@ Define the smallest experimental Core boundary for structured security diagnosti
 records a stable code, security surface, and finite reason while excluding raw input, credentials,
 and complete malicious payloads. It is an implementation RFC for the security-diagnostics direction
 described by RFC 0020; it does not make RFC 0020 Accepted or make the diagnostics protocol Stable.
+
+## Governance decision
+
+Accepted on 2026-08-15 by an explicit maintainer governance decision.
+
+Acceptance approves this bounded experimental contract as the direction for a future implementation;
+it does not implement `recordSecurity`, publish `security.event`, stabilize the `vii.trace` protocol,
+or accept RFC 0020. Implementation remains gated on a real security producer and a real consumer that
+validate the boundary. The implementation must preserve the existing bounded, value-free,
+production-safe, read-only diagnostics model and include the testing and security evidence listed
+below.
 
 ## Motivation
 
@@ -121,9 +132,9 @@ Unknown future fields may be ignored by compatible consumers.
 
 ## Public API or protocol impact
 
-This is an additive experimental API proposal for `@vii/core`. It extends the existing
+This is an additive experimental API contract for `@vii/core`. It extends the existing
 `Diagnostics` type and adds no package or transport boundary. `security.event` belongs to the
-Draft `vii.trace` protocol and must not be consumed as a Stable schema. A later RFC or an Accepted
+Draft `vii.trace` protocol and must not be consumed as a Stable schema. A later RFC or governance
 decision may rename, split, or remove the method and codes before 1.0.
 
 ## Lifecycle and resource ownership

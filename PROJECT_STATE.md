@@ -76,9 +76,10 @@ containing only generated IDs, parent links, lifecycle status, and resource disp
 and values remain excluded; bounded traces may preserve a disposed node without its creation event.
 It does not read files, execute project code, access the network, mutate projects, or make the
 terminal `vii inspect` command or diagnostics schema stable.
-Structured security diagnostics remain a proposed follow-up contract in RFC 0023; no security-event
-recording API or enforcement behavior is implemented until that RFC is accepted and a real producer
-validates the boundary.
+Structured security diagnostics are accepted as a bounded experimental follow-up contract in RFC 0023;
+RFC 0004 remains Draft and RFC 0020 remains Proposed. No security-event recording API or enforcement
+behavior is implemented until a real producer and consumer validate the boundary. Acceptance does not
+make `recordSecurity`, `security.event`, or the `vii.trace` protocol stable.
 
 The durable ecosystem research direction now separates capability ownership from tool ownership.
 Form research targets a small headless module that reuses Vii State, Scope, diagnostics, and thin

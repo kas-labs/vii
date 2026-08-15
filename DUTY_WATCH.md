@@ -1604,7 +1604,7 @@ PR: [#56](https://github.com/kas-labs/vii/pull/56) merged as `62384bc`
 
 Status: completed
 Branch: `test/security-diagnostics-payload-corpus`
-PR: not yet created
+PR: [#58](https://github.com/kas-labs/vii/pull/58) merged as `00af2e0`
 
 ### Scope
 
@@ -1630,8 +1630,6 @@ PR: not yet created
 
 ### Remaining / recovery
 
-- Publish this focused regression test as a draft PR; do not merge without separate explicit
-  approval.
 - Further security producers or inspection fields remain blocked pending a real bounded consumer
   and the applicable security/governance evidence.
 
@@ -1639,7 +1637,7 @@ PR: not yet created
 
 Status: completed
 Branch: `test/security-diagnostics-failure-isolation`
-PR: not yet created
+PR: [#60](https://github.com/kas-labs/vii/pull/60) merged as `a899da4`
 
 ### Scope
 
@@ -1663,8 +1661,6 @@ PR: not yet created
 
 ### Remaining / recovery
 
-- Publish this focused regression test as a draft PR; do not merge without separate explicit
-  approval.
 - The explicit RFC 0023 test gates are now covered. Further security producers or inspection
   fields remain blocked pending a real bounded consumer and the applicable security/governance
   evidence.
@@ -1673,7 +1669,7 @@ PR: not yet created
 
 Status: completed
 Branch: `test/security-diagnostics-trace-export`
-PR: not yet created
+PR: [#59](https://github.com/kas-labs/vii/pull/59) merged as `0286d4a`
 
 ### Scope
 
@@ -1698,7 +1694,5 @@ PR: not yet created
 
 ### Remaining / recovery
 
-- Publish this focused regression test as a draft PR; do not merge without separate explicit
-  approval.
 - Further security producers or inspection fields remain blocked pending a real bounded consumer
   and the applicable security/governance evidence.

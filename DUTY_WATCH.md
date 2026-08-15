@@ -1599,3 +1599,38 @@ PR: [#56](https://github.com/kas-labs/vii/pull/56) merged as `62384bc`
 
 - Start a new implementation branch only when an approved, bounded consumer/producer contract
   justifies a behavior change; use TDD for that change.
+
+## 2026-08-16 CEST | Prove security diagnostics discard malicious runtime payload fields
+
+Status: completed
+Branch: `test/security-diagnostics-payload-corpus`
+PR: not yet created
+
+### Scope
+
+- Close the existing RFC 0023 malicious-input corpus test gate without adding a security producer,
+  expanding `inspectTrace`, or changing the experimental Core contract.
+
+### Changes
+
+- Added a public Core boundary test that invokes `recordSecurity` with runtime-only body, cookie,
+  authorization, State-value, and stack fields and proves the resulting event and exported trace
+  contain only the finite security payload.
+- The test covers defense in depth at the runtime boundary while retaining TypeScript's narrow
+  `SecurityDiagnosticInput` contract. No production code, package, API, event schema, filesystem,
+  network, telemetry, transport, CLI, or dry-run behavior changed.
+- PR #57 had merged as `9442cc4` with all checks passing and no comments or reviews before this
+  focused branch was created.
+
+### Validation
+
+- Focused Core test passed: 58 tests across 9 files.
+- Focused Core lint, typecheck, and build passed.
+- `pnpm format:check`, `pnpm pack:check`, `pnpm validate`, and `git diff --check` passed.
+
+### Remaining / recovery
+
+- Publish this focused regression test as a draft PR; do not merge without separate explicit
+  approval.
+- Further security producers or inspection fields remain blocked pending a real bounded consumer
+  and the applicable security/governance evidence.

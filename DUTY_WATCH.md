@@ -1634,3 +1634,37 @@ PR: not yet created
   approval.
 - Further security producers or inspection fields remain blocked pending a real bounded consumer
   and the applicable security/governance evidence.
+
+## 2026-08-16 CEST | Prove bounded security trace export round-trip
+
+Status: completed
+Branch: `test/security-diagnostics-trace-export`
+PR: not yet created
+
+### Scope
+
+- Close the existing RFC 0023 trace export JSON round-trip and bounded-buffer evidence gate for
+  the experimental `security.event` path without changing runtime behavior.
+
+### Changes
+
+- Added a public Core test proving two security events use the existing bounded buffer, retain the
+  correct dropped-event count, preserve only the remaining finite event, and survive a JSON
+  round-trip through `exportTrace()`.
+- No production code, package, API, event schema, producer, inspection field, filesystem, network,
+  telemetry, transport, CLI, or dry-run behavior changed.
+- PR #58 had merged as `00af2e0` with all checks passing and no comments or reviews before this
+  focused branch was created.
+
+### Validation
+
+- Focused Core test passed: 59 tests across 9 files.
+- Focused Core lint, typecheck, and build passed.
+- `pnpm format:check`, `pnpm pack:check`, `pnpm validate`, and `git diff --check` passed.
+
+### Remaining / recovery
+
+- Publish this focused regression test as a draft PR; do not merge without separate explicit
+  approval.
+- Further security producers or inspection fields remain blocked pending a real bounded consumer
+  and the applicable security/governance evidence.

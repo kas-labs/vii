@@ -36,3 +36,34 @@ test("diagnostics trace export preserves bounded events and dropped count", () =
   expect(trace.droppedEvents).toBe(1);
   expect(trace.events.map((event) => event.id)).toEqual(["diagnostic-2"]);
 });
+
+test("security trace export remains bounded and JSON round-trips", () => {
+  const diagnostics = createDiagnostics({ maxEvents: 1, clock: () => 789 });
+
+  diagnostics.recordSecurity({
+    code: "VII-SEC-008",
+    surface: "path",
+    reason: "blocked",
+  });
+  diagnostics.recordSecurity({
+    code: "VII-SEC-012",
+    surface: "input",
+    reason: "malformed",
+  });
+
+  const trace = diagnostics.exportTrace();
+
+  expect(trace.droppedEvents).toBe(1);
+  expect(trace.events).toEqual([
+    expect.objectContaining({
+      id: "diagnostic-2",
+      type: "security.event",
+      payload: {
+        code: "VII-SEC-012",
+        surface: "input",
+        reason: "malformed",
+      },
+    }),
+  ]);
+  expect(JSON.parse(JSON.stringify(trace))).toEqual(trace);
+});

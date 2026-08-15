@@ -1,5 +1,55 @@
 export type DiagnosticsMode = "off" | "development" | "production-safe";
 
+const securityMetadataLimit = 128;
+
+export type SecurityDiagnosticCode =
+  | "VII-SEC-001"
+  | "VII-SEC-002"
+  | "VII-SEC-003"
+  | "VII-SEC-004"
+  | "VII-SEC-005"
+  | "VII-SEC-006"
+  | "VII-SEC-007"
+  | "VII-SEC-008"
+  | "VII-SEC-009"
+  | "VII-SEC-010"
+  | "VII-SEC-011"
+  | "VII-SEC-012"
+  | "VII-SEC-013"
+  | "VII-SEC-014"
+  | "VII-SEC-015";
+
+export type SecurityDiagnosticSurface =
+  | "input"
+  | "template"
+  | "url"
+  | "serialization"
+  | "command"
+  | "path"
+  | "filesystem"
+  | "registry"
+  | "capability"
+  | "request";
+
+export type SecurityDiagnosticReason =
+  | "rejected"
+  | "blocked"
+  | "truncated"
+  | "malformed"
+  | "denied"
+  | "integrity_mismatch"
+  | "isolation_violation"
+  | "unsupported_policy";
+
+export interface SecurityDiagnosticInput {
+  readonly code: SecurityDiagnosticCode;
+  readonly surface: SecurityDiagnosticSurface;
+  readonly reason: SecurityDiagnosticReason;
+  readonly field?: string;
+  readonly route?: string;
+  readonly causeId?: string;
+}
+
 export interface DiagnosticEvent {
   protocolVersion: "0.1";
   id: string;
@@ -36,6 +86,7 @@ export interface Diagnostics {
   readonly mode: DiagnosticsMode;
   readonly droppedEvents: number;
   run<T>(work: () => T): T;
+  recordSecurity(input: SecurityDiagnosticInput): void;
   getEvents(): readonly DiagnosticEvent[];
   exportTrace(): DiagnosticTrace;
   clear(): void;
@@ -85,6 +136,32 @@ export function createDiagnostics(options: DiagnosticsOptions = {}): Diagnostics
       return droppedEvents;
     },
     run: <T>(work: () => T): T => withDiagnostics(diagnostics, work),
+    recordSecurity: (input) => {
+      if (mode === "off") {
+        return;
+      }
+
+      const field = normalizeSecurityMetadata(input.field);
+      const route = normalizeSecurityMetadata(input.route);
+      const metadata =
+        mode === "development"
+          ? {
+              ...(field === undefined ? {} : { field }),
+              ...(route === undefined ? {} : { route }),
+            }
+          : {};
+
+      diagnostics.record(
+        "security.event",
+        {
+          code: input.code,
+          surface: input.surface,
+          reason: input.reason,
+          ...metadata,
+        },
+        input.causeId,
+      );
+    },
     allocateId: (prefix) => `${prefix}-${nextEntityId++}`,
     getEvents: () => events.slice(),
     exportTrace: () => {
@@ -169,4 +246,13 @@ function redactPayload(
   const redactedPayload = { ...payload };
   delete redactedPayload["name"];
   return redactedPayload;
+}
+
+function normalizeSecurityMetadata(value: string | undefined): string | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  const normalized = value.replace(/[\r\n]/g, "").slice(0, securityMetadataLimit);
+  return normalized.length === 0 ? undefined : normalized;
 }

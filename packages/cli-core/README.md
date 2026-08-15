@@ -18,6 +18,11 @@ The operation is root-confined, only creates a missing state file beneath an exi
 `src` directory, and blocks local changes, symlinks, missing source directories, and ambiguous
 detection. Its report returns the exact planned file path.
 
+When an explicit Core diagnostics collector is supplied, `addState` records the experimental
+`VII-SEC-008` `security.event` for a blocked `src` or `src/state.ts` symlink. Safe dry-runs do not
+emit a security event. The diagnostics input is observational; the operation remains root-confined
+and read-only in dry-run mode.
+
 `doctorProject(root)` performs read-only Analyze → Validate → Report diagnostics. It reports
 healthy, attention, or blocked status with explainable findings for detection conflicts, missing
 Vii Core or framework adapters, missing Nx integration, ambiguous rendering, and incomplete safe

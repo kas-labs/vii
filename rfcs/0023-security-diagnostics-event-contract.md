@@ -15,12 +15,12 @@ described by RFC 0020; it does not make RFC 0020 Accepted or make the diagnostic
 
 Accepted on 2026-08-15 by an explicit maintainer governance decision.
 
-Acceptance approves this bounded experimental contract as the direction for a future implementation;
-it does not implement `recordSecurity`, publish `security.event`, stabilize the `vii.trace` protocol,
-or accept RFC 0020. Implementation remains gated on a real security producer and a real consumer that
-validate the boundary. The implementation must preserve the existing bounded, value-free,
-production-safe, read-only diagnostics model and include the testing and security evidence listed
-below.
+Acceptance approved this bounded experimental contract for implementation without accepting RFC
+0020 or stabilizing the `vii.trace` protocol. The first implementation slice now provides
+`recordSecurity`, uses the existing `addState` symlink guard as a real producer, and validates the
+event through the existing read-only `inspectTrace` consumer. The implementation preserves the
+bounded, value-free, production-safe, read-only diagnostics model and remains subject to the testing
+and security evidence listed below.
 
 ## Motivation
 
@@ -163,8 +163,9 @@ Security consumers remain read-only and receive no mutation authority.
 ## Performance implications
 
 The implementation should use the existing `record` path and avoid a second buffer or serializer.
-The `off` path should return before normalization. Development-only string normalization is bounded
-by fixed limits and production-safe mode skips optional metadata. Performance coverage must compare
+The `off` path should return before normalization. Development-only string normalization removes CR/LF
+and caps each optional metadata string at 128 characters; production-safe mode skips optional
+metadata. Performance coverage must compare
 off, development, and production-safe security recording separately from ordinary State writes.
 
 ## Alternatives considered
@@ -175,8 +176,8 @@ off, development, and production-safe security recording separately from ordinar
   the immutable `security.event` type carries a finite code instead.
 - **A separate security package:** deferred until a real producer requires a package boundary;
   Core already owns the diagnostics collector.
-- **Immediate Stable API:** rejected because RFC 0020 is Proposed, RFC 0004 is Draft, and no real
-  security producer or external consumer validates the contract yet.
+- **Immediate Stable API:** rejected because RFC 0020 is Proposed, RFC 0004 is Draft, and the first
+  producer/consumer slice does not constitute external schema validation or security review.
 
 ## Migration and rollback
 
@@ -193,7 +194,7 @@ metadata. Promotion to Preview requires consumer fixtures, schema validation, an
 - CR/LF and maximum-length normalization tests for development metadata;
 - sink and clock failure isolation tests;
 - trace export JSON round-trip and bounded-buffer tests;
-- Vanilla packed consumer coverage once a producer exists;
+- Vanilla packed consumer coverage for the first producer/consumer slice;
 - malicious-input corpus proving complete payloads never enter the event.
 
 ## Unresolved questions

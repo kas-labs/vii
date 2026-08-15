@@ -13,6 +13,10 @@ export type {
   Diagnostics,
   DiagnosticsMode,
   DiagnosticsOptions,
+  SecurityDiagnosticCode,
+  SecurityDiagnosticInput,
+  SecurityDiagnosticReason,
+  SecurityDiagnosticSurface,
 } from "./diagnostics.js";
 export type { Computed, ReadableState } from "./computed.js";
 export type { Scope, ScopeOptions, ViiResource } from "./scope.js";

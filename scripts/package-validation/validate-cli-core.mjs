@@ -129,6 +129,8 @@ try {
       { resourceId: "resource-2", scopeId: "scope-1", status: "disposed", succeeded: true },
     ],
   });
+  assert.equal(consumer.securityProducerStatus, "blocked");
+  assert.deepEqual(consumer.securityInspectionEventTypes, [{ type: "security.event", count: 1 }]);
   console.log("Packed CLI Core artifact with clean consumer validated.");
 } finally {
   await rm(temporaryRoot, { recursive: true, force: true });

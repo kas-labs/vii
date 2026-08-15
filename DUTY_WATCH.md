@@ -1635,6 +1635,40 @@ PR: not yet created
 - Further security producers or inspection fields remain blocked pending a real bounded consumer
   and the applicable security/governance evidence.
 
+## 2026-08-16 CEST | Prove security diagnostics isolate sink and clock failures
+
+Status: completed
+Branch: `test/security-diagnostics-failure-isolation`
+PR: not yet created
+
+### Scope
+
+- Close the existing RFC 0023 sink and clock failure-isolation evidence gate directly on the
+  experimental `recordSecurity()` path without changing runtime behavior.
+
+### Changes
+
+- Added a public Core test proving a failing diagnostic clock and sink cannot throw through
+  `recordSecurity`; the recorded finite security event uses the existing fallback timestamp.
+- No production code, package, API, event schema, producer, inspection field, filesystem, network,
+  telemetry, transport, CLI, or dry-run behavior changed.
+- PR #59 had merged as `0286d4a` with all checks passing and no comments or reviews before this
+  focused branch was created.
+
+### Validation
+
+- Focused Core test passed: 60 tests across 9 files.
+- Focused Core lint, typecheck, and build passed.
+- `pnpm format:check`, `pnpm pack:check`, `pnpm validate`, and `git diff --check` passed.
+
+### Remaining / recovery
+
+- Publish this focused regression test as a draft PR; do not merge without separate explicit
+  approval.
+- The explicit RFC 0023 test gates are now covered. Further security producers or inspection
+  fields remain blocked pending a real bounded consumer and the applicable security/governance
+  evidence.
+
 ## 2026-08-16 CEST | Prove bounded security trace export round-trip
 
 Status: completed

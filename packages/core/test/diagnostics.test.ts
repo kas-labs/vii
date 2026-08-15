@@ -261,6 +261,31 @@ test("diagnostics records a bounded security event without raw input", () => {
   ]);
 });
 
+test("security diagnostics isolate sink and clock failures", () => {
+  const diagnostics = createDiagnostics({
+    clock: () => {
+      throw new Error("clock failed");
+    },
+    sink: {
+      emit: () => {
+        throw new Error("sink failed");
+      },
+    },
+  });
+
+  expect(() =>
+    diagnostics.recordSecurity({
+      code: "VII-SEC-008",
+      surface: "path",
+      reason: "blocked",
+    }),
+  ).not.toThrow();
+  expect(diagnostics.getEvents()[0]).toMatchObject({
+    timestamp: 0,
+    type: "security.event",
+  });
+});
+
 test("security diagnostics discard malicious runtime payload fields", () => {
   const diagnostics = createDiagnostics({ clock: () => 432 });
   const sensitiveValues = [

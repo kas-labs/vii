@@ -45,6 +45,7 @@ try {
   assert.deepEqual(
     new Set(entries),
     new Set([
+      "package/LICENSE",
       "package/README.md",
       "package/dist/detect-project.d.ts",
       "package/dist/detect-project.d.ts.map",

@@ -188,4 +188,4 @@ Vii is experimental and pre-alpha. Package names, APIs, architecture, security c
 
 ## License
 
-The license will be selected before the first public source release.
+Vii is licensed under the [Apache License 2.0](./LICENSE).

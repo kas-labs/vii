@@ -2,6 +2,7 @@
   "name": "@vii/angular",
   "version": "0.0.0",
   "private": true,
+  "license": "Apache-2.0",
   "type": "module",
   "description": "Experimental Angular adapter for the Vii Core external-store contract.",
   "files": [

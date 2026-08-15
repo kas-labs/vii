@@ -84,6 +84,12 @@ it adds no enforcement, transport, telemetry, or stable schema. RFC 0004 remains
 remains Proposed. `recordSecurity`, `security.event`, and the `vii.trace` protocol remain
 experimental and may change under governance.
 
+The repository is licensed under Apache-2.0. The accepted first public release target is a
+Core-only `@vii/core@0.1.0-experimental.0` npm `next` candidate; it remains preparation-only until
+the reference consumer, changeset, package metadata, release-security, and explicit publication
+approval gates in `docs/governance/EXPERIMENTAL_CORE_RELEASE.md` are satisfied. All packages remain
+private until that separate release approval.
+
 The durable ecosystem research direction now separates capability ownership from tool ownership.
 Form research targets a small headless module that reuses Vii State, Scope, diagnostics, and thin
 framework adapters. HTTP research targets a small Fetch-first request/response transport and remains

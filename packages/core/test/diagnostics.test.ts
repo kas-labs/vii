@@ -261,6 +261,42 @@ test("diagnostics records a bounded security event without raw input", () => {
   ]);
 });
 
+test("security diagnostics discard malicious runtime payload fields", () => {
+  const diagnostics = createDiagnostics({ clock: () => 432 });
+  const sensitiveValues = [
+    "cookie=session-secret",
+    "Bearer authorization-secret",
+    "request-body-secret",
+    "state-value-secret",
+    "stack-trace-secret",
+  ];
+
+  Reflect.apply(diagnostics.recordSecurity, diagnostics, [
+    {
+      code: "VII-SEC-012",
+      surface: "input",
+      reason: "malformed",
+      body: sensitiveValues[2],
+      cookie: sensitiveValues[0],
+      authorization: sensitiveValues[1],
+      value: sensitiveValues[3],
+      stack: sensitiveValues[4],
+    },
+  ]);
+
+  const event = diagnostics.getEvents()[0];
+  const trace = diagnostics.exportTrace();
+
+  expect(event?.payload).toEqual({
+    code: "VII-SEC-012",
+    surface: "input",
+    reason: "malformed",
+  });
+  for (const sensitiveValue of sensitiveValues) {
+    expect(JSON.stringify({ event, trace })).not.toContain(sensitiveValue);
+  }
+});
+
 test("development security events normalize bounded metadata", () => {
   const diagnostics = createDiagnostics({ clock: () => 433 });
 

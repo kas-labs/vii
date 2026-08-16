@@ -17,6 +17,22 @@ pnpm add ./artifacts/vii-core-0.0.0.tgz
 The public API and the `vii.trace` diagnostics protocol remain experimental and may change under
 repository governance. This package has no hidden network, telemetry, or automatic-install behavior.
 
+## Known limitations and support
+
+This is a pre-alpha package for evaluation, not a production support commitment. In particular:
+
+- State, Computed, Batch, Scope, and Diagnostics are the only public Core primitives; adapters and
+  CLI packages are private and are not part of this release candidate;
+- the `vii.trace` `0.1` protocol and `recordSecurity()` are experimental and may change or be removed
+  under the RFC process;
+- Scope disposal is synchronous; async disposal, resource transfer, and async context propagation are
+  not implemented;
+- Core supplies no persistence, transport, Devtools, browser inspector, OpenTelemetry bridge, or
+  telemetry service.
+
+Report ordinary package issues at the repository issue tracker. Report potential vulnerabilities
+privately according to the repository's [security policy](../../SECURITY.md).
+
 The package currently exposes experimental State, Computed, Batch, Scope, and Diagnostics primitives:
 
 ```ts

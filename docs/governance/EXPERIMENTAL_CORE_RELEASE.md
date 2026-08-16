@@ -25,6 +25,14 @@ They need their own consumer, compatibility, and release decisions.
   credentials in the repository;
 - obtain explicit approval for the release commit, tag, and npm publication.
 
+## Release preparation record
+
+The Core changeset records a `minor` base release. Applying it must use the approved experimental
+prerelease process so the resulting candidate is `0.1.0-experimental.0`; it must not be applied as a
+stable `0.1.0` release. npm distribution remains the separately configured `next` tag. Changeset
+application, generated changelog changes, removal of `private`, tag creation, and publication remain
+protected release actions.
+
 ## Non-goals
 
 - publishing any package now;

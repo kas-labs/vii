@@ -1,0 +1,79 @@
+name: Publish Core
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: Type publish-v0.1.0-experimental.0 to confirm the one-time bootstrap publication.
+        required: true
+        type: choice
+        options:
+          - publish-v0.1.0-experimental.0
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    if: >-
+      github.ref == 'refs/tags/v0.1.0-experimental.0' &&
+      inputs.confirm == 'publish-v0.1.0-experimental.0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: npm-publish
+    concurrency:
+      group: core-npm-publish
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Check out the approved release tag
+        uses: actions/checkout@v4
+        with:
+          ref: refs/tags/v0.1.0-experimental.0
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.12.4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.17.0
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+
+      - name: Provision the bootstrap npm CLI
+        run: npm install --global npm@11.15.0
+
+      - name: Verify release toolchain
+        run: node --version && npm --version && pnpm --version
+
+      - name: Install the locked dependency graph
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate repository and release configuration
+        run: pnpm validate && pnpm release:core:check
+
+      - name: Audit production dependencies
+        run: pnpm audit --prod --json
+
+      - name: Pack Core candidate
+        run: pnpm --filter @vii/core pack --pack-destination .artifacts
+
+      - name: Publish the exact Core candidate to next
+        run: >-
+          npm publish .artifacts/vii-core-0.1.0-experimental.0.tgz
+          --access public
+          --tag next
+          --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Verify registry result
+        run: >-
+          npm view @vii/core@0.1.0-experimental.0 version dist-tags.next
+          --json
+          --registry=https://registry.npmjs.org

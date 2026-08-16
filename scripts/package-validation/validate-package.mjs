@@ -94,6 +94,7 @@ try {
   assert.equal(coreManifest.repository?.url, "git+https://github.com/kas-labs/vii.git");
   assert.equal(coreManifest.bugs?.url, "https://github.com/kas-labs/vii/issues");
   const expectedCoreEntries = new Set([
+    "package/CHANGELOG.md",
     "package/LICENSE",
     "package/README.md",
     "package/dist/batch.d.ts",

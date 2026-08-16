@@ -26,6 +26,14 @@ separately approved release change.
 The audit is a point-in-time registry result, not a claim that future dependency resolution is safe.
 It must never be fixed automatically as part of a release.
 
+## Current external setup
+
+On 2026-08-16, the repository gained a protected `npm-publish` GitHub Environment. It requires the
+sole maintainer `vitala89` to approve and, by explicit maintainer decision, permits self-approval
+because no independent reviewer is available. Custom deployment policy permits only the exact
+`v0.1.0-experimental.0` tag. No environment secrets, npm Trusted Publisher, npm scope settings, tags,
+or published packages were created by this setup.
+
 ## External maintainer setup
 
 The following controls require npm and GitHub maintainer authority and cannot be proven from this
@@ -48,6 +56,21 @@ provenance automatically for public packages published from public repositories.
 11.5.1+ and Node.js 22.14+; the release runner must meet those minimums even though ordinary repository
 CI currently uses Node 22. See [npm Trusted Publishing](https://docs.npmjs.com/trusted-publishers/) and
 [npm provenance](https://docs.npmjs.com/generating-provenance-statements/).
+
+## First-publication bootstrap exception
+
+npm requires a package to exist before a Trusted Publisher can be configured. The first Core candidate
+therefore uses a one-time, short-lived granular `NPM_TOKEN` stored only as a secret of the protected
+`npm-publish` Environment. The manual workflow runs from the exact release tag, requires its explicit
+confirmation input, uses `--provenance`, and never writes the token to the repository, logs, package,
+or artifact. Immediately after successful publication, configure the GitHub Actions Trusted Publisher
+for `publish-core.yml`, verify OIDC publishing, and revoke the bootstrap token. This exception does not
+permit future token-based publications.
+
+Before dispatching the bootstrap workflow, the npm owner must add that secret to `npm-publish` with
+read-and-write access limited to `@vii`, an expiry of at most one day, and the temporary 2FA-bypass
+setting required for CI publication. Do not place the token in a repository secret, local file, issue,
+pull request, or chat.
 
 ## Future publish workflow contract
 

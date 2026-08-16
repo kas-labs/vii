@@ -98,9 +98,12 @@ The packed Core artifact also carries its Apache-2.0 license, repository and iss
 keywords, and future public `next` publish configuration; the package remains private and unpublished.
 The pending Core changeset records the `minor` base for `0.1.0-experimental.0`; it must be applied only
 through the approved experimental prerelease release process, never as a Stable `0.1.0` publication.
-Release-security preparation now records the current production dependency audit and the external
-GitHub Environment/npm Trusted Publisher prerequisites. No publishing workflow, environment, npm
-configuration, version update, or publication has been created.
+Release-security preparation records the current production dependency audit, a protected
+`npm-publish` Environment limited to the exact first candidate tag, and the external npm Trusted
+Publisher prerequisites. The Environment has one permitted self-approving maintainer because no
+independent reviewer is available. The release branch prepares Core version
+`0.1.0-experimental.0`, its generated changelog, and a manual one-time provenance bootstrap workflow;
+no environment secret, npm Trusted Publisher, tag, or publication has been created.
 
 The durable ecosystem research direction now separates capability ownership from tool ownership.
 Form research targets a small headless module that reuses Vii State, Scope, diagnostics, and thin

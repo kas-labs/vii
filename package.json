@@ -17,6 +17,7 @@
     "build": "nx run-many --target=build --all",
     "changeset": "changeset",
     "version:packages": "changeset version",
+    "release:core:check": "node scripts/release-validation/validate-core-release-candidate.mjs",
     "benchmark:core": "pnpm --filter @vii/core build && node scripts/benchmarks/core-state-baseline.mjs",
     "pack:check": "node scripts/package-validation/validate-package.mjs && node scripts/package-validation/validate-cli-core.mjs",
     "check": "pnpm validate",

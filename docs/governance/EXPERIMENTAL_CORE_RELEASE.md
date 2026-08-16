@@ -34,6 +34,11 @@ stable `0.1.0` release. npm distribution remains the separately configured `next
 application, generated changelog changes, removal of `private`, tag creation, and publication remain
 protected release actions.
 
+The first candidate uses the one-time bootstrap exception in
+`CORE_EXPERIMENTAL_RELEASE_SECURITY.md` because npm requires an existing package before it accepts a
+Trusted Publisher configuration. That exception is limited to the protected manual candidate workflow
+and must be replaced with OIDC Trusted Publishing immediately after the first publication.
+
 ## Non-goals
 
 - publishing any package now;

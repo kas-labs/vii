@@ -1838,3 +1838,41 @@ PR: [#65](https://github.com/kas-labs/vii/pull/65)
 
 - Wait for PR #65 checks and review. Do not merge, version, remove `private`, tag, or publish without
   separate explicit approval.
+
+## 2026-08-16 CEST | Prepare Core experimental release changeset
+
+Status: completed
+Branch: `release/core-experimental-changeset`
+PR: not opened
+
+### Scope
+
+- Prepare the versioning intent, release-note source, known limitations, and support statement for the
+  Core-only experimental candidate without applying a version or publishing a package.
+
+### Changes
+
+- Added the pending `@vii/core` minor changeset that supplies the base for the approved
+  `0.1.0-experimental.0` candidate.
+- Documented the required experimental prerelease application path and explicit boundary against a
+  Stable `0.1.0` release.
+- Added Core consumer documentation for supported surface, limitations, issue reporting, and private
+  vulnerability reporting.
+
+### Validation
+
+- `pnpm changeset status --output=/tmp/vii-changeset-status.json`: passed and recognized the pending
+  Core minor changeset; no release is calculated while Core remains private.
+- `pnpm format:check`, `pnpm pack:check`, `pnpm validate`, and `git diff --check`: passed.
+
+### Architecture / compatibility
+
+- No runtime, public API, diagnostics, filesystem, CLI, dry-run, network, telemetry, package version,
+  or publication behavior changed.
+- The changeset is only release intent. Application, generated changelog/version updates, removal of
+  `private`, tag creation, and npm publication still require explicit release approval.
+
+### Remaining / recovery
+
+- Publish this focused preparation as a draft PR. After review and merge, release security/trusted
+  publishing evidence remains before an explicit release decision.

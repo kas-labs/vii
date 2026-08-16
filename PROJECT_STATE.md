@@ -96,6 +96,8 @@ The repository uses Changesets for future public package versioning. The configu
 script; version application and publication remain separately approved release actions.
 The packed Core artifact also carries its Apache-2.0 license, repository and issue links, discovery
 keywords, and future public `next` publish configuration; the package remains private and unpublished.
+The pending Core changeset records the `minor` base for `0.1.0-experimental.0`; it must be applied only
+through the approved experimental prerelease release process, never as a Stable `0.1.0` publication.
 
 The durable ecosystem research direction now separates capability ownership from tool ownership.
 Form research targets a small headless module that reuses Vii State, Scope, diagnostics, and thin

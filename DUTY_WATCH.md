@@ -1997,3 +1997,27 @@ PR: not opened
 
 - Publish this factual readiness update as a draft PR. Scope ownership, protected environment, trusted
   publisher configuration, versioning, and publication remain maintainer-authorized external actions.
+
+## 2026-08-16 CEST | Record Core registry preflight pull request
+
+Status: completed
+Branch: `release/core-registry-preflight`
+PR: [#68](https://github.com/kas-labs/vii/pull/68)
+
+### Scope
+
+- Publish the verified registry/toolchain preflight record as a draft review request.
+
+### Changes
+
+- Opened draft PR #68 from `release/core-registry-preflight` to `main` at `8093c2a`.
+
+### Validation
+
+- The preceding commit passed read-only npm registry/toolchain preflight, `pnpm format:check`,
+  `pnpm pack:check`, `pnpm validate`, and `git diff --check`.
+
+### Remaining / recovery
+
+- Wait for PR #68 checks and review. Scope ownership, GitHub Environment, npm Trusted Publisher,
+  versioning, private removal, tag, and publication require separate explicit maintainer authority.

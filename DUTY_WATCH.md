@@ -1687,6 +1687,32 @@ Branch: `feat/core-reference-consumer`
 - Before Core publication, adopt changesets, complete public package metadata and release security,
   and obtain explicit release approval.
 
+## 2026-08-16 CEST | Add changesets release foundation
+
+Status: completed
+Branch: `release/changesets-foundation`
+PR: not yet created
+
+### Changes
+
+- Added `@changesets/cli`, the repository configuration, and guarded scripts for creating and
+  applying changesets. No publish script exists.
+- Configured public package access and `main` as the release base while keeping every package
+  private and version `0.0.0` until the separately approved Core candidate release.
+- Updated the experimental Core release decision and durable project state.
+
+### Validation
+
+- `pnpm changeset status` passed and reported no pending bumps.
+- `pnpm format:check`, `pnpm validate`, and `git diff --check` passed.
+
+### Remaining / recovery
+
+- Publish this changesets foundation as a draft PR; do not merge or publish without separate
+  explicit approval.
+- Before Core publication: add its release changeset, complete public package metadata and trusted
+  publishing/provenance, then obtain explicit release approval.
+
 ## 2026-08-16 CEST | Prove security diagnostics isolate sink and clock failures
 
 Status: completed

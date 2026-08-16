@@ -89,6 +89,9 @@ Core-only `@vii/core@0.1.0-experimental.0` npm `next` candidate; it remains prep
 the reference consumer, changeset, package metadata, release-security, and explicit publication
 approval gates in `docs/governance/EXPERIMENTAL_CORE_RELEASE.md` are satisfied. All packages remain
 private until that separate release approval.
+The `examples/core-reference` checkout flow is the first real packed-Core reference consumer: it
+uses only public State, Computed, and Scope APIs and is copied into a clean temporary project by
+package validation, where it installs the packed Core artifact without a workspace alias.
 
 The durable ecosystem research direction now separates capability ownership from tool ownership.
 Form research targets a small headless module that reuses Vii State, Scope, diagnostics, and thin

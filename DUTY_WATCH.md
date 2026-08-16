@@ -2067,3 +2067,29 @@ PR: not opened
   `NPM_TOKEN` scoped to `@vii` as the `npm-publish` Environment secret, create the exact release tag,
   approve and dispatch the workflow, verify npm/provenance, configure Trusted Publisher/OIDC, and revoke
   the bootstrap token. Do not publish another package or use `latest`.
+
+## 2026-08-16 CEST | Record first Core experimental candidate pull request
+
+Status: completed
+Branch: `release/core-first-experimental`
+PR: [#69](https://github.com/kas-labs/vii/pull/69)
+
+### Scope
+
+- Publish the verified first Core experimental release candidate as a draft review request without
+  creating its tag, token, or npm release.
+
+### Changes
+
+- Opened draft PR #69 from `release/core-first-experimental` to `main` at `dc3db63`.
+
+### Validation
+
+- The preceding commit passed release candidate validation, YAML parsing, `pnpm format:check`,
+  `pnpm pack:check`, `pnpm validate`, `pnpm audit --prod --json`, and `git diff --check`.
+
+### Remaining / recovery
+
+- Wait for PR #69 checks and review. After merge, add the one-day scoped `NPM_TOKEN` only to the
+  `npm-publish` Environment, then create the exact tag and manually approve/dispatch the workflow.
+  Verify publication/provenance, configure OIDC Trusted Publishing, and revoke the bootstrap token.

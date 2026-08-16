@@ -2166,3 +2166,41 @@ PR: not opened
   exact tag, dispatch the protected workflow, and approve the staged package in npm with 2FA.
 - Configure OIDC Trusted Publishing for staged publication and revoke the bootstrap token after npm
   approval. Do not publish `latest` or use a direct token-based publish.
+
+## 2026-08-17 CEST | Record npm staged-bootstrap prerequisite
+
+Status: partial
+Branch: `release/core-npm-stage`
+PR: not opened
+
+### Scope
+
+- Execute the post-merge `.2` release staging and record the registry prerequisite discovered in CI.
+
+### Changes
+
+- Confirmed PR #72 merged to `main` at `4c896a9`; all checks passed and the PR has no comments or reviews.
+- Updated the protected `npm-publish` Environment from exact tag `.1` to `.2`, created
+  `v0.1.0-experimental.2`, and approved the sole configured reviewer for workflow run `31975525313`.
+- The workflow passed checkout, locked install, release validation, audit, and pack, then failed only at
+  `npm stage publish` with E404 because `@vii-labs/core` does not yet exist in npm. `npm view` and
+  `npm stage list` confirm no published or staged package.
+- Corrected release-security and project-state records: npm staged publishing cannot bootstrap a new
+  package, so the maintainer must perform one local direct `.2` publish with interactive 2FA before OIDC
+  staged publishing can be used for a later candidate.
+
+### Validation
+
+- Workflow run `31975525313`: validation, production audit, and packed artifact steps passed; staging
+  failed closed with the documented npm E404 prerequisite.
+- Official npm staged-publishing documentation confirms that the package must already exist before it
+  can be staged.
+
+### Remaining / recovery
+
+- From the exact `.2` tag, the npm owner must publish the packed artifact once locally as `vitalii.kas`
+  with interactive 2FA; never send the OTP through chat or store it in GitHub.
+- After `@vii-labs/core@0.1.0-experimental.2` exists, create a new focused release candidate for the
+  next version, configure OIDC Trusted Publishing with stage-only permission, and revoke `NPM_TOKEN`.
+- Do not retry workflow `31975525313`, do not publish `latest`, and do not merge another release change
+  without the normal PR review and checks.

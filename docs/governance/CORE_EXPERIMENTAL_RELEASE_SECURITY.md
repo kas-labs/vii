@@ -46,7 +46,8 @@ repository alone:
    `@vii-labs/core` is available for this publication.
 2. Create a protected GitHub Environment named `npm-publish` with required human reviewers and rules
    restricting it to the release tag or protected `main` as approved by maintainers.
-3. After the reviewed publish workflow exists, configure npm Trusted Publisher with GitHub owner
+3. After the first package exists and the reviewed future publish workflow is prepared, configure npm
+   Trusted Publisher with GitHub owner
    `kas-labs`, repository `vii`, that exact workflow filename, the `npm-publish` environment, and the
    `npm stage publish` allowed action only. The workflow must not receive permission for direct
    publication; npm 2FA approval remains the separate human release gate.
@@ -63,19 +64,19 @@ CI currently uses Node 22. See [npm Trusted Publishing](https://docs.npmjs.com/t
 
 ## First-publication bootstrap exception
 
-npm requires a package to exist before a Trusted Publisher can be configured. The first Core candidate
-therefore uses a one-time, short-lived granular `NPM_TOKEN` stored only as a secret of the protected
-`npm-publish` Environment. The manual workflow runs from the exact release tag, requires its explicit
-confirmation input, uses `npm stage publish --provenance`, and never writes the token to the repository,
-logs, package, or artifact. Staging does not make the package public: the npm maintainer must inspect and
-approve it with 2FA in the npm Staged Packages UI. Immediately after that publication, configure the
-GitHub Actions Trusted Publisher for `publish-core.yml`, verify OIDC staged publishing, and revoke the
-bootstrap token. This exception does not permit future token-based publications.
+npm requires a package to exist before a Trusted Publisher or staged publication can be configured. The
+first Core candidate therefore requires one maintainer-run direct publication of the reviewed `.2`
+artifact with npm's interactive 2FA. Run it locally as `vitalii.kas` from the exact release tag; do not
+put an OTP in the repository, a GitHub secret, an issue, a pull request, or chat. The protected `.2`
+workflow attempted staged publication and failed closed with npm E404 because the package did not yet
+exist; it must not be retried for `.2`. After the manual bootstrap creates `@vii-labs/core`, prepare a
+new reviewed candidate workflow using OIDC and `npm stage publish --provenance`, approve that staged
+candidate with 2FA, and revoke the bootstrap token. This exception does not permit future token-based
+publications.
 
-Before dispatching the bootstrap workflow, the npm owner must add that secret to `npm-publish` with
-read-and-write access limited to `@vii-labs` and an expiry of at most one day. Staging does not require
-a bypass-2FA token; any existing bootstrap token must be revoked immediately after the staged candidate
-is approved. Do not place the token in a repository secret, local file, issue, pull request, or chat.
+The existing short-lived token remains confined to the protected `npm-publish` Environment until the
+manual bootstrap is complete, then must be revoked. Do not place the token in a repository secret, local
+file, issue, pull request, or chat.
 
 ## Future publish workflow contract
 

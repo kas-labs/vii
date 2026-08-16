@@ -223,13 +223,15 @@ See `docs/architecture/TEMPLATE_CONTROL_FLOW.md`.
 
 - DOM renderer
 - Component initialization and targeted updates
+- CSR reference application before SSR becomes a framework requirement
 - Vite plugin prototype
 - Vite development server integration
 - Rolldown production build
 - Separate TypeScript checking
 - HMR protocol
-- Client and server environment graphs
-- Route and asset manifests
+- Explicit client, server, shared, and build environment graphs
+- Route, asset, and hydration manifests
+- Compiler diagnostics for invalid cross-environment imports
 - Build speed, memory, and output-size measurements
 - Optional Bun and Rspack adapter research
 - Optional `@vii/nx` integration research
@@ -240,19 +242,37 @@ Vii owns compiler semantics and build orchestration. It does not initially build
 
 A standalone Vii application framework is considered only if native component and build prototypes provide a clear benefit beyond adapters.
 
+Rendering follows progressive complexity:
+
+```text
+CSR baseline
+-> optional SSG / prerender
+-> optional SSR + hydration
+-> optional streaming / hybrid rendering
+-> optional advanced server functions
+```
+
 Possible scope:
 
 - Router
 - File-based and explicit routes
 - Nested layouts
-- CSR and SSG
-- Basic SSR and hydration
-- Streaming
+- CSR as the independently usable default native rendering mode
+- Optional SSG / prerender
+- Optional SSR and hydration
+- Optional streaming
 - Explicit hybrid route rules
-- Server and client boundaries
-- Typed loaders and server functions
+- Explicit shared, client, server, build, and optional edge boundaries
+- Compiler/build diagnostics for invalid environment imports
+- Typed loaders and optional server functions whose remote/network semantics remain visible
 - Deployment adapters
 - Cohesive `vii dev`, `vii build`, `vii test`, and `vii check` workflows over replaceable lower-level engines when justified
+
+SSR is presentation infrastructure by default. Using it must not require Vii to own application domain logic, database access, transactions, queues, or the backend architecture.
+
+A CSR application must not pay the conceptual, bundle, lifecycle, or tooling cost of unused SSR, hydration, streaming, or server-function features.
+
+See `docs/architecture/RENDERING_STRATEGY.md`.
 
 This phase is not a delivery promise and is not required for Vii State, Query, Form research, UI, or adapters to succeed.
 
@@ -265,7 +285,7 @@ This phase is not a delivery promise and is not required for Vii State, Query, F
 - Mobile patterns
 - Advanced UI components
 - Stream module or RxJS interop expansion
-- Partial hydration or islands research
+- Partial hydration or islands research only after basic SSR/hydration is proven
 - Additional build and deployment targets
 - Intentloom repository profiles and policy bundles
 - InLoom first-class Vii workflows
@@ -288,6 +308,8 @@ A phase or capability advances only when:
 - at least one real consumer validates the design;
 - risks, privacy impact, accessibility impact, and breaking changes are documented;
 - implementation support is not inferred from documentation alone;
+- rendering complexity is not introduced when a simpler mode solves the validated need;
+- SSR, hydration, streaming, or server functions demonstrate measurable value over the simpler mode below them;
 - a new Vii-owned engine is not created when a mature replaceable engine meets the requirement without losing Vii semantics;
 - agent-assisted work preserves provenance, permissions, approvals, and validation evidence where used.
 
@@ -296,6 +318,7 @@ A phase or capability advances only when:
 The native framework sequence may stop at any stage if:
 
 - existing framework adapters provide sufficient value;
+- CSR or static output solves the validated product need without additional server-rendering complexity;
 - compiler and renderer complexity exceeds demonstrated user benefit;
 - security, accessibility, tooling, or compatibility quality cannot meet Vii standards;
 - maintenance capacity is insufficient.
@@ -304,14 +327,14 @@ Vii Core remains useful independently of the framework decision.
 
 ## Ecosystem capability decision rule
 
-A Form, HTTP, testing, build, template, or other ecosystem capability remains Research or is deferred when:
+A Form, HTTP, testing, build, template, rendering, or other ecosystem capability remains Research or is deferred when:
 
 - an existing library solves the validated need without losing important Vii semantics;
 - there is no real consumer;
 - it would delay committed Core or adapter work;
 - the capability cannot remain optional and tree-shakable where appropriate;
 - maintenance cost exceeds demonstrated benefit;
-- API, performance, security, accessibility, compatibility, or lifecycle requirements remain unclear.
+- API, performance, security, accessibility, compatibility, lifecycle, or execution-boundary requirements remain unclear.
 
 ## Agent decision rule
 

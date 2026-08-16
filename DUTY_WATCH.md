@@ -1876,3 +1876,27 @@ PR: not opened
 
 - Publish this focused preparation as a draft PR. After review and merge, release security/trusted
   publishing evidence remains before an explicit release decision.
+
+## 2026-08-16 CEST | Record Core experimental changeset pull request
+
+Status: completed
+Branch: `release/core-experimental-changeset`
+PR: [#66](https://github.com/kas-labs/vii/pull/66)
+
+### Scope
+
+- Publish the verified Core changeset preparation branch as a draft review request.
+
+### Changes
+
+- Opened draft PR #66 from `release/core-experimental-changeset` to `main` at `15aac3a`.
+
+### Validation
+
+- The preceding commit passed `pnpm changeset status --output=/tmp/vii-changeset-status.json`,
+  `pnpm format:check`, `pnpm pack:check`, `pnpm validate`, and `git diff --check`.
+
+### Remaining / recovery
+
+- Wait for PR #66 checks and review. Do not apply the changeset, version, remove `private`, tag, or
+  publish without separate explicit approval.

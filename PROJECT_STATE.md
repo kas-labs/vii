@@ -105,11 +105,12 @@ Release-security preparation records the current production dependency audit, a 
 permitted self-approving maintainer because no independent reviewer is available. Its former exact-tag
 bootstrap run for `@vii/core` failed before publication because that scope is not owned by the project;
 its token secret was removed. The `.1` direct bootstrap for `@vii-labs/core` also failed before
-publication because npm required interactive 2FA. The `.2` staged bootstrap then failed because npm
-does not allow staging a brand-new package; `npm view` and `npm stage list` still return E404. The
-protected workflow and `.2` tag are retained as evidence, but the first package must be published once
-manually with the maintainer's npm 2FA. Only after that package exists can the staged OIDC workflow be
-used for later candidates. No `@vii-labs` package or Trusted Publisher exists.
+publication because npm required interactive 2FA. The `.2` staged bootstrap failed because npm does not
+allow staging a brand-new package, so the maintainer published `.2` once locally with interactive 2FA.
+`@vii-labs/core@0.1.0-experimental.2` now exists on npm with `next` and an accidental `latest` tag; the
+latest tag still requires interactive removal. The GitHub bootstrap secret is deleted. OIDC Trusted
+Publisher configuration and npm token revocation remain pending; future candidates must use OIDC staged
+publishing and must not update `latest`.
 
 The durable ecosystem research direction now separates capability ownership from tool ownership.
 Form research targets a small headless module that reuses Vii State, Scope, diagnostics, and thin

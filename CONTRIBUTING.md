@@ -152,4 +152,4 @@ Review is technical and evidence-based. Maintainers may request a smaller scope,
 
 ## License and authorship
 
-By contributing, you confirm that you have the right to submit the work under the repository license once one is selected and added to the project.
+By contributing, you confirm that you have the right to submit the work under the Apache License 2.0.

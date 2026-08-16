@@ -79,6 +79,7 @@ try {
   assert.ok(angularArtifactPath, "expected an Angular package artifact");
   assert.ok(vueArtifactPath, "expected a Vue package artifact");
   const expectedCoreEntries = new Set([
+    "package/LICENSE",
     "package/README.md",
     "package/dist/batch.d.ts",
     "package/dist/batch.d.ts.map",
@@ -126,6 +127,7 @@ try {
   assertPackageEntries(
     reactArtifactPath,
     new Set([
+      "package/LICENSE",
       "package/README.md",
       "package/dist/index.d.ts",
       "package/dist/index.d.ts.map",
@@ -138,6 +140,7 @@ try {
   assertPackageEntries(
     angularArtifactPath,
     new Set([
+      "package/LICENSE",
       "package/README.md",
       "package/dist/index.d.ts",
       "package/dist/index.d.ts.map",
@@ -150,6 +153,7 @@ try {
   assertPackageEntries(
     vueArtifactPath,
     new Set([
+      "package/LICENSE",
       "package/README.md",
       "package/dist/index.d.ts",
       "package/dist/index.d.ts.map",

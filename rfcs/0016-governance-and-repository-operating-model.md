@@ -83,7 +83,7 @@ Rejected because passing automation does not establish product fit, architectura
 
 ## Unresolved questions
 
-- final repository license
+- final repository license (resolved: Apache-2.0)
 - future organization-level governance across Kas Labs projects
 - exact maintainer nomination process
 - security response roles and private disclosure tooling

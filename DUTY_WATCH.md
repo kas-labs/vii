@@ -1633,6 +1633,36 @@ PR: [#58](https://github.com/kas-labs/vii/pull/58) merged as `00af2e0`
 - Further security producers or inspection fields remain blocked pending a real bounded consumer
   and the applicable security/governance evidence.
 
+## 2026-08-16 CEST | Choose Apache-2.0 and prepare Core experimental release
+
+Status: completed
+Branch: `release/apache-license-core-experimental`
+
+### Scope
+
+- Record the explicit Apache-2.0 licensing decision and the first release-preparation target:
+  Core-only `@vii/core@0.1.0-experimental.0` on npm's `next` channel.
+
+### Changes
+
+- Added the canonical Apache-2.0 license and SPDX metadata to the repository and workspace package
+  manifests.
+- Replaced stale license wording, resolved the open governance question, and documented release
+  preconditions and non-goals in `EXPERIMENTAL_CORE_RELEASE.md`.
+- No package was published, no `private` field was removed, and no runtime, public API, diagnostics,
+  filesystem, network, telemetry, CLI, or transport behavior changed.
+
+### Validation
+
+- SPDX metadata was checked across all affected manifests.
+- `pnpm format:check`, `pnpm pack:check`, `pnpm validate`, and `git diff --check` passed after
+  package-content validation was updated to require the automatically included `LICENSE` file.
+
+### Remaining / recovery
+
+- Before publication: add a real packed-Core reference consumer, adopt changesets, complete public
+  package metadata and release security, and obtain explicit release approval.
+
 ## 2026-08-16 CEST | Prove security diagnostics isolate sink and clock failures
 
 Status: completed

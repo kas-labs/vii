@@ -12,6 +12,7 @@ const fixtureDirectory = path.join(repositoryRoot, "fixtures/vanilla");
 const reactFixtureDirectory = path.join(repositoryRoot, "fixtures/react");
 const angularFixtureDirectory = path.join(repositoryRoot, "fixtures/angular");
 const vueFixtureDirectory = path.join(repositoryRoot, "fixtures/vue");
+const coreReferenceDirectory = path.join(repositoryRoot, "examples/core-reference");
 const pnpm = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 const temporaryRoot = await mkdtemp(path.join(os.tmpdir(), "vii-pack-check-"));
 const artifactDirectory = path.join(temporaryRoot, "artifact");
@@ -19,6 +20,7 @@ const consumerDirectory = path.join(temporaryRoot, "consumer");
 const reactConsumerDirectory = path.join(temporaryRoot, "react-consumer");
 const angularConsumerDirectory = path.join(temporaryRoot, "angular-consumer");
 const vueConsumerDirectory = path.join(temporaryRoot, "vue-consumer");
+const coreReferenceConsumerDirectory = path.join(temporaryRoot, "core-reference-consumer");
 
 function run(command, args, cwd = repositoryRoot) {
   execFileSync(command, args, {
@@ -46,6 +48,7 @@ try {
   await mkdir(reactConsumerDirectory, { recursive: true });
   await mkdir(angularConsumerDirectory, { recursive: true });
   await mkdir(vueConsumerDirectory, { recursive: true });
+  await mkdir(coreReferenceConsumerDirectory, { recursive: true });
 
   run(pnpm, ["--filter", "@vii/core", "build"]);
   run(pnpm, ["--filter", "@vii/react", "build"]);
@@ -212,6 +215,25 @@ try {
   assert.deepEqual(consumer.productionSafeScopePayloads, [{ scopeId: "scope-1" }]);
 
   await prepareConsumer({
+    directory: coreReferenceConsumerDirectory,
+    fixtureDirectory: coreReferenceDirectory,
+    packageJson: {
+      name: "vii-packed-core-reference",
+      private: true,
+      type: "module",
+      dependencies: { "@vii/core": `file:${coreArtifactPath}` },
+    },
+    repositoryRoot,
+    pnpm,
+  });
+  const coreReference = await import(path.join(coreReferenceConsumerDirectory, "dist/main.js"));
+  assert.deepEqual(coreReference.runCheckoutReference(), {
+    finalQuantity: 3,
+    observedQuantities: [2, 3],
+    totalCents: 2400,
+  });
+
+  await prepareConsumer({
     directory: reactConsumerDirectory,
     fixtureDirectory: reactFixtureDirectory,
     packageJson: {
@@ -283,7 +305,7 @@ try {
   });
   const vueConsumer = await import(path.join(vueConsumerDirectory, "dist/main.js"));
   assert.equal(vueConsumer.renderedValue, 2, "packed Vue consumer should read a Core-backed ref");
-  console.log("Packed Core, React, Angular, and Vue artifacts with clean consumers validated.");
+  console.log("Packed Core, reference, React, Angular, and Vue consumers validated.");
 } finally {
   await rm(temporaryRoot, { recursive: true, force: true });
 }

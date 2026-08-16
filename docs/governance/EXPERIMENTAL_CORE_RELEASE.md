@@ -15,8 +15,8 @@ They need their own consumer, compatibility, and release decisions.
 
 - keep `@vii/core` runtime-neutral, value-free in diagnostics, and free of hidden network or
   telemetry behavior;
-- add a real reference consumer that installs the packed Core artifact rather than a workspace
-  alias;
+- maintain the Core reference consumer that installs the packed Core artifact rather than a
+  workspace alias;
 - adopt a changeset workflow and prepare a changelog entry, package metadata, known limitations,
   and support statement;
 - validate the candidate package contents, public exports, Node compatibility, performance baseline,

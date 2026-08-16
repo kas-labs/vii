@@ -422,7 +422,7 @@ PR: not opened
 
 ## 2026-08-11 22:45 Europe/Berlin | Align engineering governance with Intentloom baseline
 
-Status: partial
+Status: completed
 Branch: `docs/align-engineering-governance`
 PR: not opened
 
@@ -1662,6 +1662,30 @@ Branch: `release/apache-license-core-experimental`
 
 - Before publication: add a real packed-Core reference consumer, adopt changesets, complete public
   package metadata and release security, and obtain explicit release approval.
+
+## 2026-08-16 CEST | Add packed Core reference consumer
+
+Status: partial
+Branch: `feat/core-reference-consumer`
+
+### Progress
+
+- Added a minimal checkout reference consumer using public Core State, Computed, and Scope APIs.
+- TDD tracer test was red before `src/main.ts` existed, then green after the minimal implementation.
+- Extended pack validation to copy the reference source to a clean temporary project and install the
+  packed Core tarball; focused reference checks and `pnpm pack:check` passed.
+
+### Validation
+
+- Focused reference test, lint, typecheck, build, and `pnpm pack:check` passed.
+- `pnpm format:check`, `pnpm validate`, and `git diff --check` passed.
+
+### Remaining / recovery
+
+- Publish this focused reference-consumer change as a draft PR. Do not publish or merge without
+  separate explicit approval.
+- Before Core publication, adopt changesets, complete public package metadata and release security,
+  and obtain explicit release approval.
 
 ## 2026-08-16 CEST | Prove security diagnostics isolate sink and clock failures
 

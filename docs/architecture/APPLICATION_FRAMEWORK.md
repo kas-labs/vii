@@ -14,13 +14,18 @@ Its purpose is to define how a future Vii-native stack could combine:
 - routing;
 - layouts;
 - data loading;
-- client and server boundaries;
-- SSR;
-- SSG;
-- streaming;
-- hybrid route rules;
-- server functions;
+- explicit client and server boundaries;
+- client-side rendering as the baseline application mode;
+- optional SSR and SSG;
+- optional streaming and hybrid route rules;
+- optional server functions;
 - deployment adapters.
+
+The controlling rendering principle is:
+
+> Rendering complexity is opt-in.
+
+A developer who chooses CSR must not need to understand hydration, request scopes, streaming, server-only modules, or edge runtimes.
 
 ## Layering
 
@@ -50,7 +55,7 @@ From Next.js:
 
 - file-based routes;
 - nested layouts;
-- server and client boundaries;
+- explicit server and client boundaries;
 - route-level loading and error UI;
 - streaming;
 - server-side data loading;
@@ -67,11 +72,31 @@ From Nuxt:
 - middleware and plugins;
 - route-level SSR, SSG, ISR, and client-only choices.
 
-Vii should not copy React Server Components protocol, opaque caching behavior, hidden auto-imports, or renderer-specific assumptions.
+Vii should not copy React Server Components protocol, opaque caching behavior, hidden auto-imports, renderer-specific assumptions, or a full-stack model that silently turns presentation code into the application backend.
+
+## Rendering philosophy
+
+Vii starts from the simplest useful execution model and adds rendering capabilities progressively:
+
+```text
+CSR
+  -> optional prerender / SSG
+  -> optional SSR + hydration
+  -> optional streaming / hybrid rendering
+  -> optional typed server functions only when evidence justifies them
+```
+
+An application may remain CSR permanently and still use Vii State, Form, Query, HTTP, Router, UI, diagnostics, and framework adapters.
+
+SSR is a presentation capability. It is not a requirement for Vii applications and it does not imply that Vii owns the application's domain backend.
+
+See `docs/architecture/RENDERING_STRATEGY.md`.
 
 ## Rendering modes
 
 ### Client-side rendering
+
+CSR is the baseline native application mode.
 
 ```text
 request
@@ -82,10 +107,14 @@ request
 
 Useful for:
 
+- authenticated dashboards;
+- enterprise applications;
 - local tools;
-- highly interactive authenticated applications;
+- highly interactive applications;
 - desktop shells;
-- applications where SEO and initial HTML are not priorities.
+- applications where SEO and initial server HTML are not primary requirements.
+
+CSR users should not need server-rendering concepts in normal development.
 
 ### Static generation
 
@@ -98,25 +127,29 @@ Useful for:
 - blogs;
 - content that changes only on deployment.
 
+Static generation is opt-in and must not force a server runtime into deployment output.
+
 ### Server-side rendering
 
-HTML is generated for a request.
+SSR is opt-in. HTML is generated for a request.
 
 ```text
 request
--> request scope
+-> request Scope
 -> route match
 -> data loading
 -> server render
 -> HTML response
--> client hydration where required
+-> hydration only where required
 ```
 
 Useful for:
 
-- personalized pages;
+- personalized public pages;
 - frequently changing public content;
 - pages that need current data and indexable HTML.
+
+An SSR route must justify the additional lifecycle, serialization, hydration, testing, memory, and security cost over CSR or static output.
 
 ### Incremental regeneration
 
@@ -125,6 +158,8 @@ A generated response may be cached and refreshed according to an explicit policy
 Vii must avoid unspecified or surprising caching. Cache ownership, key, freshness, invalidation, and runtime support must be visible.
 
 ### Streaming
+
+Streaming is opt-in and requires evidence that it improves the target user experience.
 
 The server may emit the application shell and resolved regions incrementally.
 
@@ -140,33 +175,25 @@ Streaming requires:
 
 ### Hybrid rendering
 
-Different routes may choose different modes.
+Different routes may choose different modes explicitly.
 
 ```ts
 export default defineApp({
   rendering: {
-    default: 'server',
+    default: 'client',
 
     rules: {
       '/': { mode: 'static' },
       '/docs/**': { mode: 'static' },
-      '/products/**': {
-        mode: 'isr',
-        revalidate: '5m',
-      },
-      '/dashboard/**': {
-        mode: 'server',
-        auth: true,
-      },
-      '/editor/**': {
-        mode: 'client',
-      },
+      '/products/**': { mode: 'server' },
+      '/dashboard/**': { mode: 'client' },
+      '/editor/**': { mode: 'client' },
     },
   },
 });
 ```
 
-The exact API is illustrative.
+The exact API is illustrative. The important contract is that server rendering is selected, not silently assumed.
 
 ## SSR mental model
 
@@ -179,7 +206,7 @@ route matching
 + server rendering
 + serialization
 + client asset selection
-+ hydration or resumable bindings
++ hydration where required
 + security headers
 + disposal
 ```
@@ -187,6 +214,8 @@ route matching
 A component rendered on the server may produce HTML without shipping all of its implementation JavaScript to the browser.
 
 Interactive regions require client code and an explicit hydration boundary.
+
+The framework must expose this complexity rather than pretending server and browser execution are identical.
 
 ## Hydration
 
@@ -200,13 +229,34 @@ Rules:
 - browser-only APIs do not execute during server render;
 - server-only capabilities and secrets do not enter the client graph;
 - mismatch diagnostics identify the source boundary;
-- hydration must not evaluate strings as code.
+- hydration must not evaluate strings as code;
+- hydration should be limited to interactive regions where practical.
 
-Vii may research partial hydration, islands, or resumability after basic hydration is correct and measurable.
+Vii may research partial hydration, islands, or resumability only after basic hydration is correct, secure, understandable, and measurable.
 
 ## Server and client boundaries
 
-Candidate explicit markers:
+Execution location must be visible and compiler-checkable.
+
+Conceptual environments are:
+
+```text
+shared
+client
+server
+build
+edge (optional research)
+```
+
+Potential source conventions include:
+
+```text
+user.shared.ts
+user.client.ts
+user.server.ts
+```
+
+Candidate explicit markers may also be researched:
 
 ```ts
 import 'vii:server-only';
@@ -224,7 +274,42 @@ export default component({
 });
 ```
 
-The build system must reject invalid imports such as a client component importing database access or server environment secrets.
+The exact syntax requires RFC and prototype evidence.
+
+The build system must reject invalid imports before runtime where practical, including:
+
+- client modules importing database access or server secrets;
+- client modules importing Node-only capabilities such as `node:fs`;
+- unconditional browser globals in server modules;
+- Node-only packages in edge builds.
+
+Diagnostics must identify the offending import chain and environment boundary.
+
+## SSR and backend ownership
+
+A Vii server-rendering layer is presentation infrastructure by default.
+
+Recommended architecture:
+
+```text
+Browser
+   ^
+   | HTML / hydration
+   |
+Vii presentation server (optional)
+   |
+   | typed HTTP / service boundary
+   v
+Application backend
+   |
+Domain / database / queues / integrations
+```
+
+The backend may use NestJS, Fastify, Spring, .NET, Go, Rust, Laravel, Rails, or another stack.
+
+Using Vii SSR must not require applications to move domain logic, database ownership, authentication authority, transactions, queues, or other backend responsibilities into Vii.
+
+A full-stack deployment may be convenient for a small application, but convenience must not erase architectural boundaries.
 
 ## Routing
 
@@ -295,7 +380,7 @@ Data-loading rules:
 
 ## Server functions
 
-A server function is a typed remote boundary, not a normal function that is silently moved across environments.
+A server function is a typed remote boundary, not a normal local function that is silently moved across environments.
 
 ```ts
 export const updateProfile = defineServerAction({
@@ -310,6 +395,18 @@ export const updateProfile = defineServerAction({
 ```
 
 The compiler may generate a client call, but the boundary must remain visible in source, diagnostics, authorization policy, and generated manifests.
+
+A server-function design must preserve visible network semantics for:
+
+- serialization;
+- authentication and authorization;
+- latency;
+- cancellation;
+- failure;
+- retries;
+- diagnostics and tracing.
+
+Server functions are an advanced opt-in capability and are not required for Vii applications.
 
 ## Project structure
 
@@ -454,6 +551,9 @@ Generators use the common CLI analysis, plan, preview, apply, validate, and repo
 - a custom database or ORM;
 - hidden data caching;
 - mandatory server rendering;
+- making SSR the default for every route;
+- requiring a Vii-owned backend to use Vii SSR;
+- hiding client/server execution boundaries;
 - React Server Components compatibility;
 - production edge support before fixtures exist;
 - a universal native mobile renderer.
@@ -463,10 +563,13 @@ Generators use the common CLI analysis, plan, preview, apply, validate, and repo
 The application framework may become Planned only when:
 
 - the native component model is validated;
-- SSR and hydration work in a reference application;
+- CSR works as an independently understandable baseline;
+- SSR and hydration work in a reference application without making them mandatory;
 - request isolation and disposal are demonstrated;
 - build output is portable across Node and one additional target;
-- route rules are explicit and testable;
+- route rendering rules are explicit and testable;
+- environment-boundary diagnostics fail invalid imports before runtime where practical;
 - security requirements pass malicious fixtures;
-- client bundle and memory budgets are measured;
+- client bundle, server memory, hydration, and runtime budgets are measured;
+- SSR or streaming prototypes demonstrate measured value over the simpler rendering mode below them;
 - the framework offers a clear benefit over Vii adapters in existing frameworks.

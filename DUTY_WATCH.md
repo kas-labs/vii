@@ -2204,3 +2204,30 @@ PR: not opened
   next version, configure OIDC Trusted Publishing with stage-only permission, and revoke `NPM_TOKEN`.
 - Do not retry workflow `31975525313`, do not publish `latest`, and do not merge another release change
   without the normal PR review and checks.
+
+## 2026-08-17 CEST | Bootstrap Core package exists on npm
+
+Status: partial
+Branch: `release/core-npm-stage`
+PR: [#73](https://github.com/kas-labs/vii/pull/73)
+
+### Changes
+
+- Verified `npm whoami` as `vitalii.kas` and confirmed `@vii-labs/core@0.1.0-experimental.2` is published.
+- Verified the intended `next` tag; npm also set `latest` during the manual bootstrap and its removal
+  requires a separate interactive 2FA account operation.
+- Deleted the GitHub `npm-publish` Environment secret `NPM_TOKEN` after the package was created.
+
+### Validation
+
+- Registry metadata reports one published version, 44 files, Apache-2.0 metadata, and expected exports.
+  No npm provenance field is present for the local bootstrap publication.
+- PR #73 checks are green; it has no comments or reviews and remains draft.
+
+### Remaining / recovery
+
+- Remove `latest` locally with npm 2FA, leaving only `next`.
+- Configure the npm Trusted Publisher for `kas-labs/vii`, `publish-core.yml`, Environment `npm-publish`,
+  with stage-only permission; this account action also requires interactive 2FA.
+- Revoke the bootstrap npm token, then prepare and review a new candidate workflow for the next version
+  using OIDC staged publishing with provenance. Do not use `latest`.

@@ -4,7 +4,26 @@
   "private": true,
   "license": "Apache-2.0",
   "type": "module",
-  "description": "Runtime-neutral Vii foundation package under Phase 0 bootstrap.",
+  "description": "Experimental runtime-neutral State, Scope, and diagnostics primitives for TypeScript.",
+  "keywords": [
+    "state",
+    "reactivity",
+    "typescript",
+    "lifecycle",
+    "diagnostics"
+  ],
+  "homepage": "https://github.com/kas-labs/vii#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kas-labs/vii.git"
+  },
+  "bugs": {
+    "url": "https://github.com/kas-labs/vii/issues"
+  },
+  "publishConfig": {
+    "access": "public",
+    "tag": "next"
+  },
   "files": [
     "dist",
     "README.md",

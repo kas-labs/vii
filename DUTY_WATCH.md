@@ -1776,3 +1776,65 @@ PR: [#59](https://github.com/kas-labs/vii/pull/59) merged as `0286d4a`
 
 - Further security producers or inspection fields remain blocked pending a real bounded consumer
   and the applicable security/governance evidence.
+
+## 2026-08-16 CEST | Prepare Core public package metadata
+
+Status: completed
+Branch: `release/core-public-metadata`
+PR: not opened
+
+### Scope
+
+- Complete the public metadata and consumer-facing release-status documentation for the future
+  experimental Core-only candidate without versioning, publishing, or removing `private`.
+
+### Changes
+
+- Added Core package description, discovery keywords, repository/homepage/issue links, and a future
+  public `next` publish configuration.
+- Documented that `@vii/core` is still unpublished, supplied a packed-tarball installation path, and
+  preserved the experimental API, diagnostics, support, privacy, and no-telemetry boundaries.
+- Extended packed-artifact validation to read the Core tarball manifest and assert the Apache-2.0
+  license plus release metadata.
+
+### Validation
+
+- `pnpm pack:check`: passed, including the new packed-manifest assertion and clean consumers.
+- `pnpm format:check`, `pnpm validate`, and `git diff --check`: passed.
+
+### Architecture / compatibility
+
+- No runtime or public API behavior changed. Core remains framework-agnostic, value-free in
+  diagnostics, private, version `0.0.0`, and unpublished.
+- `publishConfig` records the approved future `next` destination only; it does not publish a package,
+  enable telemetry, change filesystem behavior, or grant external authority.
+
+### Remaining / recovery
+
+- Open a draft PR for review. Before publication, prepare an approved Core changeset/changelog and
+  release-security evidence, configure trusted publishing/provenance, then obtain explicit approval
+  for release commit, tag, and npm publication.
+
+## 2026-08-16 CEST | Record Core public metadata pull request
+
+Status: completed
+Branch: `release/core-public-metadata`
+PR: [#65](https://github.com/kas-labs/vii/pull/65)
+
+### Scope
+
+- Publish the verified Core metadata preparation branch as a draft review request.
+
+### Changes
+
+- Opened draft PR #65 from `release/core-public-metadata` to `main` at `681c44d`.
+
+### Validation
+
+- The preceding commit passed `pnpm pack:check`, `pnpm format:check`, `pnpm validate`, and
+  `git diff --check`.
+
+### Remaining / recovery
+
+- Wait for PR #65 checks and review. Do not merge, version, remove `private`, tag, or publish without
+  separate explicit approval.

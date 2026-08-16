@@ -195,6 +195,9 @@ The root `/ROADMAP.md` provides the public phase overview. Cross-phase capabilit
 - `governance/ADR_PROCESS.md`
 - `governance/API_STABILITY.md`
 - `governance/RELEASE_POLICY.md`
+- `governance/EXPERIMENTAL_CORE_RELEASE.md`, accepted Core-only experimental release decision.
+- `governance/CORE_EXPERIMENTAL_RELEASE_SECURITY.md`, release evidence and protected publishing
+  prerequisites; it does not authorize publication.
 - `governance/PACKAGE_LIFECYCLE.md`
 - `governance/DECISION_MAKING.md`
 - `governance/REPOSITORY_OPERATING_MODEL.md`

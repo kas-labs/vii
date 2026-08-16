@@ -1900,3 +1900,41 @@ PR: [#66](https://github.com/kas-labs/vii/pull/66)
 
 - Wait for PR #66 checks and review. Do not apply the changeset, version, remove `private`, tag, or
   publish without separate explicit approval.
+
+## 2026-08-16 CEST | Record Core release security readiness
+
+Status: completed
+Branch: `release/core-security-readiness`
+PR: not opened
+
+### Scope
+
+- Create a reviewable evidence record and maintainer runbook for protected trusted
+  publishing/provenance before any release workflow, versioning, or npm publication is authorized.
+
+### Changes
+
+- Added the Core experimental release security readiness record with current repository evidence,
+  external GitHub Environment/npm Trusted Publisher prerequisites, future manual workflow contract,
+  and approval order.
+- Recorded the current production dependency audit: `pnpm audit --prod --json` reported no known
+  findings across 44 production dependencies.
+- Linked the release decision, documentation index, and durable state to the readiness record.
+
+### Validation
+
+- `pnpm audit --prod --json`: passed with 0 findings at every severity.
+- `pnpm format:check`, `pnpm pack:check`, `pnpm validate`, and `git diff --check`: passed.
+
+### Architecture / compatibility
+
+- No runtime, public API, package, version, release tag, filesystem, CLI, dry-run, network, telemetry,
+  GitHub Environment, npm Trusted Publisher, or publishing workflow behavior changed.
+- The record requires future publishing to be manual, protected, OIDC-based, provenance-producing, and
+  limited to Core on `next`; no credentials are stored in the repository.
+
+### Remaining / recovery
+
+- Publish this readiness record as a draft PR. After review/merge, the remaining protected actions
+  require maintainer-owned npm/GitHub configuration and explicit authorization for the separate
+  versioning and publication change.

@@ -85,11 +85,12 @@ remains Proposed. `recordSecurity`, `security.event`, and the `vii.trace` protoc
 experimental and may change under governance.
 
 The repository is licensed under Apache-2.0. The accepted first public release target is a
-Core-only `@vii-labs/core@0.1.0-experimental.1` npm `next` candidate; `@vii` is owned by an
+Core-only `@vii-labs/core@0.1.0-experimental.2` npm `next` candidate; `@vii` is owned by an
 unrelated npm user, while `@vii-labs` is owned by `vitalii.kas`. The candidate remains preparation-only until
 the reference consumer, changeset, package metadata, release-security, and explicit publication
 approval gates in `docs/governance/EXPERIMENTAL_CORE_RELEASE.md` are satisfied. All packages remain
-private until that separate release approval.
+unpublished until that separate release approval; Core alone is public-configured while adapters and CLI
+Core remain private.
 The `examples/core-reference` checkout flow is the first real packed-Core reference consumer: it
 uses only public State, Computed, and Scope APIs and is copied into a clean temporary project by
 package validation, where it installs the packed Core artifact without a workspace alias.
@@ -97,15 +98,16 @@ The repository uses Changesets for future public package versioning. The configu
 script; version application and publication remain separately approved release actions.
 The packed Core artifact also carries its Apache-2.0 license, repository and issue links, discovery
 keywords, and future public `next` publish configuration; Core is public-configured but remains unpublished.
-The pending Core changeset records the `minor` base for `0.1.0-experimental.1`; it must be applied only
+The pending Core changeset records the `minor` base for `0.1.0-experimental.2`; it must be applied only
 through the approved experimental prerelease release process, never as a Stable `0.1.0` publication.
 Release-security preparation records the current production dependency audit, a protected
 `npm-publish` Environment, and the external npm Trusted Publisher prerequisites. The Environment has one
 permitted self-approving maintainer because no independent reviewer is available. Its former exact-tag
 bootstrap run for `@vii/core` failed before publication because that scope is not owned by the project;
-its token secret was removed. The release branch prepares the independent `@vii-labs/core`
-`0.1.0-experimental.1` candidate, generated changelog, and a manual one-time provenance bootstrap
-workflow. No `@vii-labs` environment secret, tag, Trusted Publisher, or publication has been created.
+its token secret was removed. The `.1` direct bootstrap for `@vii-labs/core` also failed before
+publication because npm required interactive 2FA. The release branch prepares the independent `.2`
+candidate and a manual staged provenance workflow; the existing Environment token must be used only to
+stage it and revoked after npm 2FA approval. No `@vii-labs` package or Trusted Publisher exists.
 
 The durable ecosystem research direction now separates capability ownership from tool ownership.
 Form research targets a small headless module that reuses Vii State, Scope, diagnostics, and thin

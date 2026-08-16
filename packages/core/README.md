@@ -5,13 +5,13 @@ Experimental runtime-neutral State, Scope, and bounded diagnostics primitives fo
 ## Experimental release status
 
 `@vii-labs/core` is not published to npm yet. The first planned public candidate is
-`0.1.0-experimental.1` on the `next` tag; it will not be a `latest` release or a production-support
+`0.1.0-experimental.2` on the `next` tag; it will not be a `latest` release or a production-support
 promise. Until that separately approved publication happens, use the repository workspace or a packed
 tarball:
 
 ```bash
 pnpm --filter @vii-labs/core pack --pack-destination ./artifacts
-pnpm add ./artifacts/vii-labs-core-0.1.0-experimental.1.tgz
+pnpm add ./artifacts/vii-labs-core-0.1.0-experimental.2.tgz
 ```
 
 The public API and the `vii.trace` diagnostics protocol remain experimental and may change under

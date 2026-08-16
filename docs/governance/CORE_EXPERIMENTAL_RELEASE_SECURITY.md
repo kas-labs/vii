@@ -20,7 +20,7 @@ separately approved release change.
 | Build and consumer proof | `pnpm validate` includes tests, builds, and packed clean consumers. | Re-run from the intended release commit. |
 | Production dependency audit | `pnpm audit --prod --json` on 2026-08-16 reported 0 info, low, moderate, high, and critical findings across 44 production dependencies. | Re-run immediately before publication and retain the result with the release record. |
 | Artifact boundary | Packed validation asserts allowed files and Core's exported manifest metadata. | Inspect the versioned candidate tarball before publication. |
-| Registry preflight | The original `@vii` namespace is owned by an unrelated npm user; `@vii-labs` is owned by `vitalii.kas`. The `.2` package is now published and must retain only the experimental `next` channel. | Confirm package ownership and dist-tags immediately before each future publication; an `E404` neither reserves a name nor proves authorization. |
+| Registry preflight | The original `@vii` namespace is owned by an unrelated npm user; `@vii-labs` is owned by `vitalii.kas`. The `.2` package is published and `next` is the supported experimental channel. npm rejected removing `latest` with E400 while `.2` is the only version. | Confirm package ownership and dist-tags immediately before each future publication; users must install experimental versions through `@next`. |
 | Publisher toolchain | Local preflight used Node.js 22.17.0 and npm 10.9.2. Node meets the trusted-publishing minimum; npm does not. | Provision npm 11.5.1+ on the protected release runner and record the exact versions. |
 
 The audit is a point-in-time registry result, not a claim that future dependency resolution is safe.
@@ -31,11 +31,12 @@ It must never be fixed automatically as part of a release.
 On 2026-08-16, the repository gained a protected `npm-publish` GitHub Environment. It requires the
 sole maintainer `vitala89` to approve and, by explicit maintainer decision, permits self-approval
 because no independent reviewer is available. Custom deployment policy permits only the exact
-`v0.1.0-experimental.1` tag. The `.0` bootstrap failed before publication because `@vii` is not
+`v0.1.0-experimental.2` tag. The `.0` bootstrap failed before publication because `@vii` is not
 project-owned. The `.1` direct bootstrap for `@vii-labs` also failed before publication when npm required
 interactive 2FA. The `.2` staged bootstrap then failed because the package did not yet exist; the
 maintainer published the reviewed `.2` artifact locally with 2FA. The Environment is restricted to the
-`.2` tag and its bootstrap secret has been deleted. No npm Trusted Publisher is configured yet.
+`.2` tag and its bootstrap secret has been deleted. npm Trusted Publisher is configured for
+`publish-core.yml` with stage-only permission (`createStagedPackage`); the npm bootstrap token is revoked.
 
 ## External maintainer setup
 
@@ -74,9 +75,8 @@ new reviewed candidate workflow using OIDC and `npm stage publish --provenance`,
 candidate with 2FA, and revoke the bootstrap token. This exception does not permit future token-based
 publications.
 
-The short-lived bootstrap token has been removed from GitHub after the manual publication. Revoke the
-same npm token from the npm account after completing the pending dist-tag and Trusted Publisher account
-actions. Do not place the token in a repository secret, local file, issue, pull request, or chat.
+The short-lived bootstrap token has been removed from GitHub and revoked from npm after the manual
+publication. Do not place tokens or OTPs in a repository secret, local file, issue, pull request, or chat.
 
 ## Future publish workflow contract
 

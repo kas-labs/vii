@@ -2231,3 +2231,30 @@ PR: [#73](https://github.com/kas-labs/vii/pull/73)
   with stage-only permission; this account action also requires interactive 2FA.
 - Revoke the bootstrap npm token, then prepare and review a new candidate workflow for the next version
   using OIDC staged publishing with provenance. Do not use `latest`.
+
+## 2026-08-17 CEST | Complete npm trust and bootstrap-token cleanup
+
+Status: partial
+Branch: `docs/release-publish-state`
+PR: [#74](https://github.com/kas-labs/vii/pull/74)
+
+### Changes
+
+- Verified npm Trusted Publisher `02da092b-466a-4e9a-8e57-4ab8229de86c` for `kas-labs/vii`, workflow
+  `publish-core.yml`, Environment `npm-publish`, with only `createStagedPackage` permission.
+- Verified `npm token list` is empty and the GitHub `NPM_TOKEN` Environment secret is absent.
+- Attempted to remove the accidental `latest` tag after interactive 2FA; npm registry rejected the
+  DELETE with E400. The only published version remains `.2`, so no placeholder stable version or unpublish
+  workaround is permitted. `next` remains the supported experimental install channel.
+
+### Validation
+
+- `npm view @vii-labs/core dist-tags --json`: `next` and registry-retained `latest` both point to `.2`.
+- PR #74 checks: CodeQL, dependency review, governance, and validation all passed; no comments or reviews.
+
+### Remaining / recovery
+
+- Treat `latest` as a registry limitation of the sole published version; documentation directs users to
+  `@vii-labs/core@next`.
+- For the next release, update the exact candidate version/tag through a reviewed PR and use the configured
+  OIDC stage-only Trusted Publisher. Do not intentionally publish `latest` or add a fake stable package.

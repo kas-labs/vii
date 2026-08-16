@@ -27,10 +27,10 @@ try {
   await mkdir(artifactDirectory, { recursive: true });
   await mkdir(coreArtifactDirectory, { recursive: true });
   await mkdir(consumerDirectory, { recursive: true });
-  run(pnpm, ["--filter", "@vii/core", "build"]);
-  run(pnpm, ["--filter", "@vii/cli-core", "build"]);
-  run(pnpm, ["--filter", "@vii/core", "pack", "--pack-destination", coreArtifactDirectory]);
-  run(pnpm, ["--filter", "@vii/cli-core", "pack", "--pack-destination", artifactDirectory]);
+  run(pnpm, ["--filter", "@vii-labs/core", "build"]);
+  run(pnpm, ["--filter", "@vii-labs/cli-core", "build"]);
+  run(pnpm, ["--filter", "@vii-labs/core", "pack", "--pack-destination", coreArtifactDirectory]);
+  run(pnpm, ["--filter", "@vii-labs/cli-core", "pack", "--pack-destination", artifactDirectory]);
 
   const artifactNames = await readdir(artifactDirectory);
   assert.equal(artifactNames.length, 1, "expected one CLI Core package artifact");
@@ -98,8 +98,8 @@ try {
       packageManager: "pnpm@10.12.4",
       devDependencies: { "@types/node": "22.17.0" },
       dependencies: {
-        "@vii/cli-core": `file:${artifactPath}`,
-        "@vii/core": `file:${coreArtifactPath}`,
+        "@vii-labs/cli-core": `file:${artifactPath}`,
+        "@vii-labs/core": `file:${coreArtifactPath}`,
       },
     },
     repositoryRoot,
@@ -107,7 +107,7 @@ try {
   });
   const consumer = await import(path.join(consumerDirectory, "dist/main.js"));
   assert.equal(consumer.detectedPackageManager, "pnpm");
-  assert.deepEqual(consumer.detectedViiPackages, ["@vii/cli-core", "@vii/core"]);
+  assert.deepEqual(consumer.detectedViiPackages, ["@vii-labs/cli-core", "@vii-labs/core"]);
   assert.equal(consumer.initStatus, "dry-run");
   assert.deepEqual(consumer.initFiles, ["vii.config.ts"]);
   assert.equal(consumer.addStateStatus, "dry-run");

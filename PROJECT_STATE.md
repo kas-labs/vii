@@ -42,16 +42,16 @@ equality, and batching semantics and is validated with an Angular 22 clean consu
 The private Vue adapter exposes `useVii` as a readonly shallow ref tied to the current effect scope
 and `createViiRef` for explicit disposal outside a Vue scope; it preserves Core selection, equality,
 and batching semantics and is validated with a Vue 3.5 clean consumer.
-The private `@vii/cli-core` package now provides read-only root project detection with evidence,
+The private `@vii-labs/cli-core` package now provides read-only root project detection with evidence,
 confidence, conflict reporting, package-manager/framework/runtime/workspace/language/rendering
 classification, and installed Vii package discovery. Its deterministic mutation operations,
 `initProject` and `addState`, use that detector as Analyze and implement the Analyze, Plan, Preview,
 Apply, Validate, Report lifecycle. `initProject` can create one root-level `vii.config.ts` with the
-detected framework marker; `addState` can create one `src/state.ts` only when `@vii/core` is already
+detected framework marker; `addState` can create one `src/state.ts` only when `@vii-labs/core` is already
 declared and an existing non-symlink `src` directory is present. Both support dry-run, return exact
 planned file paths, are idempotent, and block ambiguous detection, local changes, and symlinks.
 Neither operation executes configuration, installs dependencies, changes package manifests, reads
-secret values, or accesses the network. The terminal `@vii/cli`, package-manager execution, state
+secret values, or accesses the network. The terminal `@vii-labs/cli`, package-manager execution, state
 generator options, and root-level monorepo selection remain provisional while RFCs 0006 and 0007
 are Draft. The read-only `doctorProject` engine operation uses the detector as Analyze and reports
 healthy, attention, or blocked findings for detection conflicts, missing Vii Core/framework/Nx
@@ -69,7 +69,7 @@ and trace exports for correlation without automatic async propagation or authori
 In `production-safe` mode, Core omits that caller-provided correlation identifier and redacts
 caller-provided scope names before buffering, sinking, or exporting events; generated identifiers
 and structural counts remain available.
-The existing private `@vii/cli-core` package now also provides a pure `inspectTrace()` consumer for
+The existing private `@vii-labs/cli-core` package now also provides a pure `inspectTrace()` consumer for
 in-memory `vii.trace` `0.1` snapshots. It validates the protocol/version and returns only deterministic
 event-type counts, total events, dropped-event count, and a structural Scope/resource ownership graph
 containing only generated IDs, parent links, lifecycle status, and resource disposal success. Names
@@ -85,7 +85,8 @@ remains Proposed. `recordSecurity`, `security.event`, and the `vii.trace` protoc
 experimental and may change under governance.
 
 The repository is licensed under Apache-2.0. The accepted first public release target is a
-Core-only `@vii/core@0.1.0-experimental.0` npm `next` candidate; it remains preparation-only until
+Core-only `@vii-labs/core@0.1.0-experimental.1` npm `next` candidate; `@vii` is owned by an
+unrelated npm user, while `@vii-labs` is owned by `vitalii.kas`. The candidate remains preparation-only until
 the reference consumer, changeset, package metadata, release-security, and explicit publication
 approval gates in `docs/governance/EXPERIMENTAL_CORE_RELEASE.md` are satisfied. All packages remain
 private until that separate release approval.
@@ -95,15 +96,16 @@ package validation, where it installs the packed Core artifact without a workspa
 The repository uses Changesets for future public package versioning. The configuration has no publish
 script; version application and publication remain separately approved release actions.
 The packed Core artifact also carries its Apache-2.0 license, repository and issue links, discovery
-keywords, and future public `next` publish configuration; the package remains private and unpublished.
-The pending Core changeset records the `minor` base for `0.1.0-experimental.0`; it must be applied only
+keywords, and future public `next` publish configuration; Core is public-configured but remains unpublished.
+The pending Core changeset records the `minor` base for `0.1.0-experimental.1`; it must be applied only
 through the approved experimental prerelease release process, never as a Stable `0.1.0` publication.
 Release-security preparation records the current production dependency audit, a protected
-`npm-publish` Environment limited to the exact first candidate tag, and the external npm Trusted
-Publisher prerequisites. The Environment has one permitted self-approving maintainer because no
-independent reviewer is available. The release branch prepares Core version
-`0.1.0-experimental.0`, its generated changelog, and a manual one-time provenance bootstrap workflow;
-no environment secret, npm Trusted Publisher, tag, or publication has been created.
+`npm-publish` Environment, and the external npm Trusted Publisher prerequisites. The Environment has one
+permitted self-approving maintainer because no independent reviewer is available. Its former exact-tag
+bootstrap run for `@vii/core` failed before publication because that scope is not owned by the project;
+its token secret was removed. The release branch prepares the independent `@vii-labs/core`
+`0.1.0-experimental.1` candidate, generated changelog, and a manual one-time provenance bootstrap
+workflow. No `@vii-labs` environment secret, tag, Trusted Publisher, or publication has been created.
 
 The durable ecosystem research direction now separates capability ownership from tool ownership.
 Form research targets a small headless module that reuses Vii State, Scope, diagnostics, and thin
@@ -164,13 +166,13 @@ pnpm validate
 It currently covers formatting, linting, type checking, tests, builds, and packed-artifact validation.
 The focused Core performance command is `pnpm benchmark:core`; it records raw results under
 `benchmarks/results/` with methodology in `docs/quality/CORE_PERFORMANCE_BASELINE.md`.
-The focused adapter command is `pnpm --filter @vii/adapter-testing test`; the full suite is included
-in `pnpm validate`. React adapter checks also include `pnpm --filter @vii/react test` and the packed
-React clean-consumer fixture. Angular adapter checks include `pnpm --filter @vii/angular test` and
-the packed Angular clean-consumer fixture. Vue adapter checks include `pnpm --filter @vii/vue test`
+The focused adapter command is `pnpm --filter @vii-labs/adapter-testing test`; the full suite is included
+in `pnpm validate`. React adapter checks also include `pnpm --filter @vii-labs/react test` and the packed
+React clean-consumer fixture. Angular adapter checks include `pnpm --filter @vii-labs/angular test` and
+the packed Angular clean-consumer fixture. Vue adapter checks include `pnpm --filter @vii-labs/vue test`
 and the packed Vue clean-consumer fixture. CLI foundation checks include
-`pnpm --filter @vii/cli-core test` and the packed CLI Core detection/init/add-state clean-consumer
-fixture, which installs packed `@vii/core` and `@vii/cli-core` artifacts together and exercises
+`pnpm --filter @vii-labs/cli-core test` and the packed CLI Core detection/init/add-state clean-consumer
+fixture, which installs packed `@vii-labs/core` and `@vii-labs/cli-core` artifacts together and exercises
 read-only doctor reporting plus the versioned machine-output envelope.
 
 Repository governance CI additionally checks branch naming and forbidden authorship/tool-attribution metadata for pull requests and their commits.

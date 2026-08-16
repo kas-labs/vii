@@ -1,5 +1,5 @@
-import { createViiSignal } from "@vii/angular";
-import { state } from "@vii/core";
+import { createViiSignal } from "@vii-labs/angular";
+import { state } from "@vii-labs/core";
 
 const count = state(2);
 const handle = createViiSignal(count);

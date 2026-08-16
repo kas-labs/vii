@@ -1,4 +1,4 @@
-# @vii/vue
+# @vii-labs/vue
 
 Experimental Vue adapter for the Vii Core readable-state contract.
 

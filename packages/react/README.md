@@ -1,4 +1,4 @@
-# @vii/react
+# @vii-labs/react
 
 This experimental adapter connects Vii Core readable values to React through
 `useSyncExternalStore`. Core remains the source of truth for State, equality, subscriptions, and

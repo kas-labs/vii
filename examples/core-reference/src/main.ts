@@ -1,4 +1,4 @@
-import { computed, createScope, state } from "@vii/core";
+import { computed, createScope, state } from "@vii-labs/core";
 
 export interface CheckoutReferenceResult {
   readonly finalQuantity: number;

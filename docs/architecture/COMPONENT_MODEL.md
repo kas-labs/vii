@@ -61,7 +61,7 @@ The recommended long-term native format is a `.vii` Single-File Component.
 
 ```html
 <script lang="ts">
-  import { state, computed } from '@vii/state';
+  import { state, computed } from '@vii-labs/state';
 
   const count = state(0);
   const doubled = computed(() => count() * 2);
@@ -107,7 +107,7 @@ counter/
 ```
 
 ```ts
-import { component } from '@vii/web';
+import { component } from '@vii-labs/web';
 import { counter } from './counter.store';
 
 export default component({
@@ -328,7 +328,7 @@ Reasons:
 - they create legacy and standards-compatibility questions;
 - they are unnecessary for function-first composition.
 
-An optional `@vii/decorators` syntax adapter may be researched for Angular-oriented teams, but Core, State, Scope, and Component IR must not depend on it.
+An optional `@vii-labs/decorators` syntax adapter may be researched for Angular-oriented teams, but Core, State, Scope, and Component IR must not depend on it.
 
 ## Folder organization
 

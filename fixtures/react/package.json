@@ -1,5 +1,5 @@
 {
-  "name": "@vii/react-fixture",
+  "name": "@vii-labs/react-fixture",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -10,8 +10,8 @@
     "build": "tsc -p tsconfig.build.json"
   },
   "dependencies": {
-    "@vii/core": "workspace:*",
-    "@vii/react": "workspace:*",
+    "@vii-labs/core": "workspace:*",
+    "@vii-labs/react": "workspace:*",
     "react": "19.2.8",
     "react-dom": "19.2.8"
   },

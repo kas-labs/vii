@@ -148,7 +148,7 @@ Migrations use fixture repositories and are safe to rerun.
 
 ### 10. Nx integration tests
 
-When `@vii/nx` exists, test:
+When `@vii-labs/nx` exists, test:
 
 - project inference;
 - generators using the shared CLI engine;

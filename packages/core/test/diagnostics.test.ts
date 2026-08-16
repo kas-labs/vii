@@ -16,7 +16,7 @@ test("diagnostics records structured State events without values", () => {
     protocolVersion: "0.1",
     id: "diagnostic-1",
     timestamp: 123,
-    package: "@vii/core",
+    package: "@vii-labs/core",
   });
   expect(JSON.stringify(events)).not.toContain("private-value");
   expect(JSON.stringify(events)).not.toContain("secret-value");
@@ -251,7 +251,7 @@ test("diagnostics records a bounded security event without raw input", () => {
       id: "diagnostic-1",
       type: "security.event",
       timestamp: 432,
-      package: "@vii/core",
+      package: "@vii-labs/core",
       payload: {
         code: "VII-SEC-008",
         surface: "path",
@@ -339,7 +339,7 @@ test("development security events normalize bounded metadata", () => {
     id: "diagnostic-1",
     type: "security.event",
     timestamp: 433,
-    package: "@vii/core",
+    package: "@vii-labs/core",
     causeId: "diagnostic-previous",
     payload: {
       code: "VII-SEC-001",
@@ -384,7 +384,7 @@ test("production-safe security events omit optional metadata and trace correlati
     id: "diagnostic-1",
     type: "security.event",
     timestamp: 434,
-    package: "@vii/core",
+    package: "@vii-labs/core",
     payload: {
       code: "VII-SEC-011",
       surface: "input",

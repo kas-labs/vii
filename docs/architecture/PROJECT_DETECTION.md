@@ -116,7 +116,7 @@ It must not:
 The first mutating consumers, `initProject` and `addState`, call detection as their Analyze phase.
 They do not reinterpret detection signals: conflicts and mixed/unknown frameworks block Apply,
 while a dry-run returns the planned file list without writing it. `initProject` plans the root-level
-`vii.config.ts`; `addState` plans `src/state.ts` only when `@vii/core` is already declared and the
+`vii.config.ts`; `addState` plans `src/state.ts` only when `@vii-labs/core` is already declared and the
 existing `src` directory is safe. Neither operation installs dependencies or changes package
 manifests. Existing changed files and symlinks are reported as conflicts so project-root
 confinement and local ownership remain explicit.

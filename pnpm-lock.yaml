@@ -39,7 +39,7 @@ importers:
 
   examples/core-reference:
     dependencies:
-      '@vii/core':
+      '@vii-labs/core':
         specifier: workspace:*
         version: link:../../packages/core
 
@@ -51,10 +51,10 @@ importers:
       '@angular/core':
         specifier: 22.1.1
         version: 22.1.1(@angular/compiler@22.1.1)(rxjs@7.8.2)(zone.js@0.16.0)
-      '@vii/angular':
+      '@vii-labs/angular':
         specifier: workspace:*
         version: link:../../packages/angular
-      '@vii/core':
+      '@vii-labs/core':
         specifier: workspace:*
         version: link:../../packages/core
       rxjs:
@@ -66,10 +66,10 @@ importers:
 
   fixtures/react:
     dependencies:
-      '@vii/core':
+      '@vii-labs/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@vii/react':
+      '@vii-labs/react':
         specifier: workspace:*
         version: link:../../packages/react
       react:
@@ -88,16 +88,16 @@ importers:
 
   fixtures/vanilla:
     dependencies:
-      '@vii/core':
+      '@vii-labs/core':
         specifier: workspace:*
         version: link:../../packages/core
 
   fixtures/vue:
     dependencies:
-      '@vii/core':
+      '@vii-labs/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@vii/vue':
+      '@vii-labs/vue':
         specifier: workspace:*
         version: link:../../packages/vue
       vue:
@@ -106,7 +106,7 @@ importers:
 
   packages/adapter-testing:
     devDependencies:
-      '@vii/core':
+      '@vii-labs/core':
         specifier: workspace:*
         version: link:../core
 
@@ -118,7 +118,7 @@ importers:
       '@angular/core':
         specifier: 22.1.1
         version: 22.1.1(@angular/compiler@22.1.1)(rxjs@7.8.2)(zone.js@0.16.0)
-      '@vii/core':
+      '@vii-labs/core':
         specifier: workspace:*
         version: link:../core
       rxjs:
@@ -133,7 +133,7 @@ importers:
       '@types/node':
         specifier: 22.17.0
         version: 22.17.0
-      '@vii/core':
+      '@vii-labs/core':
         specifier: workspace:*
         version: link:../core
 
@@ -150,7 +150,7 @@ importers:
       '@types/react-test-renderer':
         specifier: 19.0.0
         version: 19.0.0
-      '@vii/core':
+      '@vii-labs/core':
         specifier: workspace:*
         version: link:../core
       react:
@@ -165,7 +165,7 @@ importers:
 
   packages/vue:
     devDependencies:
-      '@vii/core':
+      '@vii-labs/core':
         specifier: workspace:*
         version: link:../core
       vue:

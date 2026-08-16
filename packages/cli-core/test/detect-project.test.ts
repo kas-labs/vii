@@ -8,8 +8,8 @@ test("doctorProject reports a healthy Vii React project without mutation", async
   const root = await createFixture({
     "package.json": JSON.stringify({
       dependencies: {
-        "@vii/core": "0.0.0",
-        "@vii/react": "0.0.0",
+        "@vii-labs/core": "0.0.0",
+        "@vii-labs/react": "0.0.0",
         react: "19.0.0",
       },
     }),
@@ -36,7 +36,7 @@ test("doctorProject reports a healthy Vii React project without mutation", async
 test("doctorProject reports detection conflicts as blocking findings", async () => {
   const root = await createFixture({
     "package.json": JSON.stringify({
-      dependencies: { "@vii/core": "0.0.0", "@vii/react": "0.0.0", react: "19.0.0" },
+      dependencies: { "@vii-labs/core": "0.0.0", "@vii-labs/react": "0.0.0", react: "19.0.0" },
     }),
     "package-lock.json": "lockfile\n",
     "src/main.ts": "export {};\n",
@@ -62,7 +62,7 @@ test("doctorProject reports detection conflicts as blocking findings", async () 
 test("doctorProject reports a missing framework adapter for review", async () => {
   const root = await createFixture({
     "package.json": JSON.stringify({
-      dependencies: { "@vii/core": "0.0.0", react: "19.0.0" },
+      dependencies: { "@vii-labs/core": "0.0.0", react: "19.0.0" },
     }),
     "package-lock.json": "lockfile\n",
     "src/main.ts": "export {};\n",
@@ -87,7 +87,7 @@ test("doctorProject reports a missing framework adapter for review", async () =>
 test("doctorProject blocks a Vii adapter without Core", async () => {
   const root = await createFixture({
     "package.json": JSON.stringify({
-      dependencies: { "@vii/react": "0.0.0", react: "19.0.0" },
+      dependencies: { "@vii-labs/react": "0.0.0", react: "19.0.0" },
     }),
     "package-lock.json": "lockfile\n",
     "src/main.ts": "export {};\n",
@@ -104,7 +104,7 @@ test("doctorProject blocks a Vii adapter without Core", async () => {
       ]),
     );
     expect(result.validation.errors).toContain(
-      "Vii packages are declared but @vii/core is missing",
+      "Vii packages are declared but @vii-labs/core is missing",
     );
   } finally {
     await removeFixture(root);
@@ -114,7 +114,7 @@ test("doctorProject blocks a Vii adapter without Core", async () => {
 test("doctorProject does not execute project configuration files", async () => {
   const root = await createFixture({
     "package.json": JSON.stringify({
-      dependencies: { "@vii/core": "0.0.0", "@vii/react": "0.0.0", react: "19.0.0" },
+      dependencies: { "@vii-labs/core": "0.0.0", "@vii-labs/react": "0.0.0", react: "19.0.0" },
     }),
     "next.config.js": "throw new Error('must not execute');\n",
     "package-lock.json": "lockfile\n",
@@ -132,7 +132,7 @@ test("doctorProject does not execute project configuration files", async () => {
 test("doctorProject reports missing Nx integration without mutation", async () => {
   const root = await createFixture({
     "nx.json": "{}\n",
-    "package.json": JSON.stringify({ dependencies: { "@vii/core": "0.0.0" } }),
+    "package.json": JSON.stringify({ dependencies: { "@vii-labs/core": "0.0.0" } }),
     "pnpm-lock.yaml": "lockfileVersion: '9.0'\n",
     "src/main.ts": "export {};\n",
     "tsconfig.json": "{}\n",
@@ -155,7 +155,7 @@ test("doctorProject reports missing Nx integration without mutation", async () =
 
 test("addState dry-run reports one state file without mutation", async () => {
   const root = await createFixture({
-    "package.json": JSON.stringify({ dependencies: { "@vii/core": "0.0.0" } }),
+    "package.json": JSON.stringify({ dependencies: { "@vii-labs/core": "0.0.0" } }),
     "pnpm-lock.yaml": "lockfileVersion: '9.0'\n",
     "src/main.ts": "export {};\n",
     "tsconfig.json": "{}\n",
@@ -168,7 +168,7 @@ test("addState dry-run reports one state file without mutation", async () => {
     expect(result.report.status).toBe("dry-run");
     expect(result.report.files).toEqual(["src/state.ts"]);
     expect(result.plan.files.map((file) => file.path)).toEqual(["src/state.ts"]);
-    expect(result.plan.files[0]?.content).toContain('from "@vii/core"');
+    expect(result.plan.files[0]?.content).toContain('from "@vii-labs/core"');
     expect(result.validation.passed).toBe(true);
     await expect(readFile(path.join(root, "src/state.ts"), "utf8")).rejects.toMatchObject({
       code: "ENOENT",
@@ -180,7 +180,7 @@ test("addState dry-run reports one state file without mutation", async () => {
 
 test("addState applies one deterministic state file and is idempotent", async () => {
   const root = await createFixture({
-    "package.json": JSON.stringify({ dependencies: { "@vii/core": "0.0.0" } }),
+    "package.json": JSON.stringify({ dependencies: { "@vii-labs/core": "0.0.0" } }),
     "pnpm-lock.yaml": "lockfileVersion: '9.0'\n",
     "src/main.ts": "export {};\n",
     "tsconfig.json": "{}\n",
@@ -194,7 +194,7 @@ test("addState applies one deterministic state file and is idempotent", async ()
     expect(first.applied).toBe(true);
     expect(first.report).toMatchObject({ status: "applied", files: ["src/state.ts"] });
     expect(first.validation.passed).toBe(true);
-    expect(content).toContain('import { state } from "@vii/core"');
+    expect(content).toContain('import { state } from "@vii-labs/core"');
     expect(content).toContain("appState");
     expect(second.applied).toBe(false);
     expect(second.report).toMatchObject({ status: "unchanged", files: [] });
@@ -204,7 +204,7 @@ test("addState applies one deterministic state file and is idempotent", async ()
   }
 });
 
-test("addState blocks when @vii/core is not installed", async () => {
+test("addState blocks when @vii-labs/core is not installed", async () => {
   const root = await createFixture({
     "package.json": JSON.stringify({ dependencies: { react: "19.0.0" } }),
     "pnpm-lock.yaml": "lockfileVersion: '9.0'\n",
@@ -219,7 +219,7 @@ test("addState blocks when @vii/core is not installed", async () => {
     expect(result.report.status).toBe("blocked");
     expect(result.plan.files).toEqual([]);
     expect(result.plan.conflicts).toContain(
-      "@vii/core is not installed; install it explicitly before running vii add state",
+      "@vii-labs/core is not installed; install it explicitly before running vii add state",
     );
     expect(result.validation.passed).toBe(false);
     await expect(readFile(path.join(root, "src/state.ts"), "utf8")).rejects.toMatchObject({
@@ -233,7 +233,7 @@ test("addState blocks when @vii/core is not installed", async () => {
 test("addState does not overwrite a locally changed state file", async () => {
   const localState = "export const appState = customState();\n";
   const root = await createFixture({
-    "package.json": JSON.stringify({ dependencies: { "@vii/core": "0.0.0" } }),
+    "package.json": JSON.stringify({ dependencies: { "@vii-labs/core": "0.0.0" } }),
     "pnpm-lock.yaml": "lockfileVersion: '9.0'\n",
     "src/main.ts": "export {};\n",
     "src/state.ts": localState,
@@ -255,7 +255,7 @@ test("addState does not overwrite a locally changed state file", async () => {
 
 test("addState blocks when the application source directory is missing", async () => {
   const root = await createFixture({
-    "package.json": JSON.stringify({ dependencies: { "@vii/core": "0.0.0" } }),
+    "package.json": JSON.stringify({ dependencies: { "@vii-labs/core": "0.0.0" } }),
     "pnpm-lock.yaml": "lockfileVersion: '9.0'\n",
     "tsconfig.json": "{}\n",
   });
@@ -277,7 +277,7 @@ test("addState blocks when the application source directory is missing", async (
 test("addState blocks ambiguous framework detection without mutation", async () => {
   const root = await createFixture({
     "package.json": JSON.stringify({
-      dependencies: { "@vii/core": "0.0.0", "@angular/core": "20.0.0", react: "19.0.0" },
+      dependencies: { "@vii-labs/core": "0.0.0", "@angular/core": "20.0.0", react: "19.0.0" },
     }),
     "pnpm-lock.yaml": "lockfileVersion: '9.0'\n",
     "src/main.ts": "export {};\n",
@@ -301,7 +301,7 @@ test("addState blocks ambiguous framework detection without mutation", async () 
 
 test("addState refuses a state symlink that escapes the project root", async () => {
   const root = await createFixture({
-    "package.json": JSON.stringify({ dependencies: { "@vii/core": "0.0.0" } }),
+    "package.json": JSON.stringify({ dependencies: { "@vii-labs/core": "0.0.0" } }),
     "pnpm-lock.yaml": "lockfileVersion: '9.0'\n",
     "src/main.ts": "export {};\n",
     "tsconfig.json": "{}\n",
@@ -474,7 +474,7 @@ test("detectProject retains framework evidence and installed Vii packages", asyn
   const root = await createFixture({
     "package.json": JSON.stringify({
       name: "react-app",
-      dependencies: { "@vii/core": "0.0.0", react: "19.0.0", "react-dom": "19.0.0" },
+      dependencies: { "@vii-labs/core": "0.0.0", react: "19.0.0", "react-dom": "19.0.0" },
       engines: { node: ">=22" },
     }),
     "package-lock.json": "lockfile\n",
@@ -490,7 +490,7 @@ test("detectProject retains framework evidence and installed Vii packages", asyn
     expect(result.packageManager).toBe("npm");
     expect(result.language).toBe("typescript");
     expect(result.rendering).toBe("client");
-    expect(result.installedViiPackages).toEqual(["@vii/core"]);
+    expect(result.installedViiPackages).toEqual(["@vii-labs/core"]);
     expect(result.conflicts).toEqual([]);
     expect(result.confidence).toBe("high");
     expect(result.evidence).toEqual(

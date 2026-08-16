@@ -496,7 +496,7 @@ network access.
 Potential package:
 
 ```text
-@vii/http
+@vii-labs/http
 ```
 
 The package name is provisional. A package must not be created until the normal

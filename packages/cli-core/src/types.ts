@@ -1,4 +1,4 @@
-import type { Diagnostics } from "@vii/core";
+import type { Diagnostics } from "@vii-labs/core";
 
 export type ProjectFramework = "react" | "angular" | "vue" | "vanilla" | "mixed" | "unknown";
 export type ProjectRuntime = "browser" | "node" | "bun" | "deno" | "unknown";

@@ -91,7 +91,7 @@ diagnostics.run(() => {
 - the default mode is `development`; `off` disables collection and `production-safe` keeps the same
   value-free event shape;
 - events use protocol version `0.1`, per-collector `diagnostic-N` IDs, an injectable clock for
-  deterministic tests, and `@vii/core` as the package identifier;
+  deterministic tests, and `@vii-labs/core` as the package identifier;
 - the in-memory store is a bounded ring buffer; the oldest event is dropped when full and
   `droppedEvents` reports the number removed;
 - Core event payloads contain identifiers, versions, counts, and lifecycle metadata, never State

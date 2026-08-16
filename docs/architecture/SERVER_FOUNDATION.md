@@ -272,9 +272,9 @@ No file is assumed safe because of its extension or browser-provided content typ
 Research integrations may include:
 
 ```text
-@vii/fastify
-@vii/hono
-@vii/nest
+@vii-labs/fastify
+@vii-labs/hono
+@vii-labs/nest
 ```
 
 Only integrations with real consumers, security review, and compliance tests should become official packages.
@@ -284,10 +284,10 @@ Only integrations with real consumers, security review, and compliance tests sho
 Potential packages:
 
 ```text
-@vii/server-node
-@vii/server-bun
-@vii/server-deno
-@vii/server-fetch
+@vii-labs/server-node
+@vii-labs/server-bun
+@vii-labs/server-deno
+@vii-labs/server-fetch
 ```
 
 Node.js is the first reference runtime.

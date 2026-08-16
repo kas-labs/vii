@@ -1,5 +1,5 @@
 {
-  "name": "@vii/angular",
+  "name": "@vii-labs/angular",
   "version": "0.0.0",
   "private": true,
   "license": "Apache-2.0",
@@ -25,12 +25,12 @@
   },
   "peerDependencies": {
     "@angular/core": ">=17.0.0",
-    "@vii/core": ">=0.0.0"
+    "@vii-labs/core": ">=0.0.0"
   },
   "devDependencies": {
     "@angular/compiler": "22.1.1",
     "@angular/core": "22.1.1",
-    "@vii/core": "workspace:*",
+    "@vii-labs/core": "workspace:*",
     "rxjs": "7.8.2",
     "zone.js": "0.16.0"
   },

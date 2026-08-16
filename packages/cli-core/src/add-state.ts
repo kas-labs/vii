@@ -64,9 +64,12 @@ export async function addState(
 }
 
 function createStateSource(): string {
-  return ['import { state } from "@vii/core";', "", "export const appState = state({});", ""].join(
-    "\n",
-  );
+  return [
+    'import { state } from "@vii-labs/core";',
+    "",
+    "export const appState = state({});",
+    "",
+  ].join("\n");
 }
 
 function createPlannedFile(content: string): AddStatePlannedFile {
@@ -79,9 +82,9 @@ function createConflicts(
   sourceDirectory: SourceDirectoryInspection,
 ): readonly string[] {
   const conflicts = detection.conflicts.map((conflict) => conflict.message);
-  if (!detection.installedViiPackages.includes("@vii/core")) {
+  if (!detection.installedViiPackages.includes("@vii-labs/core")) {
     conflicts.push(
-      "@vii/core is not installed; install it explicitly before running vii add state",
+      "@vii-labs/core is not installed; install it explicitly before running vii add state",
     );
   }
   if (inspection === "different") {

@@ -1,5 +1,5 @@
 import { DestroyRef, inject, signal, type Signal } from "@angular/core";
-import type { ReadableState } from "@vii/core";
+import type { ReadableState } from "@vii-labs/core";
 
 export type ViiSelector<TState, TSelected> = (state: TState) => TSelected;
 export type ViiEquality<T> = (previous: T, next: T) => boolean;

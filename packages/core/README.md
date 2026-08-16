@@ -1,17 +1,17 @@
-# @vii/core
+# @vii-labs/core
 
 Experimental runtime-neutral State, Scope, and bounded diagnostics primitives for TypeScript.
 
 ## Experimental release status
 
-`@vii/core` is not published to npm yet. The first planned public candidate is
-`0.1.0-experimental.0` on the `next` tag; it will not be a `latest` release or a production-support
+`@vii-labs/core` is not published to npm yet. The first planned public candidate is
+`0.1.0-experimental.1` on the `next` tag; it will not be a `latest` release or a production-support
 promise. Until that separately approved publication happens, use the repository workspace or a packed
 tarball:
 
 ```bash
-pnpm --filter @vii/core pack --pack-destination ./artifacts
-pnpm add ./artifacts/vii-core-0.1.0-experimental.0.tgz
+pnpm --filter @vii-labs/core pack --pack-destination ./artifacts
+pnpm add ./artifacts/vii-labs-core-0.1.0-experimental.1.tgz
 ```
 
 The public API and the `vii.trace` diagnostics protocol remain experimental and may change under
@@ -36,7 +36,7 @@ privately according to the repository's [security policy](../../SECURITY.md).
 The package currently exposes experimental State, Computed, Batch, Scope, and Diagnostics primitives:
 
 ```ts
-import { batch, computed, createDiagnostics, createScope, state } from "@vii/core";
+import { batch, computed, createDiagnostics, createScope, state } from "@vii-labs/core";
 
 const count = state(0);
 count.set(1);

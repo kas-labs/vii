@@ -1,4 +1,4 @@
-# @vii/cli-core
+# @vii-labs/cli-core
 
 Experimental project detection and deterministic mutation engine for the Vii CLI foundation.
 
@@ -13,7 +13,7 @@ Analyze → Plan → Preview → Apply → Validate → Report lifecycle. The mi
 config, an escaping symlink, or ambiguous detection blocks Apply and reports the conflict.
 
 `addState(root, { dryRun: true })` uses the same lifecycle to plan `src/state.ts`. It requires an
-existing `@vii/core` dependency, creates no package-manager changes, and never installs dependencies.
+existing `@vii-labs/core` dependency, creates no package-manager changes, and never installs dependencies.
 The operation is root-confined, only creates a missing state file beneath an existing non-symlink
 `src` directory, and blocks local changes, symlinks, missing source directories, and ambiguous
 detection. Its report returns the exact planned file path.

@@ -1,4 +1,4 @@
-import { batch, computed, createDiagnostics, createScope, state } from "@vii/core";
+import { batch, computed, createDiagnostics, createScope, state } from "@vii-labs/core";
 
 const count = state(0);
 const observed: number[] = [];

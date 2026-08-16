@@ -536,7 +536,7 @@ PR: #24 (merged)
 
 ## 2026-08-12 00:12 Europe/Berlin | Expand packed Vanilla fixture
 
-Status: partial
+Status: completed
 Branch: `feat/expand-vanilla-fixture`
 PR: not opened
 
@@ -2093,3 +2093,43 @@ PR: [#69](https://github.com/kas-labs/vii/pull/69)
 - Wait for PR #69 checks and review. After merge, add the one-day scoped `NPM_TOKEN` only to the
   `npm-publish` Environment, then create the exact tag and manually approve/dispatch the workflow.
   Verify publication/provenance, configure OIDC Trusted Publishing, and revoke the bootstrap token.
+
+## 2026-08-16 CEST | Correct public npm namespace after failed bootstrap
+
+Status: partial
+Branch: `release/npm-scope-migration`
+PR: not opened
+
+### Scope
+
+- Correct the unpublished public package namespace after confirming that `@vii` is owned by an
+  unrelated npm user, and prepare a replacement experimental candidate under the project-owned
+  `@vii-labs` organization.
+
+### Changes
+
+- Verified `vitalii.kas` owns `@vii-labs`; the organization includes its standard `developers` team.
+- Migrated workspace package names, imports, fixtures, packed-consumer validation, diagnostics package
+  metadata, and package documentation from `@vii/*` to `@vii-labs/*`.
+- Replaced the unpublishable `@vii/core@0.1.0-experimental.0` candidate with the independent
+  `@vii-labs/core@0.1.0-experimental.1` candidate and exact `v0.1.0-experimental.1` workflow contract.
+- Preserved historical Duty Watch records for the old candidate. The old remote tag remains
+  unmodified and no package was published.
+
+### Validation
+
+- TDD: Core diagnostics contract failed while events reported `@vii/core`, then passed after the
+  package identity migration.
+- `pnpm release:core:check`: passed after updating the candidate changelog assertion.
+- Initial `pnpm pack:check` exposed stale local workspace links; `pnpm install --frozen-lockfile`
+  refreshed the graph, and the rerun passed.
+- `pnpm release:core:check`, `pnpm format:check`, `pnpm pack:check`, `pnpm validate`,
+  `pnpm audit --prod --json` (0 vulnerabilities across 44 production dependencies), and
+  `git diff --check`: passed.
+
+### Remaining / recovery
+
+- Update the protected `npm-publish` Environment from the abandoned `.0` tag to the reviewed
+  `v0.1.0-experimental.1` tag only after the replacement PR merges.
+- Create a new `@vii-labs`-scoped bootstrap token only after the reviewed candidate is merged; the
+  prior secret was removed and the failed `@vii` bootstrap never published a package.

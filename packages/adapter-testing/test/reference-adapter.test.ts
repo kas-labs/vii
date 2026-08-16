@@ -1,4 +1,4 @@
-import { batch, state } from "@vii/core";
+import { batch, state } from "@vii-labs/core";
 import { defineAdapterComplianceSuite, type AdapterComplianceFixture } from "../src/index.js";
 import { expectTypeOf, test } from "vitest";
 

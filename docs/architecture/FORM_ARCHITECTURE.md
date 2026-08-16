@@ -38,7 +38,7 @@ Dependency direction remains:
 ```text
 framework UI
    -> Form adapter
-   -> @vii/form
+   -> @vii-labs/form
    -> Vii State / Scope / Diagnostics contracts
 ```
 
@@ -109,7 +109,7 @@ semantics inside Form Core.
 
 ### 1. Headless and framework agnostic
 
-`@vii/form` owns form behavior, not UI rendering.
+`@vii-labs/form` owns form behavior, not UI rendering.
 
 React, Angular, Vue, native Vii templates, Web Components, or Vanilla consumers
 must observe the same form semantics.
@@ -414,7 +414,7 @@ remain independently usable.
 Candidate package:
 
 ```text
-@vii/form
+@vii-labs/form
 ```
 
 Potential adapter packages should not be created until the shared adapter pattern

@@ -31,12 +31,12 @@ A developer who chooses CSR must not need to understand hydration, request scope
 
 ```text
 Vii Application Framework
-├── @vii/app
-├── @vii/router
-├── @vii/web
-├── @vii/server
-├── @vii/query
-└── @vii/build
+├── @vii-labs/app
+├── @vii-labs/router
+├── @vii-labs/web
+├── @vii-labs/server
+├── @vii-labs/query
+└── @vii-labs/build
         │
         v
 Vii Core Foundations

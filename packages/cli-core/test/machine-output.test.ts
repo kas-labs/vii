@@ -12,7 +12,7 @@ import {
 
 test("machine output wraps doctor diagnostics in a versioned JSON envelope", async () => {
   const root = await createFixture({
-    "package.json": JSON.stringify({ dependencies: { "@vii/core": "0.0.0" } }),
+    "package.json": JSON.stringify({ dependencies: { "@vii-labs/core": "0.0.0" } }),
     "package-lock.json": "lockfile\n",
     "src/main.ts": "export {};\n",
     "tsconfig.json": "{}\n",
@@ -62,7 +62,7 @@ test("machine output preserves an init plan and validation result", async () => 
 
 test("machine output preserves the add state planned file", async () => {
   const root = await createFixture({
-    "package.json": JSON.stringify({ dependencies: { "@vii/core": "0.0.0" } }),
+    "package.json": JSON.stringify({ dependencies: { "@vii-labs/core": "0.0.0" } }),
     "package-lock.json": "lockfile\n",
     "src/main.ts": "export {};\n",
     "tsconfig.json": "{}\n",
@@ -79,7 +79,7 @@ test("machine output preserves the add state planned file", async () => {
       plan: { conflicts: [], files: [{ action: "create", path: "src/state.ts" }] },
       validation: { passed: true },
     });
-    expect(output.plan.files[0]?.content).toContain('from "@vii/core"');
+    expect(output.plan.files[0]?.content).toContain('from "@vii-labs/core"');
   } finally {
     await removeFixture(root);
   }

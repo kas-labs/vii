@@ -2,7 +2,7 @@ import { mkdtemp, mkdir, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { expect, test } from "vitest";
-import { createDiagnostics } from "@vii/core";
+import { createDiagnostics } from "@vii-labs/core";
 import { addState, inspectTrace } from "../src/index.js";
 
 test("addState records a security event when src is a symlink", async () => {
@@ -12,7 +12,7 @@ test("addState records a security event when src is a symlink", async () => {
   try {
     await writeFile(
       path.join(root, "package.json"),
-      JSON.stringify({ dependencies: { "@vii/core": "0.0.0" } }),
+      JSON.stringify({ dependencies: { "@vii-labs/core": "0.0.0" } }),
     );
     await symlink(sourceTarget, path.join(root, "src"), "dir");
 
@@ -43,7 +43,7 @@ test("addState records a security event when state file is a symlink", async () 
   try {
     await writeFile(
       path.join(root, "package.json"),
-      JSON.stringify({ dependencies: { "@vii/core": "0.0.0" } }),
+      JSON.stringify({ dependencies: { "@vii-labs/core": "0.0.0" } }),
     );
     await mkdir(sourceTarget);
     await writeFile(externalState, "export const external = true;\n");
@@ -73,7 +73,7 @@ test("addState does not record security events for a safe dry-run", async () => 
   try {
     await writeFile(
       path.join(root, "package.json"),
-      JSON.stringify({ dependencies: { "@vii/core": "0.0.0" } }),
+      JSON.stringify({ dependencies: { "@vii-labs/core": "0.0.0" } }),
     );
     await mkdir(path.join(root, "src"));
 

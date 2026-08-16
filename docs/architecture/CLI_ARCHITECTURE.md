@@ -10,9 +10,9 @@ The CLI reduces setup complexity. It does not replace package managers, general-
 
 Vii may use those systems through adapters while preserving one Vii command and planning model.
 
-The initial private implementation is `@vii/cli-core`, which provides the project detection
+The initial private implementation is `@vii-labs/cli-core`, which provides the project detection
 boundary described in `PROJECT_DETECTION.md` and deterministic `initProject` and `addState` engine
-operations. Terminal parsing, package-manager execution, and the full `@vii/cli` package remain
+operations. Terminal parsing, package-manager execution, and the full `@vii-labs/cli` package remain
 future layers over this engine.
 
 ## Entry points
@@ -21,7 +21,7 @@ Recommended user-facing commands:
 
 ```bash
 npm create vii@latest
-npx @vii/cli@latest init
+npx @vii-labs/cli@latest init
 vii add state
 vii doctor
 ```
@@ -30,9 +30,9 @@ Candidate packages:
 
 ```text
 create-vii
-@vii/cli
-@vii/cli-core
-@vii/nx
+@vii-labs/cli
+@vii-labs/cli-core
+@vii-labs/nx
 ```
 
 Package names remain subject to namespace and release decisions.
@@ -104,7 +104,7 @@ The CLI must not silently overwrite modified files or write outside the resolved
 
 The initial `initProject` operation creates at most one root-level `vii.config.ts` containing the
 detected framework marker. `addState` creates at most one `src/state.ts` and requires an existing
-`@vii/core` dependency. Both use the shared detector as Analyze, return exact file plans for
+`@vii-labs/core` dependency. Both use the shared detector as Analyze, return exact file plans for
 Preview, apply only missing files, validate resulting bytes, and report the complete lifecycle.
 `--dry-run` is represented by the engine's `dryRun` option until a terminal parser exists. These
 operations do not install dependencies, execute project configuration, mutate package manifests,
@@ -133,10 +133,10 @@ is Draft.
 Terminal commands, IDE integrations, InLoom agents, and Nx generators must use one underlying deterministic engine.
 
 ```text
-@vii/cli-core
+@vii-labs/cli-core
      ^
      ├── Vii terminal CLI
-     ├── @vii/nx
+     ├── @vii-labs/nx
      ├── IDE integrations
      └── InLoom and agent integrations
 ```
@@ -218,7 +218,7 @@ Runtime, package manager, build engine, and workspace manager are separate conce
 Candidate configuration:
 
 ```ts
-import { defineConfig } from "@vii/cli";
+import { defineConfig } from "@vii-labs/cli";
 
 export default defineConfig({
   framework: "react",
@@ -379,7 +379,7 @@ vii preview
 vii analyze
 ```
 
-The user-facing contract remains Vii-owned while `@vii/build-core` delegates general bundling to an engine such as Vite/Rolldown.
+The user-facing contract remains Vii-owned while `@vii-labs/build-core` delegates general bundling to an engine such as Vite/Rolldown.
 
 ```text
 Vii CLI
@@ -397,22 +397,22 @@ Vii is not an Nx replacement and does not require Nx.
 An official optional package may provide:
 
 ```text
-@vii/nx
+@vii-labs/nx
 ```
 
 Installation:
 
 ```bash
-nx add @vii/nx
+nx add @vii-labs/nx
 ```
 
 Candidate generators:
 
 ```bash
-nx g @vii/nx:application apps/web
-nx g @vii/nx:component user-card --project=web
-nx g @vii/nx:store users --project=web
-nx g @vii/nx:page dashboard --project=web
+nx g @vii-labs/nx:application apps/web
+nx g @vii-labs/nx:component user-card --project=web
+nx g @vii-labs/nx:store users --project=web
+nx g @vii-labs/nx:page dashboard --project=web
 ```
 
 Candidate inferred tasks:
@@ -426,7 +426,7 @@ lint
 preview
 ```
 
-`@vii/nx` should:
+`@vii-labs/nx` should:
 
 - detect `vii.config.ts`;
 - infer Vii tasks;
@@ -449,7 +449,7 @@ Nx workspace use may become:
 ```bash
 nx dev web
 nx build web
-nx g @vii/nx:component user-card --project=web
+nx g @vii-labs/nx:component user-card --project=web
 ```
 
 ## Migrations
@@ -598,6 +598,6 @@ Not included initially:
 - community plugin execution;
 - AI-powered commands;
 - deployment orchestration;
-- production `@vii/nx` support.
+- production `@vii-labs/nx` support.
 
 These features remain Planned, Research, or Vision until their underlying layers are accepted.

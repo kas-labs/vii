@@ -1,5 +1,5 @@
 {
-  "name": "@vii/react",
+  "name": "@vii-labs/react",
   "version": "0.0.0",
   "private": true,
   "license": "Apache-2.0",
@@ -24,14 +24,14 @@
     "build": "tsc -p tsconfig.build.json"
   },
   "peerDependencies": {
-    "@vii/core": ">=0.0.0",
+    "@vii-labs/core": ">=0.0.0",
     "react": ">=18.0.0"
   },
   "devDependencies": {
     "@types/react": "19.2.17",
     "@types/react-dom": "19.2.3",
     "@types/react-test-renderer": "19.0.0",
-    "@vii/core": "workspace:*",
+    "@vii-labs/core": "workspace:*",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "react-test-renderer": "19.2.8"

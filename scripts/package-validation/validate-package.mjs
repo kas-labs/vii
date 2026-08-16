@@ -56,24 +56,24 @@ try {
   await mkdir(vueConsumerDirectory, { recursive: true });
   await mkdir(coreReferenceConsumerDirectory, { recursive: true });
 
-  run(pnpm, ["--filter", "@vii/core", "build"]);
-  run(pnpm, ["--filter", "@vii/react", "build"]);
-  run(pnpm, ["--filter", "@vii/angular", "build"]);
-  run(pnpm, ["--filter", "@vii/vue", "build"]);
-  run(pnpm, ["--filter", "@vii/core", "pack", "--pack-destination", artifactDirectory]);
-  run(pnpm, ["--filter", "@vii/react", "pack", "--pack-destination", artifactDirectory]);
-  run(pnpm, ["--filter", "@vii/angular", "pack", "--pack-destination", artifactDirectory]);
-  run(pnpm, ["--filter", "@vii/vue", "pack", "--pack-destination", artifactDirectory]);
+  run(pnpm, ["--filter", "@vii-labs/core", "build"]);
+  run(pnpm, ["--filter", "@vii-labs/react", "build"]);
+  run(pnpm, ["--filter", "@vii-labs/angular", "build"]);
+  run(pnpm, ["--filter", "@vii-labs/vue", "build"]);
+  run(pnpm, ["--filter", "@vii-labs/core", "pack", "--pack-destination", artifactDirectory]);
+  run(pnpm, ["--filter", "@vii-labs/react", "pack", "--pack-destination", artifactDirectory]);
+  run(pnpm, ["--filter", "@vii-labs/angular", "pack", "--pack-destination", artifactDirectory]);
+  run(pnpm, ["--filter", "@vii-labs/vue", "pack", "--pack-destination", artifactDirectory]);
 
   const artifactNames = await readdir(artifactDirectory);
   assert.equal(artifactNames.length, 4, "expected Core, React, Angular, and Vue package artifacts");
   const artifactPaths = new Map(
     artifactNames.map((name) => [
-      name.startsWith("vii-core-")
+      name.startsWith("vii-labs-core-")
         ? "core"
-        : name.startsWith("vii-react-")
+        : name.startsWith("vii-labs-react-")
           ? "react"
-          : name.startsWith("vii-angular-")
+          : name.startsWith("vii-labs-angular-")
             ? "angular"
             : "vue",
       path.join(artifactDirectory, name),
@@ -187,7 +187,7 @@ try {
       name: "vii-packed-consumer",
       private: true,
       type: "module",
-      dependencies: { "@vii/core": `file:${coreArtifactPath}` },
+      dependencies: { "@vii-labs/core": `file:${coreArtifactPath}` },
     },
     repositoryRoot,
     pnpm,
@@ -234,7 +234,7 @@ try {
       name: "vii-packed-core-reference",
       private: true,
       type: "module",
-      dependencies: { "@vii/core": `file:${coreArtifactPath}` },
+      dependencies: { "@vii-labs/core": `file:${coreArtifactPath}` },
     },
     repositoryRoot,
     pnpm,
@@ -254,8 +254,8 @@ try {
       private: true,
       type: "module",
       dependencies: {
-        "@vii/core": `file:${coreArtifactPath}`,
-        "@vii/react": `file:${reactArtifactPath}`,
+        "@vii-labs/core": `file:${coreArtifactPath}`,
+        "@vii-labs/react": `file:${reactArtifactPath}`,
         react: "19.2.8",
         "react-dom": "19.2.8",
       },
@@ -284,8 +284,8 @@ try {
       dependencies: {
         "@angular/compiler": "22.1.1",
         "@angular/core": "22.1.1",
-        "@vii/angular": `file:${angularArtifactPath}`,
-        "@vii/core": `file:${coreArtifactPath}`,
+        "@vii-labs/angular": `file:${angularArtifactPath}`,
+        "@vii-labs/core": `file:${coreArtifactPath}`,
         rxjs: "7.8.2",
         "zone.js": "0.16.0",
       },
@@ -308,8 +308,8 @@ try {
       private: true,
       type: "module",
       dependencies: {
-        "@vii/core": `file:${coreArtifactPath}`,
-        "@vii/vue": `file:${vueArtifactPath}`,
+        "@vii-labs/core": `file:${coreArtifactPath}`,
+        "@vii-labs/vue": `file:${vueArtifactPath}`,
         vue: "3.5.41",
       },
     },

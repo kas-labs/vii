@@ -1,4 +1,4 @@
-# @vii/adapter-testing
+# @vii-labs/adapter-testing
 
 This private package contains the shared compliance suite used by Vii adapter implementations. It
 is intentionally test-only while the public adapter package names and selector API remain under

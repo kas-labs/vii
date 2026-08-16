@@ -1,5 +1,5 @@
 {
-  "name": "@vii/adapter-testing",
+  "name": "@vii-labs/adapter-testing",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -10,6 +10,6 @@
     "test": "vitest run --config ../../vitest.config.ts"
   },
   "devDependencies": {
-    "@vii/core": "workspace:*"
+    "@vii-labs/core": "workspace:*"
   }
 }

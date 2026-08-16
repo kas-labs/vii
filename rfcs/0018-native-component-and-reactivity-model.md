@@ -131,10 +131,10 @@ A mandatory virtual DOM is not required.
 RxJS remains optional for complex event streams.
 
 ```text
-@vii/state
-@vii/query
-@vii/stream
-@vii/rxjs
+@vii-labs/state
+@vii-labs/query
+@vii-labs/stream
+@vii-labs/rxjs
 ```
 
 State answers what the current value is. Streams represent event sequences over time.

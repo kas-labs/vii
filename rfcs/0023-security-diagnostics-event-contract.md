@@ -115,7 +115,7 @@ The emitted event uses the existing versioned envelope and the immutable event t
   "timestamp": 0,
   "traceId": "checkout",
   "causeId": "diagnostic-6",
-  "package": "@vii/core",
+  "package": "@vii-labs/core",
   "payload": {
     "code": "VII-SEC-001",
     "surface": "input",
@@ -132,7 +132,7 @@ Unknown future fields may be ignored by compatible consumers.
 
 ## Public API or protocol impact
 
-This is an additive experimental API contract for `@vii/core`. It extends the existing
+This is an additive experimental API contract for `@vii-labs/core`. It extends the existing
 `Diagnostics` type and adds no package or transport boundary. `security.event` belongs to the
 Draft `vii.trace` protocol and must not be consumed as a Stable schema. A later RFC or governance
 decision may rename, split, or remove the method and codes before 1.0.

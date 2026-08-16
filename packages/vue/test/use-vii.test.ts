@@ -1,4 +1,4 @@
-import { batch, state } from "@vii/core";
+import { batch, state } from "@vii-labs/core";
 import { effect, effectScope, isReactive, isReadonly } from "vue";
 import { expect, expectTypeOf, test } from "vitest";
 import { createViiRef, useVii } from "../src/index.js";

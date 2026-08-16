@@ -97,15 +97,15 @@ This permits engine replacement without changing normal project commands.
 Candidate packages:
 
 ```text
-@vii/compiler-core
-@vii/compiler-sfc
-@vii/compiler-template
-@vii/build-core
-@vii/build-vite
-@vii/build-rspack
-@vii/build-bun
-@vii/cli-core
-@vii/cli
+@vii-labs/compiler-core
+@vii-labs/compiler-sfc
+@vii-labs/compiler-template
+@vii-labs/build-core
+@vii-labs/build-vite
+@vii-labs/build-rspack
+@vii-labs/build-bun
+@vii-labs/cli-core
+@vii-labs/cli
 ```
 
 Only packages backed by implementation need and owners should be created.
@@ -160,7 +160,7 @@ export interface ViiBuildEngine {
 }
 ```
 
-Framework configuration, route graph, environment graph, manifests, and diagnostics should be defined by `@vii/build-core`.
+Framework configuration, route graph, environment graph, manifests, and diagnostics should be defined by `@vii-labs/build-core`.
 
 ## Environment graph
 
@@ -376,13 +376,13 @@ Neither engine changes Vii runtime semantics.
 
 ## Nx integration
 
-`@vii/nx` should adapt Vii tasks into Nx rather than duplicate the build system.
+`@vii-labs/nx` should adapt Vii tasks into Nx rather than duplicate the build system.
 
 ```text
-@vii/build-core
+@vii-labs/build-core
      ^
      ├── Vii CLI
-     └── @vii/nx
+     └── @vii-labs/nx
 ```
 
 Nx integration may provide:

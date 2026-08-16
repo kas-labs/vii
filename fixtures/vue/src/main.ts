@@ -1,5 +1,5 @@
-import { state } from "@vii/core";
-import { createViiRef } from "@vii/vue";
+import { state } from "@vii-labs/core";
+import { createViiRef } from "@vii-labs/vue";
 
 const count = state(2);
 const handle = createViiRef(count);

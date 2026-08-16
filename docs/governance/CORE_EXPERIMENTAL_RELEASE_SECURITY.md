@@ -6,7 +6,7 @@ publication, or workflow execution.
 ## Purpose
 
 This record defines the minimum supply-chain evidence and maintainer-controlled setup for the first
-public `@vii/core@0.1.0-experimental.0` candidate on npm's `next` tag. It is deliberately a runbook,
+public `@vii-labs/core@0.1.0-experimental.1` candidate on npm's `next` tag. It is deliberately a runbook,
 not a publishing workflow: a workflow capable of external publication must be reviewed in the
 separately approved release change.
 
@@ -20,7 +20,7 @@ separately approved release change.
 | Build and consumer proof | `pnpm validate` includes tests, builds, and packed clean consumers. | Re-run from the intended release commit. |
 | Production dependency audit | `pnpm audit --prod --json` on 2026-08-16 reported 0 info, low, moderate, high, and critical findings across 44 production dependencies. | Re-run immediately before publication and retain the result with the release record. |
 | Artifact boundary | Packed validation asserts allowed files and Core's exported manifest metadata. | Inspect the versioned candidate tarball before publication. |
-| Registry preflight | `npm view @vii/core` on 2026-08-16 returned npm `E404`; the package was not publicly readable as published. | Confirm scope ownership and publication authority; an `E404` neither reserves the name nor proves authorization. |
+| Registry preflight | The original `@vii` namespace is owned by an unrelated npm user; `@vii-labs` was created on 2026-08-16 and `npm org ls @vii-labs` confirms `vitalii.kas` as owner. `npm view @vii-labs/core` returns `E404` because it is not published. | Confirm the `@vii-labs` ownership result immediately before publication; an `E404` neither reserves a name nor proves authorization. |
 | Publisher toolchain | Local preflight used Node.js 22.17.0 and npm 10.9.2. Node meets the trusted-publishing minimum; npm does not. | Provision npm 11.5.1+ on the protected release runner and record the exact versions. |
 
 The audit is a point-in-time registry result, not a claim that future dependency resolution is safe.
@@ -31,16 +31,18 @@ It must never be fixed automatically as part of a release.
 On 2026-08-16, the repository gained a protected `npm-publish` GitHub Environment. It requires the
 sole maintainer `vitala89` to approve and, by explicit maintainer decision, permits self-approval
 because no independent reviewer is available. Custom deployment policy permits only the exact
-`v0.1.0-experimental.0` tag. No environment secrets, npm Trusted Publisher, npm scope settings, tags,
-or published packages were created by this setup.
+`v0.1.0-experimental.0` tag. That tag's one bootstrap run failed before publication because `@vii` is
+not project-owned, and its Environment secret was removed. The Environment must be restricted to the new
+`v0.1.0-experimental.1` tag only after the reviewed replacement candidate is merged. No `@vii-labs`
+secret, npm Trusted Publisher, tag, or published package exists.
 
 ## External maintainer setup
 
 The following controls require npm and GitHub maintainer authority and cannot be proven from this
 repository alone:
 
-1. Confirm that the `@vii` npm scope is owned by the intended maintainers and that `@vii/core` is
-   available for this publication.
+1. Confirm that the `@vii-labs` npm scope remains owned by the intended maintainers and that
+   `@vii-labs/core` is available for this publication.
 2. Create a protected GitHub Environment named `npm-publish` with required human reviewers and rules
    restricting it to the release tag or protected `main` as approved by maintainers.
 3. After the reviewed publish workflow exists, configure npm Trusted Publisher with GitHub owner
@@ -68,7 +70,7 @@ for `publish-core.yml`, verify OIDC publishing, and revoke the bootstrap token. 
 permit future token-based publications.
 
 Before dispatching the bootstrap workflow, the npm owner must add that secret to `npm-publish` with
-read-and-write access limited to `@vii`, an expiry of at most one day, and the temporary 2FA-bypass
+read-and-write access limited to `@vii-labs`, an expiry of at most one day, and the temporary 2FA-bypass
 setting required for CI publication. Do not place the token in a repository secret, local file, issue,
 pull request, or chat.
 
@@ -83,8 +85,8 @@ pull requests. It must:
 - check out the approved immutable release tag and verify it is the intended commit;
 - use a clean install with the locked dependency graph, build, test, pack, inspect the Core tarball,
   and re-run the production dependency audit before `npm publish`;
-- publish only `@vii/core`, only with `--tag next`, and only after verifying the applied version is
-  `0.1.0-experimental.0` and the package is public;
+- publish only `@vii-labs/core`, only with `--tag next`, and only after verifying the applied version is
+  `0.1.0-experimental.1` and the package is public;
 - fail closed if the package is still private, the version/tag differs, release evidence is missing,
   npm authentication falls back to a token, or any validation fails;
 - write no secrets, package contents, diagnostics values, source uploads, telemetry, or arbitrary

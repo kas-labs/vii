@@ -1938,3 +1938,27 @@ PR: not opened
 - Publish this readiness record as a draft PR. After review/merge, the remaining protected actions
   require maintainer-owned npm/GitHub configuration and explicit authorization for the separate
   versioning and publication change.
+
+## 2026-08-16 CEST | Record Core release security readiness pull request
+
+Status: completed
+Branch: `release/core-security-readiness`
+PR: [#67](https://github.com/kas-labs/vii/pull/67)
+
+### Scope
+
+- Publish the verified Core release-security readiness record as a draft review request.
+
+### Changes
+
+- Opened draft PR #67 from `release/core-security-readiness` to `main` at `93568c6`.
+
+### Validation
+
+- The preceding commit passed `pnpm audit --prod --json`, `pnpm format:check`, `pnpm pack:check`,
+  `pnpm validate`, and `git diff --check`.
+
+### Remaining / recovery
+
+- Wait for PR #67 checks and review. Do not create external npm/GitHub release configuration, apply
+  versions, remove `private`, tag, or publish without separate explicit approval.

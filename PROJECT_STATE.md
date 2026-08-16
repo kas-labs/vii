@@ -94,6 +94,8 @@ uses only public State, Computed, and Scope APIs and is copied into a clean temp
 package validation, where it installs the packed Core artifact without a workspace alias.
 The repository uses Changesets for future public package versioning. The configuration has no publish
 script; version application and publication remain separately approved release actions.
+The packed Core artifact also carries its Apache-2.0 license, repository and issue links, discovery
+keywords, and future public `next` publish configuration; the package remains private and unpublished.
 
 The durable ecosystem research direction now separates capability ownership from tool ownership.
 Form research targets a small headless module that reuses Vii State, Scope, diagnostics, and thin

@@ -42,6 +42,12 @@ function assertPackageEntries(artifactPath, expectedEntries, label) {
   );
 }
 
+function readPackageManifest(artifactPath) {
+  return JSON.parse(
+    execFileSync("tar", ["-xOzf", artifactPath, "package/package.json"], { encoding: "utf8" }),
+  );
+}
+
 try {
   await mkdir(artifactDirectory, { recursive: true });
   await mkdir(consumerDirectory, { recursive: true });
@@ -81,6 +87,12 @@ try {
   assert.ok(reactArtifactPath, "expected a React package artifact");
   assert.ok(angularArtifactPath, "expected an Angular package artifact");
   assert.ok(vueArtifactPath, "expected a Vue package artifact");
+  const coreManifest = readPackageManifest(coreArtifactPath);
+  assert.equal(coreManifest.license, "Apache-2.0", "Core artifact should declare its license");
+  assert.deepEqual(coreManifest.publishConfig, { access: "public", tag: "next" });
+  assert.equal(coreManifest.repository?.type, "git");
+  assert.equal(coreManifest.repository?.url, "git+https://github.com/kas-labs/vii.git");
+  assert.equal(coreManifest.bugs?.url, "https://github.com/kas-labs/vii/issues");
   const expectedCoreEntries = new Set([
     "package/LICENSE",
     "package/README.md",

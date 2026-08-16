@@ -1,6 +1,21 @@
 # @vii/core
 
-This is the first buildable Vii package created by the Phase 0 repository bootstrap.
+Experimental runtime-neutral State, Scope, and bounded diagnostics primitives for TypeScript.
+
+## Experimental release status
+
+`@vii/core` is not published to npm yet. The first planned public candidate is
+`0.1.0-experimental.0` on the `next` tag; it will not be a `latest` release or a production-support
+promise. Until that separately approved publication happens, use the repository workspace or a packed
+tarball:
+
+```bash
+pnpm --filter @vii/core pack --pack-destination ./artifacts
+pnpm add ./artifacts/vii-core-0.0.0.tgz
+```
+
+The public API and the `vii.trace` diagnostics protocol remain experimental and may change under
+repository governance. This package has no hidden network, telemetry, or automatic-install behavior.
 
 The package currently exposes experimental State, Computed, Batch, Scope, and Diagnostics primitives:
 

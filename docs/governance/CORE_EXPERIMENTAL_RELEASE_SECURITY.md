@@ -6,7 +6,7 @@ publication, or workflow execution.
 ## Purpose
 
 This record defines the minimum supply-chain evidence and maintainer-controlled setup for the first
-public `@vii-labs/core@0.1.0-experimental.1` candidate on npm's `next` tag. It is deliberately a runbook,
+public `@vii-labs/core@0.1.0-experimental.2` candidate on npm's `next` tag. It is deliberately a runbook,
 not a publishing workflow: a workflow capable of external publication must be reviewed in the
 separately approved release change.
 
@@ -31,10 +31,11 @@ It must never be fixed automatically as part of a release.
 On 2026-08-16, the repository gained a protected `npm-publish` GitHub Environment. It requires the
 sole maintainer `vitala89` to approve and, by explicit maintainer decision, permits self-approval
 because no independent reviewer is available. Custom deployment policy permits only the exact
-`v0.1.0-experimental.0` tag. That tag's one bootstrap run failed before publication because `@vii` is
-not project-owned, and its Environment secret was removed. The Environment must be restricted to the new
-`v0.1.0-experimental.1` tag only after the reviewed replacement candidate is merged. No `@vii-labs`
-secret, npm Trusted Publisher, tag, or published package exists.
+`v0.1.0-experimental.1` tag. The `.0` bootstrap failed before publication because `@vii` is not
+project-owned. The `.1` direct bootstrap for `@vii-labs` also failed before publication when npm required
+interactive 2FA; its token remains only in the protected Environment. The Environment must be restricted
+to the new `v0.1.0-experimental.2` tag only after the reviewed staged candidate is merged. No package
+has been published and no npm Trusted Publisher exists.
 
 ## External maintainer setup
 
@@ -47,7 +48,8 @@ repository alone:
    restricting it to the release tag or protected `main` as approved by maintainers.
 3. After the reviewed publish workflow exists, configure npm Trusted Publisher with GitHub owner
    `kas-labs`, repository `vii`, that exact workflow filename, the `npm-publish` environment, and the
-   `npm publish` allowed action only. Do not permit stage publishing for this candidate.
+   `npm stage publish` allowed action only. The workflow must not receive permission for direct
+   publication; npm 2FA approval remains the separate human release gate.
 4. Remove or restrict any automation npm write tokens. The release workflow must use OIDC and must not
    receive a long-lived `NODE_AUTH_TOKEN`.
 5. Record the GitHub environment protection and npm Trusted Publisher configuration in the release PR
@@ -64,15 +66,16 @@ CI currently uses Node 22. See [npm Trusted Publishing](https://docs.npmjs.com/t
 npm requires a package to exist before a Trusted Publisher can be configured. The first Core candidate
 therefore uses a one-time, short-lived granular `NPM_TOKEN` stored only as a secret of the protected
 `npm-publish` Environment. The manual workflow runs from the exact release tag, requires its explicit
-confirmation input, uses `--provenance`, and never writes the token to the repository, logs, package,
-or artifact. Immediately after successful publication, configure the GitHub Actions Trusted Publisher
-for `publish-core.yml`, verify OIDC publishing, and revoke the bootstrap token. This exception does not
-permit future token-based publications.
+confirmation input, uses `npm stage publish --provenance`, and never writes the token to the repository,
+logs, package, or artifact. Staging does not make the package public: the npm maintainer must inspect and
+approve it with 2FA in the npm Staged Packages UI. Immediately after that publication, configure the
+GitHub Actions Trusted Publisher for `publish-core.yml`, verify OIDC staged publishing, and revoke the
+bootstrap token. This exception does not permit future token-based publications.
 
 Before dispatching the bootstrap workflow, the npm owner must add that secret to `npm-publish` with
-read-and-write access limited to `@vii-labs`, an expiry of at most one day, and the temporary 2FA-bypass
-setting required for CI publication. Do not place the token in a repository secret, local file, issue,
-pull request, or chat.
+read-and-write access limited to `@vii-labs` and an expiry of at most one day. Staging does not require
+a bypass-2FA token; any existing bootstrap token must be revoked immediately after the staged candidate
+is approved. Do not place the token in a repository secret, local file, issue, pull request, or chat.
 
 ## Future publish workflow contract
 
@@ -84,9 +87,9 @@ pull requests. It must:
   itself grant write access to a resource;
 - check out the approved immutable release tag and verify it is the intended commit;
 - use a clean install with the locked dependency graph, build, test, pack, inspect the Core tarball,
-  and re-run the production dependency audit before `npm publish`;
-- publish only `@vii-labs/core`, only with `--tag next`, and only after verifying the applied version is
-  `0.1.0-experimental.1` and the package is public;
+  and re-run the production dependency audit before `npm stage publish`;
+- stage only `@vii-labs/core`, only with `--tag next`, and only after verifying the applied version is
+  `0.1.0-experimental.2`; require a separate npm 2FA approval before it becomes public;
 - fail closed if the package is still private, the version/tag differs, release evidence is missing,
   npm authentication falls back to a token, or any validation fails;
 - write no secrets, package contents, diagnostics values, source uploads, telemetry, or arbitrary

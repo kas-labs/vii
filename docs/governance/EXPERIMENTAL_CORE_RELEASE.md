@@ -5,7 +5,7 @@ Status: accepted for release preparation; publication requires a separate explic
 ## Decision
 
 Vii is licensed under Apache-2.0. The first public package candidate is `@vii-labs/core` only, at
-`0.1.0-experimental.1`, published to npm's `next` channel. It replaces the unpublishable
+`0.1.0-experimental.2`, published to npm's `next` channel. It replaces the unpublishable
 `@vii/core` candidate after confirming that `@vii` is not project-owned. It is experimental and is not a
 production-support promise or a `latest` release.
 
@@ -30,7 +30,7 @@ They need their own consumer, compatibility, and release decisions.
 ## Release preparation record
 
 The Core changeset records a `minor` base release. The namespace correction uses the next experimental
-candidate, `0.1.0-experimental.1`; it must not be applied as a
+candidate, `0.1.0-experimental.2`; it must not be applied as a
 stable `0.1.0` release. npm distribution remains the separately configured `next` tag. Changeset
 application, generated changelog changes, removal of `private`, tag creation, and publication remain
 protected release actions.
@@ -38,7 +38,8 @@ protected release actions.
 The first candidate uses the one-time bootstrap exception in
 `CORE_EXPERIMENTAL_RELEASE_SECURITY.md` because npm requires an existing package before it accepts a
 Trusted Publisher configuration. That exception is limited to the protected manual candidate workflow
-and must be replaced with OIDC Trusted Publishing immediately after the first publication.
+and stages the package for a separate npm 2FA approval; it must be replaced with OIDC Trusted
+Publishing immediately after the first publication.
 
 ## Non-goals
 

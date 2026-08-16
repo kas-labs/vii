@@ -1,6 +1,6 @@
 # @vii-labs/core
 
-## 0.1.0-experimental.1
+## 0.1.0-experimental.2
 
 ### Minor Changes
 

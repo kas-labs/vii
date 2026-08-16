@@ -2133,3 +2133,36 @@ PR: not opened
   `v0.1.0-experimental.1` tag only after the replacement PR merges.
 - Create a new `@vii-labs`-scoped bootstrap token only after the reviewed candidate is merged; the
   prior secret was removed and the failed `@vii` bootstrap never published a package.
+
+## 2026-08-16 CEST | Replace direct npm bootstrap with staged publication
+
+Status: completed
+Branch: `release/core-staged-bootstrap`
+PR: not opened
+
+### Scope
+
+- Replace the failed direct npm bootstrap with an approval-preserving staged publication candidate.
+
+### Changes
+
+- Prepared `@vii-labs/core@0.1.0-experimental.2` for the `next` tag without changing the unpublished
+  `.1` tag or attempting another direct publication.
+- Changed the protected exact-tag workflow to run `npm stage publish --provenance`; npm keeps the package
+  private until the npm maintainer explicitly approves it with 2FA.
+- Updated the release validator and release-security, experimental-release, package, and project-state
+  records for the staged `.2` candidate and the post-publication OIDC/token-revocation path.
+
+### Validation
+
+- TDD: `pnpm release:core:check` failed while the candidate still declared `.1` and direct publication,
+  then passed after the `.2` staged workflow and contract were implemented.
+- `pnpm release:core:check`, `pnpm format:check`, `pnpm pack:check`, and `pnpm validate` passed.
+
+### Remaining / recovery
+
+- Run the production dependency audit and final diff check, then open the staged-candidate draft PR.
+- After review and merge, restrict the `npm-publish` Environment to `v0.1.0-experimental.2`, create that
+  exact tag, dispatch the protected workflow, and approve the staged package in npm with 2FA.
+- Configure OIDC Trusted Publishing for staged publication and revoke the bootstrap token after npm
+  approval. Do not publish `latest` or use a direct token-based publish.

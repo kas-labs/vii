@@ -15,12 +15,15 @@
     "typecheck": "nx run-many --target=typecheck --all",
     "test": "nx run-many --target=test --all",
     "build": "nx run-many --target=build --all",
+    "changeset": "changeset",
+    "version:packages": "changeset version",
     "benchmark:core": "pnpm --filter @vii/core build && node scripts/benchmarks/core-state-baseline.mjs",
     "pack:check": "node scripts/package-validation/validate-package.mjs && node scripts/package-validation/validate-cli-core.mjs",
     "check": "pnpm validate",
     "validate": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm pack:check"
   },
   "devDependencies": {
+    "@changesets/cli": "^3.0.0",
     "@eslint/js": "10.0.1",
     "eslint": "10.8.0",
     "nx": "23.1.0",

@@ -17,8 +17,8 @@ They need their own consumer, compatibility, and release decisions.
   telemetry behavior;
 - maintain the Core reference consumer that installs the packed Core artifact rather than a
   workspace alias;
-- adopt a changeset workflow and prepare a changelog entry, package metadata, known limitations,
-  and support statement;
+- maintain the adopted changeset workflow and prepare the Core release changeset, changelog entry,
+  package metadata, known limitations, and support statement;
 - validate the candidate package contents, public exports, Node compatibility, performance baseline,
   security scan, and clean-consumer installation;
 - configure protected npm trusted publishing and provenance; do not store long-lived registry

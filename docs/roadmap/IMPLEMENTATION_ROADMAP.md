@@ -225,7 +225,7 @@ Vii HTTP must remain transport. It must not become another Query cache or server
 Goals:
 
 - continue using Vitest as the canonical repository test runner while it satisfies project requirements;
-- prototype Vii-specific matchers, fixtures, and compliance utilities before considering a `@vii/testing` package;
+- prototype Vii-specific matchers, fixtures, and compliance utilities before considering a `@vii-labs/testing` package;
 - use browser automation for browser-level evidence instead of building a browser runner;
 - keep Vite/Rolldown as the first native build research direction;
 - keep Bun and Rspack replaceable optional adapters or compatibility targets;

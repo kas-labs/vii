@@ -1,5 +1,5 @@
 {
-  "name": "@vii/vue",
+  "name": "@vii-labs/vue",
   "version": "0.0.0",
   "private": true,
   "license": "Apache-2.0",
@@ -24,11 +24,11 @@
     "build": "tsc -p tsconfig.build.json"
   },
   "peerDependencies": {
-    "@vii/core": ">=0.0.0",
+    "@vii-labs/core": ">=0.0.0",
     "vue": ">=3.2.0"
   },
   "devDependencies": {
-    "@vii/core": "workspace:*",
+    "@vii-labs/core": "workspace:*",
     "vue": "3.5.41"
   },
   "vii": {

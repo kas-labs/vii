@@ -56,7 +56,7 @@ export interface DiagnosticEvent {
   type: string;
   timestamp: number;
   traceId?: string;
-  package: "@vii/core";
+  package: "@vii-labs/core";
   causeId?: string;
   payload: Readonly<Record<string, unknown>>;
 }
@@ -210,7 +210,7 @@ export function createDiagnostics(options: DiagnosticsOptions = {}): Diagnostics
         type,
         timestamp,
         ...(traceId === undefined ? {} : { traceId }),
-        package: "@vii/core",
+        package: "@vii-labs/core",
         payload: Object.freeze(redactPayload(mode, type, payload)),
         ...(causeId === undefined ? {} : { causeId }),
       };

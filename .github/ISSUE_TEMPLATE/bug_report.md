@@ -7,7 +7,7 @@ labels: "type: bug, status: needs-triage"
 
 ## Affected package or area
 
-<!-- Example: @vii/state, CLI, React adapter, documentation -->
+<!-- Example: @vii-labs/state, CLI, React adapter, documentation -->
 
 ## Version or commit
 

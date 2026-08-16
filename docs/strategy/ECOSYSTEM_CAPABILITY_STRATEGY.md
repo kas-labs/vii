@@ -117,7 +117,7 @@ TypeScript, Vitest, ESLint, Prettier, and packed-artifact validation setup.
 Vitest remains the canonical repository unit and contract test runner while it
 continues to meet Vii requirements.
 
-A future `@vii/testing` tool package may add Vii-specific helpers such as:
+A future `@vii-labs/testing` tool package may add Vii-specific helpers such as:
 
 - State and subscriber assertions;
 - Scope and disposal assertions;

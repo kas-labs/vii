@@ -1,5 +1,5 @@
 {
-  "name": "@vii/vue-fixture",
+  "name": "@vii-labs/vue-fixture",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -10,8 +10,8 @@
     "build": "tsc -p tsconfig.build.json"
   },
   "dependencies": {
-    "@vii/core": "workspace:*",
-    "@vii/vue": "workspace:*",
+    "@vii-labs/core": "workspace:*",
+    "@vii-labs/vue": "workspace:*",
     "vue": "3.5.41"
   }
 }

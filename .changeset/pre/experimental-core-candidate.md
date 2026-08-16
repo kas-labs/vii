@@ -1,5 +1,5 @@
 ---
-"@vii/core": minor
+"@vii-labs/core": minor
 ---
 
 Prepare the first experimental Core release candidate with public package metadata, a packed

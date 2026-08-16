@@ -1,5 +1,5 @@
-import { state } from "@vii/core";
-import { useVii } from "@vii/react";
+import { state } from "@vii-labs/core";
+import { useVii } from "@vii-labs/react";
 import { createElement, type ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 

@@ -1,4 +1,4 @@
-import { batch, state } from "@vii/core";
+import { batch, state } from "@vii-labs/core";
 import {
   createEnvironmentInjector,
   computed,

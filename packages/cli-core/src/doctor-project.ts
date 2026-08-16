@@ -81,18 +81,18 @@ function addViiFindings(findings: DoctorFinding[], detection: DetectedProject): 
     );
     return;
   }
-  if (!packages.has("@vii/core")) {
+  if (!packages.has("@vii-labs/core")) {
     findings.push(
       createFinding(
         "vii-core-missing",
         "error",
-        "Vii packages are declared but @vii/core is missing",
+        "Vii packages are declared but @vii-labs/core is missing",
         ["package.json"],
       ),
     );
   }
   addAdapterFinding(findings, detection, packages);
-  if (detection.workspace === "nx" && !packages.has("@vii/nx")) {
+  if (detection.workspace === "nx" && !packages.has("@vii-labs/nx")) {
     findings.push(
       createFinding(
         "nx-integration-missing",
@@ -121,11 +121,11 @@ function addAdapterFinding(
 ): void {
   const adapter =
     detection.framework === "react"
-      ? "@vii/react"
+      ? "@vii-labs/react"
       : detection.framework === "angular"
-        ? "@vii/angular"
+        ? "@vii-labs/angular"
         : detection.framework === "vue"
-          ? "@vii/vue"
+          ? "@vii-labs/vue"
           : undefined;
   if (adapter !== undefined && !packages.has(adapter)) {
     findings.push(

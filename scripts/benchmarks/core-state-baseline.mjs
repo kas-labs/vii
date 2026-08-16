@@ -9,7 +9,7 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const packageJson = JSON.parse(readFileSync(join(root, "packages/core/package.json"), "utf8"));
 const coreEntry = join(root, "packages/core/dist/index.js");
 const core = await import(pathToFileURL(coreEntry).href).catch(() => {
-  throw new Error("Core is not built. Run `pnpm --filter @vii/core build` first.");
+  throw new Error("Core is not built. Run `pnpm --filter @vii-labs/core build` first.");
 });
 
 const iterations = readPositiveInteger("Vii_BENCH_ITERATIONS", 10_000);

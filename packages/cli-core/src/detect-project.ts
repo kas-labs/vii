@@ -310,7 +310,9 @@ function collectDependencyNames(manifest: PackageManifest): ReadonlySet<string> 
 }
 
 function detectInstalledViiPackages(manifest: PackageManifest): readonly string[] {
-  return [...collectDependencyNames(manifest)].filter((name) => name.startsWith("@vii/")).sort();
+  return [...collectDependencyNames(manifest)]
+    .filter((name) => name.startsWith("@vii-labs/"))
+    .sort();
 }
 
 function hasDependency(manifest: PackageManifest, dependency: string): boolean {

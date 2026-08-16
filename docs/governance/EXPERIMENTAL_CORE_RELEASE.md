@@ -4,8 +4,9 @@ Status: accepted for release preparation; publication requires a separate explic
 
 ## Decision
 
-Vii is licensed under Apache-2.0. The first public package candidate is `@vii/core` only, at
-`0.1.0-experimental.0`, published to npm's `next` channel. It is experimental and is not a
+Vii is licensed under Apache-2.0. The first public package candidate is `@vii-labs/core` only, at
+`0.1.0-experimental.1`, published to npm's `next` channel. It replaces the unpublishable
+`@vii/core` candidate after confirming that `@vii` is not project-owned. It is experimental and is not a
 production-support promise or a `latest` release.
 
 React, Angular, Vue, and CLI Core remain private workspace packages for this release candidate.
@@ -13,7 +14,7 @@ They need their own consumer, compatibility, and release decisions.
 
 ## Preconditions
 
-- keep `@vii/core` runtime-neutral, value-free in diagnostics, and free of hidden network or
+- keep `@vii-labs/core` runtime-neutral, value-free in diagnostics, and free of hidden network or
   telemetry behavior;
 - maintain the Core reference consumer that installs the packed Core artifact rather than a
   workspace alias;
@@ -28,8 +29,8 @@ They need their own consumer, compatibility, and release decisions.
 
 ## Release preparation record
 
-The Core changeset records a `minor` base release. Applying it must use the approved experimental
-prerelease process so the resulting candidate is `0.1.0-experimental.0`; it must not be applied as a
+The Core changeset records a `minor` base release. The namespace correction uses the next experimental
+candidate, `0.1.0-experimental.1`; it must not be applied as a
 stable `0.1.0` release. npm distribution remains the separately configured `next` tag. Changeset
 application, generated changelog changes, removal of `private`, tag creation, and publication remain
 protected release actions.

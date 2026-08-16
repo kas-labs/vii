@@ -1,4 +1,4 @@
-# @vii/angular
+# @vii-labs/angular
 
 Experimental Angular adapter for the Vii Core readable-state contract.
 

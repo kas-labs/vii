@@ -2,7 +2,7 @@
   "schemaVersion": "0.1",
   "suite": "core-state-baseline",
   "package": {
-    "name": "@vii/core",
+    "name": "@vii-labs/core",
     "version": "0.0.0",
     "entry": "dist/index.js"
   },

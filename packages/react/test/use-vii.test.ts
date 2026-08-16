@@ -1,4 +1,4 @@
-import { batch, state } from "@vii/core";
+import { batch, state } from "@vii-labs/core";
 import { createElement, StrictMode, useEffect, type ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";

@@ -72,7 +72,7 @@ Official items:
 
 ```bash
 vii ui add button
-vii ui add @vii/dialog
+vii ui add @vii-labs/dialog
 ```
 
 Private or third-party registries:
@@ -86,7 +86,7 @@ Project configuration may map namespaces to registry endpoints.
 ```json
 {
   "registries": {
-    "@vii": "https://registry.vii.dev/{name}.json",
+    "@vii-labs": "https://registry.vii.dev/{name}.json",
     "@company": "https://ui.company.example/registry/{name}.json"
   }
 }
@@ -136,9 +136,9 @@ Illustrative content:
 {
   "lockfileVersion": 1,
   "items": {
-    "@vii/button": {
+    "@vii-labs/button": {
       "version": "0.3.1",
-      "registry": "@vii",
+      "registry": "@vii-labs",
       "integrity": "sha256-...",
       "files": {
         "src/components/ui/button.tsx": "sha256-..."

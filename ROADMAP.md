@@ -149,7 +149,7 @@ Vii should own framework-specific semantics and Vii-specific testing intelligenc
 Research direction:
 
 - keep Vitest as the canonical repository unit/contract runner while it meets project requirements;
-- research `@vii/testing` for State, Scope, diagnostics, Query, Form, adapter, SSR, and lifecycle-specific assertions and fixtures rather than building a new general-purpose test runner;
+- research `@vii-labs/testing` for State, Scope, diagnostics, Query, Form, adapter, SSR, and lifecycle-specific assertions and fixtures rather than building a new general-purpose test runner;
 - use browser automation such as Playwright when browser-level evidence is required;
 - keep Vite and Rolldown as the first native framework build research direction;
 - keep Bun and Rspack optional compatibility or engine adapters rather than Vii Core dependencies;
@@ -234,7 +234,7 @@ See `docs/architecture/TEMPLATE_CONTROL_FLOW.md`.
 - Compiler diagnostics for invalid cross-environment imports
 - Build speed, memory, and output-size measurements
 - Optional Bun and Rspack adapter research
-- Optional `@vii/nx` integration research
+- Optional `@vii-labs/nx` integration research
 
 Vii owns compiler semantics and build orchestration. It does not initially build a new general-purpose JavaScript bundler or a replacement for Vitest.
 

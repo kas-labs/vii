@@ -1,6 +1,6 @@
 {
-  "name": "@vii/core",
-  "version": "0.1.0-experimental.0",
+  "name": "@vii-labs/core",
+  "version": "0.1.0-experimental.1",
   "private": false,
   "license": "Apache-2.0",
   "type": "module",

@@ -1,6 +1,6 @@
 # Core performance baseline
 
-This document records the first P1.9 measurements for the experimental `@vii/core` runtime. The
+This document records the first P1.9 measurements for the experimental `@vii-labs/core` runtime. The
 numbers are local baselines for detecting changes in the same harness; they are not a promise that
 Vii is faster than another runtime or suitable for every workload.
 

@@ -243,10 +243,10 @@ Stream    What sequence of events occurs over time?
 Planned boundaries:
 
 ```text
-@vii/state
-@vii/query
-@vii/stream
-@vii/rxjs
+@vii-labs/state
+@vii-labs/query
+@vii-labs/stream
+@vii-labs/rxjs
 ```
 
 RxJS remains optional interop for complex event streams and Angular ecosystems. It is not required for booleans, counters, selected values, local forms, or ordinary application State.

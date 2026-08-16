@@ -1,5 +1,5 @@
 {
-  "name": "@vii/vanilla-fixture",
+  "name": "@vii-labs/vanilla-fixture",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -10,6 +10,6 @@
     "build": "tsc -p tsconfig.build.json"
   },
   "dependencies": {
-    "@vii/core": "workspace:*"
+    "@vii-labs/core": "workspace:*"
   }
 }

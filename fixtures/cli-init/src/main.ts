@@ -14,8 +14,8 @@ import {
   stringifyMachineOutput,
   type AddStateResult,
   type TraceInspection,
-} from "@vii/cli-core";
-import { createDiagnostics, createScope, state } from "@vii/core";
+} from "@vii-labs/cli-core";
+import { createDiagnostics, createScope, state } from "@vii-labs/core";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const detection = await detectProject(root);
@@ -45,7 +45,7 @@ let securityInspection: TraceInspection;
 try {
   await writeFile(
     path.join(securityRoot, "package.json"),
-    JSON.stringify({ dependencies: { "@vii/core": "0.0.0" } }),
+    JSON.stringify({ dependencies: { "@vii-labs/core": "0.0.0" } }),
   );
   await symlink(securitySource, path.join(securityRoot, "src"), "dir");
   const securityDiagnostics = createDiagnostics({ clock: () => 789 });

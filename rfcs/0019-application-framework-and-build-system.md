@@ -135,7 +135,7 @@ Turbopack architectural reference only
 
 ### Nx
 
-`@vii/nx` consumes the same build and generator engine.
+`@vii-labs/nx` consumes the same build and generator engine.
 
 It may provide task inference, generators, project graph metadata, affected execution, and migrations.
 
@@ -146,13 +146,13 @@ Vii remains independently usable.
 Potential future packages:
 
 ```text
-@vii/app
-@vii/router
-@vii/web
-@vii/server
-@vii/build-core
-@vii/build-vite
-@vii/nx
+@vii-labs/app
+@vii-labs/router
+@vii-labs/web
+@vii-labs/server
+@vii-labs/build-core
+@vii-labs/build-vite
+@vii-labs/nx
 ```
 
 No package is created until implementation need, owner, consumer, tests, and lifecycle plan exist.

@@ -225,7 +225,7 @@ A replaceable engine such as Vite/Rolldown initially performs general bundling.
 
 Nx remains optional.
 
-`@vii/nx` may expose Vii generators, inferred tasks, graph metadata, affected execution, and migrations through the shared Vii CLI and Build Core.
+`@vii-labs/nx` may expose Vii generators, inferred tasks, graph metadata, affected execution, and migrations through the shared Vii CLI and Build Core.
 
 Vii does not become an Nx replacement and does not require an Nx workspace.
 

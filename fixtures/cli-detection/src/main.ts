@@ -1,7 +1,7 @@
 /// <reference types="node" />
 
 import { fileURLToPath } from "node:url";
-import { detectProject } from "@vii/cli-core";
+import { detectProject } from "@vii-labs/cli-core";
 
 const result = await detectProject(fileURLToPath(new URL("..", import.meta.url)));
 

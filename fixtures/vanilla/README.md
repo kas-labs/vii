@@ -1,10 +1,10 @@
 # Packed Vanilla fixture
 
-This fixture is a small clean-consumer example for the packed `@vii/core` artifact. Its executable
+This fixture is a small clean-consumer example for the packed `@vii-labs/core` artifact. Its executable
 source uses the current experimental State, Computed, Batch, and Scope APIs:
 
 ```ts
-import { batch, computed, createScope, state } from "@vii/core";
+import { batch, computed, createScope, state } from "@vii-labs/core";
 
 const count = state(0);
 const observed: number[] = [];

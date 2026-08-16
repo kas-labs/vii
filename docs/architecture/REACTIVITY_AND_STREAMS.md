@@ -229,7 +229,7 @@ Required properties:
 
 ## Query
 
-`@vii/query` is responsible for remote server state concerns:
+`@vii-labs/query` is responsible for remote server state concerns:
 
 - caching;
 - deduplication;
@@ -267,10 +267,10 @@ RxJS remains valuable for advanced streams and existing Angular ecosystems. It i
 Recommended package boundaries:
 
 ```text
-@vii/state       current values and dependency graph
-@vii/query       remote cached state
-@vii/stream      optional event-stream primitives, later
-@vii/rxjs        optional RxJS interop
+@vii-labs/state       current values and dependency graph
+@vii-labs/query       remote cached state
+@vii-labs/stream      optional event-stream primitives, later
+@vii-labs/rxjs        optional RxJS interop
 ```
 
 Candidate interop:

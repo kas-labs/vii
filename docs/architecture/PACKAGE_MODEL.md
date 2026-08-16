@@ -10,11 +10,11 @@ Runtime-neutral foundations with the strongest stability requirements.
 
 Examples:
 
-- `@vii/state`
-- `@vii/contracts`
-- `@vii/protocol`
-- `@vii/scope`
-- `@vii/diagnostics`
+- `@vii-labs/state`
+- `@vii-labs/contracts`
+- `@vii-labs/protocol`
+- `@vii-labs/scope`
+- `@vii-labs/diagnostics`
 
 Core packages must not depend on UI frameworks, CLIs, bundlers, package managers, host runtimes, or native platforms.
 
@@ -24,12 +24,12 @@ Optional application capabilities built on Core.
 
 Examples:
 
-- `@vii/query`
-- `@vii/form`
-- `@vii/http`
-- `@vii/router`
-- `@vii/stream`
-- `@vii/ui`
+- `@vii-labs/query`
+- `@vii-labs/form`
+- `@vii-labs/http`
+- `@vii-labs/router`
+- `@vii-labs/stream`
+- `@vii-labs/ui`
 
 Modules do not silently become part of every client bundle.
 
@@ -41,11 +41,11 @@ Research and Vision packages for a possible future Vii-native component and appl
 
 Potential examples:
 
-- `@vii/web`
-- `@vii/app`
-- `@vii/compiler-core`
-- `@vii/compiler-sfc`
-- `@vii/build-core`
+- `@vii-labs/web`
+- `@vii-labs/app`
+- `@vii-labs/compiler-core`
+- `@vii-labs/compiler-sfc`
+- `@vii-labs/build-core`
 
 No native framework package becomes official until the State, Scope, and adapter layers prove their value and the package satisfies the normal proposal requirements.
 
@@ -55,13 +55,13 @@ Bridges Vii contracts to a framework, runtime, platform, or build engine.
 
 Examples:
 
-- `@vii/react`
-- `@vii/angular`
-- `@vii/vue`
-- `@vii/runtime-node`
-- `@vii/build-vite`
-- `@vii/build-rspack`
-- `@vii/build-bun`
+- `@vii-labs/react`
+- `@vii-labs/angular`
+- `@vii-labs/vue`
+- `@vii-labs/runtime-node`
+- `@vii-labs/build-vite`
+- `@vii-labs/build-rspack`
+- `@vii-labs/build-bun`
 
 Adapters do not implement another State, Scope, diagnostics, security, or component semantic model.
 
@@ -71,15 +71,15 @@ Development-only tooling.
 
 Examples:
 
-- `@vii/cli`
-- `@vii/cli-core`
-- `@vii/devtools`
-- `@vii/testing`
-- `@vii/nx`
+- `@vii-labs/cli`
+- `@vii-labs/cli-core`
+- `@vii-labs/devtools`
+- `@vii-labs/testing`
+- `@vii-labs/nx`
 
 Tool packages may be privileged and require explicit filesystem, process, network, and environment security review.
 
-`@vii/testing` is a possible Vii-specific assertion, fixture, and compliance layer. It is not a commitment to build a new general-purpose test runner while mature runners such as Vitest satisfy the repository's needs.
+`@vii-labs/testing` is a possible Vii-specific assertion, fixture, and compliance layer. It is not a commitment to build a new general-purpose test runner while mature runners such as Vitest satisfy the repository's needs.
 
 ## Distribution
 
@@ -100,11 +100,11 @@ Optional bridges to external systems.
 
 Examples:
 
-- `@vii/opentelemetry`;
-- `@vii/rxjs`;
-- `@vii/fastify`;
-- `@vii/hono`;
-- `@vii/nest`.
+- `@vii-labs/opentelemetry`;
+- `@vii-labs/rxjs`;
+- `@vii-labs/fastify`;
+- `@vii-labs/hono`;
+- `@vii-labs/nest`.
 
 An integration must preserve Vii lifecycle, diagnostics, compatibility, and security contracts where applicable.
 
@@ -168,12 +168,12 @@ Template control-flow syntax may differ between native templates and TSX, but co
 The package model preserves conceptual separation:
 
 ```text
-@vii/state    current values and dependency graph
-@vii/query    cached remote state and server-state lifecycle
-@vii/form     form field state, validation, and submission lifecycle
-@vii/http     request/response transport and middleware
-@vii/stream   optional event streams
-@vii/rxjs     optional RxJS interop
+@vii-labs/state    current values and dependency graph
+@vii-labs/query    cached remote state and server-state lifecycle
+@vii-labs/form     form field state, validation, and submission lifecycle
+@vii-labs/http     request/response transport and middleware
+@vii-labs/stream   optional event streams
+@vii-labs/rxjs     optional RxJS interop
 ```
 
 Resource ownership belongs to shared Scope foundations and relevant modules rather than a universal async abstraction that absorbs every use case.
@@ -185,16 +185,16 @@ Query may use Vii HTTP, native Fetch, or another user-provided transport. HTTP m
 The future Build System distinguishes framework orchestration from bundler engines.
 
 ```text
-@vii/build-core
+@vii-labs/build-core
   owns environment graph, route graph, manifests, and engine contracts
 
-@vii/build-vite
+@vii-labs/build-vite
   adapts Vite and Rolldown
 
-@vii/build-rspack
+@vii-labs/build-rspack
   optional enterprise adapter
 
-@vii/build-bun
+@vii-labs/build-bun
   optional Bun adapter
 ```
 
@@ -202,7 +202,7 @@ The engine must not change Vii runtime semantics.
 
 ## Nx
 
-`@vii/nx` is an optional external workspace integration.
+`@vii-labs/nx` is an optional external workspace integration.
 
 It consumes the shared CLI and Build Core for generators, inferred tasks, graph metadata, affected execution, and migrations.
 

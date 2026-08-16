@@ -22,7 +22,8 @@ They need their own consumer, compatibility, and release decisions.
 - validate the candidate package contents, public exports, Node compatibility, performance baseline,
   security scan, and clean-consumer installation;
 - configure protected npm trusted publishing and provenance; do not store long-lived registry
-  credentials in the repository;
+  credentials in the repository; follow `CORE_EXPERIMENTAL_RELEASE_SECURITY.md` for evidence and
+  external maintainer setup;
 - obtain explicit approval for the release commit, tag, and npm publication.
 
 ## Release preparation record

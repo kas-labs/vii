@@ -18,7 +18,7 @@ Current architectural priorities include:
 - first-class diagnostics without hidden telemetry;
 - public API stability through RFC/ADR governance;
 - ownership of Vii-specific semantics while mature build, test, browser, and package-management engines remain replaceable infrastructure;
-- explicit Research tracks for a State/Scope-backed Form module, a Fetch-first HTTP transport separate from Query, and native template control-flow semantics.
+- explicit Research tracks for a State/Scope-backed Form module, a Fetch-first HTTP transport separate from Query, native template control-flow semantics, and progressive rendering.
 
 The current implementation includes the State Core surface through P1.9, the initial P2.1 shared
 adapter compliance suite, the initial P2.2 React adapter, the initial P2.3 Angular adapter, and the
@@ -117,6 +117,16 @@ compliance utilities instead of recreating a general-purpose runner. Vite/Rolldo
 native build research direction, with Bun and Rspack treated as optional adapters or compatibility
 targets rather than Core dependencies.
 
+The durable rendering direction is progressive and CSR-first. A future native Vii application may
+remain fully client-rendered without adopting hydration, request-server lifecycle, streaming, edge,
+or server-function concepts. Static generation, SSR/hydration, streaming, hybrid route rendering,
+and server functions are opt-in layers that require independent evidence. Client, server, shared,
+build, and optional edge environments should be explicit and compiler-checkable. Vii SSR is
+presentation infrastructure by default and must not require Vii to own an application's domain
+backend, database, transactions, queues, or business logic. Rendering complexity should advance only
+when measured benefit justifies the additional lifecycle, serialization, testing, memory, and security
+cost.
+
 ## Repository operating model
 
 - Default branch: `main`.
@@ -186,6 +196,7 @@ Use the following ownership model rather than duplicating rules:
 - Form research: `docs/architecture/FORM_ARCHITECTURE.md`;
 - HTTP transport research: `docs/architecture/HTTP_CLIENT.md`;
 - native template control-flow research: `docs/architecture/TEMPLATE_CONTROL_FLOW.md`;
+- rendering strategy research: `docs/architecture/RENDERING_STRATEGY.md`;
 - API compatibility: `docs/governance/API_STABILITY.md`;
 - RFC process: `docs/governance/RFC_PROCESS.md`;
 - ADR process: `docs/governance/ADR_PROCESS.md`;

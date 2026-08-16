@@ -11,7 +11,7 @@ tarball:
 
 ```bash
 pnpm --filter @vii/core pack --pack-destination ./artifacts
-pnpm add ./artifacts/vii-core-0.0.0.tgz
+pnpm add ./artifacts/vii-core-0.1.0-experimental.0.tgz
 ```
 
 The public API and the `vii.trace` diagnostics protocol remain experimental and may change under

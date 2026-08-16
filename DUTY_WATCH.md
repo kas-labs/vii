@@ -2021,3 +2021,49 @@ PR: [#68](https://github.com/kas-labs/vii/pull/68)
 
 - Wait for PR #68 checks and review. Scope ownership, GitHub Environment, npm Trusted Publisher,
   versioning, private removal, tag, and publication require separate explicit maintainer authority.
+
+## 2026-08-16 CEST | Prepare first Core experimental release candidate
+
+Status: completed
+Branch: `release/core-first-experimental`
+PR: not opened
+
+### Scope
+
+- Prepare the explicitly authorized first public Core candidate, its protected one-time provenance
+  bootstrap workflow, and release metadata without creating a tag or publishing to npm.
+
+### Changes
+
+- Created the protected `npm-publish` GitHub Environment with `vitala89` as its sole required reviewer,
+  self-approval explicitly allowed, and deployment restricted to
+  `v0.1.0-experimental.0`.
+- Applied the accepted Core changeset in experimental prerelease mode: Core is now
+  `0.1.0-experimental.0`, public, and has its generated changelog. Private adapters and CLI Core remain
+  private with their prior Core peer ranges.
+- Added a manual-only, exact-tag, environment-gated bootstrap workflow. It validates, audits, packs,
+  publishes only the exact Core tarball to `next` with provenance, and uses an environment-scoped
+  one-time `NPM_TOKEN` that has not been created or stored in this repository.
+- Added a release-candidate validator and packed-artifact assertion for the Core changelog.
+
+### Validation
+
+- TDD release validator: red while the workflow was absent; green after the candidate configuration.
+- `pnpm release:core:check`, `pnpm format:check`, `pnpm pack:check`, `pnpm validate`,
+  `pnpm audit --prod --json`, and `git diff --check`: passed.
+- Packed Core artifact was inspected locally at `0.1.0-experimental.0` and contains only the expected
+  release files, including LICENSE and CHANGELOG.
+
+### Architecture / compatibility
+
+- Core remains framework-agnostic, value-free in diagnostics, without filesystem, CLI, dry-run,
+  telemetry, transport, or hidden network runtime behavior.
+- This is the first explicitly authorized public experimental candidate; no API or diagnostics protocol
+  is promoted to Stable. No package has been published, tagged, or associated with an npm token yet.
+
+### Remaining / recovery
+
+- Open the release candidate as a draft PR. After checks/review and merge, add a one-day granular
+  `NPM_TOKEN` scoped to `@vii` as the `npm-publish` Environment secret, create the exact release tag,
+  approve and dispatch the workflow, verify npm/provenance, configure Trusted Publisher/OIDC, and revoke
+  the bootstrap token. Do not publish another package or use `latest`.

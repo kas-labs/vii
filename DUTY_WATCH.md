@@ -1814,3 +1814,27 @@ PR: not opened
 - Open a draft PR for review. Before publication, prepare an approved Core changeset/changelog and
   release-security evidence, configure trusted publishing/provenance, then obtain explicit approval
   for release commit, tag, and npm publication.
+
+## 2026-08-16 CEST | Record Core public metadata pull request
+
+Status: completed
+Branch: `release/core-public-metadata`
+PR: [#65](https://github.com/kas-labs/vii/pull/65)
+
+### Scope
+
+- Publish the verified Core metadata preparation branch as a draft review request.
+
+### Changes
+
+- Opened draft PR #65 from `release/core-public-metadata` to `main` at `681c44d`.
+
+### Validation
+
+- The preceding commit passed `pnpm pack:check`, `pnpm format:check`, `pnpm validate`, and
+  `git diff --check`.
+
+### Remaining / recovery
+
+- Wait for PR #65 checks and review. Do not merge, version, remove `private`, tag, or publish without
+  separate explicit approval.

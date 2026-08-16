@@ -37,9 +37,9 @@ protected release actions.
 
 The first candidate uses the one-time bootstrap exception in
 `CORE_EXPERIMENTAL_RELEASE_SECURITY.md` because npm requires an existing package before it accepts a
-Trusted Publisher configuration. That exception is limited to the protected manual candidate workflow
-and stages the package for a separate npm 2FA approval; it must be replaced with OIDC Trusted
-Publishing immediately after the first publication.
+Trusted Publisher configuration or a staged publication. The maintainer must publish the reviewed `.2`
+artifact once locally with interactive npm 2FA. That exception must be replaced with OIDC Trusted
+Publishing and staged approval for the next candidate immediately afterward.
 
 ## Non-goals
 

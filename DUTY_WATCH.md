@@ -1962,3 +1962,38 @@ PR: [#67](https://github.com/kas-labs/vii/pull/67)
 
 - Wait for PR #67 checks and review. Do not create external npm/GitHub release configuration, apply
   versions, remove `private`, tag, or publish without separate explicit approval.
+
+## 2026-08-16 CEST | Record Core registry and publisher preflight
+
+Status: completed
+Branch: `release/core-registry-preflight`
+PR: not opened
+
+### Scope
+
+- Verify read-only registry availability and local trusted-publisher toolchain readiness without
+  authenticating to npm, reserving a scope, or publishing a package.
+
+### Changes
+
+- Recorded that the public npm registry returned `E404` for `@vii/core` on 2026-08-16; this is an
+  availability observation, not a scope-ownership or publication-rights claim.
+- Recorded that local Node.js 22.17.0 meets the trusted-publishing baseline while npm 10.9.2 does not
+  meet npm's 11.5.1+ requirement; the protected release runner must provision a newer npm explicitly.
+
+### Validation
+
+- `npm view @vii/core version --registry=https://registry.npmjs.org`: completed read-only and returned
+  `E404`.
+- `node --version` and `npm --version`: completed.
+- `git diff --check`: passed.
+
+### Architecture / compatibility
+
+- No runtime, public API, package, version, filesystem, CLI, dry-run, network behavior, credentials,
+  npm scope, GitHub configuration, workflow, tag, or publication changed.
+
+### Remaining / recovery
+
+- Publish this factual readiness update as a draft PR. Scope ownership, protected environment, trusted
+  publisher configuration, versioning, and publication remain maintainer-authorized external actions.

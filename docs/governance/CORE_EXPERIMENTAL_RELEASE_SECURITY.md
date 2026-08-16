@@ -20,6 +20,8 @@ separately approved release change.
 | Build and consumer proof | `pnpm validate` includes tests, builds, and packed clean consumers. | Re-run from the intended release commit. |
 | Production dependency audit | `pnpm audit --prod --json` on 2026-08-16 reported 0 info, low, moderate, high, and critical findings across 44 production dependencies. | Re-run immediately before publication and retain the result with the release record. |
 | Artifact boundary | Packed validation asserts allowed files and Core's exported manifest metadata. | Inspect the versioned candidate tarball before publication. |
+| Registry preflight | `npm view @vii/core` on 2026-08-16 returned npm `E404`; the package was not publicly readable as published. | Confirm scope ownership and publication authority; an `E404` neither reserves the name nor proves authorization. |
+| Publisher toolchain | Local preflight used Node.js 22.17.0 and npm 10.9.2. Node meets the trusted-publishing minimum; npm does not. | Provision npm 11.5.1+ on the protected release runner and record the exact versions. |
 
 The audit is a point-in-time registry result, not a claim that future dependency resolution is safe.
 It must never be fixed automatically as part of a release.

@@ -18,6 +18,7 @@ This directory is the primary map for Vii product, architecture, security, gover
 12. [Implementation Roadmap](roadmap/IMPLEMENTATION_ROADMAP.md)
 13. [Foundation Coverage Audit](roadmap/FOUNDATION_COVERAGE_AUDIT.md)
 14. [Ecosystem Capability Strategy](strategy/ECOSYSTEM_CAPABILITY_STRATEGY.md)
+15. [Rendering Strategy](architecture/RENDERING_STRATEGY.md)
 
 ## Current implementation focus
 
@@ -34,7 +35,9 @@ repository foundation
 
 Native components, the application framework, SSR, native build orchestration, Nx integration, desktop, and mobile remain Research or Vision until prerequisites and evidence exist.
 
-Form, HTTP, native template control flow, and Vii-specific testing helpers now have explicit Research directions. Those documents define boundaries and graduation criteria; they do not mean the packages or syntax are implemented or supported.
+Form, HTTP, native template control flow, progressive rendering, and Vii-specific testing helpers now have explicit Research directions. Those documents define boundaries and graduation criteria; they do not mean the packages, syntax, or rendering modes are implemented or supported.
+
+The future native application framework is CSR-first. Static generation, SSR/hydration, streaming, hybrid rendering, and server functions are opt-in layers that require independent evidence. Vii SSR is presentation infrastructure by default and does not require Vii to own an application's domain backend.
 
 Intentloom integration begins as a documentation, policy, and task-context layer. It must not delay the first Core package or become a runtime dependency.
 
@@ -92,6 +95,7 @@ Developers and agents should read these guides together with the architecture do
 
 - `architecture/COMPONENT_MODEL.md`
 - `architecture/TEMPLATE_CONTROL_FLOW.md`, Research semantics for conditional branches, keyed repetition, empty states, and switch-like template control flow.
+- `architecture/RENDERING_STRATEGY.md`, CSR-first progressive rendering with explicit opt-in static, SSR, hydration, streaming, hybrid, and server-function layers.
 - `architecture/APPLICATION_FRAMEWORK.md`
 
 These documents describe a future direction, not current implementation support.
@@ -123,6 +127,8 @@ Current explicit research tracks are:
 - Form, informed by Angular Signal Forms, TanStack Form, React Hook Form, Vue, and VeeValidate while defining its own Vii semantics;
 - HTTP, informed by Fetch, Angular HttpClient, Axios, and small Fetch clients while remaining separate from Query;
 - native template control flow, comparing block, directive, and TSX/JavaScript authoring while sharing one compiler/runtime semantic model;
+- progressive rendering, keeping CSR independently usable and requiring opt-in evidence for SSG, SSR/hydration, streaming, hybrid rendering, and server functions;
+- explicit execution environments so client/server mistakes can fail at build time rather than appear as confusing runtime errors;
 - Vii-specific testing intelligence over mature test runners rather than a new general-purpose runner;
 - Vite/Rolldown as the first native build research direction, with Bun and Rspack as optional adapters or compatibility targets;
 - meta-framework research such as Analog for orchestration and DX lessons rather than runtime dependency or API copying.
@@ -219,7 +225,7 @@ The root `/ROADMAP.md` provides the public phase overview. Cross-phase capabilit
 
 - RFC 0022: Public Website and Documentation Lifecycle
 
-The Form, HTTP, testing, and template-control-flow documents are Research inputs. They are intentionally not presented as accepted RFCs.
+The Form, HTTP, testing, template-control-flow, and rendering-strategy documents are Research inputs. They are intentionally not presented as accepted RFCs.
 
 These proposals remain Proposed. Implementation and support claims require accepted decisions, milestones, tests, fixtures, and releases.
 

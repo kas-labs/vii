@@ -18,8 +18,10 @@ The roadmap is evidence-driven. A phase is complete only when its exit criteria 
 8. Do not build a general-purpose bundler before Vii-specific compiler value is proven.
 9. Do not build a general-purpose test runner while mature engines meet Vii requirements; add Vii-specific testing intelligence instead.
 10. Reuse mature engines behind replaceable boundaries when they do not compromise Vii semantics.
-11. Keep Intentloom, InLoom, agents, and AI providers outside the Vii production runtime.
-12. Preserve human authority over architecture, security, governance, and releases.
+11. Make rendering complexity progressive and opt-in: CSR first, then static, SSR, streaming, and advanced server capabilities only when evidence justifies each layer.
+12. Keep client, server, shared, build, and optional edge execution boundaries explicit and compiler-checkable.
+13. Keep Intentloom, InLoom, agents, and AI providers outside the Vii production runtime.
+14. Preserve human authority over architecture, security, governance, and releases.
 
 ## Phase sequence
 
@@ -246,6 +248,24 @@ Goals:
 
 Primary architecture: `docs/architecture/TEMPLATE_CONTROL_FLOW.md`.
 
+### Rendering strategy research track
+
+This track defines progressive rendering without making server rendering a default framework assumption.
+
+Goals:
+
+- establish CSR as the independently usable baseline native application mode;
+- prove static generation separately from a server runtime;
+- add SSR only as an opt-in route/application capability;
+- make hydration boundaries explicit and as small as practical;
+- make shared, client, server, build, and optional edge environments compiler-visible;
+- reject invalid environment imports before runtime where practical;
+- keep Vii SSR as presentation infrastructure that can call an independently owned backend;
+- preserve visible network semantics for any future server-function abstraction;
+- require measured value before streaming, partial hydration, islands, resumability, or advanced full-stack conveniences advance.
+
+Primary architecture: `docs/architecture/RENDERING_STRATEGY.md`.
+
 ### Phase 5: Vii Query
 
 Status: Planned
@@ -329,21 +349,25 @@ Goals:
 
 - DOM renderer;
 - targeted reactive updates;
+- CSR reference application before SSR work becomes a framework requirement;
 - Vite plugin;
 - Vite development server integration;
 - Rolldown production build;
 - separate TypeScript checker;
 - HMR protocol;
-- client and server graphs;
+- explicit client, server, shared, and build graphs;
 - asset, route, and hydration manifests;
+- compiler diagnostics for invalid environment imports;
 - optional Bun, Rspack, and Nx integration spikes.
 
 Exit evidence:
 
-- client and SSR reference applications build;
+- a CSR reference application builds and runs without requiring server-rendering concepts;
+- a separate SSR research application builds only after CSR foundations are validated;
 - HMR and source maps are usable;
 - client/server secret boundary tests pass;
-- build speed, memory, bundle size, and runtime memory are measured;
+- invalid cross-environment imports fail deterministically;
+- build speed, memory, bundle size, hydration cost, and runtime memory are measured where applicable;
 - Vii build orchestration provides value beyond a thin Vite preset.
 
 Vii does not create a replacement bundler or Vitest-equivalent merely to own the entire toolchain.
@@ -356,16 +380,19 @@ Potential goals:
 
 - file-based and explicit routes;
 - layouts;
-- CSR and SSG;
-- basic SSR and hydration;
-- streaming;
-- explicit hybrid route rules;
-- typed loaders and server functions;
+- CSR as the default and independently usable native rendering mode;
+- optional SSG / prerender;
+- optional SSR and hydration;
+- optional streaming and hybrid route rules;
+- explicit shared, client, server, build, and optional edge boundaries;
+- typed loaders and optional server functions with visible remote semantics;
 - security header generation;
 - deployment adapters;
 - cohesive `vii dev`, `vii build`, `vii test`, and `vii check` commands over replaceable engines when justified.
 
-This phase advances only if the native runtime provides a clear advantage beyond existing framework adapters.
+SSR remains presentation infrastructure by default and must not require Vii to own the application's domain backend, database, transactions, queues, or business logic.
+
+This phase advances only if the native runtime provides a clear advantage beyond existing framework adapters. Each rendering layer advances independently and must demonstrate value over the simpler layer below it.
 
 ### Phase 11: Ecosystem and agent-assisted expansion
 
@@ -379,7 +406,7 @@ Potential work:
 - desktop and mobile packages;
 - additional UI components;
 - Stream module and RxJS interop;
-- partial hydration or islands research;
+- partial hydration or islands research only after basic SSR/hydration is proven;
 - additional build and deployment targets;
 - Intentloom repository profiles and policy bundles;
 - InLoom first-class Vii workflows;
@@ -412,6 +439,8 @@ Research should stop or be deferred when:
 - maintenance capacity is missing;
 - an existing mature library or engine solves the validated need without losing important Vii semantics;
 - existing framework adapters already solve the validated user need;
+- CSR or static rendering solves the target use case without SSR complexity;
+- an SSR/full-stack feature blurs backend ownership without a measured product benefit;
 - committed Core or adapter delivery is being delayed;
 - agent host enforcement is insufficient;
 - context provenance or privacy cannot meet policy;

@@ -1,7 +1,7 @@
 # Core Reference Consumer
 
 This is the first real reference consumer for the experimental `@vii-labs/core` release path. It models
-a tiny checkout quantity flow using State, Computed, and Scope-owned subscriptions.
+a tiny checkout quantity flow using State, a Scope-owned Computed value, and a Scope-owned subscription.
 
 Run it from the repository with:
 

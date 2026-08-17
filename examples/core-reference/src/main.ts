@@ -8,20 +8,22 @@ export interface CheckoutReferenceResult {
 
 export function runCheckoutReference(): CheckoutReferenceResult {
   const quantity = state(1);
-  const totalCents = computed(() => quantity.get() * 800);
   const observedQuantities: number[] = [];
   const scope = createScope();
+  let totalCents!: ReturnType<typeof computed<number>>;
 
   scope.run(() => {
+    totalCents = computed(() => quantity.get() * 800);
     quantity.subscribe((value) => observedQuantities.push(value));
   });
   quantity.set(2);
   quantity.update((current) => current + 1);
+  const finalTotalCents = totalCents.get();
   scope.dispose();
 
   return {
     finalQuantity: quantity.get(),
     observedQuantities,
-    totalCents: totalCents.get(),
+    totalCents: finalTotalCents,
   };
 }

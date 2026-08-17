@@ -37,6 +37,48 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-17 15:25 CEST | Fix Core reference consumer Computed ownership
+
+Status: completed
+Branch: `dogfood/intentloom-first-development-loop`
+PR: not opened
+
+### Scope
+
+- Correct the packed Core reference consumer so its checkout Computed value is owned by the
+  checkout Scope and evaluated before Scope disposal.
+
+### Changes
+
+- Created the checkout Computed inside `scope.run`.
+- Captured the final computed total before disposing the Scope.
+- Updated the reference-consumer test description and README to document Scope ownership for both
+  the Computed value and subscription.
+
+### Validation
+
+- `pnpm --filter @vii-labs/core-reference test`: passed, 1 test.
+- `pnpm --filter @vii-labs/core-reference build`: passed.
+- `pnpm pack:check`: passed with network-enabled registry access; packed Core, reference, React,
+  Angular, Vue, and CLI Core consumers validated.
+- `pnpm validate`: passed with network-enabled registry access; formatting, lint, typecheck, tests,
+  builds, and packed-consumer validation passed.
+- `git diff --check`: passed.
+- Initial sandboxed `pack:check` and `validate` attempts reached the packed-consumer stage but failed
+  only because `registry.npmjs.org` DNS resolution returned `ENOTFOUND`; no repository dependency or
+  configuration was changed.
+
+### Architecture / compatibility
+
+- Only the Core reference consumer example, its test, and its README changed.
+- Core runtime behavior, public APIs, package boundaries, dependencies, release state, and packed
+  package contents were unchanged.
+- The consumer now follows the existing Scope ownership and deterministic disposal contract.
+
+### Remaining / recovery
+
+- None. Do not commit or push until human review.
+
 ## 2026-08-12 02:56 Europe/Berlin | Implement P3.1 project detection
 
 Status: completed

@@ -51,6 +51,7 @@ Allowed types:
 - `security`
 - `release`
 - `revert`
+- `dogfood`
 
 `main` and release tags/refs are reserved. Do not use actor, tool, model, or harness prefixes such as `codex/`, `claude/`, `agent/`, `bot/`, or personal-name prefixes.
 

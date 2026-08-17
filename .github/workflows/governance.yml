@@ -23,11 +23,11 @@ jobs:
           HEAD_REF: ${{ github.head_ref }}
         run: |
           set -euo pipefail
-          pattern='^(feat|fix|refactor|docs|test|chore|build|ci|perf|security|release|revert)/[a-z0-9]+([a-z0-9-]*[a-z0-9])?$'
+          pattern='^(feat|fix|refactor|docs|test|chore|build|ci|perf|security|release|revert|dogfood)/[a-z0-9]+([a-z0-9-]*[a-z0-9])?$'
           if [[ ! "$HEAD_REF" =~ $pattern ]]; then
             echo "Invalid branch name: $HEAD_REF"
             echo "Expected: <type>/<short-kebab-description>"
-            echo "Allowed types: feat fix refactor docs test chore build ci perf security release revert"
+            echo "Allowed types: feat fix refactor docs test chore build ci perf security release revert dogfood"
             exit 1
           fi
 

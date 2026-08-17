@@ -71,7 +71,7 @@ For relevant runtime changes, explicitly review allocation/disposal, subscriptio
 ## Delivery workflow
 
 1. Create a focused branch using `<type>/<short-kebab-description>`.
-2. Allowed branch types are `feat`, `fix`, `refactor`, `docs`, `test`, `chore`, `build`, `ci`, `perf`, `security`, `release`, and `revert`.
+2. Allowed branch types are `feat`, `fix`, `refactor`, `docs`, `test`, `chore`, `build`, `ci`, `perf`, `security`, `release`, `revert`, and `dogfood`. Use `dogfood` only for validated repository self-use or integration cycles.
 3. Do not use actor/tool/model prefixes such as `codex/`, `claude/`, `agent/`, `bot/`, or personal-name prefixes.
 4. Keep every commit atomic and independently reviewable. Keep implementation, its tests, and required documentation together. Split unrelated features, refactors, formatting-only changes, CI changes, and release metadata.
 5. Use a Conventional Commit subject: `<type>(<optional-scope>): <summary>`.

@@ -140,6 +140,7 @@ cost.
 
 - Default branch: `main`.
 - Development happens on focused branches using `<type>/<short-kebab-description>`.
+- The `dogfood` branch type is reserved for validated repository self-use or integration cycles.
 - Conventional Commit subjects are required by project policy.
 - Tool/AI attribution such as `Co-Authored-By` and generated-by footers is forbidden in commit and PR text.
 - Meaningful tasks must update `DUTY_WATCH.md` with an accurate handoff.

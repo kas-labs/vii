@@ -37,6 +37,39 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-18 CEST | Allow validated dogfood delivery branches
+
+Status: partial
+Branch: `dogfood/intentloom-first-development-loop`
+PR: #76
+
+### Scope
+
+- Fix the `delivery-policy` check for the repository's validated Intentloom dogfood cycle.
+
+### Changes
+
+- Added `dogfood` as a documented branch type for validated repository self-use or integration cycles.
+- Aligned the governance workflow, agent guidance, contributor guidance, and durable project state.
+
+### Validation
+
+- Confirmed the failing job rejected only `dogfood/intentloom-first-development-loop`; PR title and commit checks were not reached.
+- Local policy regex check: passed for `dogfood/intentloom-first-development-loop`.
+- `git diff --check`: passed.
+- `pnpm validate`: passed with network-enabled registry access; format, lint, typecheck, tests,
+  builds, and packed Core, React, Angular, Vue, and CLI consumers passed.
+
+### Architecture / compatibility
+
+- No runtime, package, public API, dependency, bundle, memory, SSR, security, or privacy behavior changed.
+- The policy remains strict about the `<type>/<short-kebab-description>` shape and reserves `dogfood` for repository self-use or integration evidence.
+
+### Remaining / recovery
+
+- Push the focused policy fix and re-run PR #76 checks. The local GitHub CLI session currently has
+  an invalid token, so the remote push and check rerun remain outstanding.
+
 ## 2026-08-17 15:25 CEST | Fix Core reference consumer Computed ownership
 
 Status: completed

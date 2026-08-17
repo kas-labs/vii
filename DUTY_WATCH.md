@@ -39,7 +39,7 @@ PR: <number or not opened>
 
 ## 2026-08-18 CEST | Allow validated dogfood delivery branches
 
-Status: partial
+Status: completed
 Branch: `dogfood/intentloom-first-development-loop`
 PR: #76
 
@@ -59,6 +59,8 @@ PR: #76
 - `git diff --check`: passed.
 - `pnpm validate`: passed with network-enabled registry access; format, lint, typecheck, tests,
   builds, and packed Core, React, Angular, Vue, and CLI consumers passed.
+- GitHub Actions Governance run `32080107089`: passed; `delivery-policy` job `95541304092` passed
+  branch, PR title, attribution, and commit-subject validation.
 
 ### Architecture / compatibility
 
@@ -67,8 +69,8 @@ PR: #76
 
 ### Remaining / recovery
 
-- Push the focused policy fix and re-run PR #76 checks. The local GitHub CLI session currently has
-  an invalid token, so the remote push and check rerun remain outstanding.
+- None for the delivery-policy fix. Independent Validate and CodeQL runs were still in progress at
+  the last status read.
 
 ## 2026-08-17 15:25 CEST | Fix Core reference consumer Computed ownership
 

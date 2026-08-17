@@ -1,0 +1,7 @@
+schemaVersion: "1"
+profile: typescript
+adapters:
+  - codex
+projectOwnedMappings:
+  - source: AGENTS.md
+    destination: AGENTS.md

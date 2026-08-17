@@ -1,0 +1,204 @@
+{
+  "schemaVersion": "1",
+  "lockVersion": "1",
+  "ownershipPolicy": "aif-owned-generated",
+  "profile": "typescript",
+  "schemaVersions": {
+    "config": "1",
+    "manifestLock": "1",
+    "sourceMap": "1",
+    "planning": "1",
+    "agentSkillPolicy": "1"
+  },
+  "adapters": [
+    {
+      "id": "codex",
+      "version": "0.1.0"
+    }
+  ],
+  "sourceHashes": [
+    {
+      "id": "skills/aif-branch-finisher/SKILL.md",
+      "checksum": "82de175d66362d5d63410ba76c6879625666529e9d041ec5ba62155e05451c8e"
+    },
+    {
+      "id": "skills/aif-code-review/SKILL.md",
+      "checksum": "62a822b3ce0977ebe2d2068e682be5f76b1b2f252d275e1dc688629e8ff9760e"
+    },
+    {
+      "id": "skills/aif-commit-writer/SKILL.md",
+      "checksum": "eb1bd868333a7e8662b2899956d2b6eef171a901e8cd10b77fe7cd6223df7637"
+    },
+    {
+      "id": "skills/aif-context-pack/SKILL.md",
+      "checksum": "155b10158e065230fd4e334318c8d105c9a0461e1d4cda251863f45f4931775b"
+    },
+    {
+      "id": "skills/aif-debugger/SKILL.md",
+      "checksum": "a0d55aa0bb8977bed01b28ea05da98d08b49c1aba90388de0d995c08d7107363"
+    },
+    {
+      "id": "skills/aif-docs-sync/SKILL.md",
+      "checksum": "84eefedb517b4687966ee5c6742392e15b593b0ae5c4baac2cd63932ab621869"
+    },
+    {
+      "id": "skills/aif-extension-review/SKILL.md",
+      "checksum": "0cd284ea9f59e3fc15622fd8de59367816ddd54193e52aad4b15ed871b7c24cb"
+    },
+    {
+      "id": "skills/aif-feature-builder/SKILL.md",
+      "checksum": "1e2939654b4cd900b1781f398ce70e0032ecf25c57360a070c25ccb98a8089d1"
+    },
+    {
+      "id": "skills/aif-feature-discovery/SKILL.md",
+      "checksum": "87ddd1e44cb8616b07372afed13d7f228ec179b0cca04555bc4b239645034da9"
+    },
+    {
+      "id": "skills/aif-iteration-handoff/SKILL.md",
+      "checksum": "1399697b06e5f8252be720851599de1d01c97a359371571d77e6977553ec1a38"
+    },
+    {
+      "id": "skills/aif-orchestrator/SKILL.md",
+      "checksum": "c2e989dfb6a59bc31e1feefe6e9ba2769ffd3f21fc88ec6185395e917f2c45cb"
+    },
+    {
+      "id": "skills/aif-planning-review/SKILL.md",
+      "checksum": "8b3963895253f855d6523411654b65a47eeeab2fb28d28eec547f90e2f6d1aaf"
+    },
+    {
+      "id": "skills/aif-privacy-review/SKILL.md",
+      "checksum": "472d19eab3b12c5b1bb63f1cc046170919557a053f623e20ca1ae4ccc3056e75"
+    },
+    {
+      "id": "skills/aif-project-adoption/SKILL.md",
+      "checksum": "a496d22dbf683f74b4c8fb457ab3bf08665d9a0685b2af5a0aea1a1db34d4180"
+    },
+    {
+      "id": "skills/aif-project-state-sync/SKILL.md",
+      "checksum": "731c42cb1f8ce045e5e307c98f1406b5c09a25eb0b2cae506f788b57b6e6c705"
+    },
+    {
+      "id": "skills/aif-security-review/SKILL.md",
+      "checksum": "964b36ab13e85e5d800d0f5d6dd9241d2982f16c639980bbaa9dfad3b18c993d"
+    },
+    {
+      "id": "skills/aif-specification-review/SKILL.md",
+      "checksum": "4d431ad47cb260cca938067f36a24053fee676158bf96e77681ebc613fb542fa"
+    },
+    {
+      "id": "skills/aif-task-router/SKILL.md",
+      "checksum": "97503056eb815b842bbca1bd1fe7e164b281b2eb0a7aae487b516898d42daab7"
+    },
+    {
+      "id": "skills/aif-technical-debt-sync/SKILL.md",
+      "checksum": "b463f9a053ef4ff8a45c8f71501c4613fcaebffa9af7abc375d227d83eb9d527"
+    },
+    {
+      "id": "skills/aif-testing-strategy/SKILL.md",
+      "checksum": "8351bfef1e76e865abd38e5604b78a8ac64fb8655d7d8bad3e47056e228fed41"
+    },
+    {
+      "id": "skills/aif-verification-gate/SKILL.md",
+      "checksum": "3782486e3c38f8cacc2d075e18a80d49608c85875c6b2accc641d13099d81aad"
+    }
+  ],
+  "metadataFormatVersion": "1",
+  "frameworkVersion": "1.0.2",
+  "adapterOutputVersion": "0.1.0",
+  "adapterId": "aif:generated-files",
+  "canonicalSourceId": "41a8360074fa98f480a60551292a10800f48c1aa162e0b09666f9358f8b8d9f8",
+  "generated": [
+    {
+      "path": ".aif/config.yaml",
+      "checksum": "7e57e24d1f39f6b8a8ad863f3adb422b1158fd1eb3df84ea21e1d1900841af26"
+    },
+    {
+      "path": ".aif/local.example.yaml",
+      "checksum": "5104462fb3f5daf2788af7a2da1a44c513c51c1619d29b6cad1a5fadc0a18d88"
+    },
+    {
+      "path": ".agents/skills/aif-branch-finisher/SKILL.md",
+      "checksum": "dbe720be7e1041c6efbcbbfc60d39fafb5573bcc0a282357f17198638dedffbd"
+    },
+    {
+      "path": ".agents/skills/aif-code-review/SKILL.md",
+      "checksum": "5d45430266f53ef15624db69476e6f226b996171d622d35c588e1f3b17874a41"
+    },
+    {
+      "path": ".agents/skills/aif-commit-writer/SKILL.md",
+      "checksum": "f80bcbe6d19e376d08f7ccdb5131506f479ba0a428a339b9f8331d2ef2680c5d"
+    },
+    {
+      "path": ".agents/skills/aif-context-pack/SKILL.md",
+      "checksum": "86aa6ddbb3dd891e1cc1558995e7687663aeaec73631da3e1f498f228b382233"
+    },
+    {
+      "path": ".agents/skills/aif-debugger/SKILL.md",
+      "checksum": "f88bac6d41542b3cbd35e782af14d2ac94963d8a33d629fbb68689e462583ed9"
+    },
+    {
+      "path": ".agents/skills/aif-docs-sync/SKILL.md",
+      "checksum": "14a8970b3b8f3f23cc79e4dd84ab388cadf11ec05d5b616f47703bea58813368"
+    },
+    {
+      "path": ".agents/skills/aif-extension-review/SKILL.md",
+      "checksum": "f6f4a4a553d69d87bf83e64903c4e87b48892124aae6bd97e24f17cb91968712"
+    },
+    {
+      "path": ".agents/skills/aif-feature-builder/SKILL.md",
+      "checksum": "2a884d997175487274cd93181a33b8abfdb03bd22d09f7e4df6fa00bba0186aa"
+    },
+    {
+      "path": ".agents/skills/aif-feature-discovery/SKILL.md",
+      "checksum": "91ec3e97d5e9ed981b196468764c441f69dc3c04445c6c85593d28f2c51a1e03"
+    },
+    {
+      "path": ".agents/skills/aif-iteration-handoff/SKILL.md",
+      "checksum": "4e55904d8088f49b2daa6c62756b469ee5d3580e47d5888478b6134c6f8a48b2"
+    },
+    {
+      "path": ".agents/skills/aif-orchestrator/SKILL.md",
+      "checksum": "037e55103d0560549ae5b478f061cb28468ba809d4a08481491a1f8b5a5ff022"
+    },
+    {
+      "path": ".agents/skills/aif-planning-review/SKILL.md",
+      "checksum": "56acb039b33f033e4a19ed2f586e45da88b5016501f8f85af42b834043e14983"
+    },
+    {
+      "path": ".agents/skills/aif-privacy-review/SKILL.md",
+      "checksum": "298cf1753a1855eefbf1f0536e764ab4610731cabc66273fa9d3940d50c6fb3b"
+    },
+    {
+      "path": ".agents/skills/aif-project-adoption/SKILL.md",
+      "checksum": "a89f6b83eb4c5deddd427dd8eeb533f3d768a12f1d0adb729054cd35e9b5b489"
+    },
+    {
+      "path": ".agents/skills/aif-project-state-sync/SKILL.md",
+      "checksum": "9f447440c415dc95a93b9bc31f649cd91f91303d8c9bdff52305567acc72ca87"
+    },
+    {
+      "path": ".agents/skills/aif-security-review/SKILL.md",
+      "checksum": "022ca77d4c949415d061cbd43f4cca5498c6a4eb9d7e57ca4ff9b000070c79a9"
+    },
+    {
+      "path": ".agents/skills/aif-specification-review/SKILL.md",
+      "checksum": "7bd20f832fa118caa94bee0a5e1487817122ecc26d3a54647ce596824415a98a"
+    },
+    {
+      "path": ".agents/skills/aif-task-router/SKILL.md",
+      "checksum": "58ee9dc7c92df7c166c5e7b100d6ccc9be1c8ec16f2d215a163c3cc1ac83a694"
+    },
+    {
+      "path": ".agents/skills/aif-technical-debt-sync/SKILL.md",
+      "checksum": "789fe2ee0fe0c7eb12c3fe9c78b098fa019566727d92ea7cc4c37d197f450d2d"
+    },
+    {
+      "path": ".agents/skills/aif-testing-strategy/SKILL.md",
+      "checksum": "385a73ef79020a3b44a7eafdb468413b7fa756539454c35a6df0d5a14e2f7d2b"
+    },
+    {
+      "path": ".agents/skills/aif-verification-gate/SKILL.md",
+      "checksum": "1f984a378151c3ce12fc8706aa917dc99615a356240add73bb2e39d7fc42116f"
+    }
+  ]
+}

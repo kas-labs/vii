@@ -1,0 +1,148 @@
+{
+  "schemaVersion": "1",
+  "metadataFormatVersion": "1",
+  "frameworkVersion": "1.0.2",
+  "adapterOutputVersion": "0.1.0",
+  "adapterId": "aif:generated-files",
+  "canonicalSourceId": "41a8360074fa98f480a60551292a10800f48c1aa162e0b09666f9358f8b8d9f8",
+  "files": [
+    {
+      "path": ".aif/config.yaml",
+      "checksum": "7e57e24d1f39f6b8a8ad863f3adb422b1158fd1eb3df84ea21e1d1900841af26",
+      "sources": ["project:config"],
+      "ownership": "aif-owned-generated"
+    },
+    {
+      "path": ".aif/local.example.yaml",
+      "checksum": "5104462fb3f5daf2788af7a2da1a44c513c51c1619d29b6cad1a5fadc0a18d88",
+      "sources": ["project:local-example"],
+      "ownership": "aif-owned-generated"
+    },
+    {
+      "path": ".agents/skills/aif-branch-finisher/SKILL.md",
+      "checksum": "dbe720be7e1041c6efbcbbfc60d39fafb5573bcc0a282357f17198638dedffbd",
+      "sources": ["skills/aif-branch-finisher/SKILL.md"],
+      "ownership": "aif-owned-generated"
+    },
+    {
+      "path": ".agents/skills/aif-code-review/SKILL.md",
+      "checksum": "5d45430266f53ef15624db69476e6f226b996171d622d35c588e1f3b17874a41",
+      "sources": ["skills/aif-code-review/SKILL.md"],
+      "ownership": "aif-owned-generated"
+    },
+    {
+      "path": ".agents/skills/aif-commit-writer/SKILL.md",
+      "checksum": "f80bcbe6d19e376d08f7ccdb5131506f479ba0a428a339b9f8331d2ef2680c5d",
+      "sources": ["skills/aif-commit-writer/SKILL.md"],
+      "ownership": "aif-owned-generated"
+    },
+    {
+      "path": ".agents/skills/aif-context-pack/SKILL.md",
+      "checksum": "86aa6ddbb3dd891e1cc1558995e7687663aeaec73631da3e1f498f228b382233",
+      "sources": ["skills/aif-context-pack/SKILL.md"],
+      "ownership": "aif-owned-generated"
+    },
+    {
+      "path": ".agents/skills/aif-debugger/SKILL.md",
+      "checksum": "f88bac6d41542b3cbd35e782af14d2ac94963d8a33d629fbb68689e462583ed9",
+      "sources": ["skills/aif-debugger/SKILL.md"],
+      "ownership": "aif-owned-generated"
+    },
+    {
+      "path": ".agents/skills/aif-docs-sync/SKILL.md",
+      "checksum": "14a8970b3b8f3f23cc79e4dd84ab388cadf11ec05d5b616f47703bea58813368",
+      "sources": ["skills/aif-docs-sync/SKILL.md"],
+      "ownership": "aif-owned-generated"
+    },
+    {
+      "path": ".agents/skills/aif-extension-review/SKILL.md",
+      "checksum": "f6f4a4a553d69d87bf83e64903c4e87b48892124aae6bd97e24f17cb91968712",
+      "sources": ["skills/aif-extension-review/SKILL.md"],
+      "ownership": "aif-owned-generated"
+    },
+    {
+      "path": ".agents/skills/aif-feature-builder/SKILL.md",
+      "checksum": "2a884d997175487274cd93181a33b8abfdb03bd22d09f7e4df6fa00bba0186aa",
+      "sources": ["skills/aif-feature-builder/SKILL.md"],
+      "ownership": "aif-owned-generated"
+    },
+    {
+      "path": ".agents/skills/aif-feature-discovery/SKILL.md",
+      "checksum": "91ec3e97d5e9ed981b196468764c441f69dc3c04445c6c85593d28f2c51a1e03",
+      "sources": ["skills/aif-feature-discovery/SKILL.md"],
+      "ownership": "aif-owned-generated"
+    },
+    {
+      "path": ".agents/skills/aif-iteration-handoff/SKILL.md",
+      "checksum": "4e55904d8088f49b2daa6c62756b469ee5d3580e47d5888478b6134c6f8a48b2",
+      "sources": ["skills/aif-iteration-handoff/SKILL.md"],
+      "ownership": "aif-owned-generated"
+    },
+    {
+      "path": ".agents/skills/aif-orchestrator/SKILL.md",
+      "checksum": "037e55103d0560549ae5b478f061cb28468ba809d4a08481491a1f8b5a5ff022",
+      "sources": ["skills/aif-orchestrator/SKILL.md"],
+      "ownership": "aif-owned-generated"
+    },
+    {
+      "path": ".agents/skills/aif-planning-review/SKILL.md",
+      "checksum": "56acb039b33f033e4a19ed2f586e45da88b5016501f8f85af42b834043e14983",
+      "sources": ["skills/aif-planning-review/SKILL.md"],
+      "ownership": "aif-owned-generated"
+    },
+    {
+      "path": ".agents/skills/aif-privacy-review/SKILL.md",
+      "checksum": "298cf1753a1855eefbf1f0536e764ab4610731cabc66273fa9d3940d50c6fb3b",
+      "sources": ["skills/aif-privacy-review/SKILL.md"],
+      "ownership": "aif-owned-generated"
+    },
+    {
+      "path": ".agents/skills/aif-project-adoption/SKILL.md",
+      "checksum": "a89f6b83eb4c5deddd427dd8eeb533f3d768a12f1d0adb729054cd35e9b5b489",
+      "sources": ["skills/aif-project-adoption/SKILL.md"],
+      "ownership": "aif-owned-generated"
+    },
+    {
+      "path": ".agents/skills/aif-project-state-sync/SKILL.md",
+      "checksum": "9f447440c415dc95a93b9bc31f649cd91f91303d8c9bdff52305567acc72ca87",
+      "sources": ["skills/aif-project-state-sync/SKILL.md"],
+      "ownership": "aif-owned-generated"
+    },
+    {
+      "path": ".agents/skills/aif-security-review/SKILL.md",
+      "checksum": "022ca77d4c949415d061cbd43f4cca5498c6a4eb9d7e57ca4ff9b000070c79a9",
+      "sources": ["skills/aif-security-review/SKILL.md"],
+      "ownership": "aif-owned-generated"
+    },
+    {
+      "path": ".agents/skills/aif-specification-review/SKILL.md",
+      "checksum": "7bd20f832fa118caa94bee0a5e1487817122ecc26d3a54647ce596824415a98a",
+      "sources": ["skills/aif-specification-review/SKILL.md"],
+      "ownership": "aif-owned-generated"
+    },
+    {
+      "path": ".agents/skills/aif-task-router/SKILL.md",
+      "checksum": "58ee9dc7c92df7c166c5e7b100d6ccc9be1c8ec16f2d215a163c3cc1ac83a694",
+      "sources": ["skills/aif-task-router/SKILL.md"],
+      "ownership": "aif-owned-generated"
+    },
+    {
+      "path": ".agents/skills/aif-technical-debt-sync/SKILL.md",
+      "checksum": "789fe2ee0fe0c7eb12c3fe9c78b098fa019566727d92ea7cc4c37d197f450d2d",
+      "sources": ["skills/aif-technical-debt-sync/SKILL.md"],
+      "ownership": "aif-owned-generated"
+    },
+    {
+      "path": ".agents/skills/aif-testing-strategy/SKILL.md",
+      "checksum": "385a73ef79020a3b44a7eafdb468413b7fa756539454c35a6df0d5a14e2f7d2b",
+      "sources": ["skills/aif-testing-strategy/SKILL.md"],
+      "ownership": "aif-owned-generated"
+    },
+    {
+      "path": ".agents/skills/aif-verification-gate/SKILL.md",
+      "checksum": "1f984a378151c3ce12fc8706aa917dc99615a356240add73bb2e39d7fc42116f",
+      "sources": ["skills/aif-verification-gate/SKILL.md"],
+      "ownership": "aif-owned-generated"
+    }
+  ]
+}

@@ -37,6 +37,49 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-18 02:28 CEST | Extend packed CLI mutation validation
+
+Status: completed
+Branch: `dogfood/intentloom-second-development-loop`
+PR: not opened
+
+### Scope
+
+- Extend the second Intentloom dogfood cycle with packed `@vii-labs/cli-core` validation for
+  mutation lifecycle and machine-output results without changing Core or the CLI protocol.
+
+### Changes
+
+- Added source-level machine-output coverage for `initProject` applied/unchanged results and a
+  blocked `addState` result, including JSON round-trips and local-file preservation.
+- Extended the packed CLI consumer with applied, unchanged, and blocked mutation scenarios in
+  addition to the existing dry-run coverage.
+- Updated packed validation assertions, fixture documentation, and durable project-state records.
+
+### Validation
+
+- `pnpm --filter @vii-labs/cli-core test`: passed, 43 tests.
+- `pnpm --filter @vii-labs/cli-core typecheck`: passed.
+- `pnpm --filter @vii-labs/cli-core lint`: passed.
+- `pnpm format:check`: passed.
+- `pnpm pack:check`: passed; packed Core, reference, React, Angular, Vue, and CLI Core consumers
+  validated, including the new mutation assertions.
+- `pnpm validate`: passed; formatting, lint, typecheck, tests, builds, and packed consumers passed.
+- `git diff --check`: passed.
+- The first sandboxed `pnpm pack:check` attempt failed only on registry DNS resolution while
+  installing existing React fixture dependencies; the network-enabled rerun passed.
+
+### Architecture / compatibility
+
+- No Core, framework adapter, dependency, public API, machine-output protocol, release, network,
+  or package-boundary behavior changed.
+- The CLI Core package remains private and experimental; validation now covers dry-run, applied,
+  idempotent unchanged, and blocked local-change mutation paths from its packed artifact.
+
+### Remaining / recovery
+
+- None for this slice. Review the diff before any commit, push, or pull request.
+
 ## 2026-08-18 CEST | Allow validated dogfood delivery branches
 
 Status: completed

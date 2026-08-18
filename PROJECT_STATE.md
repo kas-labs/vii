@@ -143,6 +143,9 @@ cost.
 - The `dogfood` branch type is reserved for validated repository self-use or integration cycles.
 - Conventional Commit subjects are required by project policy.
 - Tool/AI attribution such as `Co-Authored-By` and generated-by footers is forbidden in commit and PR text.
+- Every non-trivial task begins with the canonical triage preflight in
+  `docs/governance/AGENT_TASK_TRIAGE_POLICY.md`, which reports scope, ambiguity, risk, verification,
+  unknowns, harness/model role, delegation, skills, approval, context, budget, and stop condition.
 - Meaningful tasks must update `DUTY_WATCH.md` with an accurate handoff.
 - Durable architecture, package maturity, validation-surface, or roadmap changes must update this document.
 - Public API, package, protocol, compatibility, privacy, security, or migration changes follow the RFC/ADR governance rules.
@@ -202,6 +205,7 @@ Use the following ownership model rather than duplicating rules:
 - durable repository state: `PROJECT_STATE.md`;
 - per-task handoff: `DUTY_WATCH.md`;
 - code quality and architecture baseline: `docs/governance/CODE_QUALITY_STANDARDS.md`;
+- agent task triage and routing preflight: `docs/governance/AGENT_TASK_TRIAGE_POLICY.md`;
 - product boundaries: `docs/strategy/PRODUCT_BOUNDARIES.md`;
 - ecosystem capability ownership and reuse rule: `docs/strategy/ECOSYSTEM_CAPABILITY_STRATEGY.md`;
 - Form research: `docs/architecture/FORM_ARCHITECTURE.md`;

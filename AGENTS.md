@@ -17,6 +17,12 @@ Before every non-trivial task, read:
 
 Do not begin implementation from the user prompt alone when repository state matters. Verify important claims against current code, Git history, merged pull requests, tests, benchmarks, package artifacts, and CI.
 
+Before implementation or proposing the next work item, apply the canonical triage contract in
+`docs/governance/AGENT_TASK_TRIAGE_POLICY.md` and print its verdict. The verdict makes the task's
+blast radius, ambiguity, risk, verification burden, unknowns, harness, model role, delegation,
+grilling gate, context plan, approval gate, budget, and stop condition explicit. Triage is a routing
+and transparency gate; it does not grant mutation, publication, credential, or delegation authority.
+
 ## Task routing and design interrogation
 
 Before implementation, classify every non-trivial request. If the route is not obvious, use the

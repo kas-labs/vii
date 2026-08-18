@@ -30,3 +30,11 @@ repository. The routing policy and exceptions live in the task-routing section o
 Future updates should re-run the extension review, inspect the complete diff, verify license and
 content-hash changes, and confirm that manual-only side-effectful skills remain outside automatic
 routing.
+
+## External workflow references
+
+The task-triage shape was reviewed in the public
+[`applye` repository](https://github.com/vitala89/applye) and adapted into the project-owned
+[`AGENT_TASK_TRIAGE_POLICY.md`](../governance/AGENT_TASK_TRIAGE_POLICY.md). Vii retains only the
+workflow concepts needed here; the external repository is not a runtime dependency and does not
+grant any additional tool, model, network, credential, or delegation capability.

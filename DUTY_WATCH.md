@@ -37,6 +37,51 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-18 23:50 CEST | Adopt Applye-style task triage preflight
+
+Status: completed
+Branch: `docs/activate-grilling-routing`
+PR: #78
+
+### Scope
+
+- Inspect the user's public `applye` repository for its agent preflight workflow and adapt the
+  useful triage contract to Vii alongside the existing grilling routing.
+
+### Changes
+
+- Added the canonical `docs/governance/AGENT_TASK_TRIAGE_POLICY.md` with five-axis scoring
+  (`blast radius`, `ambiguity`, `risk`, `verification`, `unknowns`), role/effort routing, and the
+  required `Triage`, `Harness`, `Model`, `Delegation`, `Grilling`, `Skills`, `Context/load code`,
+  `Approval`, `Budget`, and `Stop when` fields.
+- Made the triage verdict mandatory before non-trivial implementation or substantive next-step
+  recommendations in `AGENTS.md`.
+- Recorded the external workflow provenance and the Vii-owned adaptation in
+  `docs/agents/EXTERNAL_SKILLS.md`; aligned the required task contract and durable project state.
+- Reviewed `applye` at commit `f1398e225ca475778ddffcfd947b9486d8eb27d1`; the source repository is
+  public and MIT-licensed. No executable code, hooks, dependencies, credentials, or external
+  delegation behavior were imported.
+
+### Validation
+
+- `git diff --check`: passed.
+- `pnpm validate`: formatting, lint, typecheck, tests, and builds passed; the sandboxed packed
+  consumer step initially hit npm registry DNS `ENOTFOUND` while installing existing React fixture
+  dependencies and was stopped rather than waiting through retries.
+- `pnpm pack:check` with network-enabled execution: passed; packed Core, reference, React, Angular,
+  Vue, and CLI Core consumers validated.
+
+### Architecture / compatibility
+
+- Documentation and agent-governance only; no runtime, package, public API, dependency, bundle,
+  memory, SSR, security, privacy, or release behavior changed.
+- Delegation remains opt-in and read-only by default; project-owned approval, RFC/ADR, validation,
+  and publication rules remain authoritative.
+
+### Remaining / recovery
+
+- None for this slice. The existing PR #78 branch is ready for review with the triage addition.
+
 ## 2026-08-18 02:28 CEST | Extend packed CLI mutation validation
 
 Status: completed

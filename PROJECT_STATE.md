@@ -94,6 +94,12 @@ Core remain private.
 The `examples/core-reference` checkout flow is the first real packed-Core reference consumer: it
 uses only public State, Computed, and Scope APIs and is copied into a clean temporary project by
 package validation, where it installs the packed Core artifact without a workspace alias.
+An external Vite React reference consumer has now provided the first Phase 4 dogfood evidence for
+the packed Core and React artifacts. Its store is isolated in a dedicated module and its Vitest
+contract covers Computed filtering, atomic Batch notifications, and Scope disposal; the consumer
+also passes the TypeScript/Vite production build. This is validation evidence rather than a
+repository fixture, so the broader Phase 4 work remains open for additional applications, lifecycle,
+bundle/type-check budgets, deployment threat-model review, and other real-world checks.
 The repository uses Changesets for future public package versioning. The configuration has no publish
 script; version application and publication remain separately approved release actions.
 The packed Core artifact also carries its Apache-2.0 license, repository and issue links, discovery

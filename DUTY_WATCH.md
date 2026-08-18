@@ -136,6 +136,40 @@ PR: [#79](https://github.com/kas-labs/vii/pull/79) merged
 - Continue with the manual post-extraction smoke check in the external Vite React consumer, then
   select the next bounded Phase 4 consumer or lifecycle slice.
 
+## 2026-08-19 00:36 CEST | Complete React consumer smoke validation
+
+Status: completed
+Branch: `docs/record-pr79-merge-status`
+PR: not opened
+
+### Scope
+
+- Complete the post-extraction manual smoke check for the external Vite React consumer.
+
+### Changes
+
+- Confirmed the user-tested React consumer remains functional after moving the Vii board store into
+  its dedicated module.
+- Confirmed the interactive task-board flow: filtering, task creation, completion toggling, and
+  clearing completed tasks.
+
+### Validation
+
+- User-confirmed `pnpm test`: passed with 3 Vitest tests.
+- User-confirmed `pnpm build`: passed.
+- User-confirmed `pnpm dev` browser smoke check: passed with no reported console errors.
+
+### Architecture / compatibility
+
+- Real-consumer evidence now covers Core State, Computed, Batch, Scope disposal, React integration,
+  TypeScript/Vite production build, and basic browser interaction.
+- No Vii runtime, package, public API, dependency, bundle, memory, SSR, security, privacy, or release
+  behavior changed.
+
+### Remaining / recovery
+
+- Start the next bounded Phase 4 consumer validation with a Vue 3 reference application.
+
 ## 2026-08-18 23:50 CEST | Adopt Applye-style task triage preflight
 
 Status: completed

@@ -210,6 +210,43 @@ PR: not opened
 - Continue Phase 4 with measured bundle/type-check/lifecycle evidence or another Vii-owned consumer
   scenario. Do not introduce Vue or another unrelated framework as a substitute for Vii.
 
+## 2026-08-19 01:12 CEST | Record Vanilla consumer baseline
+
+Status: completed
+Branch: `dogfood/phase4-vanilla-onboarding-validation`
+PR: not opened
+
+### Scope
+
+- Capture reproducible application-level lifecycle, type-check, build-time, and bundle evidence for
+  the Vii-native Vanilla onboarding consumer.
+
+### Changes
+
+- Added a repeated lifecycle test covering 100 form instances and Scope disposal without callbacks.
+- Recorded the external consumer baseline in project state without introducing hard release budgets.
+- No Vii runtime, package, public API, dependency, or fixture code changed.
+
+### Validation
+
+- External consumer `pnpm test`: passed; Vitest v4.1.11, 1 file and 6 tests passed.
+- Repeated lifecycle test: 100 create/subscribe/dispose iterations passed.
+- External consumer `pnpm exec tsc --noEmit`: user-reported wall time 0.98 s.
+- External consumer `pnpm build`: user-reported wall time 1.23 s; Vite v8.2.1 transformed 16 modules.
+- Production JavaScript asset: 11,184 bytes raw, 4,005 bytes gzip.
+- Production CSS asset: Vite-reported 1.59 kB raw, 0.77 kB gzip.
+
+### Architecture / compatibility
+
+- The baseline covers the current Vii Core consumer boundary and repeated Scope cleanup; it does not
+  claim absence of all browser memory retention or establish a release threshold.
+- No native renderer, framework, runtime, package, or public API was introduced.
+
+### Remaining / recovery
+
+- Repeat the same measurements on future consumer revisions, document methodology changes, and choose
+  the next Vii-owned Phase 4 scenario or deeper browser memory investigation.
+
 ## 2026-08-18 23:50 CEST | Adopt Applye-style task triage preflight
 
 Status: completed

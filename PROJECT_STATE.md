@@ -106,6 +106,12 @@ keeps form domain data separate from UI state, and exercises Computed validation
 Scope-preserving reset, and teardown disposal. Its store has five passing Vitest tests, and the user
 confirmed the integrated Vanilla DOM browser smoke check is functional. This is still external dogfood
 evidence rather than a native Vii renderer or application-framework implementation.
+The same Vanilla consumer now has an application-level baseline: six Vitest tests pass, including
+100 repeated form-instance Scope disposal checks; the reported `tsc --noEmit` wall time is 0.98 s and
+the reported production build wall time is 1.23 s. The Vite 8.2.1 output reports 16 transformed
+modules, 11,184 raw JavaScript bytes and 4,005 gzip bytes for the JavaScript asset, plus 1.59 kB raw
+and 0.77 kB gzip for the CSS asset. These are local reproducibility measurements, not release budgets
+or universal performance claims.
 The repository uses Changesets for future public package versioning. The configuration has no publish
 script; version application and publication remain separately approved release actions.
 The packed Core artifact also carries its Apache-2.0 license, repository and issue links, discovery

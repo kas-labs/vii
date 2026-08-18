@@ -2378,3 +2378,77 @@ PR: [#74](https://github.com/kas-labs/vii/pull/74)
   `@vii-labs/core@next`.
 - For the next release, update the exact candidate version/tag through a reviewed PR and use the configured
   OIDC stage-only Trusted Publisher. Do not intentionally publish `latest` or add a fake stable package.
+
+## 2026-08-18 17:09 CEST | Review project state and roadmap
+
+Status: completed
+Branch: `main`
+PR: not opened
+
+### Scope
+
+- Review the canonical project documents, latest operational handoff, repository history, current package
+  surface, and roadmap to report completed work and the planned next steps.
+
+### Changes
+
+- No runtime or product behavior changed. This entry records the repository-state audit and its validation
+  evidence.
+
+### Validation
+
+- Read `README.md`, `ROADMAP.md`, `PROJECT_STATE.md`, `CONTRIBUTING.md`, current governance/product-boundary
+  documents, roadmap/implementation documents, relevant diagnostics RFCs, and the latest Duty Watch entries.
+- Confirmed clean `main` at `531e83d`, synchronized with `origin/main`.
+- `pnpm validate`: passed with network-enabled registry access; all lint, typecheck, test, build, and packed
+  Core, reference, React, Angular, Vue, and CLI Core consumer checks passed.
+- `git diff --check`: passed.
+
+### Architecture / compatibility
+
+- No package, public API, dependency, runtime, filesystem, network, release, security, or privacy behavior
+  changed. PROJECT_STATE remains the durable implementation source of truth; roadmap research remains
+  non-supporting design intent.
+
+### Remaining / recovery
+
+- None for this audit. The next implementation decision should use the Phase 3 consumer/governance gate
+  and the Phase 4 real-application validation plan summarized in the handoff report.
+
+## 2026-08-18 17:25 CEST | Activate project grilling workflow
+
+Status: completed
+Branch: `docs/activate-grilling-routing`
+PR: not opened
+
+### Scope
+
+- Review the installed external skills and make grilling automatic for ambiguous repository feature and
+  architecture work while preserving explicit bug-diagnosis and small-task paths.
+
+### Changes
+
+- Added task-routing rules to `AGENTS.md` for `aif-task-router`, `grill-with-docs`, `grill-me`,
+  `diagnosing-bugs`/`aif-debugger`, discovery, planning review, TDD, and verification.
+- Enabled model invocation for the local `grill-with-docs` entrypoint and added an external-skills
+  adoption note covering provenance, MIT licensing, hashes, manual-only side effects, and rollback.
+- Added the selected editable skills and `skills-lock.json` as the project-owned workflow bundle.
+
+### Validation
+
+- `pnpm validate`: passed; formatting, lint, typecheck, tests, builds, and packed Core, reference,
+  React, Angular, Vue, and CLI Core consumers passed.
+- `git diff --check`: passed.
+- Static extension review found no automatic install, publish, telemetry, or hidden authority path;
+  `claude-handoff` and `wizard` remain manual-only due to their external-process/secret-write capability.
+
+### Architecture / compatibility
+
+- No Vii runtime, package, public API, dependency, or product behavior changed. The routing rule affects
+  agent workflow selection only; project governance and explicit human approval remain authoritative.
+- External skills remain editable, hash-recorded guidance and are not treated as trusted authority.
+
+### Remaining / recovery
+
+- Review the full diff and PR checks. To roll back the workflow adoption, revert this commit and remove
+  the added external skill bundle; do not update skills in place without repeating the extension review.

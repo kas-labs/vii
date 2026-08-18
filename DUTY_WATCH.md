@@ -37,6 +37,44 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-18 18:57 CEST | Validate external React consumer State slice
+
+Status: completed
+Branch: `dogfood/phase4-react-reference-validation`
+PR: not opened
+
+### Scope
+
+- Validate the packed Vii Core and React artifacts in a separately created Vite React consumer as
+  the first bounded Phase 4 real-application dogfood slice.
+
+### Changes
+
+- The external consumer now keeps its Vii board store in a dedicated module.
+- Added Vitest coverage for Computed filtering, atomic Batch writes, and Scope disposal.
+- No Vii repository runtime, package, public API, dependency, or fixture code changed.
+
+### Validation
+
+- External consumer `pnpm test`: passed; Vitest v4.1.11, 1 file and 3 tests passed.
+- External consumer `pnpm build`: passed; TypeScript build and Vite v8.2.1 production build passed,
+  transforming 28 modules.
+- Earlier consumer smoke validation also confirmed the Vite dev server and browser interaction for
+  the initial State/Computed/Batch/Scope task-board slice.
+
+### Architecture / compatibility
+
+- Evidence confirms the existing packed Core and React boundaries work in a real Vite React consumer;
+  no repository API or package-boundary change was required.
+- The broader Phase 4 remains open: more real applications, lifecycle/memory checks, bundle and
+  type-check budgets, deployment threat-model review, and additional adapter/runtime coverage.
+
+### Remaining / recovery
+
+- Re-run the consumer `pnpm dev` smoke check after the final module extraction if browser evidence is
+  required for this exact revision. Continue Phase 4 with the next bounded consumer or lifecycle
+  validation slice.
+
 ## 2026-08-18 23:50 CEST | Adopt Applye-style task triage preflight
 
 Status: completed

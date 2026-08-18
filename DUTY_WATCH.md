@@ -170,6 +170,46 @@ PR: not opened
 
 - Start the next bounded Phase 4 consumer validation with a Vue 3 reference application.
 
+## 2026-08-19 01:04 CEST | Validate Vii-native Vanilla onboarding consumer
+
+Status: completed
+Branch: `dogfood/phase4-vanilla-onboarding-validation`
+PR: not opened
+
+### Scope
+
+- Validate a second Phase 4 real-application consumer using Vii Core with Vanilla DOM, without
+  conflating Vii with an unrelated framework.
+
+### Changes
+
+- Created the external `vii-reference-vanilla-onboarding` consumer manually from the Vite
+  `vanilla-ts` template.
+- Added an app-level two-step onboarding form using one Vii `FormData` state, separate UI state,
+  Computed validation, atomic Batch transitions, Scope-preserving reset, and teardown disposal.
+- Corrected the next-step direction from the stale Vue suggestion to Vii-native/reference work.
+- No Vii runtime, package, public API, dependency, or fixture code changed.
+
+### Validation
+
+- External consumer `pnpm test`: passed; Vitest v4.1.11, 1 file and 5 tests passed.
+- External consumer `pnpm exec tsc --noEmit`: passed during the store validation checkpoint.
+- External consumer `pnpm build`: passed during the store validation checkpoint with Vite v8.2.1.
+- User-confirmed Vanilla DOM browser smoke check: passed for field validation, step transition,
+  back, submit summary, reset, and absence of reported console errors.
+- Exact post-DOM command output was not captured separately; the browser result was user-confirmed.
+
+### Architecture / compatibility
+
+- This validates Vii Core as a framework-independent application state/lifecycle foundation while
+  keeping DOM behavior at the application edge.
+- It does not introduce a native Vii renderer or application framework; those remain Research/Vision.
+
+### Remaining / recovery
+
+- Continue Phase 4 with measured bundle/type-check/lifecycle evidence or another Vii-owned consumer
+  scenario. Do not introduce Vue or another unrelated framework as a substitute for Vii.
+
 ## 2026-08-18 23:50 CEST | Adopt Applye-style task triage preflight
 
 Status: completed

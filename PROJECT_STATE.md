@@ -100,6 +100,12 @@ contract covers Computed filtering, atomic Batch notifications, and Scope dispos
 also passes the TypeScript/Vite production build. This is validation evidence rather than a
 repository fixture, so the broader Phase 4 work remains open for additional applications, lifecycle,
 bundle/type-check budgets, deployment threat-model review, and other real-world checks.
+The second external Phase 4 consumer is a Vii-native Vanilla DOM onboarding application named
+`vii-reference-vanilla-onboarding`. It uses only the packed Core artifact at the application boundary,
+keeps form domain data separate from UI state, and exercises Computed validation, Batch step changes,
+Scope-preserving reset, and teardown disposal. Its store has five passing Vitest tests, and the user
+confirmed the integrated Vanilla DOM browser smoke check is functional. This is still external dogfood
+evidence rather than a native Vii renderer or application-framework implementation.
 The repository uses Changesets for future public package versioning. The configuration has no publish
 script; version application and publication remain separately approved release actions.
 The packed Core artifact also carries its Apache-2.0 license, repository and issue links, discovery

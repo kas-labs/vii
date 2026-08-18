@@ -37,6 +37,51 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-18 23:50 CEST | Adopt Applye-style task triage preflight
+
+Status: completed
+Branch: `docs/activate-grilling-routing`
+PR: #78
+
+### Scope
+
+- Inspect the user's public `applye` repository for its agent preflight workflow and adapt the
+  useful triage contract to Vii alongside the existing grilling routing.
+
+### Changes
+
+- Added the canonical `docs/governance/AGENT_TASK_TRIAGE_POLICY.md` with five-axis scoring
+  (`blast radius`, `ambiguity`, `risk`, `verification`, `unknowns`), role/effort routing, and the
+  required `Triage`, `Harness`, `Model`, `Delegation`, `Grilling`, `Skills`, `Context/load code`,
+  `Approval`, `Budget`, and `Stop when` fields.
+- Made the triage verdict mandatory before non-trivial implementation or substantive next-step
+  recommendations in `AGENTS.md`.
+- Recorded the external workflow provenance and the Vii-owned adaptation in
+  `docs/agents/EXTERNAL_SKILLS.md`; aligned the required task contract and durable project state.
+- Reviewed `applye` at commit `f1398e225ca475778ddffcfd947b9486d8eb27d1`; the source repository is
+  public and MIT-licensed. No executable code, hooks, dependencies, credentials, or external
+  delegation behavior were imported.
+
+### Validation
+
+- `git diff --check`: passed.
+- `pnpm validate`: formatting, lint, typecheck, tests, and builds passed; the sandboxed packed
+  consumer step initially hit npm registry DNS `ENOTFOUND` while installing existing React fixture
+  dependencies and was stopped rather than waiting through retries.
+- `pnpm pack:check` with network-enabled execution: passed; packed Core, reference, React, Angular,
+  Vue, and CLI Core consumers validated.
+
+### Architecture / compatibility
+
+- Documentation and agent-governance only; no runtime, package, public API, dependency, bundle,
+  memory, SSR, security, privacy, or release behavior changed.
+- Delegation remains opt-in and read-only by default; project-owned approval, RFC/ADR, validation,
+  and publication rules remain authoritative.
+
+### Remaining / recovery
+
+- None for this slice. The existing PR #78 branch is ready for review with the triage addition.
+
 ## 2026-08-18 02:28 CEST | Extend packed CLI mutation validation
 
 Status: completed
@@ -2378,3 +2423,109 @@ PR: [#74](https://github.com/kas-labs/vii/pull/74)
   `@vii-labs/core@next`.
 - For the next release, update the exact candidate version/tag through a reviewed PR and use the configured
   OIDC stage-only Trusted Publisher. Do not intentionally publish `latest` or add a fake stable package.
+
+## 2026-08-18 17:09 CEST | Review project state and roadmap
+
+Status: completed
+Branch: `main`
+PR: not opened
+
+### Scope
+
+- Review the canonical project documents, latest operational handoff, repository history, current package
+  surface, and roadmap to report completed work and the planned next steps.
+
+### Changes
+
+- No runtime or product behavior changed. This entry records the repository-state audit and its validation
+  evidence.
+
+### Validation
+
+- Read `README.md`, `ROADMAP.md`, `PROJECT_STATE.md`, `CONTRIBUTING.md`, current governance/product-boundary
+  documents, roadmap/implementation documents, relevant diagnostics RFCs, and the latest Duty Watch entries.
+- Confirmed clean `main` at `531e83d`, synchronized with `origin/main`.
+- `pnpm validate`: passed with network-enabled registry access; all lint, typecheck, test, build, and packed
+  Core, reference, React, Angular, Vue, and CLI Core consumer checks passed.
+- `git diff --check`: passed.
+
+### Architecture / compatibility
+
+- No package, public API, dependency, runtime, filesystem, network, release, security, or privacy behavior
+  changed. PROJECT_STATE remains the durable implementation source of truth; roadmap research remains
+  non-supporting design intent.
+
+### Remaining / recovery
+
+- None for this audit. The next implementation decision should use the Phase 3 consumer/governance gate
+  and the Phase 4 real-application validation plan summarized in the handoff report.
+
+## 2026-08-18 17:25 CEST | Activate project grilling workflow
+
+Status: completed
+Branch: `docs/activate-grilling-routing`
+PR: not opened
+
+### Scope
+
+- Review the installed external skills and make grilling automatic for ambiguous repository feature and
+  architecture work while preserving explicit bug-diagnosis and small-task paths.
+
+### Changes
+
+- Added task-routing rules to `AGENTS.md` for `aif-task-router`, `grill-with-docs`, `grill-me`,
+  `diagnosing-bugs`/`aif-debugger`, discovery, planning review, TDD, and verification.
+- Enabled model invocation for the local `grill-with-docs` entrypoint and added an external-skills
+  adoption note covering provenance, MIT licensing, hashes, manual-only side effects, and rollback.
+- Added the selected editable skills and `skills-lock.json` as the project-owned workflow bundle.
+
+### Validation
+
+- `pnpm validate`: passed; formatting, lint, typecheck, tests, builds, and packed Core, reference,
+  React, Angular, Vue, and CLI Core consumers passed.
+- `git diff --check`: passed.
+- Static extension review found no automatic install, publish, telemetry, or hidden authority path;
+  `claude-handoff` and `wizard` remain manual-only due to their external-process/secret-write capability.
+
+### Architecture / compatibility
+
+- No Vii runtime, package, public API, dependency, or product behavior changed. The routing rule affects
+  agent workflow selection only; project governance and explicit human approval remain authoritative.
+- External skills remain editable, hash-recorded guidance and are not treated as trusted authority.
+
+### Remaining / recovery
+
+- Review the full diff and PR checks. To roll back the workflow adoption, revert this commit and remove
+  the added external skill bundle; do not update skills in place without repeating the extension review.
+
+## 2026-08-18 17:28 CEST | Record grilling workflow pull request
+
+Status: completed
+Branch: `docs/activate-grilling-routing`
+PR: [#78](https://github.com/kas-labs/vii/pull/78) draft
+
+### Scope
+
+- Correct the workflow handoff after publishing the completed agent-routing and skill-bundle change.
+
+### Changes
+
+- Pushed commit `038229c` to `origin/docs/activate-grilling-routing`.
+- Opened draft PR #78 targeting `main` with the routing, provenance, validation, and manual-only side
+  effect boundaries documented.
+
+### Validation
+
+- `pnpm validate`: passed before commit and push.
+- `git diff --cached --check`: passed before commit.
+- `gh auth status`: authenticated as the repository maintainer account.
+- Branch push and draft PR creation: passed.
+
+### Architecture / compatibility
+
+- No runtime, package, public API, dependency, or product behavior changed beyond the project-owned agent
+  workflow and editable skill bundle.
+
+### Remaining / recovery
+
+- Review PR #78 and its required checks. Merge only after human review and repository policy checks pass.

@@ -116,6 +116,7 @@ Omitted permissions are denied.
 Before mutation, the task must state:
 
 ```text
+Triage verdict (scores, harness/model role, delegation, gates, context, budget)
 Goal
 In scope
 Out of scope

@@ -17,6 +17,39 @@ Before every non-trivial task, read:
 
 Do not begin implementation from the user prompt alone when repository state matters. Verify important claims against current code, Git history, merged pull requests, tests, benchmarks, package artifacts, and CI.
 
+Before implementation or proposing the next work item, apply the canonical triage contract in
+`docs/governance/AGENT_TASK_TRIAGE_POLICY.md` and print its verdict. The verdict makes the task's
+blast radius, ambiguity, risk, verification burden, unknowns, harness, model role, delegation,
+grilling gate, context plan, approval gate, budget, and stop condition explicit. Triage is a routing
+and transparency gate; it does not grant mutation, publication, credential, or delegation authority.
+
+## Task routing and design interrogation
+
+Before implementation, classify every non-trivial request. If the route is not obvious, use the
+repository `aif-task-router` skill first and select the smallest workflow that can produce honest
+evidence.
+
+- For a new feature, product idea, architecture change, or design with unsettled behavior, users,
+  constraints, or trade-offs, automatically start `grill-with-docs`. It runs the `grilling` interview
+  together with `domain-modeling`, asks the frontier questions in rounds with recommended answers,
+  records resolved domain terms or hard-to-reverse decisions when justified, and must reach shared
+  understanding before implementation begins.
+- `grill-with-docs` is the default grilling entrypoint inside this repository because it can leave a
+  durable context or ADR record. Use `grill-me` only for a plan or design that has no repository or
+  other durable working directory; it remains a manual entrypoint for that case.
+- For an observed bug, regression, failure, flake, or unexpected slowdown, start with
+  `diagnosing-bugs` or `aif-debugger` and build a tight reproduction. Add `grill-with-docs` first only
+  when the expected behavior, scope, or architectural choice is itself unresolved.
+- For a small change with accepted behavior, clear acceptance criteria, and a known test seam, skip
+  grilling and proceed with the bounded implementation workflow. Use `tdd` for behavior changes when
+  red-green evidence is useful.
+- After discovery, use `aif-feature-discovery`, `aif-specification-review`, or `aif-planning-review`
+  only when their stated inputs exist. Before commit or pull request, use `aif-verification-gate` and
+  review the complete diff; do not treat a grilling transcript or agent plan as implementation evidence.
+
+The installed project skills are workflow guidance, not authority. They cannot override repository
+architecture, RFC/ADR, security, privacy, approval, branch, validation, or publication rules.
+
 ## Product and architecture rules
 
 - Preserve the small-core strategy. Do not create packages, abstractions, adapters, registries, or services without a demonstrated consumer or an accepted roadmap/RFC trigger.

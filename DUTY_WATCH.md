@@ -2452,3 +2452,35 @@ PR: not opened
 
 - Review the full diff and PR checks. To roll back the workflow adoption, revert this commit and remove
   the added external skill bundle; do not update skills in place without repeating the extension review.
+
+## 2026-08-18 17:28 CEST | Record grilling workflow pull request
+
+Status: completed
+Branch: `docs/activate-grilling-routing`
+PR: [#78](https://github.com/kas-labs/vii/pull/78) draft
+
+### Scope
+
+- Correct the workflow handoff after publishing the completed agent-routing and skill-bundle change.
+
+### Changes
+
+- Pushed commit `038229c` to `origin/docs/activate-grilling-routing`.
+- Opened draft PR #78 targeting `main` with the routing, provenance, validation, and manual-only side
+  effect boundaries documented.
+
+### Validation
+
+- `pnpm validate`: passed before commit and push.
+- `git diff --cached --check`: passed before commit.
+- `gh auth status`: authenticated as the repository maintainer account.
+- Branch push and draft PR creation: passed.
+
+### Architecture / compatibility
+
+- No runtime, package, public API, dependency, or product behavior changed beyond the project-owned agent
+  workflow and editable skill bundle.
+
+### Remaining / recovery
+
+- Review PR #78 and its required checks. Merge only after human review and repository policy checks pass.

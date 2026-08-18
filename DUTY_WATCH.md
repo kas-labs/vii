@@ -106,6 +106,36 @@ PR: [#79](https://github.com/kas-labs/vii/pull/79) draft
 - Review PR #79 and wait for its required checks. Keep the PR as draft until human review confirms
   the evidence and the next Phase 4 slice is selected.
 
+## 2026-08-19 00:31 CEST | Record React validation pull request merge
+
+Status: completed
+Branch: `docs/record-pr79-merge-status`
+PR: [#79](https://github.com/kas-labs/vii/pull/79) merged
+
+### Scope
+
+- Reconcile the Phase 4 React consumer handoff after the published documentation change was merged.
+
+### Changes
+
+- Recorded that PR #79 merged into `main` at commit `8a8b13f`.
+- Confirmed the local `main` branch is synchronized with `origin/main`.
+
+### Validation
+
+- PR #79 repository validation, governance, dependency review, and CodeQL checks: passed.
+- Local working tree before this documentation correction: clean.
+
+### Architecture / compatibility
+
+- Documentation-only reconciliation; no runtime, package, public API, dependency, bundle, memory,
+  SSR, security, privacy, or release behavior changed.
+
+### Remaining / recovery
+
+- Continue with the manual post-extraction smoke check in the external Vite React consumer, then
+  select the next bounded Phase 4 consumer or lifecycle slice.
+
 ## 2026-08-18 23:50 CEST | Adopt Applye-style task triage preflight
 
 Status: completed

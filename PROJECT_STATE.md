@@ -181,7 +181,8 @@ the packed Angular clean-consumer fixture. Vue adapter checks include `pnpm --fi
 and the packed Vue clean-consumer fixture. CLI foundation checks include
 `pnpm --filter @vii-labs/cli-core test` and the packed CLI Core detection/init/add-state clean-consumer
 fixture, which installs packed `@vii-labs/core` and `@vii-labs/cli-core` artifacts together and exercises
-read-only doctor reporting plus the versioned machine-output envelope.
+read-only doctor reporting, the versioned machine-output envelope, and dry-run, applied, idempotent
+unchanged, and blocked local-change mutation paths.
 
 Repository governance CI additionally checks branch naming and forbidden authorship/tool-attribution metadata for pull requests and their commits.
 The public repository also runs CodeQL analysis for JavaScript/TypeScript and GitHub Actions workflows,

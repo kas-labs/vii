@@ -112,6 +112,25 @@ try {
   assert.deepEqual(consumer.initFiles, ["vii.config.ts"]);
   assert.equal(consumer.addStateStatus, "dry-run");
   assert.deepEqual(consumer.addStateFiles, ["src/state.ts"]);
+  assert.deepEqual(consumer.mutationStatuses, [
+    "applied",
+    "unchanged",
+    "applied",
+    "unchanged",
+    "blocked",
+  ]);
+  assert.deepEqual(consumer.mutationFiles, [["vii.config.ts"], [], ["src/state.ts"], [], []]);
+  assert.deepEqual(consumer.mutationValidation, [true, true, true, true, false]);
+  assert.deepEqual(
+    consumer.mutationJsonRoundTrips.map((output) => [output.command, output.status, output.kind]),
+    [
+      ["init", "applied", "mutation"],
+      ["init", "unchanged", "mutation"],
+      ["add state", "applied", "mutation"],
+      ["add state", "unchanged", "mutation"],
+      ["add state", "blocked", "mutation"],
+    ],
+  );
   assert.equal(consumer.doctorStatus, "healthy");
   assert.deepEqual(consumer.doctorFindingCodes, []);
   assert.deepEqual(consumer.machineOutputProtocols, ["vii.cli", "vii.cli", "vii.cli"]);

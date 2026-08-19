@@ -100,6 +100,51 @@ contract covers Computed filtering, atomic Batch notifications, and Scope dispos
 also passes the TypeScript/Vite production build. This is validation evidence rather than a
 repository fixture, so the broader Phase 4 work remains open for additional applications, lifecycle,
 bundle/type-check budgets, deployment threat-model review, and other real-world checks.
+The second external Phase 4 consumer is a Vii-native Vanilla DOM onboarding application named
+`vii-reference-vanilla-onboarding`. It uses only the packed Core artifact at the application boundary,
+keeps form domain data separate from UI state, and exercises Computed validation, Batch step changes,
+Scope-preserving reset, and teardown disposal. Its store has five passing Vitest tests, and the user
+confirmed the integrated Vanilla DOM browser smoke check is functional. This is still external dogfood
+evidence rather than a native Vii renderer or application-framework implementation.
+The same Vanilla consumer now has an application-level baseline: six Vitest tests pass, including
+100 repeated form-instance Scope disposal checks; the reported `tsc --noEmit` wall time is 0.98 s and
+the reported production build wall time is 1.23 s. The Vite 8.2.1 output reports 16 transformed
+modules, 11,184 raw JavaScript bytes and 4,005 gzip bytes for the JavaScript asset, plus 1.59 kB raw
+and 0.77 kB gzip for the CSS asset. These are local reproducibility measurements, not release budgets
+or universal performance claims.
+The Vanilla consumer's DOM boundary has also passed a bounded security and accessibility review:
+the shared HTML escaping helper has two passing malicious-input tests, and the consumer build reports
+17 transformed modules with 11.64 kB raw JavaScript/4.19 kB gzip and 1.74 kB raw CSS/0.81 kB gzip.
+The user confirmed keyboard navigation, accessible error associations, escaped payload rendering, no
+script/image execution, and no reported browser-console errors. This is a bounded consumer review,
+not a penetration test or a universal accessibility certification.
+The same consumer now exposes a development-only `mountOnboarding(root)` lifecycle seam backed by an
+idempotent dispose function. A browser probe repeatedly mounted and disposed the onboarding UI in one
+process, verified an empty host after each cycle, and completed a 1,000-cycle run without reported
+errors. The probe is development-only and is not a native Vii renderer or a production memory budget.
+The external onboarding consumer's form API was then simplified so its application boundary exposes
+form state, visible errors, user actions, and idempotent disposal without leaking the internal Scope,
+touched map, or unused validation Computed values. The simplified consumer passed eight Vitest tests,
+the TypeScript check, the Vite production build, the dev server smoke check, and the 100-cycle browser
+lifecycle probe. This is consumer evidence and does not change Vii's public Core API.
+The same external Vanilla consumer now mounts a Vii-native Diagnostics playground as its active demo.
+The playground uses development diagnostics with maxEvents: 100 and traceId:
+"diagnostics-playground", and exposes one explicit demo Scope around a counter and doubled Computed
+value, Increment, Batch +2, Scope disposal/recreation, a live event timeline, bounded event counters,
+Clear, and vii.trace JSON preview/download. Its public model seam has four passing Vitest tests
+covering state/Computed observation, Batch trace recording, Scope disposal and recreation, and
+bounded trace export/clear; together with the existing onboarding and DOM tests the consumer reports
+12 passing tests across three files. pnpm exec tsc --noEmit and the Vite 8.2.1 production build pass;
+the build reports 19 transformed modules, 11.76 kB raw JavaScript/4.42 kB gzip, and 3.32 kB raw CSS/
+1.23 kB gzip. A local Vite page fetch and the user's manual browser verification of timeline, Scope
+lifecycle, Clear, JSON preview, and vii-trace.json download all succeed for this diagnostics revision.
+The Diagnostics playground consumer now also carries a validation surface for Phase 4 lifecycle and
+artifact budgets. Its model tests cover 1000 repeated playground instances and the bounded
+maxEvents: 100 buffer; the Vite build remains 19 transformed modules, and the reproducible
+report:bundle command measured 15,089 raw bytes and 5,645 gzip bytes across the emitted CSS and
+JavaScript assets. The dev-only browser probe now exercises Create Scope, Increment, Batch +2,
+Dispose Scope, idempotent mount disposal, and an empty host over a default 1000-cycle run; the
+browser execution result for this revision remains pending manual confirmation.
 The repository uses Changesets for future public package versioning. The configuration has no publish
 script; version application and publication remain separately approved release actions.
 The packed Core artifact also carries its Apache-2.0 license, repository and issue links, discovery

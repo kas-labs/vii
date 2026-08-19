@@ -106,6 +106,261 @@ PR: [#79](https://github.com/kas-labs/vii/pull/79) draft
 - Review PR #79 and wait for its required checks. Keep the PR as draft until human review confirms
   the evidence and the next Phase 4 slice is selected.
 
+## 2026-08-19 00:31 CEST | Record React validation pull request merge
+
+Status: completed
+Branch: `docs/record-pr79-merge-status`
+PR: [#79](https://github.com/kas-labs/vii/pull/79) merged
+
+### Scope
+
+- Reconcile the Phase 4 React consumer handoff after the published documentation change was merged.
+
+### Changes
+
+- Recorded that PR #79 merged into `main` at commit `8a8b13f`.
+- Confirmed the local `main` branch is synchronized with `origin/main`.
+
+### Validation
+
+- PR #79 repository validation, governance, dependency review, and CodeQL checks: passed.
+- Local working tree before this documentation correction: clean.
+
+### Architecture / compatibility
+
+- Documentation-only reconciliation; no runtime, package, public API, dependency, bundle, memory,
+  SSR, security, privacy, or release behavior changed.
+
+### Remaining / recovery
+
+- Continue with the manual post-extraction smoke check in the external Vite React consumer, then
+  select the next bounded Phase 4 consumer or lifecycle slice.
+
+## 2026-08-19 00:36 CEST | Complete React consumer smoke validation
+
+Status: completed
+Branch: `docs/record-pr79-merge-status`
+PR: not opened
+
+### Scope
+
+- Complete the post-extraction manual smoke check for the external Vite React consumer.
+
+### Changes
+
+- Confirmed the user-tested React consumer remains functional after moving the Vii board store into
+  its dedicated module.
+- Confirmed the interactive task-board flow: filtering, task creation, completion toggling, and
+  clearing completed tasks.
+
+### Validation
+
+- User-confirmed `pnpm test`: passed with 3 Vitest tests.
+- User-confirmed `pnpm build`: passed.
+- User-confirmed `pnpm dev` browser smoke check: passed with no reported console errors.
+
+### Architecture / compatibility
+
+- Real-consumer evidence now covers Core State, Computed, Batch, Scope disposal, React integration,
+  TypeScript/Vite production build, and basic browser interaction.
+- No Vii runtime, package, public API, dependency, bundle, memory, SSR, security, privacy, or release
+  behavior changed.
+
+### Remaining / recovery
+
+- Start the next bounded Phase 4 consumer validation with a Vue 3 reference application.
+
+## 2026-08-19 01:04 CEST | Validate Vii-native Vanilla onboarding consumer
+
+Status: completed
+Branch: `dogfood/phase4-vanilla-onboarding-validation`
+PR: not opened
+
+### Scope
+
+- Validate a second Phase 4 real-application consumer using Vii Core with Vanilla DOM, without
+  conflating Vii with an unrelated framework.
+
+### Changes
+
+- Created the external `vii-reference-vanilla-onboarding` consumer manually from the Vite
+  `vanilla-ts` template.
+- Added an app-level two-step onboarding form using one Vii `FormData` state, separate UI state,
+  Computed validation, atomic Batch transitions, Scope-preserving reset, and teardown disposal.
+- Corrected the next-step direction from the stale Vue suggestion to Vii-native/reference work.
+- No Vii runtime, package, public API, dependency, or fixture code changed.
+
+### Validation
+
+- External consumer `pnpm test`: passed; Vitest v4.1.11, 1 file and 5 tests passed.
+- External consumer `pnpm exec tsc --noEmit`: passed during the store validation checkpoint.
+- External consumer `pnpm build`: passed during the store validation checkpoint with Vite v8.2.1.
+- User-confirmed Vanilla DOM browser smoke check: passed for field validation, step transition,
+  back, submit summary, reset, and absence of reported console errors.
+- Exact post-DOM command output was not captured separately; the browser result was user-confirmed.
+
+### Architecture / compatibility
+
+- This validates Vii Core as a framework-independent application state/lifecycle foundation while
+  keeping DOM behavior at the application edge.
+- It does not introduce a native Vii renderer or application framework; those remain Research/Vision.
+
+### Remaining / recovery
+
+- Continue Phase 4 with measured bundle/type-check/lifecycle evidence or another Vii-owned consumer
+  scenario. Do not introduce Vue or another unrelated framework as a substitute for Vii.
+
+## 2026-08-19 01:12 CEST | Record Vanilla consumer baseline
+
+Status: completed
+Branch: `dogfood/phase4-vanilla-onboarding-validation`
+PR: not opened
+
+### Scope
+
+- Capture reproducible application-level lifecycle, type-check, build-time, and bundle evidence for
+  the Vii-native Vanilla onboarding consumer.
+
+### Changes
+
+- Added a repeated lifecycle test covering 100 form instances and Scope disposal without callbacks.
+- Recorded the external consumer baseline in project state without introducing hard release budgets.
+- No Vii runtime, package, public API, dependency, or fixture code changed.
+
+### Validation
+
+- External consumer `pnpm test`: passed; Vitest v4.1.11, 1 file and 6 tests passed.
+- Repeated lifecycle test: 100 create/subscribe/dispose iterations passed.
+- External consumer `pnpm exec tsc --noEmit`: user-reported wall time 0.98 s.
+- External consumer `pnpm build`: user-reported wall time 1.23 s; Vite v8.2.1 transformed 16 modules.
+- Production JavaScript asset: 11,184 bytes raw, 4,005 bytes gzip.
+- Production CSS asset: Vite-reported 1.59 kB raw, 0.77 kB gzip.
+
+### Architecture / compatibility
+
+- The baseline covers the current Vii Core consumer boundary and repeated Scope cleanup; it does not
+  claim absence of all browser memory retention or establish a release threshold.
+- No native renderer, framework, runtime, package, or public API was introduced.
+
+### Remaining / recovery
+
+- Repeat the same measurements on future consumer revisions, document methodology changes, and choose
+  the next Vii-owned Phase 4 scenario or deeper browser memory investigation.
+
+## 2026-08-19 02:02 CEST | Complete Vanilla DOM boundary review
+
+Status: completed
+Branch: `dogfood/phase4-vanilla-onboarding-validation`
+PR: not opened
+
+### Scope
+
+- Complete the bounded security and accessibility review of the Vii-native Vanilla onboarding
+  consumer's DOM boundary.
+
+### Changes
+
+- Centralized HTML escaping and added two malicious-input regression tests.
+- Added accessible form labels, error associations, `aria-invalid`, `role="alert"`, and notification
+  field grouping.
+- No Vii runtime, package, public API, dependency, or fixture code changed.
+
+### Validation
+
+- External consumer `pnpm test`: passed; 2 test files and 8 tests passed.
+- External consumer `pnpm exec tsc --noEmit`: passed.
+- External consumer `pnpm build`: passed; Vite v8.2.1 transformed 17 modules.
+- Production JavaScript asset: 11.64 kB raw, 4.19 kB gzip.
+- Production CSS asset: 1.74 kB raw, 0.81 kB gzip.
+- User-confirmed browser review: keyboard navigation, accessible errors, escaped malicious payload,
+  no script/image execution, and no reported console errors.
+
+### Architecture / compatibility
+
+- User input remains at the DOM edge and is escaped before HTML interpolation; Vii Core remains
+  framework-agnostic and unchanged.
+- This is bounded consumer security/accessibility evidence, not a penetration test or certification.
+
+### Remaining / recovery
+
+- Repeat the boundary tests when rendering or input handling changes. Continue with the next Vii-owned
+  Phase 4 scenario or a deeper browser memory investigation.
+
+## 2026-08-19 14:29 CEST | Validate Vanilla mount disposal lifecycle
+
+Status: completed
+Branch: `dogfood/phase4-vanilla-onboarding-validation`
+PR: not opened
+
+### Scope
+
+- Validate repeated application-level mount and dispose behavior for the Vii-native Vanilla consumer
+  in one browser process.
+
+### Changes
+
+- Extracted the UI lifecycle into `mountOnboarding(root)` with an idempotent `dispose()` result.
+- Added AbortController-backed DOM listener cleanup and a development-only lifecycle probe.
+- No Vii runtime, package, public API, dependency, or fixture code changed.
+
+### Validation
+
+- User-confirmed external consumer tests, TypeScript check, and production build remained green after
+  the mount boundary extraction.
+- Browser lifecycle probe completed 100 and 1,000 mount/dispose cycles without reported errors.
+- Each cycle left zero children in the probe host; repeated `dispose()` was safe.
+
+### Architecture / compatibility
+
+- The consumer now has an explicit application-edge lifecycle seam; Vii Core Scope remains the owner
+  of form Computed resources and subscriptions.
+- The probe is development-only evidence. It does not establish a universal browser heap budget or
+  prove absence of all retained memory in every browser.
+
+### Remaining / recovery
+
+- Remove or keep the development-only probe according to the consumer's test-fixture policy, repeat it
+  after lifecycle changes, and choose the next Vii-owned Phase 4 scenario.
+
+## 2026-08-19 15:37 CEST | Complete Vanilla consumer API simplification
+
+Status: completed
+Branch: `dogfood/phase4-vanilla-onboarding-validation`
+PR: not opened
+
+### Scope
+
+- Review and simplify the external Vii-native onboarding form API without changing user-visible
+  behavior or the Vii Core public contract.
+
+### Changes
+
+- Removed internal Scope, touched-state, and unused validation Computed values from the form store's
+  returned application surface.
+- Moved subscription cleanup ownership to `mountOnboarding()` while retaining idempotent form disposal.
+- No Vii runtime, package, public API, dependency, or fixture code changed.
+
+### Validation
+
+- External consumer `pnpm test`: passed; 2 test files and 8 tests passed.
+- External consumer `pnpm exec tsc --noEmit`: passed.
+- External consumer `pnpm build`: passed; Vite v8.2.1 transformed 19 modules.
+- External consumer `pnpm dev`: user-confirmed server ready and browser flow functional.
+- User-confirmed browser regression: onboarding, validation, Back, Submit, Reset, and lifecycle probe
+  remained functional after the API simplification.
+- User-confirmed `runViiLifecycleProbe(100)`: passed with an empty host and safe repeated disposal.
+
+### Architecture / compatibility
+
+- The application edge now owns DOM subscriptions; the form store keeps Core Scope private while
+  preserving explicit disposal.
+- This is an external consumer refactor and does not promote the form API or change Vii Core.
+
+### Remaining / recovery
+
+- Current Vanilla Phase 4 slice is complete. Reuse the recorded consumer baseline for future changes;
+  select the next Vii-owned scenario only after a new scoped decision.
+
 ## 2026-08-18 23:50 CEST | Adopt Applye-style task triage preflight
 
 Status: completed
@@ -808,7 +1063,7 @@ PR: not opened
 
 ## 2026-08-12 00:17 Europe/Berlin | Open P1.8 fixture PR
 
-Status: partial
+Status: completed
 Branch: `feat/expand-vanilla-fixture`
 PR: #26 (draft)
 
@@ -2598,3 +2853,116 @@ PR: [#78](https://github.com/kas-labs/vii/pull/78) draft
 ### Remaining / recovery
 
 - Review PR #78 and its required checks. Merge only after human review and repository policy checks pass.
+
+## 2026-08-19 16:16 CEST | Implement Diagnostics playground consumer
+
+Status: partial
+Branch: dogfood/phase4-vanilla-onboarding-validation
+PR: not opened
+
+### Scope
+
+- Add the approved Vii-native Interactive Diagnostics playground to the external Vanilla reference
+  consumer without changing Vii Core or introducing a renderer/framework dependency.
+
+### Changes
+
+- Added a diagnostics playground model with development mode, maxEvents: 100, and
+  traceId: "diagnostics-playground".
+- Added State/Computed counter controls, diagnostics-aware Batch +2, explicit Scope creation/disposal,
+  Scope recreation, live event timeline, counters, Clear, JSON preview, and JSON download boundary.
+- Switched the external consumer's active entrypoint and lifecycle probe to the playground.
+- Added four public-seam Vitest tests; the existing onboarding and DOM tests remain in place.
+
+### Validation
+
+- External consumer pnpm test: passed; Vitest v4.1.11, 3 files and 12 tests passed.
+- External consumer pnpm exec tsc --noEmit: passed.
+- External consumer pnpm build: passed; Vite v8.2.1 transformed 19 modules and emitted 11.76 kB
+  raw JavaScript/4.42 kB gzip and 3.32 kB raw CSS/1.23 kB gzip.
+- External consumer local Vite HTML fetch: passed.
+- Headless browser automation was not available in the current environment.
+- User manual browser verification passed for timeline, Scope lifecycle, Clear, JSON preview, and
+  vii-trace.json download.
+- git diff --check: passed before this handoff update.
+
+### Architecture / compatibility
+
+- No Vii repository runtime, package, public API, dependency, or release behavior changed.
+- The playground observes Vii Diagnostics and keeps browser DOM, Blob, URL, and download behavior at
+  the application edge.
+- The bounded trace remains value-free according to the Core diagnostics contract; no telemetry,
+  network call, or automatic publication was added.
+
+### Remaining / recovery
+
+- None for this slice. Continue Phase 4 with the next bounded consumer or lifecycle slice.
+
+## 2026-08-19 16:43 CEST | Publish Diagnostics playground handoff
+
+Status: completed
+Branch: dogfood/phase4-vanilla-onboarding-validation
+PR: [#80](https://github.com/kas-labs/vii/pull/80) draft
+
+### Scope
+
+- Publish the completed Diagnostics playground evidence for review.
+
+### Changes
+
+- Pushed the branch to origin.
+- Opened draft PR #80 targeting main.
+
+### Validation
+
+- git diff --check: passed before publication.
+- The PR body records the external consumer tests, typecheck, build, manual browser verification,
+  and the repository validation network limitation.
+
+### Architecture / compatibility
+
+- Documentation and handoff only; no Vii runtime, package, public API, dependency, release, telemetry,
+  or network behavior changed.
+
+### Remaining / recovery
+
+- Review PR #80 and merge only after the required checks and human review pass.
+
+## 2026-08-19 16:47 CEST | Validate Diagnostics lifecycle and bundle budgets
+
+Status: partial
+Branch: dogfood/phase4-vanilla-onboarding-validation
+PR: [#80](https://github.com/kas-labs/vii/pull/80) draft
+
+### Scope
+
+- Extend the external Diagnostics playground evidence with active Scope lifecycle repetition,
+  bounded diagnostics-buffer coverage, and reproducible bundle measurements.
+
+### Changes
+
+- Updated the dev-only lifecycle probe to exercise Create Scope, Increment, Batch +2, Dispose Scope,
+  idempotent disposal, and an empty host across a default 1000-cycle run.
+- Added Vitest coverage for 1000 repeated playground instances and the maxEvents: 100 buffer.
+- Added the external consumer command pnpm report:bundle for raw and gzip artifact sizes.
+
+### Validation
+
+- External consumer pnpm test: passed; Vitest v4.1.11, 3 files and 14 tests passed.
+- External consumer pnpm exec tsc --noEmit: passed.
+- External consumer pnpm build: passed; Vite v8.2.1 transformed 19 modules.
+- External consumer pnpm report:bundle: passed; total raw 15,089 bytes and gzip 5,645 bytes.
+- Browser execution of runViiLifecycleProbe(1000): not run yet.
+- git diff --check: pending after this handoff update.
+
+### Architecture / compatibility
+
+- No Vii Core runtime, package, public API, dependency, release, telemetry, or network behavior changed.
+- The probe and report remain external consumer validation seams; the measured sizes are local evidence,
+  not universal product budgets or a production memory claim.
+
+### Remaining / recovery
+
+- Run the dev server and execute runViiLifecycleProbe(1000) in the browser console. Expected result:
+  iterations 1000, activeScopeCycles 1000, remainingChildren 0, hostConnected true.
+- After that result, update this handoff to completed and push the final PR #80 head.

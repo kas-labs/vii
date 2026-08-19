@@ -144,7 +144,8 @@ maxEvents: 100 buffer; the Vite build remains 19 transformed modules, and the re
 report:bundle command measured 15,089 raw bytes and 5,645 gzip bytes across the emitted CSS and
 JavaScript assets. The dev-only browser probe now exercises Create Scope, Increment, Batch +2,
 Dispose Scope, idempotent mount disposal, and an empty host over a default 1000-cycle run; the
-browser execution result for this revision remains pending manual confirmation.
+user-confirmed browser execution returned iterations 1000, activeScopeCycles 1000, remainingChildren
+0, and hostConnected true.
 The repository uses Changesets for future public package versioning. The configuration has no publish
 script; version application and publication remain separately approved release actions.
 The packed Core artifact also carries its Apache-2.0 license, repository and issue links, discovery

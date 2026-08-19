@@ -118,6 +118,10 @@ the shared HTML escaping helper has two passing malicious-input tests, and the c
 The user confirmed keyboard navigation, accessible error associations, escaped payload rendering, no
 script/image execution, and no reported browser-console errors. This is a bounded consumer review,
 not a penetration test or a universal accessibility certification.
+The same consumer now exposes a development-only `mountOnboarding(root)` lifecycle seam backed by an
+idempotent dispose function. A browser probe repeatedly mounted and disposed the onboarding UI in one
+process, verified an empty host after each cycle, and completed a 1,000-cycle run without reported
+errors. The probe is development-only and is not a native Vii renderer or a production memory budget.
 The repository uses Changesets for future public package versioning. The configuration has no publish
 script; version application and publication remain separately approved release actions.
 The packed Core artifact also carries its Apache-2.0 license, repository and issue links, discovery

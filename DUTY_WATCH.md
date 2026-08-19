@@ -286,6 +286,42 @@ PR: not opened
 - Repeat the boundary tests when rendering or input handling changes. Continue with the next Vii-owned
   Phase 4 scenario or a deeper browser memory investigation.
 
+## 2026-08-19 14:29 CEST | Validate Vanilla mount disposal lifecycle
+
+Status: completed
+Branch: `dogfood/phase4-vanilla-onboarding-validation`
+PR: not opened
+
+### Scope
+
+- Validate repeated application-level mount and dispose behavior for the Vii-native Vanilla consumer
+  in one browser process.
+
+### Changes
+
+- Extracted the UI lifecycle into `mountOnboarding(root)` with an idempotent `dispose()` result.
+- Added AbortController-backed DOM listener cleanup and a development-only lifecycle probe.
+- No Vii runtime, package, public API, dependency, or fixture code changed.
+
+### Validation
+
+- User-confirmed external consumer tests, TypeScript check, and production build remained green after
+  the mount boundary extraction.
+- Browser lifecycle probe completed 100 and 1,000 mount/dispose cycles without reported errors.
+- Each cycle left zero children in the probe host; repeated `dispose()` was safe.
+
+### Architecture / compatibility
+
+- The consumer now has an explicit application-edge lifecycle seam; Vii Core Scope remains the owner
+  of form Computed resources and subscriptions.
+- The probe is development-only evidence. It does not establish a universal browser heap budget or
+  prove absence of all retained memory in every browser.
+
+### Remaining / recovery
+
+- Remove or keep the development-only probe according to the consumer's test-fixture policy, repeat it
+  after lifecycle changes, and choose the next Vii-owned Phase 4 scenario.
+
 ## 2026-08-18 23:50 CEST | Adopt Applye-style task triage preflight
 
 Status: completed

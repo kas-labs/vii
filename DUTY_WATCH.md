@@ -3065,3 +3065,33 @@ PR: not opened
 ### Remaining / recovery
 
 - None for this review. Continue Phase 4 with the next bounded slice.
+
+## 2026-08-19 17:12 CEST | Publish Diagnostics privacy review
+
+Status: completed
+Branch: security/diagnostics-privacy-review
+PR: [#82](https://github.com/kas-labs/vii/pull/82) draft
+
+### Scope
+
+- Publish the completed bounded Diagnostics privacy and threat-model review.
+
+### Changes
+
+- Pushed commit a54e1b0 to origin/security/diagnostics-privacy-review.
+- Opened draft PR #82 targeting main.
+
+### Validation
+
+- git diff --check: passed before publication.
+- PR #82 records the 16 consumer tests, redaction assertions, bundle report, and static no-network
+  scan.
+
+### Architecture / compatibility
+
+- Documentation and handoff only; no Vii runtime, package, public API, dependency, release, telemetry,
+  or network behavior changed.
+
+### Remaining / recovery
+
+- Review and merge PR #82 after its required checks and human review pass.

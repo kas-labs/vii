@@ -2997,3 +2997,33 @@ PR: [#80](https://github.com/kas-labs/vii/pull/80) draft
 ### Remaining / recovery
 
 - None for this slice. Review and merge PR #80 after its required checks and human review pass.
+
+## 2026-08-19 16:59 CEST | Publish final Diagnostics validation correction
+
+Status: completed
+Branch: docs/complete-diagnostics-budget-handoff
+PR: [#81](https://github.com/kas-labs/vii/pull/81) draft
+
+### Scope
+
+- Preserve the final user-confirmed lifecycle result that was committed after PR #80 had already
+  merged.
+
+### Changes
+
+- Created a corrective documentation branch from the merged PR state.
+- Opened draft PR #81 with the final PROJECT_STATE and DUTY_WATCH correction only.
+
+### Validation
+
+- The corrective diff is limited to the completed lifecycle handoff.
+- git diff --check: passed before publication.
+
+### Architecture / compatibility
+
+- Documentation only; no Vii runtime, package, public API, dependency, release, telemetry, or network
+  behavior changed.
+
+### Remaining / recovery
+
+- Review and merge PR #81 after its required checks and human review pass.

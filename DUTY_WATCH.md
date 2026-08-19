@@ -322,6 +322,45 @@ PR: not opened
 - Remove or keep the development-only probe according to the consumer's test-fixture policy, repeat it
   after lifecycle changes, and choose the next Vii-owned Phase 4 scenario.
 
+## 2026-08-19 15:37 CEST | Complete Vanilla consumer API simplification
+
+Status: completed
+Branch: `dogfood/phase4-vanilla-onboarding-validation`
+PR: not opened
+
+### Scope
+
+- Review and simplify the external Vii-native onboarding form API without changing user-visible
+  behavior or the Vii Core public contract.
+
+### Changes
+
+- Removed internal Scope, touched-state, and unused validation Computed values from the form store's
+  returned application surface.
+- Moved subscription cleanup ownership to `mountOnboarding()` while retaining idempotent form disposal.
+- No Vii runtime, package, public API, dependency, or fixture code changed.
+
+### Validation
+
+- External consumer `pnpm test`: passed; 2 test files and 8 tests passed.
+- External consumer `pnpm exec tsc --noEmit`: passed.
+- External consumer `pnpm build`: passed; Vite v8.2.1 transformed 19 modules.
+- External consumer `pnpm dev`: user-confirmed server ready and browser flow functional.
+- User-confirmed browser regression: onboarding, validation, Back, Submit, Reset, and lifecycle probe
+  remained functional after the API simplification.
+- User-confirmed `runViiLifecycleProbe(100)`: passed with an empty host and safe repeated disposal.
+
+### Architecture / compatibility
+
+- The application edge now owns DOM subscriptions; the form store keeps Core Scope private while
+  preserving explicit disposal.
+- This is an external consumer refactor and does not promote the form API or change Vii Core.
+
+### Remaining / recovery
+
+- Current Vanilla Phase 4 slice is complete. Reuse the recorded consumer baseline for future changes;
+  select the next Vii-owned scenario only after a new scoped decision.
+
 ## 2026-08-18 23:50 CEST | Adopt Applye-style task triage preflight
 
 Status: completed

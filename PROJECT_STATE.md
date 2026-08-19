@@ -122,6 +122,11 @@ The same consumer now exposes a development-only `mountOnboarding(root)` lifecyc
 idempotent dispose function. A browser probe repeatedly mounted and disposed the onboarding UI in one
 process, verified an empty host after each cycle, and completed a 1,000-cycle run without reported
 errors. The probe is development-only and is not a native Vii renderer or a production memory budget.
+The external onboarding consumer's form API was then simplified so its application boundary exposes
+form state, visible errors, user actions, and idempotent disposal without leaking the internal Scope,
+touched map, or unused validation Computed values. The simplified consumer passed eight Vitest tests,
+the TypeScript check, the Vite production build, the dev server smoke check, and the 100-cycle browser
+lifecycle probe. This is consumer evidence and does not change Vii's public Core API.
 The repository uses Changesets for future public package versioning. The configuration has no publish
 script; version application and publication remain separately approved release actions.
 The packed Core artifact also carries its Apache-2.0 license, repository and issue links, discovery

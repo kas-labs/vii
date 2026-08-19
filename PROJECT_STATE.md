@@ -127,6 +127,17 @@ form state, visible errors, user actions, and idempotent disposal without leakin
 touched map, or unused validation Computed values. The simplified consumer passed eight Vitest tests,
 the TypeScript check, the Vite production build, the dev server smoke check, and the 100-cycle browser
 lifecycle probe. This is consumer evidence and does not change Vii's public Core API.
+The same external Vanilla consumer now mounts a Vii-native Diagnostics playground as its active demo.
+The playground uses development diagnostics with maxEvents: 100 and traceId:
+"diagnostics-playground", and exposes one explicit demo Scope around a counter and doubled Computed
+value, Increment, Batch +2, Scope disposal/recreation, a live event timeline, bounded event counters,
+Clear, and vii.trace JSON preview/download. Its public model seam has four passing Vitest tests
+covering state/Computed observation, Batch trace recording, Scope disposal and recreation, and
+bounded trace export/clear; together with the existing onboarding and DOM tests the consumer reports
+12 passing tests across three files. pnpm exec tsc --noEmit and the Vite 8.2.1 production build pass;
+the build reports 19 transformed modules, 11.76 kB raw JavaScript/4.42 kB gzip, and 3.32 kB raw CSS/
+1.23 kB gzip. A local Vite page fetch succeeds, while browser click, download, and visual interaction
+evidence for this exact diagnostics revision remains a manual verification step.
 The repository uses Changesets for future public package versioning. The configuration has no publish
 script; version application and publication remain separately approved release actions.
 The packed Core artifact also carries its Apache-2.0 license, repository and issue links, discovery

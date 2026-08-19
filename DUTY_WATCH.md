@@ -2853,3 +2853,50 @@ PR: [#78](https://github.com/kas-labs/vii/pull/78) draft
 ### Remaining / recovery
 
 - Review PR #78 and its required checks. Merge only after human review and repository policy checks pass.
+
+## 2026-08-19 16:16 CEST | Implement Diagnostics playground consumer
+
+Status: partial
+Branch: dogfood/phase4-vanilla-onboarding-validation
+PR: not opened
+
+### Scope
+
+- Add the approved Vii-native Interactive Diagnostics playground to the external Vanilla reference
+  consumer without changing Vii Core or introducing a renderer/framework dependency.
+
+### Changes
+
+- Added a diagnostics playground model with development mode, maxEvents: 100, and
+  traceId: "diagnostics-playground".
+- Added State/Computed counter controls, diagnostics-aware Batch +2, explicit Scope creation/disposal,
+  Scope recreation, live event timeline, counters, Clear, JSON preview, and JSON download boundary.
+- Switched the external consumer's active entrypoint and lifecycle probe to the playground.
+- Added four public-seam Vitest tests; the existing onboarding and DOM tests remain in place.
+
+### Validation
+
+- External consumer pnpm test: passed; Vitest v4.1.11, 3 files and 12 tests passed.
+- External consumer pnpm exec tsc --noEmit: passed.
+- External consumer pnpm build: passed; Vite v8.2.1 transformed 19 modules and emitted 11.76 kB
+  raw JavaScript/4.42 kB gzip and 3.32 kB raw CSS/1.23 kB gzip.
+- External consumer local Vite HTML fetch: passed.
+- Headless browser click/download verification: not available in the current environment; manual
+  browser verification remains required.
+- git diff --check: passed before this handoff update.
+
+### Architecture / compatibility
+
+- No Vii repository runtime, package, public API, dependency, or release behavior changed.
+- The playground observes Vii Diagnostics and keeps browser DOM, Blob, URL, and download behavior at
+  the application edge.
+- The bounded trace remains value-free according to the Core diagnostics contract; no telemetry,
+  network call, or automatic publication was added.
+
+### Remaining / recovery
+
+- Run the manual browser smoke check in the external consumer: create Scope, Increment, Batch +2,
+  inspect timeline/counters, Dispose and recreate Scope, Clear, and Export trace; confirm the JSON
+  file downloads as vii-trace.json and the preview contains protocol: "vii.trace" and
+  traceId: "diagnostics-playground".
+- After that check, continue Phase 4 with the next bounded consumer or lifecycle slice.

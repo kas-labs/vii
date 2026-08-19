@@ -138,6 +138,13 @@ bounded trace export/clear; together with the existing onboarding and DOM tests 
 the build reports 19 transformed modules, 11.76 kB raw JavaScript/4.42 kB gzip, and 3.32 kB raw CSS/
 1.23 kB gzip. A local Vite page fetch and the user's manual browser verification of timeline, Scope
 lifecycle, Clear, JSON preview, and vii-trace.json download all succeed for this diagnostics revision.
+The Diagnostics playground consumer now also carries a validation surface for Phase 4 lifecycle and
+artifact budgets. Its model tests cover 1000 repeated playground instances and the bounded
+maxEvents: 100 buffer; the Vite build remains 19 transformed modules, and the reproducible
+report:bundle command measured 15,089 raw bytes and 5,645 gzip bytes across the emitted CSS and
+JavaScript assets. The dev-only browser probe now exercises Create Scope, Increment, Batch +2,
+Dispose Scope, idempotent mount disposal, and an empty host over a default 1000-cycle run; the
+browser execution result for this revision remains pending manual confirmation.
 The repository uses Changesets for future public package versioning. The configuration has no publish
 script; version application and publication remain separately approved release actions.
 The packed Core artifact also carries its Apache-2.0 license, repository and issue links, discovery

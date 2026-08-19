@@ -2927,3 +2927,42 @@ PR: [#80](https://github.com/kas-labs/vii/pull/80) draft
 ### Remaining / recovery
 
 - Review PR #80 and merge only after the required checks and human review pass.
+
+## 2026-08-19 16:47 CEST | Validate Diagnostics lifecycle and bundle budgets
+
+Status: partial
+Branch: dogfood/phase4-vanilla-onboarding-validation
+PR: [#80](https://github.com/kas-labs/vii/pull/80) draft
+
+### Scope
+
+- Extend the external Diagnostics playground evidence with active Scope lifecycle repetition,
+  bounded diagnostics-buffer coverage, and reproducible bundle measurements.
+
+### Changes
+
+- Updated the dev-only lifecycle probe to exercise Create Scope, Increment, Batch +2, Dispose Scope,
+  idempotent disposal, and an empty host across a default 1000-cycle run.
+- Added Vitest coverage for 1000 repeated playground instances and the maxEvents: 100 buffer.
+- Added the external consumer command pnpm report:bundle for raw and gzip artifact sizes.
+
+### Validation
+
+- External consumer pnpm test: passed; Vitest v4.1.11, 3 files and 14 tests passed.
+- External consumer pnpm exec tsc --noEmit: passed.
+- External consumer pnpm build: passed; Vite v8.2.1 transformed 19 modules.
+- External consumer pnpm report:bundle: passed; total raw 15,089 bytes and gzip 5,645 bytes.
+- Browser execution of runViiLifecycleProbe(1000): not run yet.
+- git diff --check: pending after this handoff update.
+
+### Architecture / compatibility
+
+- No Vii Core runtime, package, public API, dependency, release, telemetry, or network behavior changed.
+- The probe and report remain external consumer validation seams; the measured sizes are local evidence,
+  not universal product budgets or a production memory claim.
+
+### Remaining / recovery
+
+- Run the dev server and execute runViiLifecycleProbe(1000) in the browser console. Expected result:
+  iterations 1000, activeScopeCycles 1000, remainingChildren 0, hostConnected true.
+- After that result, update this handoff to completed and push the final PR #80 head.

@@ -3027,3 +3027,71 @@ PR: [#81](https://github.com/kas-labs/vii/pull/81) draft
 ### Remaining / recovery
 
 - Review and merge PR #81 after its required checks and human review pass.
+
+## 2026-08-19 17:08 CEST | Review Diagnostics privacy boundary
+
+Status: completed
+Branch: security/diagnostics-privacy-review
+PR: not opened
+
+### Scope
+
+- Review the packed Vanilla Diagnostics consumer against the Vii privacy and diagnostics threat-model
+  requirements for production-safe redaction and value minimization.
+
+### Changes
+
+- Added two external consumer tests for production-safe and development Diagnostics data handling.
+- Verified production-safe omission of caller trace IDs, Scope names, security field/route metadata,
+  and raw state values.
+- Verified development correlation remains available without collecting raw state values.
+
+### Validation
+
+- External consumer pnpm test: passed; Vitest v4.1.11, 4 files and 16 tests passed.
+- External consumer pnpm exec tsc --noEmit: passed.
+- External consumer pnpm build: passed; Vite v8.2.1 transformed 19 modules.
+- External consumer pnpm report:bundle: passed; total raw 15,089 bytes and gzip 5,645 bytes.
+- Static scan of the consumer boundary found no fetch, XMLHttpRequest, sendBeacon, telemetry, or
+  analytics path.
+- git diff --check: passed before this handoff update.
+
+### Architecture / compatibility
+
+- No Vii Core runtime, package, public API, dependency, release, telemetry, or network behavior changed.
+- The review covers the packed Core consumer boundary and remains bounded evidence, not a penetration
+  test or a universal privacy certification.
+
+### Remaining / recovery
+
+- None for this review. Continue Phase 4 with the next bounded slice.
+
+## 2026-08-19 17:12 CEST | Publish Diagnostics privacy review
+
+Status: completed
+Branch: security/diagnostics-privacy-review
+PR: [#82](https://github.com/kas-labs/vii/pull/82) draft
+
+### Scope
+
+- Publish the completed bounded Diagnostics privacy and threat-model review.
+
+### Changes
+
+- Pushed commit a54e1b0 to origin/security/diagnostics-privacy-review.
+- Opened draft PR #82 targeting main.
+
+### Validation
+
+- git diff --check: passed before publication.
+- PR #82 records the 16 consumer tests, redaction assertions, bundle report, and static no-network
+  scan.
+
+### Architecture / compatibility
+
+- Documentation and handoff only; no Vii runtime, package, public API, dependency, release, telemetry,
+  or network behavior changed.
+
+### Remaining / recovery
+
+- Review and merge PR #82 after its required checks and human review pass.

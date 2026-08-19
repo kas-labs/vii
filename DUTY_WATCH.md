@@ -2966,3 +2966,64 @@ PR: [#80](https://github.com/kas-labs/vii/pull/80) draft
 - Run the dev server and execute runViiLifecycleProbe(1000) in the browser console. Expected result:
   iterations 1000, activeScopeCycles 1000, remainingChildren 0, hostConnected true.
 - After that result, update this handoff to completed and push the final PR #80 head.
+
+## 2026-08-19 16:55 CEST | Complete Diagnostics lifecycle and bundle validation
+
+Status: completed
+Branch: dogfood/phase4-vanilla-onboarding-validation
+PR: [#80](https://github.com/kas-labs/vii/pull/80) draft
+
+### Scope
+
+- Close the Diagnostics playground lifecycle and artifact-budget validation after the browser probe.
+
+### Changes
+
+- Confirmed the active Scope lifecycle probe across the default 1000-cycle run.
+- Confirmed the consumer host is empty after each disposal and the probe dispose path is idempotent.
+
+### Validation
+
+- User browser execution of runViiLifecycleProbe(1000): passed.
+- Result: iterations 1000, activeScopeCycles 1000, remainingChildren 0, hostConnected true.
+- Automated consumer tests, typecheck, build, and report:bundle checks remain passing as recorded above.
+- git diff --check: passed before this handoff update.
+
+### Architecture / compatibility
+
+- No Vii Core runtime, package, public API, dependency, release, telemetry, or network behavior changed.
+- Evidence remains local consumer validation and does not claim a universal production memory budget.
+
+### Remaining / recovery
+
+- None for this slice. Review and merge PR #80 after its required checks and human review pass.
+
+## 2026-08-19 16:59 CEST | Publish final Diagnostics validation correction
+
+Status: completed
+Branch: docs/complete-diagnostics-budget-handoff
+PR: [#81](https://github.com/kas-labs/vii/pull/81) draft
+
+### Scope
+
+- Preserve the final user-confirmed lifecycle result that was committed after PR #80 had already
+  merged.
+
+### Changes
+
+- Created a corrective documentation branch from the merged PR state.
+- Opened draft PR #81 with the final PROJECT_STATE and DUTY_WATCH correction only.
+
+### Validation
+
+- The corrective diff is limited to the completed lifecycle handoff.
+- git diff --check: passed before publication.
+
+### Architecture / compatibility
+
+- Documentation only; no Vii runtime, package, public API, dependency, release, telemetry, or network
+  behavior changed.
+
+### Remaining / recovery
+
+- Review and merge PR #81 after its required checks and human review pass.

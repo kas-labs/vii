@@ -247,6 +247,45 @@ PR: not opened
 - Repeat the same measurements on future consumer revisions, document methodology changes, and choose
   the next Vii-owned Phase 4 scenario or deeper browser memory investigation.
 
+## 2026-08-19 02:02 CEST | Complete Vanilla DOM boundary review
+
+Status: completed
+Branch: `dogfood/phase4-vanilla-onboarding-validation`
+PR: not opened
+
+### Scope
+
+- Complete the bounded security and accessibility review of the Vii-native Vanilla onboarding
+  consumer's DOM boundary.
+
+### Changes
+
+- Centralized HTML escaping and added two malicious-input regression tests.
+- Added accessible form labels, error associations, `aria-invalid`, `role="alert"`, and notification
+  field grouping.
+- No Vii runtime, package, public API, dependency, or fixture code changed.
+
+### Validation
+
+- External consumer `pnpm test`: passed; 2 test files and 8 tests passed.
+- External consumer `pnpm exec tsc --noEmit`: passed.
+- External consumer `pnpm build`: passed; Vite v8.2.1 transformed 17 modules.
+- Production JavaScript asset: 11.64 kB raw, 4.19 kB gzip.
+- Production CSS asset: 1.74 kB raw, 0.81 kB gzip.
+- User-confirmed browser review: keyboard navigation, accessible errors, escaped malicious payload,
+  no script/image execution, and no reported console errors.
+
+### Architecture / compatibility
+
+- User input remains at the DOM edge and is escaped before HTML interpolation; Vii Core remains
+  framework-agnostic and unchanged.
+- This is bounded consumer security/accessibility evidence, not a penetration test or certification.
+
+### Remaining / recovery
+
+- Repeat the boundary tests when rendering or input handling changes. Continue with the next Vii-owned
+  Phase 4 scenario or a deeper browser memory investigation.
+
 ## 2026-08-18 23:50 CEST | Adopt Applye-style task triage preflight
 
 Status: completed

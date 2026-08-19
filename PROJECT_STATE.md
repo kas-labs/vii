@@ -112,6 +112,12 @@ the reported production build wall time is 1.23 s. The Vite 8.2.1 output reports
 modules, 11,184 raw JavaScript bytes and 4,005 gzip bytes for the JavaScript asset, plus 1.59 kB raw
 and 0.77 kB gzip for the CSS asset. These are local reproducibility measurements, not release budgets
 or universal performance claims.
+The Vanilla consumer's DOM boundary has also passed a bounded security and accessibility review:
+the shared HTML escaping helper has two passing malicious-input tests, and the consumer build reports
+17 transformed modules with 11.64 kB raw JavaScript/4.19 kB gzip and 1.74 kB raw CSS/0.81 kB gzip.
+The user confirmed keyboard navigation, accessible error associations, escaped payload rendering, no
+script/image execution, and no reported browser-console errors. This is a bounded consumer review,
+not a penetration test or a universal accessibility certification.
 The repository uses Changesets for future public package versioning. The configuration has no publish
 script; version application and publication remain separately approved release actions.
 The packed Core artifact also carries its Apache-2.0 license, repository and issue links, discovery

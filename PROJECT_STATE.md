@@ -136,8 +136,8 @@ covering state/Computed observation, Batch trace recording, Scope disposal and r
 bounded trace export/clear; together with the existing onboarding and DOM tests the consumer reports
 12 passing tests across three files. pnpm exec tsc --noEmit and the Vite 8.2.1 production build pass;
 the build reports 19 transformed modules, 11.76 kB raw JavaScript/4.42 kB gzip, and 3.32 kB raw CSS/
-1.23 kB gzip. A local Vite page fetch succeeds, while browser click, download, and visual interaction
-evidence for this exact diagnostics revision remains a manual verification step.
+1.23 kB gzip. A local Vite page fetch and the user's manual browser verification of timeline, Scope
+lifecycle, Clear, JSON preview, and vii-trace.json download all succeed for this diagnostics revision.
 The repository uses Changesets for future public package versioning. The configuration has no publish
 script; version application and publication remain separately approved release actions.
 The packed Core artifact also carries its Apache-2.0 license, repository and issue links, discovery

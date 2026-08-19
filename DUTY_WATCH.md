@@ -1063,7 +1063,7 @@ PR: not opened
 
 ## 2026-08-12 00:17 Europe/Berlin | Open P1.8 fixture PR
 
-Status: partial
+Status: completed
 Branch: `feat/expand-vanilla-fixture`
 PR: #26 (draft)
 
@@ -2881,8 +2881,9 @@ PR: not opened
 - External consumer pnpm build: passed; Vite v8.2.1 transformed 19 modules and emitted 11.76 kB
   raw JavaScript/4.42 kB gzip and 3.32 kB raw CSS/1.23 kB gzip.
 - External consumer local Vite HTML fetch: passed.
-- Headless browser click/download verification: not available in the current environment; manual
-  browser verification remains required.
+- Headless browser automation was not available in the current environment.
+- User manual browser verification passed for timeline, Scope lifecycle, Clear, JSON preview, and
+  vii-trace.json download.
 - git diff --check: passed before this handoff update.
 
 ### Architecture / compatibility
@@ -2895,8 +2896,4 @@ PR: not opened
 
 ### Remaining / recovery
 
-- Run the manual browser smoke check in the external consumer: create Scope, Increment, Batch +2,
-  inspect timeline/counters, Dispose and recreate Scope, Clear, and Export trace; confirm the JSON
-  file downloads as vii-trace.json and the preview contains protocol: "vii.trace" and
-  traceId: "diagnostics-playground".
-- After that check, continue Phase 4 with the next bounded consumer or lifecycle slice.
+- None for this slice. Continue Phase 4 with the next bounded consumer or lifecycle slice.

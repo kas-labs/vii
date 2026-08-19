@@ -2897,3 +2897,33 @@ PR: not opened
 ### Remaining / recovery
 
 - None for this slice. Continue Phase 4 with the next bounded consumer or lifecycle slice.
+
+## 2026-08-19 16:43 CEST | Publish Diagnostics playground handoff
+
+Status: completed
+Branch: dogfood/phase4-vanilla-onboarding-validation
+PR: [#80](https://github.com/kas-labs/vii/pull/80) draft
+
+### Scope
+
+- Publish the completed Diagnostics playground evidence for review.
+
+### Changes
+
+- Pushed the branch to origin.
+- Opened draft PR #80 targeting main.
+
+### Validation
+
+- git diff --check: passed before publication.
+- The PR body records the external consumer tests, typecheck, build, manual browser verification,
+  and the repository validation network limitation.
+
+### Architecture / compatibility
+
+- Documentation and handoff only; no Vii runtime, package, public API, dependency, release, telemetry,
+  or network behavior changed.
+
+### Remaining / recovery
+
+- Review PR #80 and merge only after the required checks and human review pass.

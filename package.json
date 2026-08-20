@@ -29,6 +29,7 @@
     "eslint": "10.8.0",
     "nx": "23.1.0",
     "prettier": "3.9.6",
+    "rxjs": "7.8.2",
     "typescript": "6.0.2",
     "typescript-eslint": "8.65.0",
     "vitest": "4.1.10"

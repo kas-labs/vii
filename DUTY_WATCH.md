@@ -3061,3 +3061,32 @@ PR: not opened
 ### Remaining / recovery
 
 - Publish the docs branch in a draft PR. Re-run pnpm validate when registry connectivity is available.
+
+## 2026-08-20 00:35 CEST | Publish internal dogfood protocol
+
+Status: completed
+Branch: docs/internal-dogfood-protocol
+PR: [#83](https://github.com/kas-labs/vii/pull/83) draft
+
+### Scope
+
+- Publish the internal dogfood protocol and structured issue template for review.
+
+### Changes
+
+- Pushed commit a299241 to origin/docs/internal-dogfood-protocol.
+- Opened draft PR #83 targeting main.
+
+### Validation
+
+- git diff --check: passed before publication.
+- PR #83 records the targeted Markdown checks and the repository validation registry limitation.
+
+### Architecture / compatibility
+
+- Documentation and issue-template only; no Vii runtime, package, public API, dependency, release,
+  telemetry, or network behavior changed.
+
+### Remaining / recovery
+
+- Review and merge PR #83 after its required checks and human review pass.

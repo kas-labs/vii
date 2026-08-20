@@ -3225,3 +3225,44 @@ PR: [#83](https://github.com/kas-labs/vii/pull/83) draft
 - Verify the actual downloaded `vii-trace.json` through a user-visible browser download result or a
   browser surface that exposes the blob download; confirm its JSON `protocol` is `vii.trace`.
 - Keep the dev server session `90560` available at `http://localhost:5173/` for that manual check.
+
+## 2026-08-20 17:44 CEST | Resolve PR #83 conflict with current main
+
+Status: completed
+Branch: docs/internal-dogfood-protocol
+PR: [#83](https://github.com/kas-labs/vii/pull/83) open, mergeable
+Issue: [#84](https://github.com/kas-labs/vii/issues/84)
+
+### Scope
+
+- Record the sanitized blocked dogfood run and reconcile PR #83 with the current `main` after PR #82
+  merged.
+
+### Changes
+
+- Created sanitized internal dogfood issue #84 without secrets, credentials, unsanitized traces, or
+  private environment paths.
+- Merged `origin/main` at `f663201` into the focused protocol branch.
+- Preserved both the PR #82 Diagnostics privacy handoff and the PR #83 protocol/dogfood handoffs in
+  `DUTY_WATCH.md` and `PROJECT_STATE.md`.
+- Pushed conflict-resolution commit `cad8bbc` to `origin/docs/internal-dogfood-protocol`.
+
+### Validation
+
+- Targeted Prettier check for the affected Markdown files: passed.
+- Initial `pnpm validate`: all format, lint, typecheck, test, and build stages passed; the first
+  pack-check attempt was blocked by sandbox registry DNS `ENOTFOUND`.
+- Network-permitted `pnpm validate`: passed, including packed Core, reference, React, Angular, Vue,
+  and CLI Core consumer validation.
+- `git diff --check`: passed.
+- GitHub PR #83: open, non-draft, `mergeable: true`; branch is synchronized with origin.
+
+### Architecture / compatibility
+
+- Documentation-only reconciliation; no Vii Core runtime, public API, dependency, release, telemetry,
+  or network behavior changed.
+- No Vue consumer was added or changed by this task.
+
+### Remaining / recovery
+
+- Merge PR #83 into `main` only after explicit maintainer confirmation.

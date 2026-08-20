@@ -41,7 +41,7 @@ PR: <number or not opened>
 
 Status: completed
 Branch: `docs/close-phase4-internal-dogfood`
-PR: not opened
+PR: #95 (draft)
 
 ### Scope
 
@@ -73,7 +73,7 @@ PR: not opened
 
 - External alpha, real deployment CSP/Trusted Types validation, browser heap/post-disposal retention
   measurement, and numeric release budgets require separate approved tasks.
-- Review the focused diff, then commit or hand off this documentation branch.
+- Review draft PR #95; merge requires maintainer confirmation.
 
 ## 2026-08-18 18:57 CEST | Validate external React consumer State slice
 

@@ -3537,3 +3537,47 @@ PR: follow-up focused documentation branch
 - Reuse these baselines for future changes to the same consumer fixtures; add numeric budgets only
   through an approved, behaviorally scoped decision.
 - Continue Phase 4 with the next bounded real-consumer or lifecycle slice.
+
+## 2026-08-20 19:19 CEST | Audit Phase 4 acceptance gates
+
+Status: completed
+Branch: docs/audit-phase4-gates
+PR: follow-up focused documentation branch
+
+### Scope
+
+- Review the current Phase 4 roadmap gates against the merged React and Vanilla packed-consumer
+  evidence without promoting experimental APIs or inventing release thresholds.
+
+### Gate verdict
+
+| Phase 4 gate                                        | Verdict                          | Evidence / remaining boundary                                                                                                                |
+| --------------------------------------------------- | -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| Real consumer validates the design                  | evidenced                        | Clean packed React and Vanilla consumers pass focused tests, typechecks, builds, and browser smoke.                                          |
+| Lifecycle and cleanup                               | evidenced for bounded scope      | Vanilla 1,000-cycle probe and React Scope disposal contract pass; no universal heap-retention claim.                                         |
+| Package/runtime compatibility                       | evidenced for bounded scope      | `@vii-labs/core@next` `0.1.0-experimental.2` passes the clean packed consumers on Node/pnpm/Vite harnesses.                                  |
+| Bundle, execution, and type-check evidence          | evidenced as baselines           | React and Vanilla measurements are recorded; no numeric release budget or cross-framework comparison.                                        |
+| Security and privacy                                | evidenced for bounded boundaries | Vanilla privacy/security review and React sink/audit/malicious-input review pass; no penetration test or deployment hardening certification. |
+| Client/server and capability boundaries             | partial                          | These consumers are client-only; SSR, server, auth, network, and capability deployment boundaries remain unvalidated.                        |
+| Risks, privacy, accessibility, and breaking changes | partial                          | Consumer-specific evidence exists; external alpha feedback and broader deployment review remain open.                                        |
+| External alpha validation                           | open                             | Roadmap item requires a separate maintainer-approved external testing decision.                                                              |
+
+### Planning-review result
+
+- Blocking gaps for Phase 4 completion: external alpha decision, real deployment security headers and
+  threat-model evidence, and an approved memory/budget plan if those claims are required.
+- Non-blocking improvement: add another real consumer only when it exercises a materially different
+  boundary; do not add a framework or API solely to fill a matrix cell.
+- First executable next step: maintainer selects one open boundary or explicitly records Phase 4 as
+  internal dogfood-complete with the listed limitations.
+
+### Architecture / compatibility
+
+- Documentation-only audit; no Vii Core runtime, public API, dependency, framework, consumer source,
+  release, or Vue behavior changed.
+
+### Remaining / recovery
+
+- Keep Core framework-agnostic and experimental API scope unchanged.
+- Do not claim Phase 4 completion or external alpha support until the open gates receive an explicit
+  maintainer decision and proportionate evidence.

@@ -41,7 +41,7 @@ PR: <number or not opened>
 
 Status: completed
 Branch: `docs/flow-primary-source-revalidation`
-PR: not opened
+PR: #98 (draft)
 
 ### Scope
 
@@ -78,7 +78,7 @@ PR: not opened
 
 ### Remaining / recovery
 
-- Commit and open a focused draft PR after reviewing the note.
+- Draft PR #98 is open and its required checks pass; merge requires maintainer confirmation.
 - Re-capture versions and source state immediately before any benchmark baseline is run.
 
 ## 2026-08-21 01:30 CEST | Add Flow real-clock and robustness validation

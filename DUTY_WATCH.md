@@ -3449,3 +3449,44 @@ PR: follow-up focused documentation branch
 
 - Continue Phase 4 with the next bounded real-consumer or lifecycle validation slice; preserve the
   current Core/API scope unless a separate approved task changes it.
+
+## 2026-08-20 18:57 CEST | Review packed React consumer security boundary
+
+Status: completed
+Branch: security/review-packed-react-consumer
+PR: follow-up focused documentation branch
+
+### Scope
+
+- Perform a bounded threat-model and privacy-boundary review of the clean packed React reference
+  consumer after its Phase 4 smoke run.
+
+### Findings and evidence
+
+- Reviewed the Vii threat model, security architecture, and security/privacy guidance against the
+  React consumer's task-title, DOM, package, and browser boundaries.
+- Static scan of `src`, `index.html`, `package.json`, and `vite.config.ts` found no raw HTML sinks,
+  `eval`, dynamic `Function`, network APIs, storage/cookie access, telemetry calls, or unsafe URL
+  construction.
+- `pnpm audit --prod`: passed; output was `No known vulnerabilities found`.
+- Malicious title fixture `<img src=x onerror="window.__viiXss=1">`: rendered as text; `imgNodes: 0`,
+  `xssMarker: false`, `consoleErrors: []`, and `nonLocalRequests: []`.
+
+### Residual risk
+
+- The reference deployment has no explicit CSP or Trusted Types headers. This is a deployment
+  hardening follow-up, not an observed XSS path in the consumer; no source change is made because
+  a production header policy is outside this bounded reference-app task.
+- The review is not a penetration test, dependency certification, or universal React security claim.
+
+### Architecture / compatibility
+
+- Read-only security validation plus documentation handoff; no Vii Core runtime, public API,
+  dependency, reference-app source, or release behavior changed.
+- No Vue consumer was added or changed.
+
+### Remaining / recovery
+
+- If this reference consumer becomes a deployment fixture, add a separately approved host-level CSP/
+  Trusted Types policy and validate it at that deployment boundary.
+- Continue Phase 4 with the next bounded real-consumer validation slice; preserve Core/API scope.

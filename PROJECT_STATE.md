@@ -107,6 +107,13 @@ build, and browser task-board smoke all passed: filter changes, task creation, c
 Computed counters, and Batch-backed Clear completed behaved as expected with zero browser-console
 errors. The local build measured 197.19 kB raw JavaScript / 62.41 kB gzip and is consumer evidence,
 not a universal React or bundle budget claim.
+That packed React consumer has also passed a bounded threat-model review: a static boundary scan found
+no raw HTML sinks, dynamic code execution, network, storage, cookie, or telemetry APIs; a production
+dependency audit reported no known vulnerabilities; and a malicious task title rendered as text with
+zero image nodes, no XSS marker execution, zero console errors, and no non-local browser requests.
+The reference deployment does not configure CSP or Trusted Types headers, so this remains consumer
+evidence with an explicit deployment-hardening follow-up, not a penetration test or security
+certification.
 The second external Phase 4 consumer is a Vii-native Vanilla DOM onboarding application named
 `vii-reference-vanilla-onboarding`. It uses only the packed Core artifact at the application boundary,
 keeps form domain data separate from UI state, and exercises Computed validation, Batch step changes,

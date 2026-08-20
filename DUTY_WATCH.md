@@ -3390,3 +3390,62 @@ PR: follow-up focused documentation branch
 
 - Continue Phase 4 with the next bounded real-consumer validation slice; preserve the current Core/API
   scope unless a separate approved task changes it.
+
+## 2026-08-20 18:52 CEST | Validate packed React reference consumer
+
+Status: completed
+Branch: docs/record-packed-react-dogfood
+PR: follow-up focused documentation branch
+
+### Scope
+
+- Validate the existing React reference consumer from a clean copy with registry-packed
+  `@vii-labs/core@next` and the packed experimental React adapter.
+
+### Changes
+
+- Created a disposable clean copy of `/Users/eugenekasap/WebstormProjects/vii-reference-react-app-vite`;
+  the supplied reference directory has no Git metadata and was not modified.
+- Replaced only the clean copy's local Core tarball dependency with `@vii-labs/core@next`; the packed
+  `@vii-labs/react@0.0.0` adapter remained at the React edge.
+- Recorded exact command, artifact, environment, browser, and API-friction evidence in this handoff
+  and `PROJECT_STATE.md`.
+
+### Validation
+
+- `pnpm remove @vii-labs/core`: first sandbox attempt hit registry DNS `ENOTFOUND`; the network-permitted
+  retry passed and removed the local Core tarball.
+- `pnpm add @vii-labs/core@next`: passed; resolved to `0.1.0-experimental.2`.
+- `pnpm list @vii-labs/core`: passed; listed `0.1.0-experimental.2`.
+- `pnpm test`: passed; 1 file and 3 tests.
+- `pnpm exec tsc --noEmit`: passed with no output.
+- `pnpm lint`: passed with no output.
+- `pnpm build`: passed; Vite `8.2.1`, 28 modules, 197.19 kB raw JavaScript / 62.41 kB gzip,
+  1.78 kB raw CSS / 0.81 kB gzip.
+- `pnpm dev`: passed at `http://127.0.0.1:5173/` with the dev server stopped after the smoke.
+- Environment: macOS Darwin `25.5.0`, arm64; Node `v26.3.1`; pnpm `10.12.4`; React `19.2.8`;
+  `@vii-labs/react 0.0.0`; HeadlessChrome `151.0.0.0` via Playwright.
+- Browser smoke: initial `Completed: 1 / 2`; Open filter showed one open task; add produced
+  `Completed: 1 / 3`; toggle produced `Completed: 2 / 3`; Done filter showed two tasks; Clear
+  completed produced `Completed: 0 / 1`. Browser console errors: `0`.
+
+### API friction / unresolved evidence
+
+- Playwright `locator.check()` clicked the controlled checkbox but timed out waiting for its
+  post-click navigation step. This was browser-tool interaction friction, not an observed React or
+  Vii runtime failure; the same checkbox action through DOM click completed the smoke with the
+  expected counters and no console errors.
+- Reference app commit is unavailable because the supplied directory has no Git metadata.
+
+### Architecture / compatibility
+
+- Validation-only evidence; no Vii Core runtime, public API, dependency, package, or reference-app
+  source changed.
+- No Vue consumer was added or changed.
+- This is internal Phase 4 consumer evidence, not a universal React compatibility, performance, or
+  bundle-budget claim.
+
+### Remaining / recovery
+
+- Continue Phase 4 with the next bounded real-consumer or lifecycle validation slice; preserve the
+  current Core/API scope unless a separate approved task changes it.

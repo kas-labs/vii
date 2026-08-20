@@ -100,6 +100,13 @@ contract covers Computed filtering, atomic Batch notifications, and Scope dispos
 also passes the TypeScript/Vite production build. This is validation evidence rather than a
 repository fixture, so the broader Phase 4 work remains open for additional applications, lifecycle,
 bundle/type-check budgets, deployment threat-model review, and other real-world checks.
+That React consumer has now also been validated from a clean disposable copy with registry
+`@vii-labs/core@next` resolved to `0.1.0-experimental.2` and the packed experimental
+`@vii-labs/react@0.0.0` adapter. Its three board contract tests, TypeScript check, lint, production
+build, and browser task-board smoke all passed: filter changes, task creation, completion toggling,
+Computed counters, and Batch-backed Clear completed behaved as expected with zero browser-console
+errors. The local build measured 197.19 kB raw JavaScript / 62.41 kB gzip and is consumer evidence,
+not a universal React or bundle budget claim.
 The second external Phase 4 consumer is a Vii-native Vanilla DOM onboarding application named
 `vii-reference-vanilla-onboarding`. It uses only the packed Core artifact at the application boundary,
 keeps form domain data separate from UI state, and exercises Computed validation, Batch step changes,

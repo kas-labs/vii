@@ -117,4 +117,4 @@ count the existing Diagnostics timeline or a simple State-plus-Promise example a
 - a bounded decision for surfacing asynchronous cancellation rejection without changing synchronous
   Core disposal;
 - subscription identity/upstream ownership research before any replay or multicast API;
-- current primary-source/version revalidation before freezing any RFC or benchmark baseline.
+- repeat primary-source/version capture immediately before freezing any RFC or benchmark baseline.

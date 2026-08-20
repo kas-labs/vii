@@ -224,6 +224,16 @@ meets Vii needs; future Vii testing work should add domain-specific assertions, 
 compliance utilities instead of recreating a general-purpose runner. Vite/Rolldown remain the first
 native build research direction, with Bun and Rspack treated as optional adapters or compatibility
 targets rather than Core dependencies.
+Flow research now has a bounded brief at `docs/architecture/FLOW_RESEARCH_BRIEF.md` and throwaway
+fixtures under `research/flow/`. The fixtures compare direct `Promise` plus `AbortController`, an
+explicit RxJS `7.8.2` adapter, and functional/fluent prototype forms across deterministic typeahead,
+re-entrant ordering, explicit hot/factory source semantics, multi-subscriber ownership, complete/error/
+cancel/dispose outcomes, Scope disposal, AsyncIterable, ReadableStream cancellation, subscriber
+callback isolation, error recovery, and value-safe diagnostics cases. RxJS is a root dev-only research
+dependency; no Flow package, public API, Core dependency, support promise, or real consumer claim was
+added. The focused fixture suite has twelve passing tests, and its strict research TypeScript check
+plus the repository `pnpm validate` pass. Async cancellation rejection surfacing remains an explicit
+research question; Core synchronous `ViiResource.dispose(): void` is unchanged.
 
 The durable rendering direction is progressive and CSR-first. A future native Vii application may
 remain fully client-rendered without adopting hydration, request-server lifecycle, streaming, edge,

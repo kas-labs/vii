@@ -36,7 +36,7 @@ repository foundation
 
 Native components, the application framework, SSR, native build orchestration, Nx integration, desktop, and mobile remain Research or Vision until prerequisites and evidence exist.
 
-Schema, Form, HTTP, native template control flow, progressive rendering, and Vii-specific testing helpers now have explicit Research directions. Those documents define boundaries and graduation criteria; they do not mean the packages, syntax, or rendering modes are implemented or supported.
+Schema, Form, HTTP, Flow, native template control flow, progressive rendering, and Vii-specific testing helpers now have explicit Research directions. Those documents define boundaries and graduation criteria; they do not mean the packages, syntax, or rendering modes are implemented or supported.
 
 The future native application framework is CSR-first. Static generation, SSR/hydration, streaming, hybrid rendering, and server functions are opt-in layers that require independent evidence. Vii SSR is presentation infrastructure by default and does not require Vii to own an application's domain backend.
 
@@ -82,6 +82,8 @@ Developers and agents should read these guides together with the architecture do
 - `architecture/REACTIVITY_AND_STREAMS.md`
 - `architecture/SCOPE_AND_RESOURCES.md`
 - `architecture/DIAGNOSTICS_PROTOCOL.md`
+- `architecture/FLOW_ARCHITECTURE.md`, Research boundary for temporal/event orchestration separate from State, Task, Query, and platform streams.
+- `architecture/FLOW_RESEARCH_BRIEF.md`, bounded correctness comparison and throwaway fixture scope for Flow research.
 - `architecture/SCHEMA_ARCHITECTURE.md`, Research direction for a small TypeScript-first runtime data-contract layer with explicit validation/transform semantics and evidence-first performance goals.
 - `architecture/FORM_ARCHITECTURE.md`, Research direction for a signal-first, typed, framework-agnostic Form module.
 - `architecture/HTTP_CLIENT.md`, Research direction for a small Fetch-first transport layer separate from Query.
@@ -129,6 +131,7 @@ Current explicit research tracks are:
 - Schema, comparing a possible Vii-native runtime contract against mature validators such as Zod, Valibot, ArkType, TypeBox, and Ajv, with zero-copy validation, allocation, bundle, type-system, JSON Schema, and integration claims requiring reproducible evidence;
 - Form, informed by Angular Signal Forms, TanStack Form, React Hook Form, Vue, and VeeValidate while defining its own Vii semantics;
 - HTTP, informed by Fetch, Angular HttpClient, Axios, and small Fetch clients while remaining separate from Query and validation providers;
+- Flow, comparing direct platform primitives, an RxJS Scope/State adapter, and a throwaway prototype for temporal composition, cancellation, disposal, and stream interoperability;
 - native template control flow, comparing block, directive, and TSX/JavaScript authoring while sharing one compiler/runtime semantic model;
 - progressive rendering, keeping CSR independently usable and requiring opt-in evidence for SSG, SSR/hydration, streaming, hybrid rendering, and server functions;
 - explicit execution environments so client/server mistakes can fail at build time rather than appear as confusing runtime errors;

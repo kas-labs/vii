@@ -37,6 +37,56 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-21 01:00 CEST | Build bounded Flow research brief and fixtures
+
+Status: completed
+Branch: `test/flow-research-fixtures`
+PR: #96 (draft)
+
+### Scope
+
+- Turn the confirmed Flow Research decisions into a bounded research brief and throwaway correctness
+  fixtures without changing Vii Core, public APIs, or package boundaries.
+
+### Changes
+
+- Added `docs/architecture/FLOW_RESEARCH_BRIEF.md` and indexed it in `docs/README.md`.
+- Added `research/flow/` fixtures for deterministic typeahead, explicit hot/factory source semantics,
+  re-entrant FIFO ordering, multi-subscriber ownership, Scope-owned disposal, complete/error/cancel/
+  dispose distinctions, subscriber callback isolation, error recovery, AsyncIterable return,
+  ReadableStream cancellation, and structural-only diagnostics.
+- Added a root dev-only `rxjs@7.8.2` dependency solely for the comparison fixture; it is not a Vii
+  runtime dependency.
+- Updated `PROJECT_STATE.md` with the durable research evidence and non-claims.
+
+### Validation
+
+- `pnpm exec vitest run research/flow/flow-research.test.ts`: passed; 1 file and 12 tests passed.
+- `pnpm exec tsc --noEmit -p research/flow/tsconfig.json`: passed.
+- `pnpm format:check`: passed.
+- `git diff --check`: passed.
+- `pnpm validate`: passed with approved network access; repository format, lint, typecheck, tests,
+  builds, packed consumer validation, and CLI Core clean-consumer validation all passed.
+
+### Architecture / compatibility
+
+- No Core source, public API, package runtime dependency, adapter behavior, consumer app, SSR claim,
+  or support tier changed.
+- Flow remains Research-only; the fixtures do not create `@vii-labs/flow` or a compatibility promise.
+- The prototype is intentionally throwaway and is not production code or a performance claim.
+- Source hotness remains explicit; subscriber callback failures are not producer/operator errors.
+- Async native cancellation is initiated synchronously at the semantic boundary, while rejection
+  surfacing remains deferred research and does not change Core disposal.
+
+### Remaining / recovery
+
+- Add no public Flow package/API unless real consumers, build-vs-integrate evidence, robustness tests,
+  and reproducible performance/type evidence justify it.
+- Real UI and platform-stream consumers, real-clock validation, benchmark groups, malicious stream and
+  timer fixtures, async cancellation-rejection surfacing, upstream ownership research, and
+  primary-source/version revalidation remain deferred.
+- Review draft PR #96; merge requires maintainer confirmation.
+
 ## 2026-08-21 00:17 CEST | Close bounded Phase 4 internal dogfood
 
 Status: completed

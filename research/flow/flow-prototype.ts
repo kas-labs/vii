@@ -5,6 +5,9 @@
 
 import type { Scope } from "../../packages/core/src/index.js";
 
+type NotificationErrors = readonly unknown[];
+type NotificationResult = void | NotificationErrors;
+
 export interface FlowObserver<T> {
   next(value: T): void;
   error(error: unknown): void;
@@ -29,10 +32,23 @@ export interface TimerScheduler {
 export type FlowOperator<T, U> = (source: FlowSource<T>) => FlowSource<U>;
 
 interface QueuedObserver<T> {
-  next(value: T): void;
-  error(error: unknown): void;
-  complete(): void;
+  next(value: T): NotificationErrors;
+  error(error: unknown): NotificationErrors;
+  complete(): NotificationErrors;
   stop(): void;
+}
+
+function notificationErrors(result: unknown): NotificationErrors {
+  return Array.isArray(result) ? result : [];
+}
+
+function raiseNotificationErrors(errors: readonly unknown[]): void {
+  if (errors.length === 1) {
+    throw errors[0];
+  }
+  if (errors.length > 1) {
+    throw new AggregateError(errors, "Flow subscriber callbacks failed");
+  }
 }
 
 function createSubscription(teardown: () => void): FlowSubscription {
@@ -56,32 +72,38 @@ function createSubscription(teardown: () => void): FlowSubscription {
 }
 
 function createQueuedObserver<T>(observer: FlowObserver<T>): QueuedObserver<T> {
-  const queue: Array<() => void> = [];
+  const queue: Array<() => unknown> = [];
   let stopped = false;
   let draining = false;
 
-  const drain = (): void => {
+  const drain = (): NotificationErrors => {
     if (draining) {
-      return;
+      return [];
     }
 
+    const errors: unknown[] = [];
     draining = true;
     try {
       while (!stopped && queue.length > 0) {
-        queue.shift()!();
+        try {
+          errors.push(...notificationErrors(queue.shift()!()));
+        } catch (error) {
+          errors.push(error);
+        }
       }
     } finally {
       draining = false;
     }
+    return errors;
   };
 
-  const enqueue = (action: () => void): void => {
+  const enqueue = (action: () => unknown): NotificationErrors => {
     if (stopped) {
-      return;
+      return [];
     }
 
     queue.push(action);
-    drain();
+    return drain();
   };
 
   return {
@@ -118,7 +140,7 @@ export function createManualSource<T>(): ManualSource<T> {
     subscribe: (observer) => {
       const queuedObserver = createQueuedObserver(observer);
       if (closed) {
-        queuedObserver.complete();
+        raiseNotificationErrors(queuedObserver.complete());
         return createSubscription(() => queuedObserver.stop());
       }
 
@@ -134,27 +156,33 @@ export function createManualSource<T>(): ManualSource<T> {
     source,
     emit: (value) => {
       if (!closed) {
+        const errors: unknown[] = [];
         for (const observer of [...observers]) {
-          observer.next(value);
+          errors.push(...observer.next(value));
         }
+        raiseNotificationErrors(errors);
       }
     },
     fail: (error) => {
       if (!closed) {
         closed = true;
+        const errors: unknown[] = [];
         for (const observer of [...observers]) {
-          observer.error(error);
+          errors.push(...observer.error(error));
         }
         observers.clear();
+        raiseNotificationErrors(errors);
       }
     },
     complete: () => {
       if (!closed) {
         closed = true;
+        const errors: unknown[] = [];
         for (const observer of [...observers]) {
-          observer.complete();
+          errors.push(...observer.complete());
         }
         observers.clear();
+        raiseNotificationErrors(errors);
       }
     },
   };
@@ -162,27 +190,89 @@ export function createManualSource<T>(): ManualSource<T> {
 
 export function map<T, U>(project: (value: T) => U): FlowOperator<T, U> {
   return (source) => ({
-    subscribe: (observer) =>
-      source.subscribe({
-        next: (value) => observer.next(project(value)),
-        error: (error) => observer.error(error),
-        complete: () => observer.complete(),
-      }),
+    subscribe: (observer) => {
+      let active = true;
+      let upstream: FlowSubscription | undefined;
+      const terminate = (error: unknown): void => {
+        if (!active) {
+          return;
+        }
+        active = false;
+        upstream?.unsubscribe();
+        observer.error(error);
+      };
+      upstream = source.subscribe({
+        next: (value) => {
+          if (!active) {
+            return;
+          }
+          let projected: U;
+          try {
+            projected = project(value);
+          } catch (error) {
+            terminate(error);
+            return;
+          }
+          observer.next(projected);
+        },
+        error: terminate,
+        complete: () => {
+          if (active) {
+            active = false;
+            observer.complete();
+          }
+        },
+      });
+      return createSubscription(() => {
+        active = false;
+        upstream?.unsubscribe();
+      });
+    },
   });
 }
 
 export function filter<T>(predicate: (value: T) => boolean): FlowOperator<T, T> {
   return (source) => ({
-    subscribe: (observer) =>
-      source.subscribe({
+    subscribe: (observer) => {
+      let active = true;
+      let upstream: FlowSubscription | undefined;
+      const terminate = (error: unknown): void => {
+        if (!active) {
+          return;
+        }
+        active = false;
+        upstream?.unsubscribe();
+        observer.error(error);
+      };
+      upstream = source.subscribe({
         next: (value) => {
-          if (predicate(value)) {
+          if (!active) {
+            return;
+          }
+          let accepted: boolean;
+          try {
+            accepted = predicate(value);
+          } catch (error) {
+            terminate(error);
+            return;
+          }
+          if (accepted) {
             observer.next(value);
           }
         },
-        error: (error) => observer.error(error),
-        complete: () => observer.complete(),
-      }),
+        error: terminate,
+        complete: () => {
+          if (active) {
+            active = false;
+            observer.complete();
+          }
+        },
+      });
+      return createSubscription(() => {
+        active = false;
+        upstream?.unsubscribe();
+      });
+    },
   });
 }
 
@@ -193,16 +283,49 @@ export function distinct<T>(same: (left: T, right: T) => boolean = Object.is): F
     subscribe: (observer) => {
       let hasPrevious = false;
       let previous!: T;
-      return source.subscribe({
+      let active = true;
+      let upstream: FlowSubscription | undefined;
+      const terminate = (error: unknown): void => {
+        if (!active) {
+          return;
+        }
+        active = false;
+        upstream?.unsubscribe();
+        observer.error(error);
+      };
+      upstream = source.subscribe({
         next: (value) => {
-          if (!hasPrevious || !same(previous, value)) {
+          if (!active) {
+            return;
+          }
+          let changed = true;
+          if (hasPrevious) {
+            try {
+              changed = !same(previous, value);
+            } catch (error) {
+              terminate(error);
+              return;
+            }
+          }
+          if (changed) {
             hasPrevious = true;
             previous = value;
+          }
+          if (changed) {
             observer.next(value);
           }
         },
-        error: (error) => observer.error(error),
-        complete: () => observer.complete(),
+        error: terminate,
+        complete: () => {
+          if (active) {
+            active = false;
+            observer.complete();
+          }
+        },
+      });
+      return createSubscription(() => {
+        active = false;
+        upstream?.unsubscribe();
       });
     },
   });
@@ -220,7 +343,7 @@ export function debounce<T>(delay: number, scheduler: TimerScheduler): FlowOpera
         timerId = undefined;
         if (!closed && hasLatest) {
           hasLatest = false;
-          observer.next(latest);
+          void observer.next(latest);
         }
       };
       upstream = source.subscribe({
@@ -280,8 +403,8 @@ export function fromAbortablePromise<T>(start: (signal: AbortSignal) => Promise<
       void start(controller.signal).then(
         (value) => {
           if (active && !controller.signal.aborted) {
-            observer.next(value);
-            observer.complete();
+            void observer.next(value);
+            void observer.complete();
           }
         },
         (error: unknown) => {
@@ -306,20 +429,21 @@ export function switchLatest<T, U>(project: (value: T) => FlowSource<U>): FlowOp
       let outerCompleted = false;
       let active = true;
       let outer: FlowSubscription | undefined;
-      const terminate = (error: unknown): void => {
+      const terminate = (error: unknown): NotificationResult => {
         if (!active) {
-          return;
+          return [];
         }
         active = false;
         outer?.unsubscribe();
         current?.unsubscribe();
-        observer.error(error);
+        return observer.error(error);
       };
-      const maybeComplete = (): void => {
+      const maybeComplete = (): NotificationResult => {
         if (active && outerCompleted && (current === undefined || current.closed)) {
           active = false;
-          observer.complete();
+          return observer.complete();
         }
+        return [];
       };
       outer = source.subscribe({
         next: (value) => {
@@ -327,7 +451,13 @@ export function switchLatest<T, U>(project: (value: T) => FlowSource<U>): FlowOp
             return;
           }
           current?.unsubscribe();
-          current = project(value).subscribe({
+          let nextSource: FlowSource<U>;
+          try {
+            nextSource = project(value);
+          } catch (error) {
+            return terminate(error);
+          }
+          current = nextSource.subscribe({
             next: (result) => observer.next(result),
             error: terminate,
             complete: () => {
@@ -359,7 +489,12 @@ export function catchError<T>(recover: (error: unknown) => FlowSource<T>): FlowO
       const upstream = source.subscribe({
         next: (value) => observer.next(value),
         error: (error) => {
-          recovery = recover(error).subscribe(observer);
+          try {
+            recovery = recover(error).subscribe(observer);
+          } catch (recoveryError) {
+            return observer.error(recoveryError);
+          }
+          return [];
         },
         complete: () => observer.complete(),
       });

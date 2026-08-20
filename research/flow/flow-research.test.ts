@@ -139,6 +139,52 @@ describe("Flow research correctness fixtures", () => {
     expect(rxjs.aborted).toEqual(["vi", "vii"]);
   });
 
+  test("composition preserves explicit hot sources and starts factory sources per subscription", async () => {
+    const hot = createManualSource<number>();
+    const firstValues: number[] = [];
+    const secondValues: number[] = [];
+
+    hot.emit(0);
+    const first = hot.source.subscribe({
+      next: (value) => firstValues.push(value),
+      error: () => undefined,
+      complete: () => undefined,
+    });
+    hot.emit(1);
+    const second = hot.source.subscribe({
+      next: (value) => secondValues.push(value),
+      error: () => undefined,
+      complete: () => undefined,
+    });
+    hot.emit(2);
+
+    let factoryStarts = 0;
+    const factory = fromAbortablePromise(async () => {
+      factoryStarts += 1;
+      return factoryStarts;
+    });
+    const factoryFirst = factory.subscribe({
+      next: () => undefined,
+      error: () => undefined,
+      complete: () => undefined,
+    });
+    const factorySecond = factory.subscribe({
+      next: () => undefined,
+      error: () => undefined,
+      complete: () => undefined,
+    });
+    await flushMicrotasks();
+
+    expect(firstValues).toEqual([1, 2]);
+    expect(secondValues).toEqual([2]);
+    expect(first).not.toBe(second);
+    expect(factoryStarts).toBe(2);
+    first.dispose();
+    second.dispose();
+    factoryFirst.dispose();
+    factorySecond.dispose();
+  });
+
   test("re-entrant emissions remain synchronous but FIFO within one subscription", () => {
     const source = createManualSource<number>();
     const observed: string[] = [];
@@ -217,6 +263,98 @@ describe("Flow research correctness fixtures", () => {
     expect(recovered).toEqual([99]);
   });
 
+  test("operator failures terminate their branch and remain recoverable only through catch", () => {
+    const source = createManualSource<number>();
+    const observed: number[] = [];
+    const errors: unknown[] = [];
+    const failure = new Error("operator failed");
+    map((value: number) => {
+      if (value === 1) {
+        throw failure;
+      }
+      return value;
+    })(source.source).subscribe({
+      next: (value) => observed.push(value),
+      error: (error) => errors.push(error),
+      complete: () => undefined,
+    });
+
+    source.emit(1);
+    source.emit(2);
+
+    expect(observed).toEqual([]);
+    expect(errors).toEqual([failure]);
+  });
+
+  test("subscriber callback failures stay outside the Flow error channel and Scope lifecycle", () => {
+    const scope = createScope();
+    const source = createManualSource<number>();
+    const secondValues: number[] = [];
+    const firstSubscription = subscribeInScope(scope, source.source, {
+      next: () => {
+        throw new Error("subscriber callback failed");
+      },
+      error: () => undefined,
+      complete: () => undefined,
+    });
+    const secondSubscription = subscribeInScope(scope, source.source, {
+      next: (value) => secondValues.push(value),
+      error: () => undefined,
+      complete: () => undefined,
+    });
+
+    expect(() => source.emit(1)).toThrow("subscriber callback failed");
+    expect(() => source.emit(2)).toThrow("subscriber callback failed");
+
+    expect(secondValues).toEqual([1, 2]);
+    expect(firstSubscription.closed).toBe(false);
+    expect(secondSubscription.closed).toBe(false);
+    scope.dispose();
+    expect(firstSubscription.closed).toBe(true);
+    expect(secondSubscription.closed).toBe(true);
+  });
+
+  test("complete, error, cancel, and dispose remain distinct terminal outcomes", async () => {
+    const completeEvents: string[] = [];
+    const completeSource = createManualSource<number>();
+    completeSource.source.subscribe({
+      next: () => undefined,
+      error: () => completeEvents.push("error"),
+      complete: () => completeEvents.push("complete"),
+    });
+    completeSource.complete();
+
+    const errorEvents: string[] = [];
+    const errorSource = createManualSource<number>();
+    errorSource.source.subscribe({
+      next: () => undefined,
+      error: () => errorEvents.push("error"),
+      complete: () => errorEvents.push("complete"),
+    });
+    errorSource.fail(new Error("producer failed"));
+
+    const cancellationEvents: string[] = [];
+    const subscription = fromAbortablePromise(
+      (signal) =>
+        new Promise<number>(() => {
+          signal.addEventListener("abort", () => cancellationEvents.push("cancel"), {
+            once: true,
+          });
+        }),
+    ).subscribe({
+      next: () => undefined,
+      error: () => cancellationEvents.push("error"),
+      complete: () => cancellationEvents.push("complete"),
+    });
+    subscription.dispose();
+    cancellationEvents.push("dispose");
+    await flushMicrotasks();
+
+    expect(completeEvents).toEqual(["complete"]);
+    expect(errorEvents).toEqual(["error"]);
+    expect(cancellationEvents).toEqual(["cancel", "dispose"]);
+  });
+
   test("inner errors terminate switchLatest and clear the outer subscription", () => {
     const outer = createManualSource<string>();
     const inner = createManualSource<number>();
@@ -243,14 +381,20 @@ describe("Flow research correctness fixtures", () => {
 
   test("AsyncIterable disposal calls return without adding Flow backpressure", async () => {
     let returned = false;
+    let returnCompleted = false;
+    let resolveReturn!: (result: IteratorResult<number>) => void;
     let resolveNext!: (result: IteratorResult<number>) => void;
     const iterable: AsyncIterable<number> = {
       [Symbol.asyncIterator]: () => ({
         next: () => new Promise<IteratorResult<number>>((resolve) => (resolveNext = resolve)),
-        return: async () => {
-          returned = true;
-          return { done: true, value: undefined };
-        },
+        return: () =>
+          new Promise<IteratorResult<number>>((resolve) => {
+            returned = true;
+            resolveReturn = (result) => {
+              returnCompleted = true;
+              resolve(result);
+            };
+          }),
       }),
     };
     const subscription = fromAsyncIterable(iterable).subscribe({
@@ -259,17 +403,30 @@ describe("Flow research correctness fixtures", () => {
       complete: () => undefined,
     });
     subscription.dispose();
+    expect(subscription.closed).toBe(true);
+    expect(returned).toBe(true);
+    expect(returnCompleted).toBe(false);
     resolveNext({ done: false, value: 1 });
+    resolveReturn({ done: true, value: undefined });
     await flushMicrotasks();
 
     expect(returned).toBe(true);
+    expect(returnCompleted).toBe(true);
   });
 
   test("ReadableStream disposal calls native cancel", async () => {
     let cancelled = false;
+    let cancelCompleted = false;
+    let resolveCancel!: () => void;
     const stream = new ReadableStream<number>({
       cancel: () => {
         cancelled = true;
+        return new Promise<void>((resolve) => {
+          resolveCancel = () => {
+            cancelCompleted = true;
+            resolve();
+          };
+        });
       },
     });
     const subscription = fromReadableStream(stream).subscribe({
@@ -278,9 +435,14 @@ describe("Flow research correctness fixtures", () => {
       complete: () => undefined,
     });
     subscription.dispose();
+    expect(subscription.closed).toBe(true);
+    expect(cancelled).toBe(true);
+    expect(cancelCompleted).toBe(false);
+    resolveCancel();
     await flushMicrotasks();
 
     expect(cancelled).toBe(true);
+    expect(cancelCompleted).toBe(true);
   });
 
   test("map keeps diagnostics payloads structural by construction", () => {

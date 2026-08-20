@@ -26,7 +26,8 @@ If research graduates, the likely package is `@vii-labs/flow`.
 - synchronous propagation by default for synchronous sources;
 - Scope-aware deterministic disposal;
 - AbortSignal-native async cancellation;
-- explicit State and Task bridges;
+- an explicit State bridge; Task remains a separate comparison boundary and is not a Flow
+  dependency;
 - AsyncIterable and WHATWG ReadableStream interoperability;
 - no hidden scheduler, microtask, retry, replay, cache, or current-value semantics;
 - value-safe Diagnostics;
@@ -57,7 +58,9 @@ Task: start -------- result/error/cancel
 Flow: value -- value -- value -- value -->
 ```
 
-A Flow flattening operator may start Tasks or Promise/AbortSignal operations. `switchLatest` may cancel stale owned work. Flow must not duplicate Task pending/result/error state.
+A consumer may adapt a separate Task at an integration edge, but the Flow prototype uses only
+`Promise` plus `AbortController`. `switchLatest` may cancel stale owned work. Flow must not import or
+require Task or duplicate Task pending/result/error state.
 
 ## Cancellation and Scope
 
@@ -78,7 +81,10 @@ The baseline is synchronous for synchronous sources. Explicit microtask or anima
 
 ## AsyncIterable and Web Streams
 
-Prefer platform interoperability over proprietary stream islands. AsyncIterable is the primary candidate bridge for pull-aware async iteration. WHATWG ReadableStream is the primary bridge for HTTP bodies and other platform streaming, including AI token streams.
+Prefer platform interoperability over proprietary stream islands. AsyncIterable is the primary
+candidate bridge for pull-aware async iteration. WHATWG ReadableStream is the interoperability
+fixture for other platform streaming. Browser, network, worker, and consumer-specific stream claims
+remain unmade until real consumers exist.
 
 Flow must not claim universal backpressure. When demand control matters, native AsyncIterable/ReadableStream semantics stay visible.
 

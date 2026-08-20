@@ -37,6 +37,54 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-21 01:30 CEST | Add Flow real-clock and robustness validation
+
+Status: completed
+Branch: `test/flow-research-validation`
+PR: not opened
+
+### Scope
+
+- Add the next bounded Flow Research validation layer after deterministic correctness, without
+  changing Vii Core, public APIs, package boundaries, or runtime dependencies.
+
+### Changes
+
+- Added a real-clock typeahead/disposal validation file using native timers and the existing fake
+  search; it does not use network or browser automation.
+- Added platform/timer robustness fixtures for a 1000-event debounce storm, AsyncIterable
+  `return()` initiation and rejection isolation, and ReadableStream `cancel()` initiation and
+  rejection isolation.
+- Kept the main correctness test below the preferred 400-line test-file target by moving cohesive
+  platform/timer cases into a separate fixture.
+- Updated the Flow research brief, fixture README, and durable project state with the new evidence
+  boundary and deferred benchmark/non-consumer claims.
+
+### Validation
+
+- `pnpm exec vitest run research/flow/flow-research.test.ts research/flow/flow-real-clock.test.ts
+  research/flow/flow-platform-robustness.test.ts`: passed; 3 files and 17 tests passed.
+- `pnpm exec tsc --noEmit -p research/flow/tsconfig.json`: passed.
+- `git diff --check`: passed.
+- `pnpm format:check`: passed.
+- `pnpm validate`: passed with approved network access; repository format, lint, typecheck, tests,
+  builds, packed consumer validation, and CLI Core clean-consumer validation all passed.
+
+### Architecture / compatibility
+
+- No Core source, public API, package runtime dependency, adapter behavior, consumer app, or support
+  tier changed.
+- Real-clock and robustness fixtures are correctness/lifecycle evidence only; they do not claim
+  throughput, retained-memory, browser, network, worker, or socket support.
+- Cancellation rejection remains outside the Flow source error channel; its explicit diagnostics
+  surfacing remains deferred research and Core synchronous disposal is unchanged.
+
+### Remaining / recovery
+
+- `git diff --check`: passed before commit.
+- Commit and push the focused branch; open a draft PR for review. Do not merge without maintainer
+  confirmation.
+
 ## 2026-08-21 01:00 CEST | Build bounded Flow research brief and fixtures
 
 Status: completed

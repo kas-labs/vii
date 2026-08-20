@@ -10,8 +10,6 @@ import {
   distinct,
   flow,
   fromAbortablePromise,
-  fromAsyncIterable,
-  fromReadableStream,
   map,
   subscribeInScope,
   switchLatest,
@@ -180,6 +178,9 @@ describe("Flow research correctness fixtures", () => {
     expect(first).not.toBe(second);
     expect(factoryStarts).toBe(2);
     first.dispose();
+    hot.emit(3);
+    expect(firstValues).toEqual([1, 2]);
+    expect(secondValues).toEqual([2, 3]);
     second.dispose();
     factoryFirst.dispose();
     factorySecond.dispose();
@@ -377,72 +378,6 @@ describe("Flow research correctness fixtures", () => {
     expect(errors).toEqual([failure]);
     expect(innerSubscriptions).toBe(1);
     subscription.dispose();
-  });
-
-  test("AsyncIterable disposal calls return without adding Flow backpressure", async () => {
-    let returned = false;
-    let returnCompleted = false;
-    let resolveReturn!: (result: IteratorResult<number>) => void;
-    let resolveNext!: (result: IteratorResult<number>) => void;
-    const iterable: AsyncIterable<number> = {
-      [Symbol.asyncIterator]: () => ({
-        next: () => new Promise<IteratorResult<number>>((resolve) => (resolveNext = resolve)),
-        return: () =>
-          new Promise<IteratorResult<number>>((resolve) => {
-            returned = true;
-            resolveReturn = (result) => {
-              returnCompleted = true;
-              resolve(result);
-            };
-          }),
-      }),
-    };
-    const subscription = fromAsyncIterable(iterable).subscribe({
-      next: () => undefined,
-      error: () => undefined,
-      complete: () => undefined,
-    });
-    subscription.dispose();
-    expect(subscription.closed).toBe(true);
-    expect(returned).toBe(true);
-    expect(returnCompleted).toBe(false);
-    resolveNext({ done: false, value: 1 });
-    resolveReturn({ done: true, value: undefined });
-    await flushMicrotasks();
-
-    expect(returned).toBe(true);
-    expect(returnCompleted).toBe(true);
-  });
-
-  test("ReadableStream disposal calls native cancel", async () => {
-    let cancelled = false;
-    let cancelCompleted = false;
-    let resolveCancel!: () => void;
-    const stream = new ReadableStream<number>({
-      cancel: () => {
-        cancelled = true;
-        return new Promise<void>((resolve) => {
-          resolveCancel = () => {
-            cancelCompleted = true;
-            resolve();
-          };
-        });
-      },
-    });
-    const subscription = fromReadableStream(stream).subscribe({
-      next: () => undefined,
-      error: () => undefined,
-      complete: () => undefined,
-    });
-    subscription.dispose();
-    expect(subscription.closed).toBe(true);
-    expect(cancelled).toBe(true);
-    expect(cancelCompleted).toBe(false);
-    resolveCancel();
-    await flushMicrotasks();
-
-    expect(cancelled).toBe(true);
-    expect(cancelCompleted).toBe(true);
   });
 
   test("map keeps diagnostics payloads structural by construction", () => {

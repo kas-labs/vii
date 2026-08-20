@@ -3490,3 +3490,50 @@ PR: follow-up focused documentation branch
 - If this reference consumer becomes a deployment fixture, add a separately approved host-level CSP/
   Trusted Types policy and validate it at that deployment boundary.
 - Continue Phase 4 with the next bounded real-consumer validation slice; preserve Core/API scope.
+
+## 2026-08-20 19:09 CEST | Record Phase 4 consumer baselines
+
+Status: completed
+Branch: docs/record-phase4-consumer-baselines
+PR: follow-up focused documentation branch
+
+### Scope
+
+- Record reproducible bundle, type-check, and build wall-time baselines for the already validated
+  packed React and Vanilla consumers.
+
+### Method
+
+- Used the existing disposable clean copies with their packed `@vii-labs/core@next` dependency.
+- Ran `/usr/bin/time -p pnpm exec tsc --noEmit` and `/usr/bin/time -p pnpm build` in each copy.
+- Recorded Vite module and emitted JS/CSS raw/gzip sizes from the same build output.
+- Interpreted the results under `docs/quality/PERFORMANCE_BUDGETS.md`: per-consumer baselines only;
+  the applications are not behaviorally equivalent enough for a cross-framework performance claim.
+
+### Validation
+
+- Environment: Node `v26.3.1`, pnpm `10.12.4`, Vite `8.2.1`, macOS Darwin `25.5.0`, arm64.
+- React: typecheck wall `1.34 s`; build wall `4.21 s`; 28 modules; JavaScript `197.19 kB` raw /
+  `62.41 kB` gzip; CSS `1.78 kB` raw / `0.81 kB` gzip.
+- Vanilla: typecheck wall `3.35 s`; build wall `3.90 s`; 19 modules; JavaScript `11.76 kB` raw /
+  `4.42 kB` gzip; CSS `3.32 kB` raw / `1.23 kB` gzip.
+- The measured Vite build phase itself reported 85 ms for React and 202 ms for Vanilla; the wall
+  times include package-script and TypeScript work.
+
+### Interpretation / limits
+
+- No numeric release budgets were introduced or inferred.
+- These measurements are local baselines for detecting changes in the same harness, not a claim that
+  React or Vanilla is faster, smaller, or lower-memory in general.
+- No browser heap measurement or post-disposal retention claim is made by this slice.
+
+### Architecture / compatibility
+
+- Measurement and documentation only; no Vii Core runtime, public API, dependency, reference-app
+  source, release behavior, or Vue consumer changed.
+
+### Remaining / recovery
+
+- Reuse these baselines for future changes to the same consumer fixtures; add numeric budgets only
+  through an approved, behaviorally scoped decision.
+- Continue Phase 4 with the next bounded real-consumer or lifecycle slice.

@@ -18,7 +18,8 @@ This directory is the primary map for Vii product, architecture, security, gover
 12. [Implementation Roadmap](roadmap/IMPLEMENTATION_ROADMAP.md)
 13. [Foundation Coverage Audit](roadmap/FOUNDATION_COVERAGE_AUDIT.md)
 14. [Ecosystem Capability Strategy](strategy/ECOSYSTEM_CAPABILITY_STRATEGY.md)
-15. [Rendering Strategy](architecture/RENDERING_STRATEGY.md)
+15. [Schema Architecture](architecture/SCHEMA_ARCHITECTURE.md)
+16. [Rendering Strategy](architecture/RENDERING_STRATEGY.md)
 
 ## Current implementation focus
 
@@ -35,7 +36,7 @@ repository foundation
 
 Native components, the application framework, SSR, native build orchestration, Nx integration, desktop, and mobile remain Research or Vision until prerequisites and evidence exist.
 
-Form, HTTP, native template control flow, progressive rendering, and Vii-specific testing helpers now have explicit Research directions. Those documents define boundaries and graduation criteria; they do not mean the packages, syntax, or rendering modes are implemented or supported.
+Schema, Form, HTTP, native template control flow, progressive rendering, and Vii-specific testing helpers now have explicit Research directions. Those documents define boundaries and graduation criteria; they do not mean the packages, syntax, or rendering modes are implemented or supported.
 
 The future native application framework is CSR-first. Static generation, SSR/hydration, streaming, hybrid rendering, and server functions are opt-in layers that require independent evidence. Vii SSR is presentation infrastructure by default and does not require Vii to own an application's domain backend.
 
@@ -61,7 +62,7 @@ Developers and agents should read these guides together with the architecture do
 
 - `strategy/PRODUCT_VISION.md`
 - `strategy/PRODUCT_BOUNDARIES.md`
-- `strategy/ECOSYSTEM_CAPABILITY_STRATEGY.md`, how Vii learns from mature ecosystems while owning only Vii-specific semantics and keeping lower-level engines replaceable.
+- `strategy/ECOSYSTEM_CAPABILITY_STRATEGY.md`, how Vii learns from mature ecosystems while owning only Vii-specific semantics and keeping lower-level engines and libraries replaceable.
 
 ## Architecture
 
@@ -81,6 +82,7 @@ Developers and agents should read these guides together with the architecture do
 - `architecture/REACTIVITY_AND_STREAMS.md`
 - `architecture/SCOPE_AND_RESOURCES.md`
 - `architecture/DIAGNOSTICS_PROTOCOL.md`
+- `architecture/SCHEMA_ARCHITECTURE.md`, Research direction for a small TypeScript-first runtime data-contract layer with explicit validation/transform semantics and evidence-first performance goals.
 - `architecture/FORM_ARCHITECTURE.md`, Research direction for a signal-first, typed, framework-agnostic Form module.
 - `architecture/HTTP_CLIENT.md`, Research direction for a small Fetch-first transport layer separate from Query.
 
@@ -117,15 +119,16 @@ Vii uses an evidence-first capability rule:
 
 ```text
 own Vii semantics
-reuse mature engines
+reuse mature engines and libraries
 keep boundaries replaceable
 prove value through real consumers
 ```
 
 Current explicit research tracks are:
 
+- Schema, comparing a possible Vii-native runtime contract against mature validators such as Zod, Valibot, ArkType, TypeBox, and Ajv, with zero-copy validation, allocation, bundle, type-system, JSON Schema, and integration claims requiring reproducible evidence;
 - Form, informed by Angular Signal Forms, TanStack Form, React Hook Form, Vue, and VeeValidate while defining its own Vii semantics;
-- HTTP, informed by Fetch, Angular HttpClient, Axios, and small Fetch clients while remaining separate from Query;
+- HTTP, informed by Fetch, Angular HttpClient, Axios, and small Fetch clients while remaining separate from Query and validation providers;
 - native template control flow, comparing block, directive, and TSX/JavaScript authoring while sharing one compiler/runtime semantic model;
 - progressive rendering, keeping CSR independently usable and requiring opt-in evidence for SSG, SSR/hydration, streaming, hybrid rendering, and server functions;
 - explicit execution environments so client/server mistakes can fail at build time rather than appear as confusing runtime errors;
@@ -192,6 +195,7 @@ The root `/ROADMAP.md` provides the public phase overview. Cross-phase capabilit
 
 - `quality/TEST_STRATEGY.md`
 - `quality/PERFORMANCE_BUDGETS.md`
+- `quality/SCHEMA_BENCHMARK_PLAN.md`, research benchmark methodology for runtime, allocation, bundle, and TypeScript compiler comparisons before any Vii Schema performance claim.
 - `quality/SECURITY_AND_PRIVACY.md`
 - `quality/COMPATIBILITY_POLICY.md`
 
@@ -202,8 +206,7 @@ The root `/ROADMAP.md` provides the public phase overview. Cross-phase capabilit
 - `governance/API_STABILITY.md`
 - `governance/RELEASE_POLICY.md`
 - `governance/EXPERIMENTAL_CORE_RELEASE.md`, accepted Core-only experimental release decision.
-- `governance/CORE_EXPERIMENTAL_RELEASE_SECURITY.md`, release evidence and protected publishing
-  prerequisites; it does not authorize publication.
+- `governance/CORE_EXPERIMENTAL_RELEASE_SECURITY.md`, release evidence and protected publishing prerequisites; it does not authorize publication.
 - `governance/PACKAGE_LIFECYCLE.md`
 - `governance/DECISION_MAKING.md`
 - `governance/REPOSITORY_OPERATING_MODEL.md`
@@ -225,7 +228,7 @@ The root `/ROADMAP.md` provides the public phase overview. Cross-phase capabilit
 
 - RFC 0022: Public Website and Documentation Lifecycle
 
-The Form, HTTP, testing, template-control-flow, and rendering-strategy documents are Research inputs. They are intentionally not presented as accepted RFCs.
+The Schema, Form, HTTP, testing, template-control-flow, and rendering-strategy documents are Research inputs. They are intentionally not presented as accepted RFCs.
 
 These proposals remain Proposed. Implementation and support claims require accepted decisions, milestones, tests, fixtures, and releases.
 

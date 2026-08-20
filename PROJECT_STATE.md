@@ -153,6 +153,11 @@ correlation ID but still exclude state values. A static consumer-boundary scan f
 XMLHttpRequest, sendBeacon, telemetry, or analytics path. This confirms the documented
 value-free/production-safe boundary for this consumer; it is not a penetration test or a claim about
 unreviewed host applications.
+The packed Vanilla consumer's development-only lifecycle probe has now also passed in the clean
+internal dogfood copy using `@vii-labs/core@next`: a headless Chrome run completed 1,000 mount,
+Scope, update, disposal, and idempotent-disposal cycles with `iterations: 1000`,
+`activeScopeCycles: 1000`, `remainingChildren: 0`, `hostConnected: true`, and zero console errors.
+This is reproducible packed-artifact lifecycle evidence, not a universal production memory budget.
 The internal dogfood process is now documented in docs/alpha/INTERNAL_DOGFOOD_PROTOCOL.md with a
 clean-install gate for packed @vii-labs/core@next, required test/typecheck/build/dev checks, and a
 Vanilla browser smoke checklist. The Markdown issue template at

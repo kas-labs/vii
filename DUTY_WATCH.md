@@ -3351,3 +3351,42 @@ Issue: [#84](https://github.com/kas-labs/vii/issues/84) closed as completed
 
 - Continue Phase 4 with the next bounded real-consumer or lifecycle validation slice; do not expand
   Core/API scope without a separate approved task.
+
+## 2026-08-20 18:44 CEST | Validate packed Vanilla lifecycle probe
+
+Status: completed
+Branch: docs/record-packed-vanilla-lifecycle
+PR: follow-up focused documentation branch
+
+### Scope
+
+- Validate the existing development-only lifecycle probe against the clean Vanilla consumer using
+  the packed `@vii-labs/core@next` artifact.
+
+### Changes
+
+- Ran the existing `window.runViiLifecycleProbe(1000)` browser seam through system Google Chrome
+  via Playwright; no source files in the reference app or Vii repository were changed.
+- Recorded the result in the durable project state and this handoff.
+
+### Validation
+
+- Core: `@vii-labs/core@next` resolved to `0.1.0-experimental.2` in the existing clean dogfood run.
+- Browser: HeadlessChrome `151.0.0.0` via Playwright; console errors `0`.
+- Lifecycle result: `iterations: 1000`, `activeScopeCycles: 1000`, `remainingChildren: 0`,
+  `hostConnected: true`.
+- The probe exercised Create Scope, Increment, Batch +2, Scope disposal, mount disposal, and the
+  idempotent second disposal on every cycle.
+- The dev server was stopped after validation; no persistent external process remains.
+
+### Architecture / compatibility
+
+- Validation-only evidence; no Vii Core runtime, public API, dependency, package, or consumer source
+  changed.
+- No Vue consumer was added or changed.
+- This is lifecycle evidence for the packed artifact, not a universal production memory claim.
+
+### Remaining / recovery
+
+- Continue Phase 4 with the next bounded real-consumer validation slice; preserve the current Core/API
+  scope unless a separate approved task changes it.

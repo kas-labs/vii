@@ -41,7 +41,7 @@ PR: <number or not opened>
 
 Status: completed
 Branch: `test/flow-research-fixtures`
-PR: not opened
+PR: #96 (draft)
 
 ### Scope
 
@@ -81,8 +81,7 @@ PR: not opened
   and reproducible performance/type evidence justify it.
 - Real UI and platform-stream consumers, real-clock validation, benchmark groups, malicious stream and
   timer fixtures, and primary-source/version revalidation remain deferred.
-- Review the focused diff, commit, then publish a draft PR if the documentation/research handoff is
-  accepted.
+- Review draft PR #96; merge requires maintainer confirmation.
 
 ## 2026-08-21 00:17 CEST | Close bounded Phase 4 internal dogfood
 

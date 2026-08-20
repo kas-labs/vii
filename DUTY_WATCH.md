@@ -3095,3 +3095,174 @@ PR: [#82](https://github.com/kas-labs/vii/pull/82) draft
 ### Remaining / recovery
 
 - Review and merge PR #82 after its required checks and human review pass.
+
+## 2026-08-20 00:25 CEST | Add internal dogfood protocol
+
+Status: partial
+Branch: docs/internal-dogfood-protocol
+PR: not opened
+
+### Scope
+
+- Document the internal packed-Core dogfood gate for the Vanilla reference app and add a structured
+  GitHub issue template for durable run evidence.
+
+### Changes
+
+- Added docs/alpha/INTERNAL_DOGFOOD_PROTOCOL.md.
+- Added .github/ISSUE_TEMPLATE/internal-dogfood.md with mandatory preflight and browser checkboxes.
+- Limited the process to maintainers and internal dogfood consumers; no external alpha or telemetry.
+
+### Validation
+
+- Targeted Prettier check for both Markdown files: passed.
+- Repository format:check: passed.
+- git diff --check: passed.
+- Repository pnpm validate: format, lint, typecheck, test, build, and Core pack-check passed; the
+  final network-dependent consumer pack-check was blocked by registry DNS ENOTFOUND for React packages.
+
+### Architecture / compatibility
+
+- Documentation and issue-template only; no Vii runtime, package, public API, dependency, release,
+  telemetry, or network behavior changed.
+
+### Remaining / recovery
+
+- Publish the docs branch in a draft PR. Re-run pnpm validate when registry connectivity is available.
+
+## 2026-08-20 00:35 CEST | Publish internal dogfood protocol
+
+Status: completed
+Branch: docs/internal-dogfood-protocol
+PR: [#83](https://github.com/kas-labs/vii/pull/83) draft
+
+### Scope
+
+- Publish the internal dogfood protocol and structured issue template for review.
+
+### Changes
+
+- Pushed commit a299241 to origin/docs/internal-dogfood-protocol.
+- Opened draft PR #83 targeting main.
+
+### Validation
+
+- git diff --check: passed before publication.
+- PR #83 records the targeted Markdown checks and the repository validation registry limitation.
+
+### Architecture / compatibility
+
+- Documentation and issue-template only; no Vii runtime, package, public API, dependency, release,
+  telemetry, or network behavior changed.
+
+### Remaining / recovery
+
+- Review and merge PR #83 after its required checks and human review pass.
+
+## 2026-08-20 17:29 CEST | Run packed Core internal dogfood on clean Vanilla copy
+
+Status: partial
+Branch: docs/internal-dogfood-protocol
+PR: [#83](https://github.com/kas-labs/vii/pull/83) draft
+
+### Scope
+
+- Execute the internal dogfood protocol against a clean copy of
+  `/Users/eugenekasap/WebstormProjects/vii-reference-vanilla-onboarding`.
+- Validate the published `@vii-labs/core@next` artifact without changing Vii Core/API or the
+  supplied reference app.
+
+### Artifact and environment
+
+- Clean run copy: `/private/tmp/vii-dogfood-run-20260820`.
+- Core: `@vii-labs/core@next` resolved by `pnpm list` to `0.1.0-experimental.2`.
+- App commit: unavailable; the supplied reference directory and clean copy contain no `.git` metadata.
+- OS: macOS `26.5.2`, Darwin `25.5.0`, arm64.
+- Node: `v22.17.0`.
+- pnpm: `10.12.4`.
+- Browser: Codex In-app Browser; browser version is not exposed by the browser control surface.
+
+### Validation
+
+- `pnpm remove @vii-labs/core`: passed after a sandbox DNS attempt; removed the local
+  `/private/tmp/vii-reference-packages/...tgz` dependency.
+- `pnpm add @vii-labs/core@next`: passed; registry package installed as `0.1.0-experimental.2`.
+- `pnpm list @vii-labs/core`: passed; output listed `@vii-labs/core 0.1.0-experimental.2`.
+- `pnpm test`: passed; 4 files and 16 tests passed.
+- `pnpm exec tsc --noEmit`: passed with no output.
+- `pnpm build`: passed; Vite `8.2.1`, 19 modules, 11.76 kB raw JS / 4.42 kB gzip, 3.32 kB raw
+  CSS / 1.23 kB gzip.
+- `pnpm dev`: initial sandbox listener failed with `listen EPERM ::1:5173`; the exact command then
+  passed with local-listener permission and served `http://localhost:5173/`.
+- Browser smoke: Create Scope and Increment produced `count 1`, `doubled 2`, and a live timeline;
+  Batch +2 produced `count 3`, `doubled 6`, `events 20`, `dropped 0`, and a trailing `batch.committed`;
+  Dispose reported `Scope disposed`; a fresh Scope started at `count 0`, `doubled 0`; Clear produced
+  empty timeline and `events 0`.
+- Export: the browser click completed and JSON preview contained `"protocol": "vii.trace"` and
+  `"version": "0.1"`; the app source sets the download name to `vii-trace.json`.
+
+### API friction / unresolved evidence
+
+- The in-app browser did not emit a download event within 5 seconds for the blob URL export, and the
+  downloaded file was not observable through the available browser or temporary-file surfaces.
+- Console logs contained no warning or error entries. This is browser-tool evidence friction, not a
+  confirmed Core or consumer runtime failure; protocol status remains partial until the downloaded
+  file itself is checked for the `vii.trace` protocol.
+- The first registry attempt hit repeated `ENOTFOUND registry.npmjs.org` due sandbox network limits.
+  A permitted network retry succeeded; the clean run therefore used the npm registry artifact, not a
+  local tarball or workspace alias.
+
+### Architecture / compatibility
+
+- No Vii Core runtime, package, public API, dependency, release, telemetry, or network behavior changed.
+- The supplied reference app was not modified. Only the disposable clean copy received install metadata,
+  `node_modules`, and build output.
+- This is internal consumer evidence and not release approval, support, privacy certification, or a
+  universal bundle/performance claim.
+
+### Remaining / recovery
+
+- Verify the actual downloaded `vii-trace.json` through a user-visible browser download result or a
+  browser surface that exposes the blob download; confirm its JSON `protocol` is `vii.trace`.
+- Keep the dev server session `90560` available at `http://localhost:5173/` for that manual check.
+
+## 2026-08-20 17:44 CEST | Resolve PR #83 conflict with current main
+
+Status: completed
+Branch: docs/internal-dogfood-protocol
+PR: [#83](https://github.com/kas-labs/vii/pull/83) open, mergeable
+Issue: [#84](https://github.com/kas-labs/vii/issues/84)
+
+### Scope
+
+- Record the sanitized blocked dogfood run and reconcile PR #83 with the current `main` after PR #82
+  merged.
+
+### Changes
+
+- Created sanitized internal dogfood issue #84 without secrets, credentials, unsanitized traces, or
+  private environment paths.
+- Merged `origin/main` at `f663201` into the focused protocol branch.
+- Preserved both the PR #82 Diagnostics privacy handoff and the PR #83 protocol/dogfood handoffs in
+  `DUTY_WATCH.md` and `PROJECT_STATE.md`.
+- Pushed conflict-resolution commit `cad8bbc` to `origin/docs/internal-dogfood-protocol`.
+
+### Validation
+
+- Targeted Prettier check for the affected Markdown files: passed.
+- Initial `pnpm validate`: all format, lint, typecheck, test, and build stages passed; the first
+  pack-check attempt was blocked by sandbox registry DNS `ENOTFOUND`.
+- Network-permitted `pnpm validate`: passed, including packed Core, reference, React, Angular, Vue,
+  and CLI Core consumer validation.
+- `git diff --check`: passed.
+- GitHub PR #83: open, non-draft, `mergeable: true`; branch is synchronized with origin.
+
+### Architecture / compatibility
+
+- Documentation-only reconciliation; no Vii Core runtime, public API, dependency, release, telemetry,
+  or network behavior changed.
+- No Vue consumer was added or changed by this task.
+
+### Remaining / recovery
+
+- Merge PR #83 into `main` only after explicit maintainer confirmation.

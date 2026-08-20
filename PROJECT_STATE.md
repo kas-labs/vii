@@ -153,6 +153,12 @@ correlation ID but still exclude state values. A static consumer-boundary scan f
 XMLHttpRequest, sendBeacon, telemetry, or analytics path. This confirms the documented
 value-free/production-safe boundary for this consumer; it is not a penetration test or a claim about
 unreviewed host applications.
+The internal dogfood process is now documented in docs/alpha/INTERNAL_DOGFOOD_PROTOCOL.md with a
+clean-install gate for packed @vii-labs/core@next, required test/typecheck/build/dev checks, and a
+Vanilla browser smoke checklist. The Markdown issue template at
+.github/ISSUE_TEMPLATE/internal-dogfood.md captures artifact, environment, command, browser,
+sanitization, findings, and follow-up evidence through a required structured checklist. The process
+is explicitly internal and does not create an external alpha or a support commitment.
 The repository uses Changesets for future public package versioning. The configuration has no publish
 script; version application and publication remain separately approved release actions.
 The packed Core artifact also carries its Apache-2.0 license, repository and issue links, discovery

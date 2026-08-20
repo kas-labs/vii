@@ -3266,3 +3266,43 @@ Issue: [#84](https://github.com/kas-labs/vii/issues/84)
 ### Remaining / recovery
 
 - Merge PR #83 into `main` only after explicit maintainer confirmation.
+
+## 2026-08-20 18:23 CEST | Record PR #83 merge status
+
+Status: completed
+Branch: docs/record-pr83-merge-status
+PR: [#83](https://github.com/kas-labs/vii/pull/83) merged
+Issue: [#84](https://github.com/kas-labs/vii/issues/84) remains open
+
+### Scope
+
+- Record the externally confirmed merge of the internal dogfood protocol into `main`.
+
+### Changes
+
+- PR #83 merged into `main` at `aea3321298a99559aca04ee6a8af2c014ad51948`.
+- GitHub checks for head `612d723840ec038b6314754c03900438b1b79646` completed successfully:
+  Governance, Dependency Review, CodeQL, and Validate.
+- Issue #84 remains the follow-up for independently verifying the downloaded `vii-trace.json` file;
+  the clean Vanilla run is still partial on that evidence point.
+- No Vii Core runtime, public API, dependency, release, telemetry, or consumer source changed.
+
+### Validation
+
+- `git fetch origin main`: passed; `origin/main` is `aea3321298a99559aca04ee6a8af2c014ad51948`.
+- Current branch was created from the merged `origin/main`: passed.
+- `git diff --check`: passed.
+- Focused Prettier check: passed for `DUTY_WATCH.md`.
+
+### Architecture / compatibility
+
+- Documentation-only post-merge record; framework-agnostic Core architecture and consumer boundaries
+  are unchanged.
+- No Vue consumer was added or changed.
+
+### Remaining / recovery
+
+- Verify the actual downloaded `vii-trace.json` through a user-visible browser download result or a
+  browser surface that exposes the blob download; confirm its JSON `protocol` is `vii.trace`.
+- Continue the next planned Vii dogfood/consumer validation slice after issue #84 is resolved or
+  explicitly accepted as a tooling-evidence limitation.

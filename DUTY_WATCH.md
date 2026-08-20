@@ -3027,3 +3027,37 @@ PR: [#81](https://github.com/kas-labs/vii/pull/81) draft
 ### Remaining / recovery
 
 - Review and merge PR #81 after its required checks and human review pass.
+
+## 2026-08-20 00:25 CEST | Add internal dogfood protocol
+
+Status: partial
+Branch: docs/internal-dogfood-protocol
+PR: not opened
+
+### Scope
+
+- Document the internal packed-Core dogfood gate for the Vanilla reference app and add a structured
+  GitHub issue template for durable run evidence.
+
+### Changes
+
+- Added docs/alpha/INTERNAL_DOGFOOD_PROTOCOL.md.
+- Added .github/ISSUE_TEMPLATE/internal-dogfood.md with mandatory preflight and browser checkboxes.
+- Limited the process to maintainers and internal dogfood consumers; no external alpha or telemetry.
+
+### Validation
+
+- Targeted Prettier check for both Markdown files: passed.
+- Repository format:check: passed.
+- git diff --check: passed.
+- Repository pnpm validate: format, lint, typecheck, test, build, and Core pack-check passed; the
+  final network-dependent consumer pack-check was blocked by registry DNS ENOTFOUND for React packages.
+
+### Architecture / compatibility
+
+- Documentation and issue-template only; no Vii runtime, package, public API, dependency, release,
+  telemetry, or network behavior changed.
+
+### Remaining / recovery
+
+- Publish the docs branch in a draft PR. Re-run pnpm validate when registry connectivity is available.

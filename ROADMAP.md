@@ -43,7 +43,7 @@ Phase 0 Intentloom work is limited to repository policy, context, task, and vali
 - Vanilla integration
 - Unit, lifecycle, type, security, and benchmark suites
 
-State Alpha does not include a native renderer, Query cache, Form engine, HTTP client, RxJS requirement, deep proxy store, NgRx-style reducer architecture, or AI-required behavior.
+State Alpha does not include a native renderer, Query cache, Form engine, HTTP client, schema engine, RxJS requirement, deep proxy store, NgRx-style reducer architecture, or AI-required behavior.
 
 ## Phase 2: Framework adapters and CLI — Committed
 
@@ -91,6 +91,34 @@ Native component generators, build commands, Nx support, autonomous agents, and 
 
 This research may begin in parallel after the relevant Core contracts are stable enough to evaluate the capability. It must not delay committed State, adapter, CLI, diagnostics, or real-application work.
 
+### Vii Schema
+
+Vii Schema is a candidate small, TypeScript-first runtime data-contract layer for validating unknown application input. It is not accepted as a package and must demonstrate meaningful value beyond integrating an existing mature validator.
+
+Research scope:
+
+- strongly typed runtime validation with input/output inference;
+- small primitives and composition surface rather than a full TypeScript mirror;
+- non-throwing `check`-style result as the application-oriented baseline, with throwing parse convenience under evaluation;
+- explicit separation of validation, coercion, and transformation;
+- zero-copy success-path research for validation-only schemas;
+- minimal allocation on valid input and lazy materialization of issue paths;
+- structured value-free errors suitable for Form and Diagnostics;
+- compact internal Schema IR and an optional CSP-safe optimized validation plan;
+- bundle-size, runtime, allocation/memory, and TypeScript compiler benchmarks;
+- JSON Schema export for the portable subset without forcing JSON Schema to be the runtime representation;
+- optional Form, HTTP, Query, server-boundary, configuration, worker-message, and AI structured-output integrations;
+- browser, server, edge/worker, SSR, and compatibility evidence before runtime claims;
+- security review for prototype pollution, getters/proxies, regexes, pathological depth/width, unions, recursion, transforms, and code-generation boundaries.
+
+Research comparisons must include current representative approaches such as Zod 4, Zod Mini, Valibot, ArkType, TypeBox, Ajv where semantically fair, and a handwritten validator baseline. Vii must not claim to be faster, smaller, or simpler without reproducible evidence.
+
+Vii Form must continue to support schema adapters and must not require Vii Schema. Vii HTTP must continue to support user-provided decoding/validation. Schema must remain independently usable and must not depend on State, Form, HTTP, Query, UI frameworks, build tools, server runtimes, or AI.
+
+Vii Schema may move to Planned only after a real consumer need, an integration-vs-build comparison, a small prototype, reproducible performance/type-check evidence, security fixtures, and a clear public-contract proposal demonstrate Vii-specific value. An official adapter to an existing schema library is an acceptable research outcome.
+
+See `docs/architecture/SCHEMA_ARCHITECTURE.md` and `docs/quality/SCHEMA_BENCHMARK_PLAN.md`.
+
 ### Vii Form
 
 Vii Form is a strong candidate application module because it can reuse State, Scope, diagnostics, framework adapters, and future Devtools directly.
@@ -103,7 +131,7 @@ Research scope:
 - nested objects, arrays, dynamic fields, and multi-step forms;
 - sync and async validation;
 - cancellation of stale async validation;
-- schema adapters without a mandatory validation provider;
+- schema adapters without a mandatory validation provider, including a possible first-party Vii Schema adapter if Schema graduates;
 - typed parsing and input/output transforms;
 - submission lifecycle and server-field errors;
 - accessible React, Angular, Vue, Vanilla, and future native-Vii bindings;
@@ -127,6 +155,7 @@ Research scope:
 - local request context metadata;
 - AbortSignal cancellation and explicit timeout behavior;
 - typed decoding without pretending compile-time generics validate network data;
+- optional runtime response contracts through Vii Schema or user-provided validators if Schema research proves value;
 - stable transport error categories;
 - retries disabled by default, with explicit optional retry policy;
 - SSR request isolation;
@@ -136,8 +165,9 @@ Research scope:
 The intended separation is:
 
 ```text
-Query = cache and server-state lifecycle
-HTTP  = transport and request/response lifecycle
+Query  = cache and server-state lifecycle
+HTTP   = transport and request/response lifecycle
+Schema = optional runtime data contract at trust boundaries
 ```
 
 See `docs/architecture/HTTP_CLIENT.md`.
@@ -149,7 +179,7 @@ Vii should own framework-specific semantics and Vii-specific testing intelligenc
 Research direction:
 
 - keep Vitest as the canonical repository unit/contract runner while it meets project requirements;
-- research `@vii-labs/testing` for State, Scope, diagnostics, Query, Form, adapter, SSR, and lifecycle-specific assertions and fixtures rather than building a new general-purpose test runner;
+- research `@vii-labs/testing` for State, Scope, diagnostics, Query, Form, Schema, adapter, SSR, and lifecycle-specific assertions and fixtures rather than building a new general-purpose test runner;
 - use browser automation such as Playwright when browser-level evidence is required;
 - keep Vite and Rolldown as the first native framework build research direction;
 - keep Bun and Rspack optional compatibility or engine adapters rather than Vii Core dependencies;
@@ -170,6 +200,7 @@ See `docs/strategy/ECOSYSTEM_CAPABILITY_STRATEGY.md`.
 - Query diagnostics
 - Server-data security and serialization review
 - Explicit transport boundary so Query can use Vii HTTP, Fetch, or another user-provided transport
+- Optional validated data ingestion without making Vii Schema mandatory
 
 ## Phase 6: Vii UI foundation — Planned
 
@@ -192,10 +223,11 @@ See `docs/strategy/ECOSYSTEM_CAPABILITY_STRATEGY.md`.
 - Typed server contracts
 - Request Scopes
 - Validation and authorization metadata
+- Optional schema contracts at request/input boundaries without coupling server foundations to one validator
 - Transport abstraction
 - CSRF, SSRF, filesystem, command, upload, and serialization security contracts
 
-Vii HTTP research may consume the portable transport lessons from this phase, but an HTTP module must remain independently useful and must not become a server framework.
+Vii HTTP and Schema research may consume portable lessons from this phase, but both capabilities must remain independently useful and must not become a server framework.
 
 ## Phase 8: Native component research — Research
 
@@ -265,6 +297,7 @@ Possible scope:
 - Explicit shared, client, server, build, and optional edge boundaries
 - Compiler/build diagnostics for invalid environment imports
 - Typed loaders and optional server functions whose remote/network semantics remain visible
+- Optional runtime validation contracts at trust boundaries without hiding network semantics
 - Deployment adapters
 - Cohesive `vii dev`, `vii build`, `vii test`, and `vii check` workflows over replaceable lower-level engines when justified
 
@@ -274,10 +307,11 @@ A CSR application must not pay the conceptual, bundle, lifecycle, or tooling cos
 
 See `docs/architecture/RENDERING_STRATEGY.md`.
 
-This phase is not a delivery promise and is not required for Vii State, Query, Form research, UI, or adapters to succeed.
+This phase is not a delivery promise and is not required for Vii State, Query, Schema, Form research, UI, or adapters to succeed.
 
 ## Phase 11: Ecosystem and agent-assisted expansion — Vision
 
+- Advanced Schema integrations if Vii Schema graduates
 - Advanced Form integrations if Vii Form graduates
 - Advanced HTTP and server integrations if Vii HTTP graduates
 - Advanced server adapters
@@ -327,14 +361,14 @@ Vii Core remains useful independently of the framework decision.
 
 ## Ecosystem capability decision rule
 
-A Form, HTTP, testing, build, template, rendering, or other ecosystem capability remains Research or is deferred when:
+A Schema, Form, HTTP, testing, build, template, rendering, or other ecosystem capability remains Research or is deferred when:
 
 - an existing library solves the validated need without losing important Vii semantics;
 - there is no real consumer;
 - it would delay committed Core or adapter work;
 - the capability cannot remain optional and tree-shakable where appropriate;
 - maintenance cost exceeds demonstrated benefit;
-- API, performance, security, accessibility, compatibility, lifecycle, or execution-boundary requirements remain unclear.
+- API, performance, security, accessibility, compatibility, lifecycle, type-system, or execution-boundary requirements remain unclear.
 
 ## Agent decision rule
 

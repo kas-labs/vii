@@ -121,6 +121,12 @@ React emitted 28 modules with 197.19 kB raw / 62.41 kB gzip JavaScript and 1.78 
 gzip CSS; Vanilla emitted 19 modules with 11.76 kB raw / 4.42 kB gzip JavaScript and 3.32 kB raw /
 1.23 kB gzip CSS. These are per-consumer reproducibility baselines, not equivalent cross-framework
 performance comparisons, numeric release budgets, or production memory claims.
+The current Phase 4 gate audit marks the two packed real consumers, lifecycle cleanup evidence,
+reproducible bundle/type-check baselines, bounded privacy/security fixtures, and documentation-backed
+compatibility checks as evidenced for their stated scopes. It leaves external alpha testing, a real
+deployment CSP/Trusted Types review, browser heap/post-disposal retention measurement, and numeric
+release budgets open. These gaps do not block the framework-agnostic Core or require speculative API
+expansion; each needs a separately approved validation or release decision.
 The second external Phase 4 consumer is a Vii-native Vanilla DOM onboarding application named
 `vii-reference-vanilla-onboarding`. It uses only the packed Core artifact at the application boundary,
 keeps form domain data separate from UI state, and exercises Computed validation, Batch step changes,

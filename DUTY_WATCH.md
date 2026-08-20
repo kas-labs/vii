@@ -37,6 +37,44 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-21 00:17 CEST | Close bounded Phase 4 internal dogfood
+
+Status: completed
+Branch: `docs/close-phase4-internal-dogfood`
+PR: #95 (draft)
+
+### Scope
+
+- Record the maintainer decision to treat the bounded internal Phase 4 dogfood evidence as complete.
+- Preserve the separate open decisions for external alpha, deployment hardening, browser retention
+  measurement, and numeric release budgets.
+
+### Changes
+
+- Updated `PROJECT_STATE.md` with the bounded internal completion status and its non-claims.
+- Added this append-only handoff; no runtime, package, public API, consumer, roadmap, or research
+  scope changed.
+
+### Validation
+
+- Reused the merged Phase 4 evidence recorded in prior Duty Watch entries: packed React and Vanilla
+  consumer tests, typechecks, builds, browser smoke, lifecycle probe, diagnostics export, privacy,
+  security, and bundle/type-check baselines.
+- This documentation-only slice did not rerun consumer/browser commands.
+- `git diff --check`: passed.
+
+### Architecture / compatibility
+
+- No Core or adapter dependency direction, public API, package artifact, runtime behavior, browser
+  capability boundary, SSR behavior, security default, privacy contract, or compatibility promise changed.
+- Internal completion does not create an external alpha or support commitment. Flow remains Research.
+
+### Remaining / recovery
+
+- External alpha, real deployment CSP/Trusted Types validation, browser heap/post-disposal retention
+  measurement, and numeric release budgets require separate approved tasks.
+- Review draft PR #95; merge requires maintainer confirmation.
+
 ## 2026-08-18 18:57 CEST | Validate external React consumer State slice
 
 Status: completed

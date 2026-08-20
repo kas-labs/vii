@@ -123,10 +123,12 @@ gzip CSS; Vanilla emitted 19 modules with 11.76 kB raw / 4.42 kB gzip JavaScript
 performance comparisons, numeric release budgets, or production memory claims.
 The current Phase 4 gate audit marks the two packed real consumers, lifecycle cleanup evidence,
 reproducible bundle/type-check baselines, bounded privacy/security fixtures, and documentation-backed
-compatibility checks as evidenced for their stated scopes. It leaves external alpha testing, a real
-deployment CSP/Trusted Types review, browser heap/post-disposal retention measurement, and numeric
-release budgets open. These gaps do not block the framework-agnostic Core or require speculative API
-expansion; each needs a separately approved validation or release decision.
+compatibility checks as evidenced for their stated scopes. Internal Phase 4 dogfood is therefore
+complete for this bounded evidence set; it is not an external alpha, support commitment, or universal
+compatibility/performance/security claim. External alpha testing, a real deployment CSP/Trusted Types
+review, browser heap/post-disposal retention measurement, and numeric release budgets remain open.
+These gaps do not block the framework-agnostic Core or require speculative API expansion; each needs a
+separately approved validation or release decision.
 The second external Phase 4 consumer is a Vii-native Vanilla DOM onboarding application named
 `vii-reference-vanilla-onboarding`. It uses only the packed Core artifact at the application boundary,
 keeps form domain data separate from UI state, and exercises Computed validation, Batch step changes,

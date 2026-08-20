@@ -114,6 +114,13 @@ zero image nodes, no XSS marker execution, zero console errors, and no non-local
 The reference deployment does not configure CSP or Trusted Types headers, so this remains consumer
 evidence with an explicit deployment-hardening follow-up, not a penetration test or security
 certification.
+The clean packed React and Vanilla consumer copies now have a same-environment application baseline
+using Node `v26.3.1`, pnpm `10.12.4`, Vite `8.2.1`, and `/usr/bin/time -p`. React typecheck wall time
+was 1.34 s and build wall time 4.21 s; Vanilla typecheck was 3.35 s and build wall time 3.90 s.
+React emitted 28 modules with 197.19 kB raw / 62.41 kB gzip JavaScript and 1.78 kB raw / 0.81 kB
+gzip CSS; Vanilla emitted 19 modules with 11.76 kB raw / 4.42 kB gzip JavaScript and 3.32 kB raw /
+1.23 kB gzip CSS. These are per-consumer reproducibility baselines, not equivalent cross-framework
+performance comparisons, numeric release budgets, or production memory claims.
 The second external Phase 4 consumer is a Vii-native Vanilla DOM onboarding application named
 `vii-reference-vanilla-onboarding`. It uses only the packed Core artifact at the application boundary,
 keeps form domain data separate from UI state, and exercises Computed validation, Batch step changes,

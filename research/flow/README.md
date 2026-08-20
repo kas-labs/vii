@@ -12,7 +12,7 @@ These fixtures compare a deterministic UI typeahead and platform-stream lifecycl
 Run the focused correctness suite and type check:
 
 ```bash
-pnpm exec vitest run research/flow/flow-research.test.ts
+pnpm exec vitest run research/flow/*.test.ts
 pnpm exec tsc --noEmit -p research/flow/tsconfig.json
 ```
 
@@ -27,3 +27,9 @@ callback failures remain outside the producer/operator error channel and do not 
 ownership. AsyncIterable and ReadableStream disposal synchronously cuts off downstream delivery and
 initiates native cleanup; it does not claim that asynchronous cleanup has completed before disposal
 returns.
+
+The separate real-clock validation layer covers latest-result delivery and disposal with native
+timers. Platform robustness fixtures cover bounded debounce timer state under a 1000-event storm,
+AsyncIterable `return()` initiation and rejection isolation, and ReadableStream `cancel()` initiation
+and rejection isolation. These are lifecycle/correctness evidence only, not throughput or memory
+claims.

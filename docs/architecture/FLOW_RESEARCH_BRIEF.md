@@ -58,6 +58,14 @@ and no result after disposal.
 The AsyncIterable fixture is primary. The WHATWG ReadableStream fixture checks that disposal calls
 the native cancellation method. No browser, network, worker, or socket compatibility claim is made.
 
+### Validation layers
+
+The deterministic layer is the primary correctness gate. A separate real-clock layer checks latest
+result delivery and disposal with native timers. Robustness fixtures check bounded debounce timer
+state under a 1000-event storm and cancellation rejection isolation for both AsyncIterable and
+ReadableStream adapters. These layers do not authorize throughput, retained-memory, browser, network,
+worker, or socket claims.
+
 ## Comparison matrix
 
 | Dimension      | Direct platform                         | RxJS adapter                       | Throwaway prototype                    |
@@ -86,6 +94,9 @@ TypeScript-cost measurements until these pass:
 - AsyncIterable disposal calls `return()`;
 - ReadableStream disposal initiates native `cancel()` without claiming async cleanup completion;
 - multiple subscribers have independent lifecycle ownership;
+- real-clock typeahead and disposal validation passes;
+- debounce timer state remains bounded under a deterministic 1000-event storm;
+- async cancellation rejection does not become a Flow source error;
 - diagnostics fixtures contain no raw emitted payloads;
 - functional and fluent forms agree on the same fixtures.
 
@@ -101,9 +112,8 @@ count the existing Diagnostics timeline or a simple State-plus-Promise example a
 ## Deferred work
 
 - real UI consumer and real platform-stream consumer evidence;
-- real-clock timer validation after deterministic correctness;
 - RxJS/direct/prototype bundle, throughput, allocation, retained-memory, and TypeScript benchmarks;
-- malicious iterable/stream, timer-storm, unbounded-rate, and cancellation-race robustness fixtures;
+- malicious iterable/stream, unbounded-rate, and cancellation-race robustness fixtures;
 - a bounded decision for surfacing asynchronous cancellation rejection without changing synchronous
   Core disposal;
 - subscription identity/upstream ownership research before any replay or multicast API;

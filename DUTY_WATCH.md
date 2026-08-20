@@ -3306,3 +3306,48 @@ Issue: [#84](https://github.com/kas-labs/vii/issues/84) remains open
   browser surface that exposes the blob download; confirm its JSON `protocol` is `vii.trace`.
 - Continue the next planned Vii dogfood/consumer validation slice after issue #84 is resolved or
   explicitly accepted as a tooling-evidence limitation.
+
+## 2026-08-20 18:34 CEST | Complete packed Core Vanilla dogfood evidence
+
+Status: completed
+Branch: docs/record-vanilla-dogfood-evidence
+PR: follow-up focused documentation branch
+Issue: [#84](https://github.com/kas-labs/vii/issues/84) closed as completed
+
+### Scope
+
+- Complete the outstanding internal dogfood protocol evidence for the clean Vanilla reference
+  consumer without changing Vii Core, its public API, or the supplied reference app.
+
+### Changes
+
+- Re-ran the browser protocol against the disposable clean copy using system Google Chrome through
+  Playwright; the app source and original reference directory were not modified.
+- Captured the actual download as `vii-trace.json` and parsed the downloaded JSON.
+- Updated sanitized issue #84 with exact command/browser evidence and closed it as completed.
+
+### Validation
+
+- Core: `@vii-labs/core@next` resolved to `0.1.0-experimental.2`.
+- App commit: unavailable; the supplied reference app has no Git metadata.
+- Environment: macOS `26.5.2`, Darwin `25.5.0`, arm64; Node `v22.17.0`; pnpm `10.12.4`;
+  HeadlessChrome `151.0.0.0` via Playwright.
+- Existing clean-copy command results remain passed: `pnpm test` (4 files, 16 tests),
+  `pnpm exec tsc --noEmit`, `pnpm build` (Vite `8.2.1`, 19 modules), and `pnpm dev`.
+- Browser smoke: Batch +2 produced `count 3`, `doubled 6`, `events 20`, `dropped 0`; timeline tail
+  was `batch.committed` with `errorCount 0`; Dispose reported `Scope disposed`; a fresh Scope started
+  at `count 0`, `doubled 0`; Clear produced `events 0`, `dropped 0`; console errors were `0`.
+- Download: filename `vii-trace.json`, 169 bytes, failure `null`; parsed `protocol: "vii.trace"`,
+  `version: "0.1"`, and `events: []` after the required Clear step.
+
+### Architecture / compatibility
+
+- Framework-agnostic Core behavior, public API, package contents, dependencies, and consumer source
+  are unchanged.
+- No Vue consumer was added or changed.
+- This is internal dogfood evidence, not a release or support claim.
+
+### Remaining / recovery
+
+- Continue Phase 4 with the next bounded real-consumer or lifecycle validation slice; do not expand
+  Core/API scope without a separate approved task.

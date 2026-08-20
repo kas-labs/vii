@@ -66,7 +66,7 @@ PR: #96 (draft)
 - `git diff --check`: passed.
 - Initial sandbox `pnpm validate` reached packed-consumer installation but hit registry DNS
   `ENOTFOUND`; the same command rerun with approved network access passed format, lint, typecheck,
-  tests, builds, packed Core/React/Angular/Vue consumers, and CLI Core clean-consumer validation.
+  tests, builds, packed repository consumers, and CLI Core clean-consumer validation.
 
 ### Architecture / compatibility
 

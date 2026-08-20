@@ -146,6 +146,13 @@ JavaScript assets. The dev-only browser probe now exercises Create Scope, Increm
 Dispose Scope, idempotent mount disposal, and an empty host over a default 1000-cycle run; the
 user-confirmed browser execution returned iterations 1000, activeScopeCycles 1000, remainingChildren
 0, and hostConnected true.
+The packed Vanilla consumer also has a bounded Diagnostics privacy review. Two tests verify that
+production-safe traces omit caller trace IDs, Scope names, security field/route metadata, and raw
+state values while retaining structured security codes; development traces retain the configured
+correlation ID but still exclude state values. A static consumer-boundary scan found no fetch,
+XMLHttpRequest, sendBeacon, telemetry, or analytics path. This confirms the documented
+value-free/production-safe boundary for this consumer; it is not a penetration test or a claim about
+unreviewed host applications.
 The internal dogfood process is now documented in docs/alpha/INTERNAL_DOGFOOD_PROTOCOL.md with a
 clean-install gate for packed @vii-labs/core@next, required test/typecheck/build/dev checks, and a
 Vanilla browser smoke checklist. The Markdown issue template at

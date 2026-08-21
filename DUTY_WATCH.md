@@ -41,7 +41,7 @@ PR: <number or not opened>
 
 Status: completed
 Branch: `test/flow-ownership-evidence`
-PR: not opened
+PR: #103 (draft)
 
 ### Scope
 
@@ -77,8 +77,8 @@ PR: not opened
 
 ### Remaining / recovery
 
-- Commit, push the focused branch, and open a draft PR against `test/flow-research-fixtures`; do not
-  merge without maintainer confirmation.
+- Draft PR #103 is open against `test/flow-research-fixtures`; do not merge without maintainer
+  confirmation.
 - Broader upstream sharing, late-subscriber behavior, explicit multicast ownership, and async
   cancellation-rejection surfacing remain deferred.
 

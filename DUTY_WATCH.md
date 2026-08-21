@@ -4570,7 +4570,7 @@ PR: [#116](https://github.com/kas-labs/vii/pull/116) draft
 
 Status: completed
 Branch: test/query-mutations
-PR: not opened
+PR: [#117](https://github.com/kas-labs/vii/pull/117) draft
 
 ### Scope
 

@@ -37,6 +37,45 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-21 18:00 CEST | Complete Flow research integration handoff
+
+Status: completed
+Branch: `docs/flow-integration-handoff`
+PR: #107 merged; docs correction PR pending
+
+### Scope
+
+- Close the Duty Watch handoff for the Flow research integration after the hot-sharing slice and
+  linear integration PR were merged.
+
+### Changes
+
+- Confirmed PR #105 squash-merged into `test/flow-research-fixtures` at `2d48f5e`.
+- Confirmed PR #107 squash-merged into `main` at `e81119d714ca35468800cd9c7f557b347201bb8e`.
+- This append-only entry corrects the earlier partial handoff; historical entries remain unchanged.
+- Source branches remain available. No branch deletion was performed.
+
+### Validation
+
+- Focused hot-sharing fixture: 1 file, 2 tests passed.
+- `pnpm exec tsc --noEmit -p research/flow/tsconfig.json`: passed.
+- `pnpm validate`: passed with exit code 0, including format, lint, typecheck, repository tests,
+  builds, packed artifacts, and clean consumer checks.
+- `git diff --check`: passed.
+- PR #107 checks passed: Governance run 200, Dependency Review run 118, CodeQL run 190, and Validate
+  run 230.
+- `origin/main` verified at the PR #107 merge commit.
+
+### Architecture / compatibility
+
+- No Vii Core/API/package or public Flow API changed. Flow remains Research-only; no Task dependency,
+  replay/retention/multicast policy, or new consumer integration was selected.
+
+### Remaining / recovery
+
+- Open and merge this focused docs-only correction PR after its checks pass. Do not delete the source
+  branches without separate confirmation.
+
 ## 2026-08-21 17:36 CEST | Integrate merged Flow hot-sharing baseline
 
 Status: partial

@@ -248,36 +248,57 @@ Results include limitations and do not imply that synthetic speed guarantees app
 
 Framework comparisons must distinguish different rendering, hydration, caching, compiler, and compatibility semantics.
 
-## Initial acceptance goals
+## Core Alpha Numeric Release Budgets
 
-Before State Alpha, establish baseline suites for:
+Based on reproducible baselines recorded in `CORE_PERFORMANCE_BASELINE.md`,
+`VANILLA_BROWSER_RETENTION_BASELINE.md`, and `VANILLA_BROWSER_CSP_BASELINE.md`, the following numeric
+release budgets are binding for `@vii-labs/core` Alpha releases:
 
-- State update throughput;
-- computed dependency chains;
-- batch fan-out;
-- subscription disposal;
-- Scope cleanup;
-- diagnostics on/off comparison;
-- packed Core bundle impact;
-- TypeScript consumer fixture compile time.
+### 1. Transfer and bundle size budget
 
-Before native component research advances, establish baselines for:
+| Surface | Raw Limit | Gzip Limit | Baseline Reference |
+| --- | ---: | ---: | --- |
+| `@vii-labs/core` ESM artifact | $\le$ 15.0 kB | $\le$ 5.0 kB | 11.8 kB raw / 4.4 kB gzip |
+| `@vii-labs/react` adapter | $\le$ 3.0 kB | $\le$ 1.2 kB | 1.2 kB raw / 0.6 kB gzip |
+| `@vii-labs/angular` adapter | $\le$ 4.0 kB | $\le$ 1.5 kB | 1.8 kB raw / 0.8 kB gzip |
+| `@vii-labs/vue` adapter | $\le$ 3.0 kB | $\le$ 1.2 kB | 1.1 kB raw / 0.6 kB gzip |
+| Vanilla Reference App output | $\le$ 16.0 kB | $\le$ 6.0 kB | 11.9 kB raw / 4.5 kB gzip |
 
-- component initialization;
-- targeted updates;
-- repeated mount and unmount;
-- SFC transform time;
-- source maps;
-- malicious template diagnostics;
-- client runtime size.
+### 2. Memory lifecycle and retention budget
 
-Before native application framework research advances, establish baselines for:
+Measured across 1,000 deterministic Scope creation, exercise, and disposal cycles in real browser execution:
 
-- development startup and HMR;
-- production build time and peak memory;
-- client and server output size;
-- SSR and hydration;
-- concurrent request isolation;
-- route-level splitting.
+| Metric | Release Threshold | Baseline Reference |
+| --- | ---: | --- |
+| Retained Event Listeners delta | **0** | 0 listener accumulation |
+| Retained DOM Nodes delta (post-GC) | **0** | 0 node accumulation |
+| Post-GC Heapcompaction delta (1,000 cycles) | $\le$ 100.0 kB | +53.9 kB |
+| Console errors / uncaught exceptions | **0** | 0 errors |
 
-Numeric release gates are adopted only after stable prototypes provide realistic baselines.
+### 3. State execution and throughput budget
+
+Measured via `pnpm benchmark:core` under Node 22+ V8 baseline:
+
+| Operation | Minimum Throughput | Baseline Reference |
+| --- | ---: | --- |
+| State reads / writes | $\ge$ 8,000,000 ops/s | > 10,000,000 ops/s |
+| Computed recomputation | $\ge$ 4,000,000 ops/s | > 5,000,000 ops/s |
+| Batch update fan-out (100 dependents) | $\ge$ 800,000 ops/s | > 1,000,000 ops/s |
+| Scope create + dispose cycle | $\ge$ 1,500,000 ops/s | > 2,000,000 ops/s |
+| Diagnostics `off` vs `development` overhead | $\le$ 20% | < 15% |
+
+### 4. Deployment security and CSP gates
+
+| Gate | Requirement | Status |
+| --- | --- | --- |
+| Strict CSP compliance | 0 `securitypolicyviolation` events under `default-src 'none'`, `script-src 'self'` | **Verified** |
+| Trusted Types compliance | 0 sink violations under `require-trusted-types-for 'script'` | **Verified** |
+| Code evaluation sinks | Zero `eval()`, `new Function()`, or dynamic code injection in Core runtime | **Verified** |
+
+### 5. Regression verification protocol
+
+Any proposed change exceeding a release budget requires:
+
+1. A reproducible benchmark reproduction in `benchmarks/results/`.
+2. Documented architectural justification in an RFC or ADR.
+3. Verification that no memory, lifecycle, or CSP violation regressions are introduced.

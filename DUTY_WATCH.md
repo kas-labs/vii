@@ -41,7 +41,7 @@ PR: <number or not opened>
 
 Status: completed
 Branch: `perf/flow-typescript-complexity`
-PR: not opened
+PR: #100 (draft)
 
 ### Scope
 
@@ -83,8 +83,9 @@ PR: not opened
 
 ### Remaining / recovery
 
-- None for this bounded slice. The next safe step is a separate temporal/async comparison only after
-  recapturing source/version state and preserving the existing correctness gate.
+- Draft PR #100 is open for review; merge requires maintainer confirmation. The next safe step is a
+  separate temporal/async comparison only after recapturing source/version state and preserving the
+  existing correctness gate.
 
 ## 2026-08-21 02:15 CEST | Add Flow synchronous comparison baseline
 

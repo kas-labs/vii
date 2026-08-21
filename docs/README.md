@@ -131,7 +131,7 @@ Current explicit research tracks are:
 - Schema, comparing a possible Vii-native runtime contract against mature validators such as Zod, Valibot, ArkType, TypeBox, and Ajv, with zero-copy validation, allocation, bundle, type-system, JSON Schema, and integration claims requiring reproducible evidence;
 - Form, informed by Angular Signal Forms, TanStack Form, React Hook Form, Vue, and VeeValidate while defining its own Vii semantics;
 - HTTP, informed by Fetch, Angular HttpClient, Axios, and small Fetch clients while remaining separate from Query and validation providers;
-- Flow, comparing direct platform primitives, an RxJS Scope/State adapter, and a throwaway prototype for temporal composition, cancellation, disposal, and stream interoperability;
+- Flow, comparing direct platform primitives, an RxJS Scope/State adapter, and a throwaway prototype for temporal composition, cancellation, disposal, stream interoperability, explicit hot sharing, and late-subscriber ownership;
 - native template control flow, comparing block, directive, and TSX/JavaScript authoring while sharing one compiler/runtime semantic model;
 - progressive rendering, keeping CSR independently usable and requiring opt-in evidence for SSG, SSR/hydration, streaming, hybrid rendering, and server functions;
 - explicit execution environments so client/server mistakes can fail at build time rather than appear as confusing runtime errors;
@@ -199,6 +199,14 @@ The root `/ROADMAP.md` provides the public phase overview. Cross-phase capabilit
 - `quality/TEST_STRATEGY.md`
 - `quality/PERFORMANCE_BUDGETS.md`
 - `quality/SCHEMA_BENCHMARK_PLAN.md`, research benchmark methodology for runtime, allocation, bundle, and TypeScript compiler comparisons before any Vii Schema performance claim.
+- `quality/FLOW_BENCHMARK_PLAN.md`, research benchmark methodology for semantically fair Flow comparisons.
+- `quality/FLOW_PRIMARY_SOURCE_REVALIDATION.md`, current primary-source constraints and version boundary for Flow comparison work.
+- `quality/FLOW_COMPARISON_BASELINE.md`, bounded synchronous correctness, runtime, and optional retention evidence for the three Flow research baselines.
+- `quality/FLOW_TYPESCRIPT_COMPLEXITY_BASELINE.md`, bounded cold/incremental TypeScript diagnostics and transitive type-surface evidence for the three Flow research baselines.
+- `quality/FLOW_ASYNC_COMPARISON_BASELINE.md`, bounded deterministic temporal, async-switching, and lifecycle evidence for the four Flow research runners.
+- `quality/FLOW_OWNERSHIP_BASELINE.md`, bounded subscription identity, per-subscription upstream ownership, and Scope disposal-isolation evidence.
+- `quality/FLOW_ROBUSTNESS_BASELINE.md`, bounded malicious producer, unbounded-rate, and cancellation-race correctness evidence for native stream adapters.
+- `quality/FLOW_CANCELLATION_REJECTION_BASELINE.md`, first-party constraints and throwaway evidence for observing native cleanup rejection without changing synchronous disposal.
 - `quality/SECURITY_AND_PRIVACY.md`
 - `quality/COMPATIBILITY_POLICY.md`
 

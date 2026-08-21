@@ -41,7 +41,7 @@ PR: <number or not opened>
 
 Status: completed
 Branch: `test/flow-cancellation-rejection`
-PR: not opened
+PR: #104 (draft)
 
 ### Scope
 
@@ -79,8 +79,8 @@ PR: not opened
 
 ### Remaining / recovery
 
-- Commit, push the focused branch, and open a draft PR against `test/flow-research-fixtures`; do not
-  merge without maintainer confirmation.
+- Draft PR #104 is open against `test/flow-research-fixtures`; do not merge without maintainer
+  confirmation.
 - Public cancellation-rejection contract, broader upstream sharing, late-subscriber behavior,
   explicit multicast ownership, real consumers, and benchmark evidence remain deferred.
 

@@ -4611,5 +4611,52 @@ PR: [#117](https://github.com/kas-labs/vii/pull/117) draft
 
 ### Remaining / recovery
 
-- Commit changes, push `test/query-mutations`, and open a draft PR against `main`.
-- Await review before proceeding to slice P5.5.
+- PR #117 opened for P5.4 Mutations and Optimistic Transactions prototype.
+
+## 2026-08-22 01:24 CEST | Implement P5.5 SSR Request Scope and Hydration prototype
+
+Status: completed
+Branch: test/query-ssr-hydration
+PR: not opened
+
+### Scope
+
+- Execute the P5.5 SSR Request Scope and Hydration prototype slice under `research/query/`
+  following RFC 0024 and the Phase 5 roadmap.
+- Validate SSR Request Scope isolation (zero cross-request cache leakage), server prefetching,
+  dehydration into versioned wire envelope (`protocol: "vii.query"`, `version: 1`), hardened client
+  hydration boundary (prototype pollution, malformed keys, invalid/future timestamps, oversized payload protection),
+  and timestamp preservation (`dataUpdatedAt`).
+
+### Changes
+
+- Added `research/query/query-hydration.ts` with `dehydrate()`, `hydrate()`, `HydrationValidationError`,
+  and `QueryHydrationEnvelope` schemas.
+- Exported `validateQueryKey()` from `research/query/query-key.ts`.
+- Updated `research/query/query-record.ts` and `research/query/query-client-prototype.ts`
+  with `prefetchQuery()`, `getAllRecords()`, and `setData(data, dataUpdatedAt)` supporting timestamp preservation.
+- Added `research/query/query-hydration.test.ts` (11 unit tests covering Request Scope isolation, Scope disposal
+  cleanup, server prefetching, dehydration, timestamp preservation, protocol/version validation, malformed envelopes,
+  prototype pollution, invalid keys, invalid timestamps, and oversized payloads).
+- Updated `research/query/README.md` and `docs/quality/QUERY_RESEARCH_BASELINE.md`.
+- Updated `PROJECT_STATE.md` with durable P5.5 conclusions.
+
+### Validation
+
+- `pnpm exec vitest run research/query/*.test.ts`: passed (7 files, 62 tests).
+- `pnpm exec tsc --noEmit -p research/query/tsconfig.json`: passed.
+- `pnpm format:check`: passed.
+- `pnpm lint`: passed.
+- `git diff --check`: passed.
+- Repository `pnpm validate`: format, lint, typecheck, test, build, and Core/CLI Core pack-checks passed.
+
+### Architecture / compatibility
+
+- All code remains internal throwaway research under `research/query/`.
+- No public `@vii-labs/query` package or Core dependencies added.
+- Diagnostics and privacy events remain deferred to P5.6.
+
+### Remaining / recovery
+
+- Commit changes, push `test/query-ssr-hydration`, and open a draft PR against `main`.
+- Await review before proceeding to slice P5.6.

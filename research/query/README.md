@@ -1,4 +1,4 @@
-# Vii Query Research: Prototypes (P5.1, P5.2, P5.3 & P5.4)
+# Vii Query Research: Prototypes (P5.1 - P5.5)
 
 > **Throwaway research only.** This directory is not a package, public API, support fixture, or production implementation.
 
@@ -8,6 +8,7 @@ This directory contains research prototypes validating foundational semantics of
 - **P5.2**: Explicit QueryClient ownership, QueryRecord state separation, in-flight request deduplication, execution generation tracking, and framework-neutral QueryObservers.
 - **P5.3**: Native `AbortSignal` fetch cancellation (`abort != error`), superseding request aborts, freshness (`staleTime`), invalidation (`invalidate != remove`), inactive retention & GC (`gcTime`), and Vii Core `Scope` integration.
 - **P5.4**: Mutation execution lifecycle (`idle -> pending -> success / error`), optimistic cache transactions, generation-protected rollback, and concurrent mutation race safety.
+- **P5.5**: SSR Request Scope isolation, server prefetching, dehydration, versioned wire envelope (`protocol: "vii.query"`, `version: 1`), hardened client hydration, and timestamp preservation.
 
 ## Verification Commands
 
@@ -71,42 +72,53 @@ Query identity is governed by deterministic value structure rather than function
 
 ## 5. Mutations & Optimistic Transactions (P5.4)
 
-### Mutation Model
-
-Mutations are remote write executions separate from Query cache entries:
-
-- State lifecycle: `idle -> pending -> success / error`.
-- Native `AbortSignal` cancellation support.
-- Standard lifecycle hooks: `onMutate`, `onSuccess`, `onError`, `onSettled`.
-
-### Optimistic Cache Transactions & Rollback
-
-- `onMutate` applies optimistic changes via `client.setOptimisticData(key, data)` or `client.setQueryData(key, updater)`.
-- `client.setOptimisticData` returns an explicit `rollback()` callback.
-- **Generation-Protected Concurrency**:
-  When Mutation A starts (`gen = 1`), Mutation B starts (`gen = 2`), Mutation B succeeds and writes server data (`gen = 3`), and Mutation A fails late:
-  Mutation A's `rollback()` checks its captured generation against the current record generation. Because a newer mutation has been accepted (`gen 3 !== gen 1`), A's rollback is safely skipped, preventing it from clobbering B's accepted update.
+- **Mutation Model**: Separate write execution lifecycle (`idle -> pending -> success / error`) with `AbortSignal` support.
+- **Generation-Protected Rollback**: When overlapping mutations execute (A starts, B starts, B succeeds, A fails late), A's rollback checks record generations and safely skips blind restoration, preventing corruption of B's accepted server update.
 
 ---
 
-## 6. Performance Baselines
+## 6. SSR Request Scope & Hydration (P5.5)
+
+### Request Scope Isolation
+
+- Every SSR request instantiates an isolated `ResearchQueryClient` bound to a Request `Scope`.
+- Request A data is never visible to Request B (zero cross-request state sharing).
+- Request Scope disposal synchronously destroys all request records and resources.
+
+### Versioned Hydration Envelope
+
+```ts
+interface QueryHydrationEnvelope {
+  protocol: "vii.query";
+  version: 1;
+  queries: HydratedQuery[];
+}
+```
+
+- **Dehydrate**: Exports only successful query data. Excludes timers, observers, errors, executions, and functions.
+- **Timestamp Preservation**: Preserves original server `dataUpdatedAt` so client freshness is computed accurately without false freshness inflation.
+- **Hardened Validation Boundary**: Strictly validates external envelopes, blocking prototype pollution, malformed keys, invalid/future timestamps, oversized payloads, and unsupported protocols/versions.
+
+---
+
+## 7. Performance Baselines
 
 Measurements collected on Apple Silicon (Node `v22.17.0`, 10,000 iterations, 5 samples):
 
 | Operation                            | Min (ms) | P50 (ms) | Mean (ms) | Throughput (ops/sec) |
 | ------------------------------------ | -------- | -------- | --------- | -------------------- |
-| `canonicalize-small-key`             | 1.94     | 2.34     | 4.74      | ~2,108,000           |
-| `canonicalize-nested-key`            | 4.15     | 4.78     | 4.91      | ~2,036,000           |
-| `canonicalize-object-key`            | 6.71     | 7.00     | 7.32      | ~1,365,000           |
-| `naive-canonicalize-object`          | 5.44     | 5.55     | 6.44      | ~1,552,000           |
-| `exact-cache-lookup`                 | 4.27     | 4.66     | 4.86      | ~2,056,000           |
-| `naive-cache-lookup`                 | 2.41     | 2.48     | 3.14      | ~3,179,000           |
-| `cache-insert-update`                | 4.65     | 5.22     | 5.41      | ~1,849,000           |
-| `family-match-1000-items` (100 runs) | 18.79    | 19.52    | 19.55     | ~5,114               |
+| `canonicalize-small-key`             | 1.61     | 2.76     | 3.33      | ~2,999,000           |
+| `canonicalize-nested-key`            | 4.04     | 5.73     | 5.38      | ~1,858,000           |
+| `canonicalize-object-key`            | 8.78     | 11.05    | 10.90     | ~917,000             |
+| `naive-canonicalize-object`          | 6.84     | 8.11     | 8.48      | ~1,179,000           |
+| `exact-cache-lookup`                 | 4.74     | 5.55     | 6.40      | ~1,562,000           |
+| `naive-cache-lookup`                 | 2.81     | 3.04     | 3.28      | ~3,050,000           |
+| `cache-insert-update`                | 5.14     | 5.61     | 5.72      | ~1,748,000           |
+| `family-match-1000-items` (100 runs) | 19.90    | 21.26    | 21.75     | ~4,598               |
 
 ---
 
-## 7. Roadmap Next Steps
+## 8. Roadmap Next Steps
 
-- **Completed**: P5.1 (QueryKey & Cache), P5.2 (QueryClient, Observers, Deduplication & Generations), P5.3 (Cancellation, Freshness, Invalidation & GC), P5.4 (Mutations & Optimistic Transactions).
-- **Next Slice**: **P5.5 — SSR Request Scope and Hydration Prototype** (`dehydrate`, versioned wire envelope, `hydrate`, request-local SSR isolation).
+- **Completed**: P5.1 (QueryKey & Cache), P5.2 (QueryClient, Observers, Deduplication & Generations), P5.3 (Cancellation, Freshness, Invalidation & GC), P5.4 (Mutations & Optimistic Transactions), P5.5 (SSR Request Scope & Hydration).
+- **Next Slice**: **P5.6 — Diagnostics and Privacy Prototype** (value-safe structural events, diagnostic sinks, telemetry-free observability).

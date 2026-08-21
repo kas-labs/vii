@@ -286,18 +286,21 @@ subscriber robustness, unbounded ReadableStream behavior, and a public asynchron
 rejection contract remain deferred. Flow remains Research-only and Core synchronous `ViiResource.dispose(): void` is unchanged.
 
 Phase 5 Query server-state architecture is established in `docs/architecture/QUERY_ARCHITECTURE.md`
-and `rfcs/0024-query-architecture.md`. Initial research slices `P5.1`, `P5.2`, `P5.3`, and `P5.4` in `research/query/`
-validate deterministic QueryKey identity, canonicalization, 32-bit FNV-1a hash bucket indexing, exact matching,
-structural family/prefix matching along array boundaries, a minimal cache prototype, explicit `ResearchQueryClient`
-ownership, `QueryRecord` independent state separation (`empty`, `success`, `error` vs `idle`, `fetching`),
+and `rfcs/0024-query-architecture.md`. Initial research slices `P5.1`, `P5.2`, `P5.3`, `P5.4`, and `P5.5` in
+`research/query/` validate deterministic QueryKey identity, canonicalization, 32-bit FNV-1a hash bucket indexing,
+exact matching, structural family/prefix matching along array boundaries, a minimal cache prototype, explicit
+`ResearchQueryClient` ownership, `QueryRecord` independent state separation (`empty`, `success`, `error` vs `idle`, `fetching`),
 concurrent same-key request deduplication, execution generation tracking with stale late completion rejection,
 framework-neutral `QueryObserver` lifecycle with zero retention leaks, native `AbortSignal` fetch cancellation
 preserving valid cached data (`abort != error`), superseding cancellation, freshness calculations via `staleTime`,
 structural `invalidateQueries()` (`invalidate != remove`, `stale != missing`), inactive retention and GC eviction
-via `gcTime` with active query protection, Vii Core `Scope.use(resource)` integration for observers and mutations,
-`MutationRecord` execution lifecycle (`idle -> pending -> success / error`), explicit optimistic updates, and
-generation-protected rollback ensuring overlapping concurrent mutations (A starts, B starts, B succeeds, A fails late)
-cannot clobber newer accepted server state. QueryKey identity accepts a strict subset (null, boolean, finite numbers,
+via `gcTime` with active query protection, Vii Core `Scope.use(resource)` integration for observers, mutations, and
+clients, `MutationRecord` execution lifecycle (`idle -> pending -> success / error`), explicit optimistic updates,
+generation-protected rollback ensuring overlapping concurrent mutations cannot clobber newer accepted server state,
+SSR Request Scope isolation proving zero cross-request data sharing, server prefetching, safe dehydration producing
+a versioned wire envelope (`protocol: "vii.query"`, `version: 1`), hardened client hydration validating against prototype
+pollution, malformed keys, invalid/future timestamps, and oversized payloads, and preservation of original `dataUpdatedAt`
+timestamps across the hydration boundary. QueryKey identity accepts a strict subset (null, boolean, finite numbers,
 strings, arrays, and plain objects with sorted keys) and deterministically rejects undefined, NaN, infinities,
 functions, symbols, BigInt, non-plain class instances, cyclic references, and prototype pollution properties.
 Hashing is an indexing optimization only; semantic equality is guaranteed by full canonical representation,

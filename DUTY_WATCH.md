@@ -37,6 +37,53 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-21 17:06 CEST | Add Flow hot-sharing ownership baseline
+
+Status: completed
+Branch: `test/flow-hot-sharing-boundaries`
+PR: not opened
+
+### Scope
+
+- Continue the approved Flow Research plan with explicit hot sharing, late-subscriber behavior,
+  ref-count ownership, and AsyncIterable cleanup comparison before any replay or multicast API.
+
+### Changes
+
+- Added `research/flow/flow-hot-sharing-boundaries.test.ts` with one controlled AsyncIterable
+  scenario across direct callbacks, raw RxJS `share()`, and a local throwaway Flow helper.
+- Recorded concurrent upstream sharing, first/last subscriber disposal, fresh upstream identity
+  after ref-count zero, no replay for late subscribers, and raw RxJS AsyncIterable `return()`
+  cleanup friction in `docs/quality/FLOW_HOT_SHARING_BASELINE.md`.
+- Updated the Flow README, research brief, documentation index, and durable project state. No Vii
+  Core/API/package, public Flow surface, consumer repository, or new Vue reference was added.
+
+### Validation
+
+- `pnpm exec vitest run research/flow/flow-hot-sharing-boundaries.test.ts --reporter=verbose --silent=false`:
+  passed; 1 file and 2 tests passed.
+- `pnpm exec vitest run research/flow/*.test.ts`: passed; 9 files and 34 tests passed.
+- `pnpm exec tsc --noEmit -p research/flow/tsconfig.json`: passed.
+- `pnpm validate`: passed with approved registry access; format, lint, typecheck, repository tests,
+  builds, packed Core/reference/React/Angular/Vue consumers, and packed CLI Core clean-consumer
+  validation all passed.
+- `git diff --check`: passed after staging the focused change.
+
+### Architecture / compatibility
+
+- Direct code and the throwaway prototype initiated AsyncIterable `return()` on last disposal;
+  raw RxJS `from(asyncIterable).pipe(share())` did not in this fixture. This is adapter-friction
+  evidence only and does not select a Vii cancellation or sharing contract.
+- No replay, retention, multicast API, Core dependency, public package, browser/network/worker
+  consumer, or performance/memory claim was added. Flow remains Research-only.
+
+### Remaining / recovery
+
+- Open a draft PR against `test/flow-research-fixtures` after the final diff review; do not merge
+  without maintainer confirmation.
+- Further multicast retention policy, real consumers, and broader platform-stream validation remain
+  deferred.
+
 ## 2026-08-21 16:26 CEST | Add Flow cancellation-rejection surfacing baseline
 
 Status: completed

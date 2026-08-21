@@ -122,6 +122,7 @@ count the existing Diagnostics timeline or a simple State-plus-Promise example a
 - broader malformed-shape, hostile-subscriber, and unbounded ReadableStream robustness fixtures;
 - a public contract decision for surfacing asynchronous cancellation rejection; the current
   structural-observer evidence remains research-only and does not change synchronous Core disposal;
-- broader upstream sharing, late-subscriber behavior, and explicit multicast ownership research
-  before any replay or multicast API;
+- further explicit multicast ownership and retention-policy research before any replay or multicast
+  API; the bounded hot-sharing fixture records no-replay late subscribers, ref-count reset behavior,
+  and raw RxJS AsyncIterable `return()` cleanup friction;
 - repeat primary-source/version capture immediately before freezing any RFC or benchmark baseline.

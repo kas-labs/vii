@@ -1,10 +1,10 @@
-# Vii Query Research Baseline (P5.1 - P5.7)
+# Vii Query Research Baseline (P5.1 - P5.8)
 
-Status: Research evidence, bounded prototype only
+Status: Research evidence & Phase 5 completion gate
 
 ## Scope
 
-This record establishes performance, determinism, and robustness baselines for Phase 5 QueryKey canonicalization, hash indexing, QueryClient ownership, deduplication, cancellation, freshness, GC, mutations, SSR hydration, value-safe diagnostics, and framework integration fixtures (`P5.1` - `P5.7`).
+This record establishes performance, determinism, robustness, comparative benchmarks, and graduation decisions for Phase 5 Query server-state architecture (`P5.1` - `P5.8`).
 
 The research covers:
 
@@ -36,7 +36,8 @@ The research covers:
 - fault-isolated diagnostic sinks preventing observer errors from impacting execution;
 - framework adapter bridges for React (`useSyncExternalStore`), Angular (`Signal` + `DestroyRef`), and Vue (`ShallowRef` + scope disposal);
 - shared Query Compliance Suite verifying exact semantic parity across React, Angular, and Vue;
-- proof of Query Core decoupling (Core operates identically without framework adapters).
+- proof of Query Core decoupling (Core operates identically without framework adapters);
+- comparative benchmarks and Build-vs-Buy evaluation gate (`docs/strategy/QUERY_BUILD_VS_BUY_EVALUATION.md`) confirming Option A (Graduate `@vii-labs/query`).
 
 The code lives entirely under `research/query/` and is not a public package or API.
 
@@ -51,20 +52,20 @@ pnpm exec tsc --noEmit -p research/query/tsconfig.json
 
 Environment: Node `v22.17.0`, pnpm `10.12.4`, macOS (Darwin arm64), Vitest `4.1.10`.
 
-All 86 tests across 9 test files passed cleanly.
+All 87 tests across 10 test files passed cleanly.
 
 ## Key Findings
 
-1. **Framework Decoupling**: Adapters are strictly thin reactive bridges that own zero cache, GC, or scheduling state. Removing or swapping adapters has zero impact on Query Core semantics.
-2. **Universal Compliance**: React, Angular, and Vue adapters share the exact same behavioral lifecycle contract and pass the identical compliance test suite.
-3. **Zero Data/Credential Leakage**: Verifiable structural event logging excludes response payloads, request variables, tokens, credentials, and user data.
-4. **Fault Isolation**: Sinks with runtime exceptions do not fail or alter queries, mutations, or hydration.
-5. **Zero Cross-Request Leakage**: Request-scoped `ResearchQueryClient` instances guarantee 100% data isolation between concurrent server requests.
-6. **Deterministic Wire Envelope**: Dehydration serializes only successful data without leaking active executions, AbortControllers, timers, or internal error states.
-7. **Timestamp Integrity**: Preserving original server `dataUpdatedAt` prevents false freshness inflation on client initial load.
-8. **Mutation & Rollback Safety**: Generation-scoped rollback prevents older failing mutations from clobbering newer accepted server updates.
+1. **Graduation Justified**: Vii Query prototype achieves 3.5x smaller footprint (~3.8 KB minified vs ~13.5 KB TanStack Query Core) with superior Vii Scope integration and zero runtime dependencies.
+2. **Framework Decoupling**: Adapters are strictly thin reactive bridges that own zero cache, GC, or scheduling state. Removing or swapping adapters has zero impact on Query Core semantics.
+3. **Universal Compliance**: React, Angular, and Vue adapters share the exact same behavioral lifecycle contract and pass the identical compliance test suite.
+4. **Zero Data/Credential Leakage**: Verifiable structural event logging excludes response payloads, request variables, tokens, credentials, and user data.
+5. **Fault Isolation**: Sinks with runtime exceptions do not fail or alter queries, mutations, or hydration.
+6. **Zero Cross-Request Leakage**: Request-scoped `ResearchQueryClient` instances guarantee 100% data isolation between concurrent server requests.
+7. **Deterministic Wire Envelope**: Dehydration serializes only successful data without leaking active executions, AbortControllers, timers, or internal error states.
+8. **Timestamp Integrity**: Preserving original server `dataUpdatedAt` prevents false freshness inflation on client initial load.
+9. **Mutation & Rollback Safety**: Generation-scoped rollback prevents older failing mutations from clobbering newer accepted server updates.
 
 ## Limitations
 
 - Measurements are single-process Node microbenchmarks on ARM64 and do not represent cross-platform browser engine characteristics.
-- Prototypes do not yet include the complete P5.8 build-vs-buy comparison report.

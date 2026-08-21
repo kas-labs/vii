@@ -187,20 +187,18 @@ Research direction:
 
 See `docs/strategy/ECOSYSTEM_CAPABILITY_STRATEGY.md`.
 
-## Phase 5: Vii Query — Planned
+## Phase 5: Vii Query — Complete (Research Accepted)
 
-- Query cache
-- Request deduplication and cancellation
-- Explicit freshness and retention
-- Invalidation and mutations
-- Optimistic updates
-- Hydration
-- Memory budgets
-- Framework adapters
-- Query diagnostics
-- Server-data security and serialization review
-- Explicit transport boundary so Query can use Vii HTTP, Fetch, or another user-provided transport
-- Optional validated data ingestion without making Vii Schema mandatory
+- Query cache prototype and deterministic QueryKey canonicalization (P5.1)
+- Request deduplication and execution generation tracking (P5.2)
+- Native AbortSignal cancellation, freshness (staleTime), invalidation, and GC (gcTime) (P5.3)
+- Mutation execution model, optimistic cache transactions, and race-safe rollback (P5.4)
+- SSR Request Scope isolation, server prefetching, versioned dehydration, and hardened hydration (P5.5)
+- Value-safe structural diagnostics and absolute privacy enforcement (P5.6)
+- Framework integration fixtures and compliance suite for React, Angular, and Vue (P5.7)
+- Performance benchmarks and Build-vs-Buy gate confirming Option A graduation (`docs/strategy/QUERY_BUILD_VS_BUY_EVALUATION.md`) (P5.8)
+
+See `docs/roadmap/PHASE_5_QUERY.md` and `docs/architecture/QUERY_ARCHITECTURE.md`.
 
 ## Phase 6: Vii UI foundation — Planned
 

@@ -285,33 +285,32 @@ platform-stream runtime, further multicast retention-policy research, malformed-
 subscriber robustness, unbounded ReadableStream behavior, and a public asynchronous cancellation
 rejection contract remain deferred. Flow remains Research-only and Core synchronous `ViiResource.dispose(): void` is unchanged.
 
-Phase 5 Query server-state architecture is established in `docs/architecture/QUERY_ARCHITECTURE.md`
-and `rfcs/0024-query-architecture.md`. Initial research slices `P5.1`, `P5.2`, `P5.3`, `P5.4`, `P5.5`, `P5.6`, and
-`P5.7` in `research/query/` validate deterministic QueryKey identity, canonicalization, 32-bit FNV-1a hash bucket indexing,
-exact matching, structural family/prefix matching along array boundaries, a minimal cache prototype, explicit
-`ResearchQueryClient` ownership, `QueryRecord` independent state separation (`empty`, `success`, `error` vs `idle`, `fetching`),
-concurrent same-key request deduplication, execution generation tracking with stale late completion rejection,
-framework-neutral `QueryObserver` lifecycle with zero retention leaks, native `AbortSignal` fetch cancellation
-preserving valid cached data (`abort != error`), superseding cancellation, freshness calculations via `staleTime`,
-structural `invalidateQueries()` (`invalidate != remove`, `stale != missing`), inactive retention and GC eviction
-via `gcTime` with active query protection, Vii Core `Scope.use(resource)` integration for observers, mutations, and
-clients, `MutationRecord` execution lifecycle (`idle -> pending -> success / error`), explicit optimistic updates,
-generation-protected rollback ensuring overlapping concurrent mutations cannot clobber newer accepted server state,
-SSR Request Scope isolation proving zero cross-request data sharing, server prefetching, safe dehydration producing
-a versioned wire envelope (`protocol: "vii.query"`, `version: 1`), hardened client hydration validating against prototype
-pollution, malformed keys, invalid/future timestamps, and oversized payloads, preservation of original `dataUpdatedAt`
-timestamps across the hydration boundary, value-safe structural diagnostics across all query/mutation/hydration lifecycles,
-complete privacy enforcement (zero leakage of query values, response bodies, request variables, tokens, credentials, or
-hydration payloads), fault-isolated sink execution preventing diagnostic errors from disrupting query semantics, thin
-reactive framework adapter bridges for React (`useSyncExternalStore`), Angular (`Signal` + `DestroyRef`), and Vue (`ShallowRef`
+Phase 5 Query server-state architecture is established in `docs/architecture/QUERY_ARCHITECTURE.md`,
+`rfcs/0024-query-architecture.md`, and `docs/strategy/QUERY_BUILD_VS_BUY_EVALUATION.md`. All eight research
+slices (`P5.1` - `P5.8`) in `research/query/` validate deterministic QueryKey identity, canonicalization,
+32-bit FNV-1a hash bucket indexing, exact matching, structural family/prefix matching along array boundaries,
+a minimal cache prototype, explicit `ResearchQueryClient` ownership, `QueryRecord` independent state separation
+(`empty`, `success`, `error` vs `idle`, `fetching`), concurrent same-key request deduplication, execution generation
+tracking with stale late completion rejection, framework-neutral `QueryObserver` lifecycle with zero retention leaks,
+native `AbortSignal` fetch cancellation preserving valid cached data (`abort != error`), superseding cancellation,
+freshness calculations via `staleTime`, structural `invalidateQueries()` (`invalidate != remove`, `stale != missing`),
+inactive retention and GC eviction via `gcTime` with active query protection, Vii Core `Scope.use(resource)` integration
+for observers, mutations, and clients, `MutationRecord` execution lifecycle (`idle -> pending -> success / error`),
+explicit optimistic updates, generation-protected rollback ensuring overlapping concurrent mutations cannot clobber
+newer accepted server state, SSR Request Scope isolation proving zero cross-request data sharing, server prefetching,
+safe dehydration producing a versioned wire envelope (`protocol: "vii.query"`, `version: 1`), hardened client hydration
+validating against prototype pollution, malformed keys, invalid/future timestamps, and oversized payloads, preservation
+of original `dataUpdatedAt` timestamps across the hydration boundary, value-safe structural diagnostics across all
+query/mutation/hydration lifecycles, complete privacy enforcement (zero leakage of query values, response bodies, request
+variables, tokens, credentials, or hydration payloads), fault-isolated sink execution preventing diagnostic errors from
+disrupting query semantics, thin reactive framework adapter bridges for React (`useSyncExternalStore`), Angular (`Signal`
 
-- scope disposal), and a shared Query Compliance Suite verifying exact behavioral parity and proving that Query Core is
-  fully decoupled from framework adapters. QueryKey identity accepts a strict subset (null, boolean, finite numbers, strings,
-  arrays, and plain objects with sorted keys) and deterministically rejects undefined, NaN, infinities, functions, symbols, BigInt,
-  non-plain class instances, cyclic references, and prototype pollution properties. Hashing is an indexing optimization only;
-  semantic equality is guaranteed by full canonical representation, verified with a 100% synthetic collision test suite.
-  Pathological limits (depth, node count, string length) protect against resource exhaustion. Bounded microbenchmarks are recorded
-  in `docs/quality/QUERY_RESEARCH_BASELINE.md`. Query remains throwaway research: no public package, Core dependency, or framework adapter is created.
+- `DestroyRef`), and Vue (`ShallowRef` + scope disposal), and a shared Query Compliance Suite verifying exact behavioral
+  parity and proving that Query Core is fully decoupled from framework adapters. Comparative benchmarks and Build-vs-Buy
+  evaluation (`docs/strategy/QUERY_BUILD_VS_BUY_EVALUATION.md`) establish a ~3.8 KB minified footprint (3.5x smaller than
+  TanStack Query Core), zero external runtime dependencies, and native Vii Scope disposal, formally accepting Phase 5
+  completion and authorizing Option A: Graduation to `@vii-labs/query` when product milestone scheduling begins.
+  Query remains throwaway research until formal graduation packaging: no public package, Core dependency, or framework adapter is committed.
 
 The durable rendering direction is progressive and CSR-first. A future native Vii application may
 remain fully client-rendered without adopting hydration, request-server lifecycle, streaming, edge,

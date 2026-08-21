@@ -4473,5 +4473,50 @@ PR: [#114](https://github.com/kas-labs/vii/pull/114) draft
 
 ### Remaining / recovery
 
-- Commit changes, push `test/query-key-cache-research`, and open a draft PR against `main`.
-- Await review before proceeding to slice P5.2.
+- PR #114 opened for P5.1 QueryKey and Cache research prototype.
+
+## 2026-08-22 00:58 CEST | Implement P5.2 QueryClient, Observer, and Deduplication prototype
+
+Status: completed
+Branch: test/query-client-deduplication
+PR: [#115](https://github.com/kas-labs/vii/pull/115) draft
+
+### Scope
+
+- Execute the P5.2 QueryClient, Observer, Deduplication, and Execution Generations prototype slice
+  under `research/query/` following RFC 0024 and the Phase 5 roadmap.
+- Validate QueryRecord state separation, in-flight request deduplication, execution generations with
+  stale completion rejection, explicit client instance isolation (no global cache singleton), and
+  framework-neutral QueryObserver lifecycle with zero listener leaks.
+
+### Changes
+
+- Added `research/query/query-record.ts` managing `QuerySnapshot` (data state separate from fetch state),
+  generation counters, observer notifications, and stale completion rejection.
+- Added `research/query/query-observer.ts` providing disposable snapshot subscriptions.
+- Added `research/query/query-client-prototype.ts` with explicit instance ownership and in-flight deduplication.
+- Added `research/query/query-deduplication.test.ts` (7 unit tests covering 1-observer, 10-observer deduplication,
+  mid-flight join, observer disposal isolation, generation-based race protection, multi-client isolation,
+  and 500-cycle leak safety).
+- Updated `research/query/README.md` and `docs/quality/QUERY_RESEARCH_BASELINE.md`.
+- Updated `PROJECT_STATE.md` with durable P5.2 conclusions.
+
+### Validation
+
+- `pnpm exec vitest run research/query/*.test.ts`: passed (4 files, 35 tests).
+- `pnpm exec tsc --noEmit -p research/query/tsconfig.json`: passed.
+- `pnpm format:check`: passed.
+- `pnpm lint`: passed.
+- `git diff --check`: passed.
+- Repository `pnpm validate`: format, lint, typecheck, test, build, and Core/CLI Core pack-checks passed.
+
+### Architecture / compatibility
+
+- All code remains internal throwaway research under `research/query/`.
+- No public `@vii-labs/query` package or Core dependencies added.
+- AbortSignal cancellation, freshness (`staleTime`), GC (`gcTime`), and mutations remain deferred to P5.3+.
+
+### Remaining / recovery
+
+- Commit changes, push `test/query-client-deduplication`, and open a draft PR against `main`.
+- Await review before proceeding to slice P5.3.

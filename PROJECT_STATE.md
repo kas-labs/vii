@@ -286,17 +286,19 @@ subscriber robustness, unbounded ReadableStream behavior, and a public asynchron
 rejection contract remain deferred. Flow remains Research-only and Core synchronous `ViiResource.dispose(): void` is unchanged.
 
 Phase 5 Query server-state architecture is established in `docs/architecture/QUERY_ARCHITECTURE.md`
-and `rfcs/0024-query-architecture.md`. The initial research slice `P5.1` in `research/query/` validates
+and `rfcs/0024-query-architecture.md`. Initial research slices `P5.1` and `P5.2` in `research/query/` validate
 deterministic QueryKey identity, canonicalization, 32-bit FNV-1a hash bucket indexing, exact matching,
-structural family/prefix matching along array boundaries, and a minimal cache index prototype.
-QueryKey identity accepts a strict subset (null, boolean, finite numbers, strings, arrays, and plain
-objects with lexicographically sorted keys) and deterministically rejects undefined, NaN, infinities,
-functions, symbols, BigInt, non-plain class instances, cyclic references, and prototype pollution
-properties. Hashing is an indexing optimization only; semantic equality is guaranteed by full canonical
-representation, verified with a 100% synthetic collision test suite. Pathological limits (depth, node
-count, string length) protect against resource exhaustion. Bounded microbenchmarks are recorded in
+structural family/prefix matching along array boundaries, a minimal cache prototype, explicit `ResearchQueryClient`
+ownership, `QueryRecord` independent state separation (`empty`, `success`, `error` vs `idle`, `fetching`),
+concurrent same-key request deduplication, execution generation tracking with stale late completion rejection,
+and framework-neutral `QueryObserver` lifecycle with zero retention leaks. QueryKey identity accepts a strict
+subset (null, boolean, finite numbers, strings, arrays, and plain objects with sorted keys) and deterministically
+rejects undefined, NaN, infinities, functions, symbols, BigInt, non-plain class instances, cyclic references,
+and prototype pollution properties. Hashing is an indexing optimization only; semantic equality is guaranteed
+by full canonical representation, verified with a 100% synthetic collision test suite. Pathological limits
+(depth, node count, string length) protect against resource exhaustion. Bounded microbenchmarks are recorded in
 `docs/quality/QUERY_RESEARCH_BASELINE.md`. Query remains throwaway research: no public package, Core
-dependency, observer lifecycle, mutation engine, or framework adapter is created.
+dependency, mutation engine, or framework adapter is created.
 
 The durable rendering direction is progressive and CSR-first. A future native Vii application may
 remain fully client-rendered without adopting hydration, request-server lifecycle, streaming, edge,

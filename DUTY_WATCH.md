@@ -4712,7 +4712,7 @@ PR: [#119](https://github.com/kas-labs/vii/pull/119) draft
 
 Status: completed
 Branch: test/query-framework-fixtures
-PR: not opened
+PR: [#120](https://github.com/kas-labs/vii/pull/120) draft
 
 ### Scope
 

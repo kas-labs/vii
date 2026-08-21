@@ -202,6 +202,7 @@ The root `/ROADMAP.md` provides the public phase overview. Cross-phase capabilit
 - `quality/FLOW_BENCHMARK_PLAN.md`, research benchmark methodology for semantically fair Flow comparisons.
 - `quality/FLOW_PRIMARY_SOURCE_REVALIDATION.md`, current primary-source constraints and version boundary for Flow comparison work.
 - `quality/FLOW_COMPARISON_BASELINE.md`, bounded synchronous correctness, runtime, and optional retention evidence for the three Flow research baselines.
+- `quality/FLOW_TYPESCRIPT_COMPLEXITY_BASELINE.md`, bounded cold/incremental TypeScript diagnostics and transitive type-surface evidence for the three Flow research baselines.
 - `quality/SECURITY_AND_PRIVACY.md`
 - `quality/COMPATIBILITY_POLICY.md`
 

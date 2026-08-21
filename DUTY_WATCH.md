@@ -37,6 +37,55 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-21 02:35 CEST | Add Flow TypeScript and complexity baseline
+
+Status: completed
+Branch: `perf/flow-typescript-complexity`
+PR: not opened
+
+### Scope
+
+- Measure cold and incremental TypeScript cost and transitive type surface for the same bounded Flow
+  comparison shape after the synchronous runtime baseline.
+
+### Changes
+
+- Added `research/flow/flow-typecheck-comparison.mjs`, which runs 9 reproducible `tsc
+  --extendedDiagnostics` checks with temporary incremental build-info files and emits raw JSON.
+- Added direct, RxJS `7.8.2`, and throwaway prototype type-check fixtures under
+  `research/flow/typecheck-fixtures/`.
+- Added `docs/quality/FLOW_TYPESCRIPT_COMPLEXITY_BASELINE.md` with exact environment, source/program
+  surfaces, compiler metrics, interpretation, and limitations.
+- Synchronized the Flow brief, Project State, and docs index.
+- Correction: PR #99 from the preceding synchronous baseline is merged; no Core/API/package change
+  was made in this slice.
+
+### Validation
+
+- `pnpm exec vitest run research/flow/flow-research.test.ts research/flow/flow-real-clock.test.ts
+  research/flow/flow-platform-robustness.test.ts research/flow/flow-comparison.test.ts`: passed;
+  4 files and 18 tests passed.
+- `pnpm exec tsc --noEmit -p research/flow/tsconfig.json`: passed.
+- `pnpm exec node research/flow/flow-typecheck-comparison.mjs`: passed; 9 compiler runs passed and
+  emitted raw diagnostics JSON. Exact results are recorded in the baseline doc.
+- `pnpm validate`: passed with format, lint, typecheck, repository tests, builds, packed consumer
+  validation, and CLI Core clean-consumer validation.
+- `git diff --check`: passed.
+
+### Architecture / compatibility
+
+- Research-only type fixtures; no runtime dependency, package boundary, public API, support promise,
+  or consumer claim changed.
+- The measured transitive graph is part of the result: RxJS declarations and the prototype/Core
+  source graph are not removed to manufacture a smaller comparison.
+- Bundle/tree-shaking, allocation, broader memory, temporal, async runtime, repeated typecheck,
+  incremental edit, and real-consumer measurements remain deferred.
+
+### Remaining / recovery
+
+- None for this bounded slice. The next safe step is a separate temporal/async comparison only after
+  recapturing source/version state and preserving the existing correctness gate.
+
 ## 2026-08-21 02:15 CEST | Add Flow synchronous comparison baseline
 
 Status: completed

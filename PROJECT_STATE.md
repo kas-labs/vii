@@ -242,9 +242,10 @@ The primary-source/version constraints for the next comparison slice are recorde
 `docs/quality/FLOW_PRIMARY_SOURCE_REVALIDATION.md`: plain RxJS Observables remain per-subscription,
 Subjects are explicit multicast sources, unsubscription is distinct from completion, and native
 AbortSignal, AsyncIterator, and ReadableStream cleanup remain asynchronous platform boundaries.
-The first comparison record is in `docs/quality/FLOW_COMPARISON_BASELINE.md`; TypeScript cost,
-bundle/tree-shaking, allocation, broader memory, temporal, and async runtime measurements remain
-deferred.
+The first comparison record is in `docs/quality/FLOW_COMPARISON_BASELINE.md`; a separate bounded
+TypeScript/complexity record now captures cold and incremental `tsc --extendedDiagnostics` output and
+the transitive type surfaces of the three baselines. Bundle/tree-shaking, allocation, broader memory,
+temporal, async runtime, and real-consumer measurements remain deferred.
 
 The durable rendering direction is progressive and CSR-first. A future native Vii application may
 remain fully client-rendered without adopting hydration, request-server lifecycle, streaming, edge,

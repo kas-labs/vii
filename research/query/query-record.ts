@@ -32,6 +32,11 @@ export interface FetchOptions {
   readonly supersede?: boolean;
 }
 
+export interface OptimisticResult {
+  readonly expectedGeneration: number;
+  readonly rollback: () => boolean;
+}
+
 export class QueryRecord<T = unknown> {
   readonly canonicalKey: string;
   readonly key: QueryKey;
@@ -128,11 +133,9 @@ export class QueryRecord<T = unknown> {
         return result;
       } catch (error) {
         if (generation === this.currentGeneration) {
-          if (controller.signal.aborted) {
-            this.handleAbort(generation);
-          } else {
-            this.updateError(error, generation);
-          }
+          controller.signal.aborted
+            ? this.handleAbort(generation)
+            : this.updateError(error, generation);
         }
         throw error;
       } finally {
@@ -158,6 +161,25 @@ export class QueryRecord<T = unknown> {
   setData(data: T): void {
     this.currentGeneration += 1;
     this.updateSuccess(data, this.currentGeneration);
+  }
+
+  setOptimisticData(data: T): OptimisticResult {
+    this.currentGeneration += 1;
+    const expectedGeneration = this.currentGeneration;
+    const previousData = this.snapshot.data;
+    this.updateSuccess(data, expectedGeneration);
+
+    return {
+      expectedGeneration,
+      rollback: () => {
+        if (this.currentGeneration === expectedGeneration) {
+          this.currentGeneration += 1;
+          this.updateSuccess(previousData as T, this.currentGeneration);
+          return true;
+        }
+        return false;
+      },
+    };
   }
 
   scheduleGc(gcTime: number, onCollect: (canonicalKey: string) => void): void {

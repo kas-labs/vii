@@ -178,6 +178,14 @@ export function canonicalizeQueryKey(key: unknown, limits?: QueryKeyLimits): str
 }
 
 /**
+ * Validates a QueryKey against the strict allowed subset and limits.
+ * Returns the canonicalized string representation.
+ */
+export function validateQueryKey(key: unknown, limits?: QueryKeyLimits): string {
+  return canonicalizeQueryKey(key, limits);
+}
+
+/**
  * Computes a fast 32-bit FNV-1a hash of a canonicalized key string for cache indexing.
  * Note: Hashing is an indexing optimization. Collision fallback must verify canonical keys.
  */

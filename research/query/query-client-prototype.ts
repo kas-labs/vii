@@ -1,5 +1,5 @@
 /**
- * @file ResearchQueryClient prototype with cancellation, freshness, invalidation, GC, and mutations.
+ * @file ResearchQueryClient prototype with prefetching, dehydration, and hydration.
  * Research only: not a public package API or production implementation.
  */
 
@@ -62,9 +62,21 @@ export class ResearchQueryClient {
     return this.records.has(canonicalKey);
   }
 
+  getAllRecords(): QueryRecord<unknown>[] {
+    return Array.from(this.records.values());
+  }
+
   fetchQuery<T>(key: QueryKey, queryFn: QueryFunction<T>, options?: FetchOptions): Promise<T> {
     const record = this.getRecord<T>(key);
     return record.fetch(queryFn, options);
+  }
+
+  async prefetchQuery<T>(key: QueryKey, queryFn: QueryFunction<T>): Promise<void> {
+    const record = this.getRecord<T>(key);
+    if (record.getSnapshot().status === "success" && !record.isStale(this.defaultStaleTime)) {
+      return;
+    }
+    await record.fetch(queryFn);
   }
 
   observeQuery<T>(key: QueryKey, listener?: ObserverListener<T>): QueryObserver<T> {
@@ -114,14 +126,18 @@ export class ResearchQueryClient {
     return record?.getSnapshot();
   }
 
-  setQueryData<T>(key: QueryKey, updaterOrData: T | ((prev: T | undefined) => T)): T {
+  setQueryData<T>(
+    key: QueryKey,
+    updaterOrData: T | ((prev: T | undefined) => T),
+    dataUpdatedAt?: number,
+  ): T {
     const record = this.getRecord<T>(key);
     const prev = record.getSnapshot().data;
     const next =
       typeof updaterOrData === "function"
         ? (updaterOrData as (prev: T | undefined) => T)(prev)
         : updaterOrData;
-    record.setData(next);
+    record.setData(next, dataUpdatedAt);
     return next;
   }
 

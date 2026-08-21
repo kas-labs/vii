@@ -158,9 +158,9 @@ export class QueryRecord<T = unknown> {
     }
   }
 
-  setData(data: T): void {
+  setData(data: T, dataUpdatedAt = Date.now()): void {
     this.currentGeneration += 1;
-    this.updateSuccess(data, this.currentGeneration);
+    this.updateSuccess(data, this.currentGeneration, dataUpdatedAt);
   }
 
   setOptimisticData(data: T): OptimisticResult {
@@ -214,14 +214,14 @@ export class QueryRecord<T = unknown> {
     this.notify();
   }
 
-  private updateSuccess(data: T, generation: number): void {
+  private updateSuccess(data: T, generation: number, dataUpdatedAt = Date.now()): void {
     this.isInvalidated = false;
     this.snapshot = {
       data,
       error: undefined,
       status: "success",
       fetchStatus: "idle",
-      dataUpdatedAt: Date.now(),
+      dataUpdatedAt,
       errorUpdatedAt: this.snapshot.errorUpdatedAt,
       observerCount: this.listeners.size,
       generation,

@@ -1,10 +1,10 @@
-# Vii Query Research Baseline (P5.1, P5.2, P5.3 & P5.4)
+# Vii Query Research Baseline (P5.1 - P5.5)
 
 Status: Research evidence, bounded prototype only
 
 ## Scope
 
-This record establishes performance, determinism, and robustness baselines for Phase 5 QueryKey canonicalization, hash indexing, QueryClient ownership, deduplication, cancellation, freshness, GC, and mutation prototypes (`P5.1`, `P5.2`, `P5.3` & `P5.4`).
+This record establishes performance, determinism, and robustness baselines for Phase 5 QueryKey canonicalization, hash indexing, QueryClient ownership, deduplication, cancellation, freshness, GC, mutations, and SSR hydration prototypes (`P5.1` - `P5.5`).
 
 The research covers:
 
@@ -23,10 +23,14 @@ The research covers:
 - cooperative cancellation on superseding requests and rapid key switching;
 - freshness calculation via `staleTime` and manual `invalidateQueries()` (`invalidate != remove`, `stale != missing`);
 - inactive retention and garbage collection (`gcTime`) protecting active queries while scheduling GC on unobserved records;
-- Vii Core `Scope.use(resource)` lifecycle integration for observers and mutations;
+- Vii Core `Scope.use(resource)` lifecycle integration for observers, mutations, and client instances;
 - Mutation execution model (`idle -> pending -> success / error`) separate from Query cache entries;
 - explicit optimistic updates with generation-protected rollback;
-- mandatory concurrent mutation race protection (Mutation A starts, Mutation B starts, Mutation B succeeds, Mutation A fails late: A's failure rollback does NOT clobber B's accepted update).
+- mandatory concurrent mutation race protection (Mutation A starts, Mutation B starts, Mutation B succeeds, Mutation A fails late: A's failure rollback does NOT clobber B's accepted update);
+- SSR Request Scope isolation proving Request A data is never visible to Request B;
+- server prefetching and safe dehydration producing a versioned wire envelope (`protocol: "vii.query"`, `version: 1`);
+- hardened client hydration with strict validation against prototype pollution, malformed keys, invalid/future timestamps, and oversized payloads;
+- preservation of original `dataUpdatedAt` timestamps across the hydration boundary.
 
 The code lives entirely under `research/query/` and is not a public package or API.
 
@@ -41,18 +45,17 @@ pnpm exec tsc --noEmit -p research/query/tsconfig.json
 
 Environment: Node `v22.17.0`, pnpm `10.12.4`, macOS (Darwin arm64), Vitest `4.1.10`.
 
-All 51 tests across 6 test files passed cleanly.
+All 62 tests across 7 test files passed cleanly.
 
 ## Key Findings
 
-1. **Mutation Isolation**: Mutations are pure write executions and do not create artificial cache records or pollute query stores.
-2. **Concurrent Race Protection**: Generation-scoped rollback ensures that when multiple optimistic mutations overlap, a failing older mutation cannot blindly overwrite newer accepted server data.
-3. **Cancellation Distinction (`abort != error`)**: Cancelling an in-flight mutation or fetch resets status to `idle` without marking a permanent error.
-4. **Non-Destructive Invalidation**: `invalidateQueries()` marks data stale without deleting cache entries, enabling optimistic and instant UI rendering while refetches coordinate.
-5. **Active GC Protection**: Queries with active observers are never evicted by GC regardless of elapsed time.
-6. **Scope Integration**: Registering observers and mutations with `scope.use(resource)` ensures clean teardown on Scope disposal.
+1. **Zero Cross-Request Leakage**: Request-scoped `ResearchQueryClient` instances guarantee 100% data isolation between distinct concurrent server requests.
+2. **Deterministic Wire Envelope**: Dehydration serializes only successful data without leaking active executions, AbortControllers, timers, or internal error states.
+3. **Timestamp Integrity**: Preserving original server `dataUpdatedAt` prevents false freshness inflation on client initial load.
+4. **Hydration Boundary Hardening**: Hydration strictly validates external untrusted input, rejecting prototype pollution, malformed keys, future/corrupt timestamps, and oversized payloads.
+5. **Mutation & Rollback Safety**: Generation-scoped rollback prevents older failing mutations from clobbering newer accepted server updates.
 
 ## Limitations
 
 - Measurements are single-process Node microbenchmarks on ARM64 and do not represent cross-platform browser engine characteristics.
-- Prototypes do not yet include SSR hydration envelope serialization or framework adapters (deferred to P5.5+).
+- Prototypes do not yet include structured diagnostic sinks or telemetry-free observability (deferred to P5.6).

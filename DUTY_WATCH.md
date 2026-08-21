@@ -41,7 +41,7 @@ PR: <number or not opened>
 
 Status: completed
 Branch: `test/flow-robustness-races`
-PR: not opened
+PR: #102 (draft)
 
 ### Scope
 
@@ -76,8 +76,8 @@ PR: not opened
 
 ### Remaining / recovery
 
-- Commit, push the focused branch, and open a draft PR against `test/flow-research-fixtures`; do not
-  merge without maintainer confirmation.
+- Draft PR #102 is open against `test/flow-research-fixtures`; review is pending and merge requires
+  maintainer confirmation.
 - Broader malformed-shape, hostile-subscriber, unbounded ReadableStream, async cancellation-rejection
   surfacing, and real platform-consumer research remain deferred.
 

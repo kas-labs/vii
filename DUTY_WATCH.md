@@ -37,6 +37,41 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-21 17:36 CEST | Integrate merged Flow hot-sharing baseline
+
+Status: partial
+Branch: `test/flow-research-integration`
+PR: #107 (draft)
+
+### Scope
+
+- Add the now-merged PR #105 hot-sharing research slice to the linear integration snapshot before
+  final validation and the approved merge of PR #107.
+
+### Changes
+
+- Marked PR #105 ready for review and squash-merged it into `test/flow-research-fixtures` at
+  `2d48f5e`; resolved only documentation/research conflicts while preserving the linear integration
+  handoff and the hot-sharing evidence.
+- No Vii Core/API/package, public Flow API, Task dependency, consumer source, or new Vue consumer
+  was changed.
+
+### Validation
+
+- PR #105 head `a4d09f2` had successful Governance and Validate checks before merge.
+- `git diff --check`: passed after conflict resolution.
+- Full post-integration validation and PR #107 update/merge: not run yet.
+
+### Architecture / compatibility
+
+- The hot-sharing slice remains Flow Research-only and records adapter-friction evidence; it does not
+  select replay, retention, multicast, or public cancellation semantics.
+
+### Remaining / recovery
+
+- Run focused and full validation, push the delta, update PR #107 scope, wait for green checks, and
+  merge #107 into `main`. Do not delete source branches without separate confirmation.
+
 ## 2026-08-21 17:28 CEST | Prepare linear Flow research integration PR
 
 Status: completed
@@ -79,6 +114,53 @@ PR: #107 (draft)
 - Maintainer review and explicit merge decision for PR #107 remain open; do not merge automatically.
 - PR #105 must be reviewed separately if the hot-sharing slice should be included before PR #107 is
   merged. Do not delete `test/flow-research-fixtures` until the stacked branch is no longer needed.
+
+## 2026-08-21 17:06 CEST | Add Flow hot-sharing ownership baseline
+
+Status: completed
+Branch: `test/flow-hot-sharing-boundaries`
+PR: not opened
+
+### Scope
+
+- Continue the approved Flow Research plan with explicit hot sharing, late-subscriber behavior,
+  ref-count ownership, and AsyncIterable cleanup comparison before any replay or multicast API.
+
+### Changes
+
+- Added `research/flow/flow-hot-sharing-boundaries.test.ts` with one controlled AsyncIterable
+  scenario across direct callbacks, raw RxJS `share()`, and a local throwaway Flow helper.
+- Recorded concurrent upstream sharing, first/last subscriber disposal, fresh upstream identity
+  after ref-count zero, no replay for late subscribers, and raw RxJS AsyncIterable `return()`
+  cleanup friction in `docs/quality/FLOW_HOT_SHARING_BASELINE.md`.
+- Updated the Flow README, research brief, documentation index, and durable project state. No Vii
+  Core/API/package, public Flow surface, consumer repository, or new Vue reference was added.
+
+### Validation
+
+- `pnpm exec vitest run research/flow/flow-hot-sharing-boundaries.test.ts --reporter=verbose --silent=false`:
+  passed; 1 file and 2 tests passed.
+- `pnpm exec vitest run research/flow/*.test.ts`: passed; 9 files and 34 tests passed.
+- `pnpm exec tsc --noEmit -p research/flow/tsconfig.json`: passed.
+- `pnpm validate`: passed with approved registry access; format, lint, typecheck, repository tests,
+  builds, packed Core/reference/React/Angular/Vue consumers, and packed CLI Core clean-consumer
+  validation all passed.
+- `git diff --check`: passed after staging the focused change.
+
+### Architecture / compatibility
+
+- Direct code and the throwaway prototype initiated AsyncIterable `return()` on last disposal;
+  raw RxJS `from(asyncIterable).pipe(share())` did not in this fixture. This is adapter-friction
+  evidence only and does not select a Vii cancellation or sharing contract.
+- No replay, retention, multicast API, Core dependency, public package, browser/network/worker
+  consumer, or performance/memory claim was added. Flow remains Research-only.
+
+### Remaining / recovery
+
+- Open a draft PR against `test/flow-research-fixtures` after the final diff review; do not merge
+  without maintainer confirmation.
+- Further multicast retention policy, real consumers, and broader platform-stream validation remain
+  deferred.
 
 ## 2026-08-21 16:26 CEST | Add Flow cancellation-rejection surfacing baseline
 

@@ -236,8 +236,14 @@ slice adds producer-failure, fast/unbounded AsyncIterable, and AsyncIterable/Rea
 cancellation-race coverage. The cancellation-rejection baseline records first-party native cleanup
 contracts and a structural observer candidate without selecting a public API. RxJS is a root dev-only
 research dependency; no Flow package, public API, Core dependency, support promise, or real consumer
-claim was added. The focused research suite now has thirty-two passing tests across eight files, and
-its strict research TypeScript check plus the repository `pnpm validate` pass. A bounded synchronous
+claim was added. The focused research suite now has thirty-four passing tests across nine files, and
+its strict research TypeScript check plus the repository `pnpm validate` pass. A bounded hot-sharing
+fixture now compares direct code, raw RxJS `share()`, and a local throwaway Flow helper over one
+controlled AsyncIterable: concurrent subscribers share one active upstream, late subscribers do not
+receive replay, ref-count zero disconnects and a later subscriber receives a fresh upstream identity.
+Direct code and the prototype initiate AsyncIterable `return()` on last disposal; raw RxJS
+`from(asyncIterable)` did not in this fixture, which remains adapter-friction evidence rather than a
+selected Vii semantic. A bounded synchronous
 comparison harness now records
 raw per-sample runtime data and an optional GC retention probe for direct callbacks, RxJS, and the
 throwaway prototype; one fixture is not treated as a global performance or memory claim. Async
@@ -255,7 +261,7 @@ suppression, AbortSignal initiation, fresh disposal cutoff, timer-boundary obser
 1,000-cycle lifecycle samples. It also exposes a prototype distinction where completed inner
 ownership is released before later disposal; this is evidence for design review, not a public
 semantic decision. Bundle/tree-shaking, allocation, broader memory, real-clock throughput,
-platform-stream runtime, broader upstream sharing, late-subscriber behavior, malformed-shape/hostile-
+platform-stream runtime, further multicast retention-policy research, malformed-shape/hostile-
 subscriber robustness, unbounded ReadableStream behavior, and a public asynchronous cancellation
 rejection contract remain deferred. Flow
 remains Research-only and Core synchronous `ViiResource.dispose(): void` is unchanged.

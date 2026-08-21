@@ -38,3 +38,10 @@ and pending ReadableStream cancellation races. These are lifecycle/correctness e
 throughput or memory claims. The cancellation-rejection fixture compares a structural cleanup
 failure observer while keeping `dispose(): void`, the source error channel, and raw error payloads
 separate. It is evidence only, not a selected public diagnostics or Flow API.
+
+The hot-sharing boundary fixture compares one explicit ref-counted AsyncIterable branch across
+direct code, RxJS `share()`, and a local prototype helper. Concurrent subscribers share one
+upstream, late subscribers receive no replay, and a new subscription after zero ref-count gets a
+fresh upstream. The raw RxJS AsyncIterable adapter did not initiate `return()` in this fixture,
+while direct code and the prototype did. This is adapter-friction evidence only; it does not select
+a public sharing API.

@@ -37,6 +37,45 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-21 19:07 CEST | Reconfirm bounded Phase 4 dogfood gate
+
+Status: completed
+Branch: `docs/confirm-phase4-gate`
+PR: focused docs PR pending
+
+### Scope
+
+- Reconfirm the maintainer decision to treat Phase 4 internal dogfood as complete for the existing
+  bounded evidence set, without promoting Phase 4 to a release or external-alpha commitment.
+
+### Changes
+
+- Verified that `PROJECT_STATE.md` already records bounded internal completion and that the roadmap
+  correctly keeps Phase 4 in Planned status.
+- Verified the source decision in merged PR #95 (`04848c6e`); this entry records the renewed decision
+  without duplicating or rewriting canonical state.
+- No Core, adapter, package, public API, consumer, Flow, or roadmap behavior changed.
+
+### Validation
+
+- `github_get_pr_info` for PR #95: `merged: true`; merge SHA `04848c6e7bab93c2d31046935f4648d803a5234e`.
+- Existing bounded evidence remains the basis: packed React and Vanilla consumers, lifecycle cleanup,
+  browser smoke, privacy/security review, and reproducible bundle/type-check baselines.
+- This docs-only confirmation does not rerun consumer/browser commands.
+- `git diff --check`: passed before staging the focused change.
+
+### Architecture / compatibility
+
+- Internal completion is limited to the documented bounded evidence. It creates no external alpha,
+  support, universal compatibility/performance/security, or release-budget claim.
+- External alpha, deployment CSP/Trusted Types, browser heap/post-disposal retention, and numeric
+  release budgets remain separate approved decisions.
+
+### Remaining / recovery
+
+- Review and merge the focused docs PR after its checks pass. Do not start a new Phase 4 boundary or
+  delete branches without separate confirmation.
+
 ## 2026-08-21 18:00 CEST | Complete Flow research integration handoff
 
 Status: completed

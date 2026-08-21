@@ -120,5 +120,6 @@ count the existing Diagnostics timeline or a simple State-plus-Promise example a
 - malicious iterable/stream, unbounded-rate, and cancellation-race robustness fixtures;
 - a bounded decision for surfacing asynchronous cancellation rejection without changing synchronous
   Core disposal;
-- subscription identity/upstream ownership research before any replay or multicast API;
+- broader upstream sharing, late-subscriber behavior, and explicit multicast ownership research
+  before any replay or multicast API;
 - repeat primary-source/version capture immediately before freezing any RFC or benchmark baseline.

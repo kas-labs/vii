@@ -230,10 +230,12 @@ explicit RxJS `7.8.2` adapter, and functional/fluent prototype forms across dete
 re-entrant ordering, explicit hot/factory source semantics, multi-subscriber ownership, complete/error/
 cancel/dispose outcomes, Scope disposal, AsyncIterable, ReadableStream cancellation, subscriber
 callback isolation, error recovery, value-safe diagnostics, real-clock behavior, timer-storm bounds,
-and cancellation-rejection isolation cases. RxJS is a root dev-only research dependency; no Flow
-package, public API, Core dependency, support promise, or real consumer claim was added. The focused
-research suite has eighteen passing tests across four files, and its strict research TypeScript
-check plus the repository `pnpm validate` pass. A bounded synchronous comparison harness now records
+and cancellation-rejection isolation cases. The new ownership slice adds per-subscription
+AsyncIterable identity, composed-source disposal isolation, and Scope-owned hot-source isolation.
+RxJS is a root dev-only research dependency; no Flow package, public API, Core dependency, support
+promise, or real consumer claim was added. The focused research suite now has twenty-four passing
+tests across six files, and its strict research TypeScript check plus the repository `pnpm validate`
+pass. A bounded synchronous comparison harness now records
 raw per-sample runtime data and an optional GC retention probe for direct callbacks, RxJS, and the
 throwaway prototype; one fixture is not treated as a global performance or memory claim. Async
 cancellation rejection surfacing remains an explicit research question; Core synchronous
@@ -250,7 +252,8 @@ suppression, AbortSignal initiation, fresh disposal cutoff, timer-boundary obser
 1,000-cycle lifecycle samples. It also exposes a prototype distinction where completed inner
 ownership is released before later disposal; this is evidence for design review, not a public
 semantic decision. Bundle/tree-shaking, allocation, broader memory, real-clock throughput,
-platform-stream runtime, and asynchronous cancellation rejection surfacing remain deferred. Flow
+platform-stream runtime, broader upstream sharing, late-subscriber behavior, and asynchronous
+cancellation rejection surfacing remain deferred. Flow
 remains Research-only and Core synchronous `ViiResource.dispose(): void` is unchanged.
 
 The durable rendering direction is progressive and CSR-first. A future native Vii application may

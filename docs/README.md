@@ -204,6 +204,7 @@ The root `/ROADMAP.md` provides the public phase overview. Cross-phase capabilit
 - `quality/FLOW_COMPARISON_BASELINE.md`, bounded synchronous correctness, runtime, and optional retention evidence for the three Flow research baselines.
 - `quality/FLOW_TYPESCRIPT_COMPLEXITY_BASELINE.md`, bounded cold/incremental TypeScript diagnostics and transitive type-surface evidence for the three Flow research baselines.
 - `quality/FLOW_ASYNC_COMPARISON_BASELINE.md`, bounded deterministic temporal, async-switching, and lifecycle evidence for the four Flow research runners.
+- `quality/FLOW_OWNERSHIP_BASELINE.md`, bounded subscription identity, per-subscription upstream ownership, and Scope disposal-isolation evidence.
 - `quality/SECURITY_AND_PRIVACY.md`
 - `quality/COMPATIBILITY_POLICY.md`
 

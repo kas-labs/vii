@@ -123,12 +123,12 @@ gzip CSS; Vanilla emitted 19 modules with 11.76 kB raw / 4.42 kB gzip JavaScript
 performance comparisons, numeric release budgets, or production memory claims.
 The current Phase 4 gate audit marks the two packed real consumers, lifecycle cleanup evidence,
 reproducible bundle/type-check baselines, bounded privacy/security fixtures, browser heap/post-disposal
-retention baseline, and documentation-backed compatibility checks as evidenced for their stated scopes.
-Internal Phase 4 dogfood is therefore complete for this bounded evidence set; it is not an external
-alpha, support commitment, or universal compatibility/performance/security claim. External alpha testing,
-a real deployment CSP/Trusted Types review, and numeric release budgets remain separate open gates.
-These gaps do not block the framework-agnostic Core or require speculative API expansion; each needs a
-separately approved validation or release decision.
+retention baseline, browser CSP and Trusted Types enforcement baseline, and documentation-backed
+compatibility checks as evidenced for their stated scopes. Internal Phase 4 dogfood is therefore
+complete for this bounded evidence set; it is not an external alpha, support commitment, or universal
+compatibility/performance/security claim. External alpha testing and numeric release budgets remain
+separate open gates. These gaps do not block the framework-agnostic Core or require speculative API
+expansion; each needs a separately approved validation or release decision.
 The second external Phase 4 consumer is a Vii-native Vanilla DOM onboarding application named
 `vii-reference-vanilla-onboarding`. It uses only the packed Core artifact at the application boundary,
 keeps form domain data separate from UI state, and exercises Computed validation, Batch step changes,
@@ -195,6 +195,13 @@ heap growth (+53.9 kB). Stale emission checks verified that mutating source Stat
 produces zero notifications to disposed Computed subscribers. The methodology and limitations are
 documented in `docs/quality/VANILLA_BROWSER_RETENTION_BASELINE.md`; this is empirical consumer evidence,
 not an external alpha, universal leak-free claim, or release budget.
+A bounded browser Content Security Policy (CSP) and Trusted Types baseline has verified deployment
+security compliance on the clean Vanilla reference consumer: under strict headers (`default-src 'none'`,
+`script-src 'self'`, and `require-trusted-types-for 'script'`), interactive DOM UI and programmatic Core
+Scope lifecycles executed with zero `securitypolicyviolation` events and zero console errors. Active policy
+enforcement was confirmed via negative probes (`eval()` execution blocked by Chromium CSP with `EvalError`).
+The methodology and limitations are documented in `docs/quality/VANILLA_BROWSER_CSP_BASELINE.md`; this is
+reproducible client hardening evidence, not a penetration test, compliance certification, or external alpha.
 The internal dogfood process is now documented in docs/alpha/INTERNAL_DOGFOOD_PROTOCOL.md with a
 clean-install gate for packed @vii-labs/core@next, required test/typecheck/build/dev checks, and a
 Vanilla browser smoke checklist. The Markdown issue template at

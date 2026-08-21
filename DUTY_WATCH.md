@@ -37,6 +37,61 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-22 00:15 CEST | Validate Vanilla browser CSP and Trusted Types baseline
+
+Status: completed
+Branch: `test/phase4-browser-csp`
+PR: #111 (draft)
+
+### Scope
+
+- Conduct bounded Content Security Policy (CSP) and Trusted Types deployment validation on the clean
+  Vanilla reference consumer (`vii-reference-vanilla-onboarding`) using packed `@vii-labs/core@next`
+  (`0.1.0-experimental.2`).
+- Verify execution under Strict Baseline CSP (`default-src 'none'`, `script-src 'self'`, no `unsafe-eval`).
+- Verify execution under Strict CSP with Trusted Types enforcement (`require-trusted-types-for 'script'`).
+- Verify that `@vii-labs/core` runtime operations do not trigger `securitypolicyviolation` events or
+  sink errors.
+- Confirm active browser enforcement through negative probes (`eval()` execution blocked by Chromium).
+
+### Changes
+
+- Added `scripts/benchmarks/vanilla-browser-csp.mjs`: modular CSP and Trusted Types validation harness.
+- Updated `scripts/benchmarks/cdp-browser.mjs`: safe async process termination in `close()`.
+- Updated `vii-reference-vanilla-onboarding/src/dom.ts`: registered default Trusted Types policy for
+  DOM string rendering.
+- Added `benchmarks/results/vanilla-browser-csp.json`: structural benchmark output.
+- Added `docs/quality/VANILLA_BROWSER_CSP_BASELINE.md`: methodology, tested CSP headers, findings,
+  and limitations.
+- Updated `docs/README.md` and `PROJECT_STATE.md` with the new CSP baseline evidence.
+- No Vii Core runtime, public API, package exports, Flow research, or Vue consumer code changed.
+
+### Validation
+
+- Browser execution: `node scripts/benchmarks/vanilla-browser-csp.mjs` passed with exit code 0.
+- Strict Baseline CSP: interactive DOM UI lifecycle (create, +1, batch +2, dispose) and programmatic
+  Core Scope execution passed with 0 CSP violations and 0 console errors.
+- Strict Trusted Types CSP (`require-trusted-types-for 'script'` + `trusted-types default;`): passed
+  with 0 Trusted Types sink errors, 0 CSP violations, and 0 console errors.
+- Active enforcement: `eval()` execution blocked by Chromium CSP with `EvalError` in all tested scenarios.
+- Reference app validation: `pnpm build` passed (19 modules transformed, 74ms).
+- Repository validation: `pnpm format:check`, `git diff --check`, `pnpm validate` passed with exit code 0.
+
+### Architecture / compatibility
+
+- Validation-only evidence on the existing clean Vanilla reference consumer; no Core runtime, public
+  API, package boundary, adapter behavior, Flow research, or dependency changed.
+- No Vue consumer added.
+- Structural/privacy-safe metrics only; zero user content, credentials, tokens, network calls, or
+  telemetry collected.
+- Internal empirical evidence; does not constitute an external alpha, release budget, or formal
+  security certification.
+
+### Remaining / recovery
+
+- Open a focused draft PR against `main` for review.
+- External alpha testing and numeric release budgets remain separate open gates.
+
 ## 2026-08-21 23:45 CEST | Validate Vanilla browser retention and Scope post-disposal
 
 Status: completed

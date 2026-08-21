@@ -115,7 +115,12 @@ export async function launchHeadlessChrome(chromePath) {
     async close() {
       client.close();
       chromeProc.kill("SIGKILL");
-      rmSync(userDataDir, { recursive: true, force: true });
+      await new Promise((r) => setTimeout(r, 300));
+      try {
+        rmSync(userDataDir, { recursive: true, force: true });
+      } catch {
+        // Ignored
+      }
     },
   };
 }

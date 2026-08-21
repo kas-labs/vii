@@ -4524,7 +4524,7 @@ PR: [#115](https://github.com/kas-labs/vii/pull/115) draft
 
 Status: completed
 Branch: test/query-cancellation-gc
-PR: not opened
+PR: [#116](https://github.com/kas-labs/vii/pull/116) draft
 
 ### Scope
 

@@ -37,6 +37,49 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-21 17:28 CEST | Prepare linear Flow research integration PR
+
+Status: completed
+Branch: `test/flow-research-integration`
+PR: #107 (draft)
+
+### Scope
+
+- Inspect `test/flow-research-fixtures` after the stacked Flow slices and prepare a policy-compatible
+  integration path into `main` without deleting or merging branches automatically.
+
+### Changes
+
+- Confirmed `test/flow-research-fixtures` at `f4cde0e` is a real stacked research branch, not an
+  empty stale branch: 26 changed files and 25 commits relative to `main`'s merge base.
+- Diagnosed PR #106 Governance failure as historical merge commit subjects rejected by delivery
+  policy, then created linear branch `test/flow-research-integration` at `1b8b29d` with the same
+  verified snapshot in one conventional commit.
+- Opened draft PR #107 against `main`; closed duplicate PR #106 as superseded. Kept PR #105 and
+  both source branches open because the hot-sharing slice is not yet part of the integration ref.
+
+### Validation
+
+- `git diff --cached --check`: passed before the linear commit.
+- `pnpm validate`: passed on the linear integration snapshot, including format, lint, typecheck,
+  repository tests, builds, and packed Core/reference/React/Angular/Vue/CLI consumers.
+- PR #107 GitHub checks: Governance, Dependency Review, Validate, and CodeQL all passed.
+- PR #106 Governance failure reproduced from workflow logs: only historical merge subjects #97–#104
+  failed; branch/title/attribution policy checks passed.
+
+### Architecture / compatibility
+
+- No Vii Core/API/package, Flow public API, Task dependency, consumer source, new Vue consumer,
+  replay/multicast API, release, browser/network/worker claim, or runtime behavior changed.
+- The linear branch is a delivery-history normalization of the already verified research snapshot;
+  it does not alter the Flow evidence or select a public contract.
+
+### Remaining / recovery
+
+- Maintainer review and explicit merge decision for PR #107 remain open; do not merge automatically.
+- PR #105 must be reviewed separately if the hot-sharing slice should be included before PR #107 is
+  merged. Do not delete `test/flow-research-fixtures` until the stacked branch is no longer needed.
+
 ## 2026-08-21 16:26 CEST | Add Flow cancellation-rejection surfacing baseline
 
 Status: completed

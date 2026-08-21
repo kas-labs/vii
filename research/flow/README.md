@@ -35,4 +35,6 @@ and rejection isolation. Ownership fixtures cover per-subscription AsyncIterable
 source disposal isolation, and Scope-owned hot-source subscriptions. The dedicated robustness-race
 fixture also covers producer failures, fast/unbounded AsyncIterable disposal, idempotent `return()`,
 and pending ReadableStream cancellation races. These are lifecycle/correctness evidence only, not
-throughput or memory claims.
+throughput or memory claims. The cancellation-rejection fixture compares a structural cleanup
+failure observer while keeping `dispose(): void`, the source error channel, and raw error payloads
+separate. It is evidence only, not a selected public diagnostics or Flow API.

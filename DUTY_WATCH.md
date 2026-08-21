@@ -4794,5 +4794,41 @@ PR: [#121](https://github.com/kas-labs/vii/pull/121) draft
 
 ### Remaining / recovery
 
-- Commit changes, push `test/query-build-vs-buy-gate`, and open a draft PR against `main`.
-- Phase 5 research program concluded.
+- PR #121 opened for P5.8 Performance and Build-vs-Buy Gate (Phase 5 Complete).
+
+## 2026-08-22 02:00 CEST | Define Phase 6 UI Architecture & Slices Roadmap
+
+Status: completed
+Branch: docs/ui-phase-6-architecture
+PR: not opened
+
+### Scope
+
+- Establish the Phase 6 UI Foundation delivery roadmap and architecture boundaries in `docs/roadmap/PHASE_6_UI.md`
+  following RFC 0008, RFC 0009, RFC 0010, and `docs/architecture/UI_ARCHITECTURE.md`.
+- Define the 8 sequential slices (P6.0 through P6.7) covering design tokens, renderless behaviors,
+  UI registry schema, lockfile, CLI source distribution, cross-framework targets, security review,
+  and performance/accessibility audits.
+
+### Changes
+
+- Added `docs/roadmap/PHASE_6_UI.md` defining goals, non-goals, slice breakdown (P6.0 - P6.7),
+  acceptance criteria, and phase completion criteria.
+- Updated `PROJECT_STATE.md` recording Phase 6 initiation and architectural references.
+
+### Validation
+
+- `pnpm format:check`: passed.
+- `pnpm lint`: passed.
+- `git diff --check`: passed.
+- Repository `pnpm validate`: format, lint, typecheck, test, build, and Core/CLI Core pack-checks passed.
+
+### Architecture / compatibility
+
+- Phase 6 UI components are open, accessible, and cross-framework (React, Angular, Vue, Elements, Vanilla).
+- Application source ownership is the default mode; no mandatory framework or runtime dependencies.
+
+### Remaining / recovery
+
+- Commit changes, push `docs/ui-phase-6-architecture`, and open a draft PR against `main`.
+- Await review before proceeding to slice P6.1 (Design Token System & DTCG Compiler Prototype).

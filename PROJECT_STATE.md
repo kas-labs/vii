@@ -312,6 +312,13 @@ disrupting query semantics, thin reactive framework adapter bridges for React (`
   completion and authorizing Option A: Graduation to `@vii-labs/query` when product milestone scheduling begins.
   Query remains throwaway research until formal graduation packaging: no public package, Core dependency, or framework adapter is committed.
 
+Phase 6 Vii UI Foundation architecture and delivery plan is established in `docs/roadmap/PHASE_6_UI.md`,
+`docs/architecture/UI_ARCHITECTURE.md`, and RFCs 0008, 0009, and 0010. Phase 6 delivers an open, accessible,
+cross-framework UI component system across source distribution, package distribution, and Custom Elements modes
+without vendor lock-in, covering design tokens (DTCG format), renderless accessibility behaviors (Dialog, Tabs,
+Disclosure), declarative registry manifests, `vii.lock` tracking, CLI source distribution (`vii ui add`), and
+framework targets (React, Angular, Vue, Web Components).
+
 The durable rendering direction is progressive and CSR-first. A future native Vii application may
 remain fully client-rendered without adopting hydration, request-server lifecycle, streaming, edge,
 or server-function concepts. Static generation, SSR/hydration, streaming, hybrid route rendering,

@@ -4428,7 +4428,7 @@ PR: follow-up focused documentation branch
 
 Status: completed
 Branch: test/query-key-cache-research
-PR: not opened
+PR: [#114](https://github.com/kas-labs/vii/pull/114) draft
 
 ### Scope
 

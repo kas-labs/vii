@@ -41,7 +41,7 @@ PR: <number or not opened>
 
 Status: completed
 Branch: `perf/flow-comparison-harness`
-PR: not opened
+PR: #99 (draft)
 
 ### Scope
 
@@ -83,8 +83,9 @@ PR: not opened
 
 ### Remaining / recovery
 
-- None for this bounded slice. The next work should recapture versions/source state before extending
-  measurement groups, then add only semantically equivalent temporal/async or complexity fixtures.
+- Draft PR #99 is open for review; merge requires maintainer confirmation. The next work should
+  recapture versions/source state before extending measurement groups, then add only semantically
+  equivalent temporal/async or complexity fixtures.
 
 ## 2026-08-21 01:45 CEST | Revalidate Flow comparison sources
 

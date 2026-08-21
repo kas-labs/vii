@@ -1,10 +1,10 @@
-# Vii Query Research Baseline (P5.1 - P5.5)
+# Vii Query Research Baseline (P5.1 - P5.6)
 
 Status: Research evidence, bounded prototype only
 
 ## Scope
 
-This record establishes performance, determinism, and robustness baselines for Phase 5 QueryKey canonicalization, hash indexing, QueryClient ownership, deduplication, cancellation, freshness, GC, mutations, and SSR hydration prototypes (`P5.1` - `P5.5`).
+This record establishes performance, determinism, and robustness baselines for Phase 5 QueryKey canonicalization, hash indexing, QueryClient ownership, deduplication, cancellation, freshness, GC, mutations, SSR hydration, and value-safe diagnostics prototypes (`P5.1` - `P5.6`).
 
 The research covers:
 
@@ -30,7 +30,10 @@ The research covers:
 - SSR Request Scope isolation proving Request A data is never visible to Request B;
 - server prefetching and safe dehydration producing a versioned wire envelope (`protocol: "vii.query"`, `version: 1`);
 - hardened client hydration with strict validation against prototype pollution, malformed keys, invalid/future timestamps, and oversized payloads;
-- preservation of original `dataUpdatedAt` timestamps across the hydration boundary.
+- preservation of original `dataUpdatedAt` timestamps across the hydration boundary;
+- value-safe structural diagnostics for all Query, Mutation, and Hydration events;
+- absolute privacy enforcement: zero logging of query values, response/request bodies, variables, tokens, credentials, or hydration payloads;
+- fault-isolated diagnostic sinks preventing observer errors from impacting execution.
 
 The code lives entirely under `research/query/` and is not a public package or API.
 
@@ -45,17 +48,18 @@ pnpm exec tsc --noEmit -p research/query/tsconfig.json
 
 Environment: Node `v22.17.0`, pnpm `10.12.4`, macOS (Darwin arm64), Vitest `4.1.10`.
 
-All 62 tests across 7 test files passed cleanly.
+All 67 tests across 8 test files passed cleanly.
 
 ## Key Findings
 
-1. **Zero Cross-Request Leakage**: Request-scoped `ResearchQueryClient` instances guarantee 100% data isolation between distinct concurrent server requests.
-2. **Deterministic Wire Envelope**: Dehydration serializes only successful data without leaking active executions, AbortControllers, timers, or internal error states.
-3. **Timestamp Integrity**: Preserving original server `dataUpdatedAt` prevents false freshness inflation on client initial load.
-4. **Hydration Boundary Hardening**: Hydration strictly validates external untrusted input, rejecting prototype pollution, malformed keys, future/corrupt timestamps, and oversized payloads.
-5. **Mutation & Rollback Safety**: Generation-scoped rollback prevents older failing mutations from clobbering newer accepted server updates.
+1. **Zero Data/Credential Leakage**: Verifiable structural event logging excludes response payloads, request variables, tokens, credentials, and user data.
+2. **Fault Isolation**: Sinks with runtime exceptions do not fail or alter queries, mutations, or hydration.
+3. **Zero Cross-Request Leakage**: Request-scoped `ResearchQueryClient` instances guarantee 100% data isolation between concurrent server requests.
+4. **Deterministic Wire Envelope**: Dehydration serializes only successful data without leaking active executions, AbortControllers, timers, or internal error states.
+5. **Timestamp Integrity**: Preserving original server `dataUpdatedAt` prevents false freshness inflation on client initial load.
+6. **Mutation & Rollback Safety**: Generation-scoped rollback prevents older failing mutations from clobbering newer accepted server updates.
 
 ## Limitations
 
 - Measurements are single-process Node microbenchmarks on ARM64 and do not represent cross-platform browser engine characteristics.
-- Prototypes do not yet include structured diagnostic sinks or telemetry-free observability (deferred to P5.6).
+- Prototypes do not yet include framework adapter fixtures (deferred to P5.7).

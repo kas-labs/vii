@@ -3,7 +3,8 @@
  * Research only: not a public package API or production implementation.
  */
 
-import { type QueryKey } from "./query-key.js";
+import { type QueryKey, hashCanonicalKey } from "./query-key.js";
+import { type QueryDiagnosticSink, emitDiagnostic } from "./query-diagnostics.js";
 
 export type QueryStatus = "empty" | "success" | "error";
 export type FetchStatus = "idle" | "fetching";
@@ -40,6 +41,7 @@ export interface OptimisticResult {
 export class QueryRecord<T = unknown> {
   readonly canonicalKey: string;
   readonly key: QueryKey;
+  readonly keyHash: number;
 
   private snapshot: QuerySnapshot<T>;
   private activeExecution?: Promise<T> | undefined;
@@ -48,10 +50,13 @@ export class QueryRecord<T = unknown> {
   private isInvalidated = false;
   private gcTimer?: ReturnType<typeof setTimeout> | undefined;
   private readonly listeners = new Set<QueryListener<T>>();
+  private sink?: QueryDiagnosticSink | undefined;
 
-  constructor(canonicalKey: string, key: QueryKey) {
+  constructor(canonicalKey: string, key: QueryKey, sink?: QueryDiagnosticSink) {
     this.canonicalKey = canonicalKey;
     this.key = key;
+    this.keyHash = hashCanonicalKey(canonicalKey);
+    this.sink = sink;
     this.snapshot = {
       data: undefined,
       error: undefined,
@@ -97,6 +102,11 @@ export class QueryRecord<T = unknown> {
   invalidate(): void {
     this.isInvalidated = true;
     this.snapshot = { ...this.snapshot, isInvalidated: true };
+    emitDiagnostic(this.sink, {
+      type: "query:invalidated",
+      timestamp: Date.now(),
+      keyHash: this.keyHash,
+    });
     this.notify();
   }
 
@@ -104,14 +114,32 @@ export class QueryRecord<T = unknown> {
     this.cancelGc();
     this.listeners.add(listener);
     this.updateObserverCount();
+    emitDiagnostic(this.sink, {
+      type: "query:observer_added",
+      timestamp: Date.now(),
+      keyHash: this.keyHash,
+      observerCount: this.listeners.size,
+    });
     return () => {
       this.listeners.delete(listener);
       this.updateObserverCount();
+      emitDiagnostic(this.sink, {
+        type: "query:observer_removed",
+        timestamp: Date.now(),
+        keyHash: this.keyHash,
+        observerCount: this.listeners.size,
+      });
     };
   }
 
   fetch(queryFn: QueryFunction<T>, options?: FetchOptions): Promise<T> {
     if (!options?.supersede && this.activeExecution && this.snapshot.fetchStatus === "fetching") {
+      emitDiagnostic(this.sink, {
+        type: "query:fetch_deduplicated",
+        timestamp: Date.now(),
+        keyHash: this.keyHash,
+        generation: this.currentGeneration,
+      });
       return this.activeExecution;
     }
     this.cancelActiveController();
@@ -120,22 +148,55 @@ export class QueryRecord<T = unknown> {
     const generation = this.currentGeneration;
     const controller = new AbortController();
     this.activeAbortController = controller;
+    const startTime = Date.now();
 
     this.snapshot = { ...this.snapshot, fetchStatus: "fetching", generation };
+    emitDiagnostic(this.sink, {
+      type: "query:fetch_started",
+      timestamp: startTime,
+      keyHash: this.keyHash,
+      generation,
+    });
     this.notify();
 
     const execution = (async () => {
       try {
         const result = await queryFn({ signal: controller.signal });
+        const durationMs = Date.now() - startTime;
         if (generation === this.currentGeneration && !controller.signal.aborted) {
+          emitDiagnostic(this.sink, {
+            type: "query:fetch_succeeded",
+            timestamp: Date.now(),
+            keyHash: this.keyHash,
+            generation,
+            durationMs,
+          });
           this.updateSuccess(result, generation);
         }
         return result;
       } catch (error) {
+        const durationMs = Date.now() - startTime;
         if (generation === this.currentGeneration) {
-          controller.signal.aborted
-            ? this.handleAbort(generation)
-            : this.updateError(error, generation);
+          if (controller.signal.aborted) {
+            emitDiagnostic(this.sink, {
+              type: "query:fetch_cancelled",
+              timestamp: Date.now(),
+              keyHash: this.keyHash,
+              generation,
+              durationMs,
+            });
+            this.handleAbort(generation);
+          } else {
+            emitDiagnostic(this.sink, {
+              type: "query:fetch_failed",
+              timestamp: Date.now(),
+              keyHash: this.keyHash,
+              generation,
+              durationMs,
+              reason: error instanceof Error ? error.name : "Error",
+            });
+            this.updateError(error, generation);
+          }
         }
         throw error;
       } finally {
@@ -175,6 +236,12 @@ export class QueryRecord<T = unknown> {
         if (this.currentGeneration === expectedGeneration) {
           this.currentGeneration += 1;
           this.updateSuccess(previousData as T, this.currentGeneration);
+          emitDiagnostic(this.sink, {
+            type: "mutation:rollback",
+            timestamp: Date.now(),
+            keyHash: this.keyHash,
+            generation: this.currentGeneration,
+          });
           return true;
         }
         return false;
@@ -186,11 +253,26 @@ export class QueryRecord<T = unknown> {
     this.cancelGc();
     if (gcTime === Number.POSITIVE_INFINITY) return;
     if (gcTime <= 0) {
+      emitDiagnostic(this.sink, {
+        type: "query:gc_evicted",
+        timestamp: Date.now(),
+        keyHash: this.keyHash,
+      });
       onCollect(this.canonicalKey);
       return;
     }
+    emitDiagnostic(this.sink, {
+      type: "query:gc_scheduled",
+      timestamp: Date.now(),
+      keyHash: this.keyHash,
+    });
     this.gcTimer = setTimeout(() => {
       this.gcTimer = undefined;
+      emitDiagnostic(this.sink, {
+        type: "query:gc_evicted",
+        timestamp: Date.now(),
+        keyHash: this.keyHash,
+      });
       onCollect(this.canonicalKey);
     }, gcTime);
   }
@@ -199,6 +281,11 @@ export class QueryRecord<T = unknown> {
     if (this.gcTimer !== undefined) {
       clearTimeout(this.gcTimer);
       this.gcTimer = undefined;
+      emitDiagnostic(this.sink, {
+        type: "query:gc_cancelled",
+        timestamp: Date.now(),
+        keyHash: this.keyHash,
+      });
     }
   }
 

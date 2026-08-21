@@ -118,6 +118,7 @@ count the existing Diagnostics timeline or a simple State-plus-Promise example a
   `docs/quality/FLOW_TYPESCRIPT_COMPLEXITY_BASELINE.md`, and
   `docs/quality/FLOW_ASYNC_COMPARISON_BASELINE.md`;
 - malicious iterable/stream, unbounded-rate, and cancellation-race robustness fixtures;
+- broader malformed-shape, hostile-subscriber, and unbounded ReadableStream robustness fixtures;
 - a bounded decision for surfacing asynchronous cancellation rejection without changing synchronous
   Core disposal;
 - broader upstream sharing, late-subscriber behavior, and explicit multicast ownership research

@@ -56,13 +56,13 @@ PR: #103 (draft)
   explicit limits.
 - Updated the Flow brief, fixture README, documentation index, and project state. No Core/API,
   package, or consumer repository changes were made.
-- Corrected the handoff context: PR #101 is merged with validate and delivery-policy checks passed.
 
 ### Validation
 
 - `pnpm exec vitest run research/flow/flow-ownership.test.ts --reporter=verbose --silent=false`:
   passed; 1 file and 3 tests passed.
-- `pnpm exec vitest run research/flow/*.test.ts`: passed; 6 files and 24 tests passed.
+- `pnpm exec vitest run research/flow/*.test.ts`: passed; 6 files and 24 tests passed before base
+  integration; the integrated branch was rechecked with 7 files and 29 tests passed.
 - `pnpm exec tsc --noEmit -p research/flow/tsconfig.json`: passed.
 - `pnpm validate`: passed with approved registry access; format, lint, typecheck, repository tests,
   builds, packed consumer validation, and packed CLI Core clean-consumer validation all passed.
@@ -81,6 +81,50 @@ PR: #103 (draft)
   confirmation.
 - Broader upstream sharing, late-subscriber behavior, explicit multicast ownership, and async
   cancellation-rejection surfacing remain deferred.
+
+## 2026-08-21 03:04 CEST | Add Flow robustness and cancellation-race fixtures
+
+Status: completed
+Branch: `test/flow-robustness-races`
+PR: #102 (draft)
+
+### Scope
+
+- Continue Flow Research after PR #101 merged, covering malicious producer, fast/unbounded
+  AsyncIterable, and native cancellation-race correctness without changing runtime/API surfaces.
+
+### Changes
+
+- Added `research/flow/flow-robustness-races.test.ts` with five deterministic fixtures for explicit
+  producer errors, semantic disposal cutoff, idempotent `AsyncIterable.return()`, and pending
+  ReadableStream cancellation.
+- Added `docs/quality/FLOW_ROBUSTNESS_BASELINE.md` with exact commands, environment, structural
+  outcomes, and limitations.
+- Updated the Flow research brief, fixture README, documentation index, and project state. No Core,
+  public API, package, or consumer repository changes were made.
+- Corrected the handoff context: PR #101 is merged with validate and delivery-policy checks passed.
+
+### Validation
+
+- `pnpm exec vitest run research/flow/*.test.ts`: passed; 6 files and 26 tests passed.
+- `pnpm exec tsc --noEmit -p research/flow/tsconfig.json`: passed.
+- `pnpm validate`: passed with approved registry access; format, lint, typecheck, repository tests,
+  builds, packed consumer validation, and packed CLI Core clean-consumer validation all passed.
+- `pnpm exec prettier --check` on changed code/docs and `git diff --check`: passed.
+
+### Architecture / compatibility
+
+- Flow remains Research-only. Cancellation is not converted to producer failure, native cleanup is
+  initiated without claiming asynchronous completion, and diagnostics remain value-safe.
+- The fixture does not import Task, add a Flow package, change Core `ViiResource.dispose(): void`, or
+  make browser/network/worker/platform-consumer claims.
+
+### Remaining / recovery
+
+- Draft PR #102 is open against `test/flow-research-fixtures`; review is pending and merge requires
+  maintainer confirmation.
+- Broader malformed-shape, hostile-subscriber, unbounded ReadableStream, async cancellation-rejection
+  surfacing, and real platform-consumer research remain deferred.
 
 ## 2026-08-21 02:55 CEST | Add Flow temporal and async comparison baseline
 

@@ -37,6 +37,53 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-21 16:26 CEST | Add Flow cancellation-rejection surfacing baseline
+
+Status: completed
+Branch: `test/flow-cancellation-rejection`
+PR: #104 (draft)
+
+### Scope
+
+- Continue the approved Flow Research plan with a bounded first-party investigation of native
+  AsyncIterable and ReadableStream cancellation rejection while preserving synchronous disposal.
+
+### Changes
+
+- Added `research/flow/flow-cancellation-rejection.test.ts` with deterministic structural-observer
+  fixtures for AsyncIterable `return()`, ReadableStream `cancel()`, synchronous cleanup throws,
+  idempotent disposal, and `dispose(): void` timing.
+- Added `docs/quality/FLOW_CANCELLATION_REJECTION_BASELINE.md` with ECMAScript, WHATWG Streams, and
+  DOM first-party constraints, candidate comparison, exact commands, and privacy-safe limits.
+- Updated the Flow brief, research README, docs index, and durable project state. No Core/API,
+  package, dependency, or consumer repository changes were made.
+
+### Validation
+
+- `pnpm exec vitest run research/flow/flow-cancellation-rejection.test.ts --reporter=verbose --silent=false`:
+  passed; 1 file and 3 tests passed.
+- `pnpm exec vitest run research/flow/*.test.ts`: passed; 8 files and 32 tests passed.
+- `pnpm exec tsc --noEmit -p research/flow/tsconfig.json`: passed.
+- `pnpm validate`: passed with approved registry access; format, lint, typecheck, repository tests,
+  builds, packed consumer validation, and packed CLI Core clean-consumer validation all passed.
+- Prettier checks and `git diff --check`: passed.
+
+### Architecture / compatibility
+
+- Native cleanup rejection remains separate from producer/operator error, subscriber callback
+  failure, cancellation, completion, and Scope disposal. The fixture only demonstrates a structural
+  observer candidate; it does not select a diagnostics event or public Flow API.
+- `dispose()` remains synchronous and returns `void`; native cleanup starts before it returns, while
+  rejection observation occurs after the native promise settles. Raw errors and user payloads are
+  excluded from structural evidence.
+
+### Remaining / recovery
+
+- Draft PR #104 is open against `test/flow-research-fixtures`; do not merge without maintainer
+  confirmation.
+- Public cancellation-rejection contract, broader upstream sharing, late-subscriber behavior,
+  explicit multicast ownership, real consumers, and benchmark evidence remain deferred.
+
 ## 2026-08-21 03:10 CEST | Add Flow ownership and subscription identity baseline
 
 Status: completed

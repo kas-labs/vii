@@ -63,8 +63,9 @@ the native cancellation method. No browser, network, worker, or socket compatibi
 The deterministic layer is the primary correctness gate. A separate real-clock layer checks latest
 result delivery and disposal with native timers. Robustness fixtures check bounded debounce timer
 state under a 1000-event storm and cancellation rejection isolation for both AsyncIterable and
-ReadableStream adapters. These layers do not authorize throughput, retained-memory, browser, network,
-worker, or socket claims.
+ReadableStream adapters. The separate cancellation-rejection baseline records first-party native
+cleanup contracts and a structural observer candidate without selecting a public API. These layers
+do not authorize throughput, retained-memory, browser, network, worker, or socket claims.
 
 ## Comparison matrix
 
@@ -119,8 +120,8 @@ count the existing Diagnostics timeline or a simple State-plus-Promise example a
   `docs/quality/FLOW_ASYNC_COMPARISON_BASELINE.md`;
 - malicious iterable/stream, unbounded-rate, and cancellation-race robustness fixtures;
 - broader malformed-shape, hostile-subscriber, and unbounded ReadableStream robustness fixtures;
-- a bounded decision for surfacing asynchronous cancellation rejection without changing synchronous
-  Core disposal;
+- a public contract decision for surfacing asynchronous cancellation rejection; the current
+  structural-observer evidence remains research-only and does not change synchronous Core disposal;
 - broader upstream sharing, late-subscriber behavior, and explicit multicast ownership research
   before any replay or multicast API;
 - repeat primary-source/version capture immediately before freezing any RFC or benchmark baseline.

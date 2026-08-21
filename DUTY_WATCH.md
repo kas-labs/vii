@@ -4617,7 +4617,7 @@ PR: [#117](https://github.com/kas-labs/vii/pull/117) draft
 
 Status: completed
 Branch: test/query-ssr-hydration
-PR: not opened
+PR: [#118](https://github.com/kas-labs/vii/pull/118) draft
 
 ### Scope
 

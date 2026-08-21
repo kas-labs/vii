@@ -41,7 +41,7 @@ PR: <number or not opened>
 
 Status: completed
 Branch: `docs/numeric-release-budgets`
-PR: not opened
+PR: #112 (draft)
 
 ### Scope
 

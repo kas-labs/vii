@@ -80,7 +80,7 @@ Framework, build, and platform integrations
              │
 Product modules
   ├─ State
-  ├─ Query (Planned)
+  ├─ Query (Research / Planned)
   ├─ Stream and RxJS interop (Research)
   ├─ Form (Planned / Research)
   ├─ UI Foundation (Planned)
@@ -148,9 +148,11 @@ security semantics
 State      current value and dependency graph
 Computed   derived current value
 Resource   owned asynchronous operation
-Query      cached remote state
+Query      retained remote/server state with freshness and request-scoped ownership
 Stream     event sequence over time
 ```
+
+Query research is defined in `QUERY_ARCHITECTURE.md`. Query owns remote-state coordination rather than transport: explicit QueryClient ownership, deterministic keys, cache/freshness/invalidation, in-flight deduplication, AbortSignal cancellation, mutations, and request-isolated hydration are its research boundary. No Query package or stable public API exists yet.
 
 RxJS is optional interop for advanced streams. It is not required for ordinary Vii State.
 
@@ -288,7 +290,7 @@ The first implementation slice contains:
 
 The initial Intentloom slice is limited to repository documentation, policy references, and one read-only or documentation-mutation workflow. It must not block the Core implementation sequence.
 
-Query, native components, the Application Framework, Build System implementation, UI, Registry, expanded Server, desktop, and mobile remain outside the first implementation slice.
+Query, native components, the Application Framework, Build System implementation, UI, Registry, expanded Server, desktop, and mobile remain outside the first implementation slice. Query is now an explicit Phase 5 Research / Planned architecture track, not implemented functionality.
 
 ## Research sequence
 
@@ -297,6 +299,7 @@ The long-term framework sequence is evidence-driven:
 ```text
 State and Scope
 → framework adapters and real applications
+→ Query research and build-vs-buy gate
 → native component prototypes
 → one Component IR
 → Web renderer
@@ -306,7 +309,7 @@ State and Scope
 → additional build and runtime adapters
 ```
 
-The sequence may stop if existing framework adapters provide sufficient value.
+The sequence may stop if existing framework adapters or mature external libraries provide sufficient value.
 
 ## Architecture evidence
 

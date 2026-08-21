@@ -41,7 +41,7 @@ PR: <number or not opened>
 
 Status: completed
 Branch: `test/phase4-browser-retention`
-PR: not opened
+PR: #110 (draft)
 
 ### Scope
 

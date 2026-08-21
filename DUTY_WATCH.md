@@ -4479,7 +4479,7 @@ PR: [#114](https://github.com/kas-labs/vii/pull/114) draft
 
 Status: completed
 Branch: test/query-client-deduplication
-PR: not opened
+PR: [#115](https://github.com/kas-labs/vii/pull/115) draft
 
 ### Scope
 

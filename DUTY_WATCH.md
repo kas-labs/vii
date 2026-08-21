@@ -37,6 +37,54 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-21 03:10 CEST | Add Flow ownership and subscription identity baseline
+
+Status: completed
+Branch: `test/flow-ownership-evidence`
+PR: #103 (draft)
+
+### Scope
+
+- Continue Flow Research after the merged PR #101 with bounded subscription identity and upstream
+  ownership evidence, without introducing replay, multicast, or a public API.
+
+### Changes
+
+- Added `research/flow/flow-ownership.test.ts` with factory AsyncIterable identity, per-subscription
+  cleanup, composed-source disposal isolation, and independent Scope ownership fixtures.
+- Added `docs/quality/FLOW_OWNERSHIP_BASELINE.md` with exact commands, structural outcomes, and
+  explicit limits.
+- Updated the Flow brief, fixture README, documentation index, and project state. No Core/API,
+  package, or consumer repository changes were made.
+- Resolved the PR #103 overlap with the merged robustness baseline from PR #102 in
+  `chore(flow): sync research fixtures base`; no Core/API/package behavior was changed.
+
+### Validation
+
+- `pnpm exec vitest run research/flow/flow-ownership.test.ts --reporter=verbose --silent=false`:
+  passed; 1 file and 3 tests passed.
+- `pnpm exec vitest run research/flow/*.test.ts`: passed; 6 files and 24 tests passed before base
+  integration; the integrated branch was rechecked with 7 files and 29 tests passed.
+- `pnpm exec tsc --noEmit -p research/flow/tsconfig.json`: passed.
+- `pnpm validate`: passed with approved registry access; format, lint, typecheck, repository tests,
+  builds, packed consumer validation, and packed CLI Core clean-consumer validation all passed.
+- Prettier check and `git diff --check`: passed.
+- GitHub PR #103 `validate`: passed; `delivery-policy`: passed.
+
+### Architecture / compatibility
+
+- Each subscription has independent identity and upstream cleanup. Explicit hot sources remain
+  shared only by their own source semantics; factory sources start independently per subscription.
+- No replay, multicast, ref-counting, backpressure, Flow package, Task dependency, Core change, or
+  public API was added. Flow remains Research-only and diagnostics remain value-safe.
+
+### Remaining / recovery
+
+- Draft PR #103 is open and mergeable against `test/flow-research-fixtures`; GitHub checks pass.
+  Do not merge without maintainer confirmation.
+- Broader upstream sharing, late-subscriber behavior, explicit multicast ownership, and async
+  cancellation-rejection surfacing remain deferred.
+
 ## 2026-08-21 03:04 CEST | Add Flow robustness and cancellation-race fixtures
 
 Status: completed

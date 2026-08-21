@@ -31,6 +31,8 @@ returns.
 The separate real-clock validation layer covers latest-result delivery and disposal with native
 timers. Platform robustness fixtures cover bounded debounce timer state under a 1000-event storm,
 AsyncIterable `return()` initiation and rejection isolation, and ReadableStream `cancel()` initiation
-and rejection isolation. The dedicated robustness-race fixture also covers producer failures,
-fast/unbounded AsyncIterable disposal, idempotent `return()`, and pending ReadableStream cancellation
-races. These are lifecycle/correctness evidence only, not throughput or memory claims.
+and rejection isolation. Ownership fixtures cover per-subscription AsyncIterable identity, composed
+source disposal isolation, and Scope-owned hot-source subscriptions. The dedicated robustness-race
+fixture also covers producer failures, fast/unbounded AsyncIterable disposal, idempotent `return()`,
+and pending ReadableStream cancellation races. These are lifecycle/correctness evidence only, not
+throughput or memory claims.

@@ -41,7 +41,7 @@ PR: <number or not opened>
 
 Status: completed
 Branch: `test/phase4-browser-csp`
-PR: not opened
+PR: #111 (draft)
 
 ### Scope
 

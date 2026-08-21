@@ -567,8 +567,8 @@ PR: #101 (draft)
 ### Validation
 
 - `pnpm exec vitest run research/flow/flow-research.test.ts research/flow/flow-real-clock.test.ts
-  research/flow/flow-platform-robustness.test.ts research/flow/flow-comparison.test.ts
-  research/flow/flow-async-comparison.test.ts`: passed; 5 files and 21 tests passed.
+research/flow/flow-platform-robustness.test.ts research/flow/flow-comparison.test.ts
+research/flow/flow-async-comparison.test.ts`: passed; 5 files and 21 tests passed.
 - `pnpm exec tsc --noEmit -p research/flow/tsconfig.json`: passed.
 - Prettier check and `git diff --check`: passed.
 - `pnpm validate`: passed with approved registry access; format, lint, typecheck, repository tests,
@@ -613,7 +613,7 @@ PR: #100 (draft)
 ### Changes
 
 - Added `research/flow/flow-typecheck-comparison.mjs`, which runs 9 reproducible `tsc
-  --extendedDiagnostics` checks with temporary incremental build-info files and emits raw JSON.
+--extendedDiagnostics` checks with temporary incremental build-info files and emits raw JSON.
 - Added direct, RxJS `7.8.2`, and throwaway prototype type-check fixtures under
   `research/flow/typecheck-fixtures/`.
 - Added `docs/quality/FLOW_TYPESCRIPT_COMPLEXITY_BASELINE.md` with exact environment, source/program
@@ -625,7 +625,7 @@ PR: #100 (draft)
 ### Validation
 
 - `pnpm exec vitest run research/flow/flow-research.test.ts research/flow/flow-real-clock.test.ts
-  research/flow/flow-platform-robustness.test.ts research/flow/flow-comparison.test.ts`: passed;
+research/flow/flow-platform-robustness.test.ts research/flow/flow-comparison.test.ts`: passed;
   4 files and 18 tests passed.
 - `pnpm exec tsc --noEmit -p research/flow/tsconfig.json`: passed.
 - `pnpm exec node research/flow/flow-typecheck-comparison.mjs`: passed; 9 compiler runs passed and
@@ -673,11 +673,11 @@ PR: #99 (draft)
 ### Validation
 
 - `pnpm exec vitest run research/flow/flow-research.test.ts research/flow/flow-real-clock.test.ts
-  research/flow/flow-platform-robustness.test.ts research/flow/flow-comparison.test.ts`: passed;
+research/flow/flow-platform-robustness.test.ts research/flow/flow-comparison.test.ts`: passed;
   4 files and 18 tests passed.
 - `pnpm exec tsc --noEmit -p research/flow/tsconfig.json`: passed.
 - `NODE_OPTIONS=--expose-gc pnpm exec vitest run research/flow/flow-comparison.test.ts
-  --reporter=verbose --silent=false`: passed; correctness gate passed, 3 runners × 10 samples and
+--reporter=verbose --silent=false`: passed; correctness gate passed, 3 runners × 10 samples and
   the 1,000-cycle retention probe emitted raw JSON captured in the baseline doc.
 - `pnpm validate`: passed after rerunning with approved registry access; format, lint, typecheck,
   repository tests, builds, packed consumer validation, and CLI Core clean-consumer validation all
@@ -727,7 +727,7 @@ PR: #98 (draft)
   async iterator close/interface, and WHATWG Streams reader cancellation/backpressure.
 - `pnpm format:check`: passed.
 - `pnpm exec prettier --check docs/quality/FLOW_PRIMARY_SOURCE_REVALIDATION.md
-  docs/architecture/FLOW_RESEARCH_BRIEF.md docs/README.md`: passed.
+docs/architecture/FLOW_RESEARCH_BRIEF.md docs/README.md`: passed.
 - `git diff --check`: passed.
 
 ### Architecture / compatibility
@@ -769,7 +769,7 @@ PR: not opened
 ### Validation
 
 - `pnpm exec vitest run research/flow/flow-research.test.ts research/flow/flow-real-clock.test.ts
-  research/flow/flow-platform-robustness.test.ts`: passed; 3 files and 17 tests passed.
+research/flow/flow-platform-robustness.test.ts`: passed; 3 files and 17 tests passed.
 - `pnpm exec tsc --noEmit -p research/flow/tsconfig.json`: passed.
 - `git diff --check`: passed.
 - `pnpm format:check`: passed.
@@ -4423,3 +4423,55 @@ PR: follow-up focused documentation branch
 - Keep Core framework-agnostic and experimental API scope unchanged.
 - Do not claim Phase 4 completion or external alpha support until the open gates receive an explicit
   maintainer decision and proportionate evidence.
+
+## 2026-08-22 00:50 CEST | Implement P5.1 QueryKey and Cache research prototype
+
+Status: completed
+Branch: test/query-key-cache-research
+PR: not opened
+
+### Scope
+
+- Execute the P5.1 QueryKey and QueryCache research prototype slice under `research/query/` following
+  the Phase 5 architecture in RFC 0024.
+- Validate deterministic QueryKey identity, canonicalization, hash bucket indexing, exact matching,
+  structural family/prefix matching, prototype security, and pathological limits.
+- Record reproducible microbenchmarks and quality baselines without creating a public package or modifying Core.
+
+### Changes
+
+- Added `research/query/tsconfig.json` extending base TypeScript config.
+- Added `research/query/query-key.ts` with strict type validation, deterministic key sorting, cycle detection,
+  prototype pollution prevention, 32-bit FNV-1a hashing, exact matching, structural array family matching,
+  and configurable depth/node/string bounds.
+- Added `research/query/query-cache-prototype.ts` providing bucket-indexed cache storage with full canonical
+  fallback disambiguation for hash collisions.
+- Added `research/query/query-key.test.ts` (20 unit tests for equality, distinct types, rejection, security,
+  limits, family matching).
+- Added `research/query/query-cache.test.ts` (7 unit tests for CRUD, in-place updates, family prefix matching,
+  and 100% collision isolation).
+- Added `research/query/query-benchmarks.test.ts` measuring canonicalization, exact lookup, cache insert,
+  and 1,000-item family match against a direct naive baseline.
+- Added `research/query/README.md` and `docs/quality/QUERY_RESEARCH_BASELINE.md`.
+- Updated `PROJECT_STATE.md` with durable P5.1 research conclusions.
+
+### Validation
+
+- `pnpm exec vitest run research/query/*.test.ts`: passed (3 files, 28 tests).
+- `pnpm exec tsc --noEmit -p research/query/tsconfig.json`: passed.
+- `pnpm format:check`: passed for all repository files.
+- `pnpm lint`: passed.
+- `git diff --check`: passed.
+- Repository `pnpm validate`: format, lint, typecheck, test, build, and Core pack-check passed.
+
+### Architecture / compatibility
+
+- All changes remain isolated inside `research/query/` and documentation.
+- No public `@vii-labs/query` package, exports, or Core dependencies were added.
+- No QueryClient lifecycle, observers, deduplication, mutations, or framework adapters were implemented.
+- Hashing is strictly an internal indexing optimization; semantic equality is guaranteed by full canonical representation.
+
+### Remaining / recovery
+
+- Commit changes, push `test/query-key-cache-research`, and open a draft PR against `main`.
+- Await review before proceeding to slice P5.2.

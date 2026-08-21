@@ -1,0 +1,56 @@
+{
+  "schemaVersion": "0.1",
+  "suite": "vanilla-browser-csp",
+  "consumer": "vii-reference-vanilla-onboarding",
+  "revision": "b780547d797f0a09458d2d587d420c4253f15d2b",
+  "workingTreeDirty": true,
+  "environment": {
+    "node": "v22.17.0",
+    "platform": "darwin arm64 25.5.0",
+    "cpu": "Apple M4",
+    "browser": "Google Chrome 151.0.7922.170",
+    "browserHarness": "Chrome DevTools Protocol (CDP) via Node WebSocket"
+  },
+  "scenarios": [
+    {
+      "suiteName": "strict-baseline-csp",
+      "cspHeader": "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'; frame-ancestors 'none';",
+      "result": {
+        "suiteName": "strict-baseline-csp",
+        "countAfterCreate": 0,
+        "statusAfterCreate": "Scope active",
+        "countAfterInc": 1,
+        "countAfterBatch": 3,
+        "statusAfterDispose": "Scope disposed",
+        "programmaticPass": true,
+        "evalBlocked": true,
+        "violationsCount": 0
+      },
+      "consoleErrors": [],
+      "cspViolations": []
+    },
+    {
+      "suiteName": "strict-trusted-types-csp",
+      "cspHeader": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; require-trusted-types-for 'script'; trusted-types default;",
+      "result": {
+        "suiteName": "strict-trusted-types-csp",
+        "countAfterCreate": 0,
+        "statusAfterCreate": "Scope active",
+        "countAfterInc": 1,
+        "countAfterBatch": 3,
+        "statusAfterDispose": "Scope disposed",
+        "programmaticPass": true,
+        "evalBlocked": true,
+        "violationsCount": 0
+      },
+      "consoleErrors": [],
+      "cspViolations": []
+    }
+  ],
+  "summary": {
+    "strictCspLifecyclePassed": true,
+    "trustedTypesLifecyclePassed": true,
+    "evalSuccessfullyBlockedByCSP": true,
+    "zeroConsoleErrors": true
+  }
+}

@@ -56,6 +56,8 @@ PR: #103 (draft)
   explicit limits.
 - Updated the Flow brief, fixture README, documentation index, and project state. No Core/API,
   package, or consumer repository changes were made.
+- Resolved the PR #103 overlap with the merged robustness baseline from PR #102 in
+  `chore(flow): sync research fixtures base`; no Core/API/package behavior was changed.
 
 ### Validation
 
@@ -67,6 +69,7 @@ PR: #103 (draft)
 - `pnpm validate`: passed with approved registry access; format, lint, typecheck, repository tests,
   builds, packed consumer validation, and packed CLI Core clean-consumer validation all passed.
 - Prettier check and `git diff --check`: passed.
+- GitHub PR #103 `validate`: passed; `delivery-policy`: passed.
 
 ### Architecture / compatibility
 
@@ -77,8 +80,8 @@ PR: #103 (draft)
 
 ### Remaining / recovery
 
-- Draft PR #103 is open against `test/flow-research-fixtures`; do not merge without maintainer
-  confirmation.
+- Draft PR #103 is open and mergeable against `test/flow-research-fixtures`; GitHub checks pass.
+  Do not merge without maintainer confirmation.
 - Broader upstream sharing, late-subscriber behavior, explicit multicast ownership, and async
   cancellation-rejection surfacing remain deferred.
 

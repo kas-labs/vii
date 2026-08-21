@@ -4518,5 +4518,51 @@ PR: [#115](https://github.com/kas-labs/vii/pull/115) draft
 
 ### Remaining / recovery
 
-- Commit changes, push `test/query-client-deduplication`, and open a draft PR against `main`.
-- Await review before proceeding to slice P5.3.
+- PR #115 opened for P5.2 QueryClient, Observer, and Deduplication prototype.
+
+## 2026-08-22 01:04 CEST | Implement P5.3 Cancellation, Freshness, Invalidation, and GC prototype
+
+Status: completed
+Branch: test/query-cancellation-gc
+PR: not opened
+
+### Scope
+
+- Execute the P5.3 Cancellation, Freshness, Inactive Retention & GC prototype slice under `research/query/`
+  following RFC 0024 and the Phase 5 roadmap.
+- Validate native AbortSignal fetch cancellation (`abort != error`), background data preservation,
+  superseding aborts, freshness calculation (`staleTime`), non-destructive invalidation (`invalidate != remove`),
+  inactive retention & GC (`gcTime`), and Vii Core `Scope.use(observer)` integration.
+
+### Changes
+
+- Updated `research/query/query-record.ts` with `AbortController` management, `isStale(staleTime)`,
+  `invalidate()`, GC timer scheduling/cancellation, and abort handling.
+- Updated `research/query/query-observer.ts` with `onDispose` callback triggering GC checks on observer removal.
+- Updated `research/query/query-client-prototype.ts` with configurable `defaultStaleTime`/`defaultGcTime`,
+  `cancelQueries()`, `invalidateQueries()`, GC cache eviction, and family prefix matching.
+- Added `research/query/query-cancellation-gc.test.ts` (9 unit tests for cancellation data preservation,
+  superseding aborts, freshness, family invalidation, active GC protection, inactive GC eviction, GC cancellation
+  on re-observation, Scope disposal, and rapid key switching).
+- Updated `research/query/README.md` and `docs/quality/QUERY_RESEARCH_BASELINE.md`.
+- Updated `PROJECT_STATE.md` with durable P5.3 conclusions.
+
+### Validation
+
+- `pnpm exec vitest run research/query/*.test.ts`: passed (5 files, 44 tests).
+- `pnpm exec tsc --noEmit -p research/query/tsconfig.json`: passed.
+- `pnpm format:check`: passed.
+- `pnpm lint`: passed.
+- `git diff --check`: passed.
+- Repository `pnpm validate`: format, lint, typecheck, test, build, and Core/CLI Core pack-checks passed.
+
+### Architecture / compatibility
+
+- All code remains isolated in `research/query/` as internal research code.
+- No public `@vii-labs/query` package or Core dependencies added.
+- Mutations, optimistic update transactions, and framework adapters remain deferred to P5.4+.
+
+### Remaining / recovery
+
+- Commit changes, push `test/query-cancellation-gc`, and open a draft PR against `main`.
+- Await review before proceeding to slice P5.4.

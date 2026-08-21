@@ -1,4 +1,4 @@
-# Vii Query Research: Prototypes (P5.1 & P5.2)
+# Vii Query Research: Prototypes (P5.1, P5.2 & P5.3)
 
 > **Throwaway research only.** This directory is not a package, public API, support fixture, or production implementation.
 
@@ -6,6 +6,7 @@ This directory contains research prototypes validating the foundational semantic
 
 - **P5.1**: Deterministic QueryKey identity, canonicalization, hash bucket indexing, collision safety, exact & structural family matching.
 - **P5.2**: Explicit QueryClient ownership, QueryRecord state separation, in-flight request deduplication, execution generation tracking, and framework-neutral QueryObservers.
+- **P5.3**: Native `AbortSignal` fetch cancellation (`abort != error`), superseding request aborts, freshness (`staleTime`), invalidation (`invalidate != remove`), inactive retention & GC (`gcTime`), and Vii Core `Scope` integration.
 
 ## Verification Commands
 
@@ -75,6 +76,7 @@ interface QuerySnapshot<T> {
   readonly errorUpdatedAt: number;
   readonly observerCount: number;
   readonly generation: number;
+  readonly isInvalidated: boolean;
 }
 ```
 
@@ -84,52 +86,60 @@ This permits a cached successful Query to remain usable and valid while a backgr
 
 Within a single `ResearchQueryClient`, equivalent concurrent calls to `fetchQuery()` for the same canonical key share a single in-flight `Promise<T>`.
 
-```text
-Observer A \
-Observer B  -> QueryRecord -> 1 underlying execution
-Observer C /
-```
-
 ### Execution Generations & Stale Completion Rejection
 
 Every fetch execution receives an incremented generation ID. If a newer execution supersedes an older in-flight request, late completion from the older request is discarded deterministically and cannot overwrite fresh cache data.
 
 ---
 
-## 4. QueryClient Ownership & Isolation (P5.2)
+## 4. Cancellation, Freshness & Inactive GC (P5.3)
 
-- **No Global Cache Singleton**: All state is owned by an explicit `ResearchQueryClient` instance.
-- **SSR Request Isolation**: Separate `ResearchQueryClient` instances never share cache entries or deduplicate requests with each other.
+### AbortSignal-Native Cancellation (`abort != error`)
+
+Every `queryFn` receives `{ signal: AbortSignal }`. When an in-flight background refetch is aborted or superseded:
+
+- Existing valid data is preserved (`status = 'success'`, `data = cachedData`).
+- `fetchStatus` resets to `'idle'`.
+- Abort is not recorded as a query failure error (`error = undefined`).
+
+### Freshness & Invalidation (`invalidate != remove`, `stale != missing`)
+
+- `staleTime` determines when data becomes stale (defaults to `0`).
+- `invalidateQueries()` marks matching records invalidated / stale immediately.
+- Invalidation never deletes cached data; it remains available for instant UI rendering while background refetches coordinate.
+- Supports exact key, structural family prefix matching (`['todos']` matches `['todos', 1]`), and custom predicates.
+
+### Inactive Retention & GC (`gcTime`)
+
+- **Active Protection**: Active queries (with >= 1 observer) are never garbage collected regardless of elapsed time.
+- **Inactive Countdown**: When observer count drops to 0, an inactive GC timer is scheduled (default 5 minutes).
+- **GC Cancellation**: If a new observer attaches before the GC timer fires, the timer is cancelled immediately.
+- **Eviction**: On GC timer expiry, the inactive query record is removed from the cache.
+
+### Vii Core Scope Integration
+
+`QueryObserver` implements `ViiResource` (`{ dispose(): void }`), allowing direct integration with Vii Core `Scope.use(observer)`. Disposing the scope synchronously cleans up observers and initiates the GC countdown.
 
 ---
 
-## 5. Framework-Neutral QueryObserver (P5.2)
-
-- Provides a clean snapshot observation interface.
-- Supports explicit disposal (`observer.dispose()`).
-- Multiple observers can attach to one record; disposing one observer leaves remaining observers and in-flight work unaffected.
-- 1,000 subscribe/dispose cycles verify zero listener retention leaks.
-
----
-
-## 6. Performance Baselines
+## 5. Performance Baselines
 
 Measurements collected on Apple Silicon (Node `v22.17.0`, 10,000 iterations, 5 samples):
 
 | Operation                            | Min (ms) | P50 (ms) | Mean (ms) | Throughput (ops/sec) |
 | ------------------------------------ | -------- | -------- | --------- | -------------------- |
-| `canonicalize-small-key`             | 1.53     | 3.15     | 3.47      | ~2,880,000           |
-| `canonicalize-nested-key`            | 3.84     | 3.93     | 3.96      | ~2,524,000           |
-| `canonicalize-object-key`            | 6.73     | 8.13     | 8.03      | ~1,245,000           |
-| `naive-canonicalize-object`          | 6.39     | 6.82     | 7.48      | ~1,336,000           |
-| `exact-cache-lookup`                 | 7.27     | 28.31    | 29.11     | ~343,000             |
-| `naive-cache-lookup`                 | 3.57     | 4.52     | 7.02      | ~1,423,000           |
-| `cache-insert-update`                | 5.20     | 6.05     | 6.47      | ~1,546,000           |
-| `family-match-1000-items` (100 runs) | 20.02    | 21.76    | 21.51     | ~4,649               |
+| `canonicalize-small-key`             | 5.28     | 7.30     | 8.64      | ~1,157,000           |
+| `canonicalize-nested-key`            | 4.48     | 7.66     | 7.40      | ~1,351,000           |
+| `canonicalize-object-key`            | 9.09     | 12.32    | 12.98     | ~770,000             |
+| `naive-canonicalize-object`          | 9.27     | 11.79    | 14.00     | ~714,000             |
+| `exact-cache-lookup`                 | 6.61     | 9.40     | 11.73     | ~852,000             |
+| `naive-cache-lookup`                 | 2.94     | 4.98     | 5.68      | ~1,761,000           |
+| `cache-insert-update`                | 6.33     | 7.01     | 9.67      | ~1,034,000           |
+| `family-match-1000-items` (100 runs) | 34.60    | 42.33    | 43.03     | ~2,324               |
 
 ---
 
-## 7. Roadmap Next Steps
+## 6. Roadmap Next Steps
 
-- **Completed**: P5.1 (QueryKey & Cache), P5.2 (QueryClient, Observers, Deduplication & Generations).
-- **Next Slice**: **P5.3 — Cancellation, Freshness, Inactive Retention & GC Prototype** (AbortSignal integration, `staleTime`, `gcTime`, manual invalidation).
+- **Completed**: P5.1 (QueryKey & Cache), P5.2 (QueryClient, Observers, Deduplication & Generations), P5.3 (Cancellation, Freshness, Invalidation & GC).
+- **Next Slice**: **P5.4 — Mutations and Optimistic Transactions Prototype** (mutation lifecycle, optimistic cache transactions, rollback, reconciliation).

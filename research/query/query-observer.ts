@@ -10,11 +10,13 @@ export type ObserverListener<T> = (snapshot: QuerySnapshot<T>) => void;
 export class QueryObserver<T = unknown> {
   private readonly record: QueryRecord<T>;
   private unsubscribeFromRecord?: (() => void) | undefined;
+  private readonly onDisposeCallback?: (() => void) | undefined;
   private readonly listeners = new Set<ObserverListener<T>>();
   private disposed = false;
 
-  constructor(record: QueryRecord<T>) {
+  constructor(record: QueryRecord<T>, onDispose?: () => void) {
     this.record = record;
+    this.onDisposeCallback = onDispose;
     this.unsubscribeFromRecord = record.subscribe((snapshot) => {
       if (!this.disposed) {
         for (const listener of this.listeners) {
@@ -52,5 +54,6 @@ export class QueryObserver<T = unknown> {
       this.unsubscribeFromRecord = undefined;
     }
     this.listeners.clear();
+    this.onDisposeCallback?.();
   }
 }

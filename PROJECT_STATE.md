@@ -286,13 +286,16 @@ subscriber robustness, unbounded ReadableStream behavior, and a public asynchron
 rejection contract remain deferred. Flow remains Research-only and Core synchronous `ViiResource.dispose(): void` is unchanged.
 
 Phase 5 Query server-state architecture is established in `docs/architecture/QUERY_ARCHITECTURE.md`
-and `rfcs/0024-query-architecture.md`. Initial research slices `P5.1` and `P5.2` in `research/query/` validate
-deterministic QueryKey identity, canonicalization, 32-bit FNV-1a hash bucket indexing, exact matching,
+and `rfcs/0024-query-architecture.md`. Initial research slices `P5.1`, `P5.2`, and `P5.3` in `research/query/`
+validate deterministic QueryKey identity, canonicalization, 32-bit FNV-1a hash bucket indexing, exact matching,
 structural family/prefix matching along array boundaries, a minimal cache prototype, explicit `ResearchQueryClient`
 ownership, `QueryRecord` independent state separation (`empty`, `success`, `error` vs `idle`, `fetching`),
 concurrent same-key request deduplication, execution generation tracking with stale late completion rejection,
-and framework-neutral `QueryObserver` lifecycle with zero retention leaks. QueryKey identity accepts a strict
-subset (null, boolean, finite numbers, strings, arrays, and plain objects with sorted keys) and deterministically
+framework-neutral `QueryObserver` lifecycle with zero retention leaks, native `AbortSignal` fetch cancellation
+preserving valid cached data (`abort != error`), superseding cancellation, freshness calculations via `staleTime`,
+structural `invalidateQueries()` (`invalidate != remove`, `stale != missing`), inactive retention and GC eviction
+via `gcTime` with active query protection, and Vii Core `Scope.use(observer)` integration. QueryKey identity accepts
+a strict subset (null, boolean, finite numbers, strings, arrays, and plain objects with sorted keys) and deterministically
 rejects undefined, NaN, infinities, functions, symbols, BigInt, non-plain class instances, cyclic references,
 and prototype pollution properties. Hashing is an indexing optimization only; semantic equality is guaranteed
 by full canonical representation, verified with a 100% synthetic collision test suite. Pathological limits

@@ -4664,7 +4664,7 @@ PR: [#118](https://github.com/kas-labs/vii/pull/118) draft
 
 Status: completed
 Branch: test/query-diagnostics-privacy
-PR: not opened
+PR: [#119](https://github.com/kas-labs/vii/pull/119) draft
 
 ### Scope
 

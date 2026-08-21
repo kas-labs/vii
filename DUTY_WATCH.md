@@ -37,6 +37,56 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-21 02:15 CEST | Add Flow synchronous comparison baseline
+
+Status: completed
+Branch: `perf/flow-comparison-harness`
+PR: #99 (draft)
+
+### Scope
+
+- Add the first bounded post-correctness comparison harness for direct callbacks, RxJS, and the
+  throwaway Flow prototype on the same explicit hot synchronous fixture.
+
+### Changes
+
+- Added `research/flow/flow-comparison.test.ts` with correctness preflight, synchronous FIFO
+  completion/disposal checks, raw timing samples, and an optional explicit-GC retention probe.
+- Added `docs/quality/FLOW_COMPARISON_BASELINE.md` with the exact commands, environment, raw samples,
+  retention observations, and limitations.
+- Indexed the baseline and synchronized `FLOW_RESEARCH_BRIEF.md` and `PROJECT_STATE.md`.
+- Did not change Vii Core, public API, package boundaries, runtime dependencies, or consumer support
+  claims.
+
+### Validation
+
+- `pnpm exec vitest run research/flow/flow-research.test.ts research/flow/flow-real-clock.test.ts
+  research/flow/flow-platform-robustness.test.ts research/flow/flow-comparison.test.ts`: passed;
+  4 files and 18 tests passed.
+- `pnpm exec tsc --noEmit -p research/flow/tsconfig.json`: passed.
+- `NODE_OPTIONS=--expose-gc pnpm exec vitest run research/flow/flow-comparison.test.ts
+  --reporter=verbose --silent=false`: passed; correctness gate passed, 3 runners × 10 samples and
+  the 1,000-cycle retention probe emitted raw JSON captured in the baseline doc.
+- `pnpm validate`: passed after rerunning with approved registry access; format, lint, typecheck,
+  repository tests, builds, packed consumer validation, and CLI Core clean-consumer validation all
+  passed. The first sandboxed attempt stopped at existing React registry downloads with `ENOTFOUND`;
+  no code failure was observed.
+- `git diff --check`: passed.
+
+### Architecture / compatibility
+
+- The comparison remains Research-only and uses the exact root dev-only RxJS `7.8.2` dependency.
+- Runtime observations are fixture- and environment-specific; no performance, memory, support-tier,
+  or graduation claim is made.
+- TypeScript compiler cost, bundle/tree-shaking, allocation, broader memory, temporal, and async
+  runtime measurements remain deferred.
+
+### Remaining / recovery
+
+- Draft PR #99 is open for review; merge requires maintainer confirmation. The next work should
+  recapture versions/source state before extending measurement groups, then add only semantically
+  equivalent temporal/async or complexity fixtures.
+
 ## 2026-08-21 01:45 CEST | Revalidate Flow comparison sources
 
 Status: completed

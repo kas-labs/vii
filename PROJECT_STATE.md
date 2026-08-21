@@ -232,13 +232,19 @@ cancel/dispose outcomes, Scope disposal, AsyncIterable, ReadableStream cancellat
 callback isolation, error recovery, value-safe diagnostics, real-clock behavior, timer-storm bounds,
 and cancellation-rejection isolation cases. RxJS is a root dev-only research dependency; no Flow
 package, public API, Core dependency, support promise, or real consumer claim was added. The focused
-research suite has seventeen passing tests across three files, and its strict research TypeScript
-check plus the repository `pnpm validate` pass. Async cancellation rejection surfacing remains an
-explicit research question; Core synchronous `ViiResource.dispose(): void` is unchanged.
+research suite has eighteen passing tests across four files, and its strict research TypeScript
+check plus the repository `pnpm validate` pass. A bounded synchronous comparison harness now records
+raw per-sample runtime data and an optional GC retention probe for direct callbacks, RxJS, and the
+throwaway prototype; one fixture is not treated as a global performance or memory claim. Async
+cancellation rejection surfacing remains an explicit research question; Core synchronous
+`ViiResource.dispose(): void` is unchanged.
 The primary-source/version constraints for the next comparison slice are recorded in
 `docs/quality/FLOW_PRIMARY_SOURCE_REVALIDATION.md`: plain RxJS Observables remain per-subscription,
 Subjects are explicit multicast sources, unsubscription is distinct from completion, and native
 AbortSignal, AsyncIterator, and ReadableStream cleanup remain asynchronous platform boundaries.
+The first comparison record is in `docs/quality/FLOW_COMPARISON_BASELINE.md`; TypeScript cost,
+bundle/tree-shaking, allocation, broader memory, temporal, and async runtime measurements remain
+deferred.
 
 The durable rendering direction is progressive and CSR-first. A future native Vii application may
 remain fully client-rendered without adopting hydration, request-server lifecycle, streaming, edge,

@@ -112,7 +112,9 @@ count the existing Diagnostics timeline or a simple State-plus-Promise example a
 ## Deferred work
 
 - real UI consumer and real platform-stream consumer evidence;
-- RxJS/direct/prototype bundle, throughput, allocation, retained-memory, and TypeScript benchmarks;
+- RxJS/direct/prototype bundle, allocation, broader retained-memory, temporal, async-switching, and
+  TypeScript benchmarks; the bounded synchronous baseline is recorded separately in
+  `docs/quality/FLOW_COMPARISON_BASELINE.md`;
 - malicious iterable/stream, unbounded-rate, and cancellation-race robustness fixtures;
 - a bounded decision for surfacing asynchronous cancellation rejection without changing synchronous
   Core disposal;

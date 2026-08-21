@@ -37,6 +37,394 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-21 16:26 CEST | Add Flow cancellation-rejection surfacing baseline
+
+Status: completed
+Branch: `test/flow-cancellation-rejection`
+PR: #104 (draft)
+
+### Scope
+
+- Continue the approved Flow Research plan with a bounded first-party investigation of native
+  AsyncIterable and ReadableStream cancellation rejection while preserving synchronous disposal.
+
+### Changes
+
+- Added `research/flow/flow-cancellation-rejection.test.ts` with deterministic structural-observer
+  fixtures for AsyncIterable `return()`, ReadableStream `cancel()`, synchronous cleanup throws,
+  idempotent disposal, and `dispose(): void` timing.
+- Added `docs/quality/FLOW_CANCELLATION_REJECTION_BASELINE.md` with ECMAScript, WHATWG Streams, and
+  DOM first-party constraints, candidate comparison, exact commands, and privacy-safe limits.
+- Updated the Flow brief, research README, docs index, and durable project state. No Core/API,
+  package, dependency, or consumer repository changes were made.
+
+### Validation
+
+- `pnpm exec vitest run research/flow/flow-cancellation-rejection.test.ts --reporter=verbose --silent=false`:
+  passed; 1 file and 3 tests passed.
+- `pnpm exec vitest run research/flow/*.test.ts`: passed; 8 files and 32 tests passed.
+- `pnpm exec tsc --noEmit -p research/flow/tsconfig.json`: passed.
+- `pnpm validate`: passed with approved registry access; format, lint, typecheck, repository tests,
+  builds, packed consumer validation, and packed CLI Core clean-consumer validation all passed.
+- Prettier checks and `git diff --check`: passed.
+
+### Architecture / compatibility
+
+- Native cleanup rejection remains separate from producer/operator error, subscriber callback
+  failure, cancellation, completion, and Scope disposal. The fixture only demonstrates a structural
+  observer candidate; it does not select a diagnostics event or public Flow API.
+- `dispose()` remains synchronous and returns `void`; native cleanup starts before it returns, while
+  rejection observation occurs after the native promise settles. Raw errors and user payloads are
+  excluded from structural evidence.
+
+### Remaining / recovery
+
+- Draft PR #104 is open against `test/flow-research-fixtures`; do not merge without maintainer
+  confirmation.
+- Public cancellation-rejection contract, broader upstream sharing, late-subscriber behavior,
+  explicit multicast ownership, real consumers, and benchmark evidence remain deferred.
+
+## 2026-08-21 03:10 CEST | Add Flow ownership and subscription identity baseline
+
+Status: completed
+Branch: `test/flow-ownership-evidence`
+PR: #103 (draft)
+
+### Scope
+
+- Continue Flow Research after the merged PR #101 with bounded subscription identity and upstream
+  ownership evidence, without introducing replay, multicast, or a public API.
+
+### Changes
+
+- Added `research/flow/flow-ownership.test.ts` with factory AsyncIterable identity, per-subscription
+  cleanup, composed-source disposal isolation, and independent Scope ownership fixtures.
+- Added `docs/quality/FLOW_OWNERSHIP_BASELINE.md` with exact commands, structural outcomes, and
+  explicit limits.
+- Updated the Flow brief, fixture README, documentation index, and project state. No Core/API,
+  package, or consumer repository changes were made.
+- Resolved the PR #103 overlap with the merged robustness baseline from PR #102 in
+  `chore(flow): sync research fixtures base`; no Core/API/package behavior was changed.
+
+### Validation
+
+- `pnpm exec vitest run research/flow/flow-ownership.test.ts --reporter=verbose --silent=false`:
+  passed; 1 file and 3 tests passed.
+- `pnpm exec vitest run research/flow/*.test.ts`: passed; 6 files and 24 tests passed before base
+  integration; the integrated branch was rechecked with 7 files and 29 tests passed.
+- `pnpm exec tsc --noEmit -p research/flow/tsconfig.json`: passed.
+- `pnpm validate`: passed with approved registry access; format, lint, typecheck, repository tests,
+  builds, packed consumer validation, and packed CLI Core clean-consumer validation all passed.
+- Prettier check and `git diff --check`: passed.
+- GitHub PR #103 `validate`: passed; `delivery-policy`: passed.
+
+### Architecture / compatibility
+
+- Each subscription has independent identity and upstream cleanup. Explicit hot sources remain
+  shared only by their own source semantics; factory sources start independently per subscription.
+- No replay, multicast, ref-counting, backpressure, Flow package, Task dependency, Core change, or
+  public API was added. Flow remains Research-only and diagnostics remain value-safe.
+
+### Remaining / recovery
+
+- Draft PR #103 is open and mergeable against `test/flow-research-fixtures`; GitHub checks pass.
+  Do not merge without maintainer confirmation.
+- Broader upstream sharing, late-subscriber behavior, explicit multicast ownership, and async
+  cancellation-rejection surfacing remain deferred.
+
+## 2026-08-21 03:04 CEST | Add Flow robustness and cancellation-race fixtures
+
+Status: completed
+Branch: `test/flow-robustness-races`
+PR: #102 (draft)
+
+### Scope
+
+- Continue Flow Research after PR #101 merged, covering malicious producer, fast/unbounded
+  AsyncIterable, and native cancellation-race correctness without changing runtime/API surfaces.
+
+### Changes
+
+- Added `research/flow/flow-robustness-races.test.ts` with five deterministic fixtures for explicit
+  producer errors, semantic disposal cutoff, idempotent `AsyncIterable.return()`, and pending
+  ReadableStream cancellation.
+- Added `docs/quality/FLOW_ROBUSTNESS_BASELINE.md` with exact commands, environment, structural
+  outcomes, and limitations.
+- Updated the Flow research brief, fixture README, documentation index, and project state. No Core,
+  public API, package, or consumer repository changes were made.
+- Corrected the handoff context: PR #101 is merged with validate and delivery-policy checks passed.
+
+### Validation
+
+- `pnpm exec vitest run research/flow/*.test.ts`: passed; 6 files and 26 tests passed.
+- `pnpm exec tsc --noEmit -p research/flow/tsconfig.json`: passed.
+- `pnpm validate`: passed with approved registry access; format, lint, typecheck, repository tests,
+  builds, packed consumer validation, and packed CLI Core clean-consumer validation all passed.
+- `pnpm exec prettier --check` on changed code/docs and `git diff --check`: passed.
+
+### Architecture / compatibility
+
+- Flow remains Research-only. Cancellation is not converted to producer failure, native cleanup is
+  initiated without claiming asynchronous completion, and diagnostics remain value-safe.
+- The fixture does not import Task, add a Flow package, change Core `ViiResource.dispose(): void`, or
+  make browser/network/worker/platform-consumer claims.
+
+### Remaining / recovery
+
+- Draft PR #102 is open against `test/flow-research-fixtures`; review is pending and merge requires
+  maintainer confirmation.
+- Broader malformed-shape, hostile-subscriber, unbounded ReadableStream, async cancellation-rejection
+  surfacing, and real platform-consumer research remain deferred.
+
+## 2026-08-21 02:55 CEST | Add Flow temporal and async comparison baseline
+
+Status: completed
+Branch: `perf/flow-async-comparison`
+PR: #101 (draft)
+
+### Scope
+
+- Continue the approved Flow Research plan with a deterministic temporal/async comparison after
+  the merged synchronous and TypeScript/complexity baselines.
+
+### Changes
+
+- Added `research/flow/flow-async-comparison.test.ts` with direct callbacks, RxJS, functional
+  prototype, and fluent prototype runners on the same Promise plus AbortSignal fixture.
+- Added deterministic debounce, stale-result switching, fresh disposal, Scope disposal, lifecycle
+  cycles, structural output, and explicit limitations.
+- Added `docs/quality/FLOW_ASYNC_COMPARISON_BASELINE.md` with exact environment, commands, raw
+  samples, structural results, and the prototype completed-inner lifecycle distinction.
+- Synchronized the Flow brief, documentation index, and durable project state. No Core/API/package
+  or consumer repository changes were made.
+
+### Validation
+
+- `pnpm exec vitest run research/flow/flow-research.test.ts research/flow/flow-real-clock.test.ts
+  research/flow/flow-platform-robustness.test.ts research/flow/flow-comparison.test.ts
+  research/flow/flow-async-comparison.test.ts`: passed; 5 files and 21 tests passed.
+- `pnpm exec tsc --noEmit -p research/flow/tsconfig.json`: passed.
+- Prettier check and `git diff --check`: passed.
+- `pnpm validate`: passed with approved registry access; format, lint, typecheck, repository tests,
+  builds, packed consumer validation, and packed CLI Core clean-consumer validation all passed. The
+  initial sandboxed run reached packed consumer validation but stopped on
+  registry `ENOTFOUND`; this was an environment/network boundary, not a code failure.
+- Registry diagnosis confirms the error is DNS/network access to `registry.npmjs.org`; use approved
+  registry access or a pre-populated/offline store for sandboxed runs. No repository workaround was
+  added.
+
+### Architecture / compatibility
+
+- Flow remains Research-only. The fixture does not create a package or public API, does not import
+  Task, and does not change `ViiResource.dispose(): void`, Core, package manifests, lockfiles, or
+  consumer support claims.
+- Structural output excludes emitted values and user content. Real browser/network/worker/platform
+  integration, bundle, allocation, broader memory, and async cancellation-rejection surfacing remain
+  deferred.
+- The comparison records one lifecycle distinction: the throwaway prototype releases a completed
+  inner branch before later disposal, while direct/RxJS adapters report an additional abort teardown.
+  This is evidence for design review, not a selected public semantic.
+
+### Remaining / recovery
+
+- Draft PR #101 is open against `test/flow-research-fixtures`; review is pending and merge requires
+  maintainer confirmation.
+- Next research candidates remain real consumers, broader memory/allocation/bundle evidence, native
+  AsyncIterable/ReadableStream runtime measurements, and explicit async cancellation-rejection
+  surfacing research.
+
+## 2026-08-21 02:35 CEST | Add Flow TypeScript and complexity baseline
+
+Status: completed
+Branch: `perf/flow-typescript-complexity`
+PR: #100 (draft)
+
+### Scope
+
+- Measure cold and incremental TypeScript cost and transitive type surface for the same bounded Flow
+  comparison shape after the synchronous runtime baseline.
+
+### Changes
+
+- Added `research/flow/flow-typecheck-comparison.mjs`, which runs 9 reproducible `tsc
+  --extendedDiagnostics` checks with temporary incremental build-info files and emits raw JSON.
+- Added direct, RxJS `7.8.2`, and throwaway prototype type-check fixtures under
+  `research/flow/typecheck-fixtures/`.
+- Added `docs/quality/FLOW_TYPESCRIPT_COMPLEXITY_BASELINE.md` with exact environment, source/program
+  surfaces, compiler metrics, interpretation, and limitations.
+- Synchronized the Flow brief, Project State, and docs index.
+- Correction: PR #99 from the preceding synchronous baseline is merged; no Core/API/package change
+  was made in this slice.
+
+### Validation
+
+- `pnpm exec vitest run research/flow/flow-research.test.ts research/flow/flow-real-clock.test.ts
+  research/flow/flow-platform-robustness.test.ts research/flow/flow-comparison.test.ts`: passed;
+  4 files and 18 tests passed.
+- `pnpm exec tsc --noEmit -p research/flow/tsconfig.json`: passed.
+- `pnpm exec node research/flow/flow-typecheck-comparison.mjs`: passed; 9 compiler runs passed and
+  emitted raw diagnostics JSON. Exact results are recorded in the baseline doc.
+- `pnpm validate`: passed with format, lint, typecheck, repository tests, builds, packed consumer
+  validation, and CLI Core clean-consumer validation.
+- `git diff --check`: passed.
+
+### Architecture / compatibility
+
+- Research-only type fixtures; no runtime dependency, package boundary, public API, support promise,
+  or consumer claim changed.
+- The measured transitive graph is part of the result: RxJS declarations and the prototype/Core
+  source graph are not removed to manufacture a smaller comparison.
+- Bundle/tree-shaking, allocation, broader memory, temporal, async runtime, repeated typecheck,
+  incremental edit, and real-consumer measurements remain deferred.
+
+### Remaining / recovery
+
+- Draft PR #100 is open for review; merge requires maintainer confirmation. The next safe step is a
+  separate temporal/async comparison only after recapturing source/version state and preserving the
+  existing correctness gate.
+
+## 2026-08-21 02:15 CEST | Add Flow synchronous comparison baseline
+
+Status: completed
+Branch: `perf/flow-comparison-harness`
+PR: #99 (draft)
+
+### Scope
+
+- Add the first bounded post-correctness comparison harness for direct callbacks, RxJS, and the
+  throwaway Flow prototype on the same explicit hot synchronous fixture.
+
+### Changes
+
+- Added `research/flow/flow-comparison.test.ts` with correctness preflight, synchronous FIFO
+  completion/disposal checks, raw timing samples, and an optional explicit-GC retention probe.
+- Added `docs/quality/FLOW_COMPARISON_BASELINE.md` with the exact commands, environment, raw samples,
+  retention observations, and limitations.
+- Indexed the baseline and synchronized `FLOW_RESEARCH_BRIEF.md` and `PROJECT_STATE.md`.
+- Did not change Vii Core, public API, package boundaries, runtime dependencies, or consumer support
+  claims.
+
+### Validation
+
+- `pnpm exec vitest run research/flow/flow-research.test.ts research/flow/flow-real-clock.test.ts
+  research/flow/flow-platform-robustness.test.ts research/flow/flow-comparison.test.ts`: passed;
+  4 files and 18 tests passed.
+- `pnpm exec tsc --noEmit -p research/flow/tsconfig.json`: passed.
+- `NODE_OPTIONS=--expose-gc pnpm exec vitest run research/flow/flow-comparison.test.ts
+  --reporter=verbose --silent=false`: passed; correctness gate passed, 3 runners × 10 samples and
+  the 1,000-cycle retention probe emitted raw JSON captured in the baseline doc.
+- `pnpm validate`: passed after rerunning with approved registry access; format, lint, typecheck,
+  repository tests, builds, packed consumer validation, and CLI Core clean-consumer validation all
+  passed. The first sandboxed attempt stopped at existing React registry downloads with `ENOTFOUND`;
+  no code failure was observed.
+- `git diff --check`: passed.
+
+### Architecture / compatibility
+
+- The comparison remains Research-only and uses the exact root dev-only RxJS `7.8.2` dependency.
+- Runtime observations are fixture- and environment-specific; no performance, memory, support-tier,
+  or graduation claim is made.
+- TypeScript compiler cost, bundle/tree-shaking, allocation, broader memory, temporal, and async
+  runtime measurements remain deferred.
+
+### Remaining / recovery
+
+- Draft PR #99 is open for review; merge requires maintainer confirmation. The next work should
+  recapture versions/source state before extending measurement groups, then add only semantically
+  equivalent temporal/async or complexity fixtures.
+
+## 2026-08-21 01:45 CEST | Revalidate Flow comparison sources
+
+Status: completed
+Branch: `docs/flow-primary-source-revalidation`
+PR: #98 (draft)
+
+### Scope
+
+- Revalidate primary platform and RxJS semantics before designing post-correctness Flow comparison
+  measurements.
+
+### Changes
+
+- Added `docs/quality/FLOW_PRIMARY_SOURCE_REVALIDATION.md` with source-owned semantics, exact local
+  version boundary, comparison consequences, measurement protocol, and non-claims.
+- Indexed the note in `docs/README.md` and linked its durable boundary from the Flow brief and
+  `PROJECT_STATE.md`.
+- Confirmed that this slice changes no Core source, public API, package boundary, runtime dependency,
+  or consumer support claim.
+
+### Validation
+
+- `pnpm list rxjs --depth=0`: verified exact dev-only RxJS `7.8.2`.
+- Environment captured: Node `v22.17.0`, pnpm `10.12.4`.
+- Primary sources reviewed: RxJS Observable/Subject guides and APIs, DOM AbortController, ECMAScript
+  async iterator close/interface, and WHATWG Streams reader cancellation/backpressure.
+- `pnpm format:check`: passed.
+- `pnpm exec prettier --check docs/quality/FLOW_PRIMARY_SOURCE_REVALIDATION.md
+  docs/architecture/FLOW_RESEARCH_BRIEF.md docs/README.md`: passed.
+- `git diff --check`: passed.
+
+### Architecture / compatibility
+
+- Plain factory sources and explicit hot Subject/event sources remain separate comparison groups.
+- Unsubscription/cancellation is not counted as normal completion; native asynchronous cleanup remains
+  outside synchronous Core disposal.
+- The note authorizes measurement planning only after correctness; it does not authorize a Flow package,
+  API, browser/network/worker support tier, or performance claim.
+
+### Remaining / recovery
+
+- Draft PR #98 is open and its required checks pass; merge requires maintainer confirmation.
+- Re-capture versions and source state immediately before any benchmark baseline is run.
+
+## 2026-08-21 01:30 CEST | Add Flow real-clock and robustness validation
+
+Status: completed
+Branch: `test/flow-research-validation`
+PR: not opened
+
+### Scope
+
+- Add the next bounded Flow Research validation layer after deterministic correctness, without
+  changing Vii Core, public APIs, package boundaries, or runtime dependencies.
+
+### Changes
+
+- Added a real-clock typeahead/disposal validation file using native timers and the existing fake
+  search; it does not use network or browser automation.
+- Added platform/timer robustness fixtures for a 1000-event debounce storm, AsyncIterable
+  `return()` initiation and rejection isolation, and ReadableStream `cancel()` initiation and
+  rejection isolation.
+- Kept the main correctness test below the preferred 400-line test-file target by moving cohesive
+  platform/timer cases into a separate fixture.
+- Updated the Flow research brief, fixture README, and durable project state with the new evidence
+  boundary and deferred benchmark/non-consumer claims.
+
+### Validation
+
+- `pnpm exec vitest run research/flow/flow-research.test.ts research/flow/flow-real-clock.test.ts
+  research/flow/flow-platform-robustness.test.ts`: passed; 3 files and 17 tests passed.
+- `pnpm exec tsc --noEmit -p research/flow/tsconfig.json`: passed.
+- `git diff --check`: passed.
+- `pnpm format:check`: passed.
+- `pnpm validate`: passed with approved network access; repository format, lint, typecheck, tests,
+  builds, packed consumer validation, and CLI Core clean-consumer validation all passed.
+
+### Architecture / compatibility
+
+- No Core source, public API, package runtime dependency, adapter behavior, consumer app, or support
+  tier changed.
+- Real-clock and robustness fixtures are correctness/lifecycle evidence only; they do not claim
+  throughput, retained-memory, browser, network, worker, or socket support.
+- Cancellation rejection remains outside the Flow source error channel; its explicit diagnostics
+  surfacing remains deferred research and Core synchronous disposal is unchanged.
+
+### Remaining / recovery
+
+- `git diff --check`: passed before commit.
+- Commit and push the focused branch; open a draft PR for review. Do not merge without maintainer
+  confirmation.
+
 ## 2026-08-21 01:00 CEST | Build bounded Flow research brief and fixtures
 
 Status: completed

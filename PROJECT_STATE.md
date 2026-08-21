@@ -229,11 +229,36 @@ fixtures under `research/flow/`. The fixtures compare direct `Promise` plus `Abo
 explicit RxJS `7.8.2` adapter, and functional/fluent prototype forms across deterministic typeahead,
 re-entrant ordering, explicit hot/factory source semantics, multi-subscriber ownership, complete/error/
 cancel/dispose outcomes, Scope disposal, AsyncIterable, ReadableStream cancellation, subscriber
-callback isolation, error recovery, and value-safe diagnostics cases. RxJS is a root dev-only research
-dependency; no Flow package, public API, Core dependency, support promise, or real consumer claim was
-added. The focused fixture suite has twelve passing tests, and its strict research TypeScript check
-plus the repository `pnpm validate` pass. Async cancellation rejection surfacing remains an explicit
-research question; Core synchronous `ViiResource.dispose(): void` is unchanged.
+callback isolation, error recovery, value-safe diagnostics, real-clock behavior, timer-storm bounds,
+and cancellation-rejection isolation cases. The ownership slice adds per-subscription AsyncIterable
+identity, composed-source disposal isolation, and Scope-owned hot-source isolation. The robustness
+slice adds producer-failure, fast/unbounded AsyncIterable, and AsyncIterable/ReadableStream
+cancellation-race coverage. The cancellation-rejection baseline records first-party native cleanup
+contracts and a structural observer candidate without selecting a public API. RxJS is a root dev-only
+research dependency; no Flow package, public API, Core dependency, support promise, or real consumer
+claim was added. The focused research suite now has thirty-two passing tests across eight files, and
+its strict research TypeScript check plus the repository `pnpm validate` pass. A bounded synchronous
+comparison harness now records
+raw per-sample runtime data and an optional GC retention probe for direct callbacks, RxJS, and the
+throwaway prototype; one fixture is not treated as a global performance or memory claim. Async
+cancellation rejection surfacing remains an explicit research question; Core synchronous
+`ViiResource.dispose(): void` is unchanged.
+The primary-source/version constraints for the next comparison slice are recorded in
+`docs/quality/FLOW_PRIMARY_SOURCE_REVALIDATION.md`: plain RxJS Observables remain per-subscription,
+Subjects are explicit multicast sources, unsubscription is distinct from completion, and native
+AbortSignal, AsyncIterator, and ReadableStream cleanup remain asynchronous platform boundaries.
+The first comparison record is in `docs/quality/FLOW_COMPARISON_BASELINE.md`; a separate bounded
+TypeScript/complexity record now captures cold and incremental `tsc --extendedDiagnostics` output and
+the transitive type surfaces of the three baselines. The deterministic temporal/async record is in
+`docs/quality/FLOW_ASYNC_COMPARISON_BASELINE.md`; it captures latest-result correctness, stale
+suppression, AbortSignal initiation, fresh disposal cutoff, timer-boundary observations, and
+1,000-cycle lifecycle samples. It also exposes a prototype distinction where completed inner
+ownership is released before later disposal; this is evidence for design review, not a public
+semantic decision. Bundle/tree-shaking, allocation, broader memory, real-clock throughput,
+platform-stream runtime, broader upstream sharing, late-subscriber behavior, malformed-shape/hostile-
+subscriber robustness, unbounded ReadableStream behavior, and a public asynchronous cancellation
+rejection contract remain deferred. Flow
+remains Research-only and Core synchronous `ViiResource.dispose(): void` is unchanged.
 
 The durable rendering direction is progressive and CSR-first. A future native Vii application may
 remain fully client-rendered without adopting hydration, request-server lifecycle, streaming, edge,

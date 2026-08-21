@@ -58,6 +58,15 @@ and no result after disposal.
 The AsyncIterable fixture is primary. The WHATWG ReadableStream fixture checks that disposal calls
 the native cancellation method. No browser, network, worker, or socket compatibility claim is made.
 
+### Validation layers
+
+The deterministic layer is the primary correctness gate. A separate real-clock layer checks latest
+result delivery and disposal with native timers. Robustness fixtures check bounded debounce timer
+state under a 1000-event storm and cancellation rejection isolation for both AsyncIterable and
+ReadableStream adapters. The separate cancellation-rejection baseline records first-party native
+cleanup contracts and a structural observer candidate without selecting a public API. These layers
+do not authorize throughput, retained-memory, browser, network, worker, or socket claims.
+
 ## Comparison matrix
 
 | Dimension      | Direct platform                         | RxJS adapter                       | Throwaway prototype                    |
@@ -86,6 +95,9 @@ TypeScript-cost measurements until these pass:
 - AsyncIterable disposal calls `return()`;
 - ReadableStream disposal initiates native `cancel()` without claiming async cleanup completion;
 - multiple subscribers have independent lifecycle ownership;
+- real-clock typeahead and disposal validation passes;
+- debounce timer state remains bounded under a deterministic 1000-event storm;
+- async cancellation rejection does not become a Flow source error;
 - diagnostics fixtures contain no raw emitted payloads;
 - functional and fluent forms agree on the same fixtures.
 
@@ -101,10 +113,15 @@ count the existing Diagnostics timeline or a simple State-plus-Promise example a
 ## Deferred work
 
 - real UI consumer and real platform-stream consumer evidence;
-- real-clock timer validation after deterministic correctness;
-- RxJS/direct/prototype bundle, throughput, allocation, retained-memory, and TypeScript benchmarks;
-- malicious iterable/stream, timer-storm, unbounded-rate, and cancellation-race robustness fixtures;
-- a bounded decision for surfacing asynchronous cancellation rejection without changing synchronous
-  Core disposal;
-- subscription identity/upstream ownership research before any replay or multicast API;
-- current primary-source/version revalidation before freezing any RFC or benchmark baseline.
+- RxJS/direct/prototype bundle, allocation, broader retained-memory, real-clock throughput, and
+  platform-stream runtime benchmarks; bounded synchronous runtime, TypeScript, and deterministic
+  temporal/async baselines are recorded separately in `docs/quality/FLOW_COMPARISON_BASELINE.md`,
+  `docs/quality/FLOW_TYPESCRIPT_COMPLEXITY_BASELINE.md`, and
+  `docs/quality/FLOW_ASYNC_COMPARISON_BASELINE.md`;
+- malicious iterable/stream, unbounded-rate, and cancellation-race robustness fixtures;
+- broader malformed-shape, hostile-subscriber, and unbounded ReadableStream robustness fixtures;
+- a public contract decision for surfacing asynchronous cancellation rejection; the current
+  structural-observer evidence remains research-only and does not change synchronous Core disposal;
+- broader upstream sharing, late-subscriber behavior, and explicit multicast ownership research
+  before any replay or multicast API;
+- repeat primary-source/version capture immediately before freezing any RFC or benchmark baseline.

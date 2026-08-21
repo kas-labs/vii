@@ -27,6 +27,10 @@ export class FakeClock implements TimerScheduler {
     }
   }
 
+  get pendingCount(): number {
+    return this.timers.filter((timer) => timer.active).length;
+  }
+
   advanceBy(duration: number): void {
     const target = this.currentTime + duration;
     while (true) {

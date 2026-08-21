@@ -268,16 +268,43 @@ Primary architecture: `docs/architecture/RENDERING_STRATEGY.md`.
 
 ### Phase 5: Vii Query
 
-Status: Planned
+Status: Research / Planned
+
+Primary architecture: `docs/architecture/QUERY_ARCHITECTURE.md`.
+
+Detailed execution plan: `docs/roadmap/PHASE_5_QUERY.md`.
+
+Governance proposal: `rfcs/0024-query-architecture.md`.
 
 Goals:
 
-- query cache, freshness, retention, cancellation, invalidation, and mutations;
-- framework-neutral Query Core;
-- diagnostics and hydration foundations;
+- explicit QueryClient ownership with no hidden global cache;
+- deterministic QueryKey canonicalization and collision-safe cache identity;
+- framework-neutral Query cache and observer semantics;
+- in-flight request deduplication and generation-based stale-completion protection;
+- AbortSignal-native cancellation with cancellation distinct from failure;
+- freshness, invalidation, inactive retention, and GC as separate semantics;
+- mutations and optimistic transaction/rollback research, including concurrent races;
+- request-local SSR QueryClients and Request Scope teardown;
+- versioned hydration/dehydration with secure structured-data boundaries;
+- value-safe Diagnostics;
 - integration with State without making State depend on Query;
 - explicit transport contract so Query can use Vii HTTP, native Fetch, or another user-supplied client;
-- secure serialization and server-data boundaries.
+- build-vs-buy comparison against direct platform primitives and a mature Query implementation before package graduation.
+
+Research sequence:
+
+1. P5.0 architecture and RFC;
+2. P5.1 QueryKey and QueryCache prototype;
+3. P5.2 QueryClient, observer, and request deduplication;
+4. P5.3 cancellation, freshness, invalidation, and GC;
+5. P5.4 mutations and optimistic transactions;
+6. P5.5 SSR Request Scope and hydration;
+7. P5.6 Diagnostics and privacy;
+8. P5.7 framework integration fixtures;
+9. P5.8 performance and build-vs-buy gate.
+
+No public Query package is authorized by P5.0. A Vii-owned package, reduced scope, thin mature-library adapter, direct platform integration, or stopping the implementation are all valid outcomes of the build-vs-buy gate.
 
 ### Phase 6: Vii UI and Registry foundation
 

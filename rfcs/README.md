@@ -59,7 +59,17 @@ Requests for Comments record proposals that affect public APIs, package boundari
 
 - `0022-public-website-and-documentation-lifecycle.md` — Proposed
 
+### Diagnostics security
+
+- `0023-security-diagnostics-event-contract.md` — Accepted
+
+### Query direction
+
+- `0024-query-architecture.md` — Proposed
+
 RFCs 0018 through 0022 document Research, Vision, development-governance, or publication-process direction. They do not change the committed first implementation sequence unless accepted decisions explicitly revise it.
+
+RFC 0023 records an accepted experimental security-diagnostics direction. RFC 0024 proposes the Phase 5 Query architecture and does not create a package, stable API, or support promise.
 
 ## When an RFC is required
 

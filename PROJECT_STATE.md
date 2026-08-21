@@ -235,6 +235,10 @@ package, public API, Core dependency, support promise, or real consumer claim wa
 research suite has seventeen passing tests across three files, and its strict research TypeScript
 check plus the repository `pnpm validate` pass. Async cancellation rejection surfacing remains an
 explicit research question; Core synchronous `ViiResource.dispose(): void` is unchanged.
+The primary-source/version constraints for the next comparison slice are recorded in
+`docs/quality/FLOW_PRIMARY_SOURCE_REVALIDATION.md`: plain RxJS Observables remain per-subscription,
+Subjects are explicit multicast sources, unsubscription is distinct from completion, and native
+AbortSignal, AsyncIterator, and ReadableStream cleanup remain asynchronous platform boundaries.
 
 The durable rendering direction is progressive and CSR-first. A future native Vii application may
 remain fully client-rendered without adopting hydration, request-server lifecycle, streaming, edge,

@@ -37,6 +37,50 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-21 01:45 CEST | Revalidate Flow comparison sources
+
+Status: completed
+Branch: `docs/flow-primary-source-revalidation`
+PR: #98 (draft)
+
+### Scope
+
+- Revalidate primary platform and RxJS semantics before designing post-correctness Flow comparison
+  measurements.
+
+### Changes
+
+- Added `docs/quality/FLOW_PRIMARY_SOURCE_REVALIDATION.md` with source-owned semantics, exact local
+  version boundary, comparison consequences, measurement protocol, and non-claims.
+- Indexed the note in `docs/README.md` and linked its durable boundary from the Flow brief and
+  `PROJECT_STATE.md`.
+- Confirmed that this slice changes no Core source, public API, package boundary, runtime dependency,
+  or consumer support claim.
+
+### Validation
+
+- `pnpm list rxjs --depth=0`: verified exact dev-only RxJS `7.8.2`.
+- Environment captured: Node `v22.17.0`, pnpm `10.12.4`.
+- Primary sources reviewed: RxJS Observable/Subject guides and APIs, DOM AbortController, ECMAScript
+  async iterator close/interface, and WHATWG Streams reader cancellation/backpressure.
+- `pnpm format:check`: passed.
+- `pnpm exec prettier --check docs/quality/FLOW_PRIMARY_SOURCE_REVALIDATION.md
+  docs/architecture/FLOW_RESEARCH_BRIEF.md docs/README.md`: passed.
+- `git diff --check`: passed.
+
+### Architecture / compatibility
+
+- Plain factory sources and explicit hot Subject/event sources remain separate comparison groups.
+- Unsubscription/cancellation is not counted as normal completion; native asynchronous cleanup remains
+  outside synchronous Core disposal.
+- The note authorizes measurement planning only after correctness; it does not authorize a Flow package,
+  API, browser/network/worker support tier, or performance claim.
+
+### Remaining / recovery
+
+- Draft PR #98 is open and its required checks pass; merge requires maintainer confirmation.
+- Re-capture versions and source state immediately before any benchmark baseline is run.
+
 ## 2026-08-21 01:30 CEST | Add Flow real-clock and robustness validation
 
 Status: completed

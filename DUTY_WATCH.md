@@ -37,6 +37,69 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-21 23:45 CEST | Validate Vanilla browser retention and Scope post-disposal
+
+Status: completed
+Branch: `test/phase4-browser-retention`
+PR: not opened
+
+### Scope
+
+- Conduct bounded browser retention and post-disposal lifecycle validation on the existing clean
+  Vanilla reference consumer (`vii-reference-vanilla-onboarding`) using packed `@vii-labs/core@next`
+  (`0.1.0-experimental.2`).
+- Verify demo Scope creation, update, and disposal in real browser execution.
+- Verify that owned resources, subscriptions, timers, and DOM event listeners are created and freed.
+- Verify that no stale emissions, notifications, or stale completions occur after `Scope.dispose()`.
+- Measure browser memory and heap metrics across 1, 100, and 1,000 deterministic lifecycle cycles.
+
+### Changes
+
+- Added `scripts/benchmarks/cdp-browser.mjs`: modular Chrome launcher and CDP WebSocket client.
+- Added `scripts/benchmarks/vanilla-browser-retention.mjs`: browser retention validation script.
+- Added `benchmarks/results/vanilla-browser-retention.json`: structural benchmark output.
+- Added `docs/quality/VANILLA_BROWSER_RETENTION_BASELINE.md`: comprehensive methodology, environment,
+  measurement results, and explicit limitations.
+- Updated `docs/README.md` and `PROJECT_STATE.md` with the new retention baseline evidence.
+- No Vii Core runtime, public API, package exports, Flow research, or Vue consumer code changed.
+- No changes made to the external reference application repository.
+
+### Validation
+
+- Browser execution: `node scripts/benchmarks/vanilla-browser-retention.mjs` passed with code 0.
+- Browser: Headless Google Chrome `151.0.7922.170` via CDP over Node 22 native WebSocket.
+- Phase 1 DOM UI: interactive Scope creation, Increment (+1), Batch (+2), Scope disposal, and
+  stale-action blocking all passed.
+- Phase 2 Programmatic: Scope creation with 3 attached resources (custom, interval timer, DOM listener),
+  clean disposal, stale-write notification suppression (0 notifications to disposed Computed subscriber),
+  idempotent second disposal, and 1,000 programmatic cycles all passed with 0 errors.
+- Retention runs:
+  - 1 cycle (23.0 ms): baseline heap 760.8 kB, post-GC heap 795.4 kB, delta +34.6 kB; node delta +448; listener delta 0.
+  - 100 cycles (3.37 s): baseline heap 795.4 kB, post-GC heap 960.3 kB, delta +164.8 kB; node delta +432; listener delta 0.
+  - 1,000 cycles (26.93 s): baseline heap 960.3 kB, post-GC heap 1,014.2 kB, delta +53.9 kB; node delta 0; listener delta 0.
+- JSEventListeners remained constant at 2 across all 1,000 cycles (0 listener leaks).
+- DOM Nodes delta returned to 0 after 1,000 cycles + GC (0 node leaks).
+- Console errors: 0 throughout all test phases.
+- Reference app validation: `pnpm test` (16 tests passed across 4 files), `pnpm exec tsc --noEmit` (passed), `pnpm build` (passed).
+- Repository validation: `pnpm validate` passed with exit code 0.
+- `git diff --check`: passed.
+
+### Architecture / compatibility
+
+- Validation-only evidence on the existing clean Vanilla reference consumer; no Core runtime, public
+  API, package boundary, adapter behavior, Flow research, or dependency changed.
+- No Vue consumer added.
+- Structural/privacy-safe metrics only; zero user content, credentials, tokens, network calls, or
+  telemetry collected.
+- Internal empirical evidence; does not constitute an external alpha, release budget, or universal
+  leak-free claim across all platforms.
+
+### Remaining / recovery
+
+- Open a focused draft PR against `main` for review.
+- External alpha testing, real deployment CSP/Trusted Types review, and numeric release budgets remain
+  separate open gates.
+
 ## 2026-08-21 19:07 CEST | Reconfirm bounded Phase 4 dogfood gate
 
 Status: completed

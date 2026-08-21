@@ -198,6 +198,8 @@ The root `/ROADMAP.md` provides the public phase overview. Cross-phase capabilit
 
 - `quality/TEST_STRATEGY.md`
 - `quality/PERFORMANCE_BUDGETS.md`
+- `quality/CORE_PERFORMANCE_BASELINE.md`, local performance baseline for State, Computed, Batch, Scope, and Diagnostics.
+- `quality/VANILLA_BROWSER_RETENTION_BASELINE.md`, bounded browser retention and post-disposal lifecycle evidence for the packed Vanilla consumer.
 - `quality/SCHEMA_BENCHMARK_PLAN.md`, research benchmark methodology for runtime, allocation, bundle, and TypeScript compiler comparisons before any Vii Schema performance claim.
 - `quality/FLOW_BENCHMARK_PLAN.md`, research benchmark methodology for semantically fair Flow comparisons.
 - `quality/FLOW_PRIMARY_SOURCE_REVALIDATION.md`, current primary-source constraints and version boundary for Flow comparison work.

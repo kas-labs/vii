@@ -1,0 +1,175 @@
+{
+  "schemaVersion": "0.1",
+  "suite": "vanilla-browser-retention",
+  "consumer": "vii-reference-vanilla-onboarding",
+  "revision": "664a869cc653a99611925feb23d12a7a355f28ce",
+  "workingTreeDirty": true,
+  "environment": {
+    "node": "v22.17.0",
+    "platform": "darwin arm64 25.5.0",
+    "cpu": "Apple M4",
+    "browser": "Google Chrome 151.0.7922.170",
+    "browserHarness": "Chrome DevTools Protocol (CDP) via Node WebSocket"
+  },
+  "consoleErrors": {
+    "count": 0,
+    "errors": []
+  },
+  "phase1_domScopeLifecycle": {
+    "initialStatus": "Scope disposed",
+    "initialCreateDisabled": false,
+    "initialDisposeDisabled": true,
+    "postCreateStatus": "Scope active",
+    "postCreateCount": 0,
+    "postCreateCreateDisabled": true,
+    "postCreateDisposeDisabled": false,
+    "postIncCount": 1,
+    "postBatchCount": 3,
+    "eventCountAfterDispose": 28,
+    "postDisposeStatus": "Scope disposed",
+    "postDisposeDisposeDisabled": true,
+    "postDisposeIncDisabled": true,
+    "staleClicksDidNotMutate": true,
+    "staleEventsDidNotEmit": true,
+    "freshScopeStatus": "Scope active",
+    "freshScopeCount": 0
+  },
+  "phase2_programmaticScope": {
+    "scopeCreated": true,
+    "resourcesDisposed": 1,
+    "listenerCleanedUp": true,
+    "timerCleanedUp": true,
+    "activeNotificationsReceived": 1,
+    "staleNotificationsReceived": 0,
+    "computedDisposalErrorThrown": true,
+    "idempotentExtraDisposals": 0,
+    "repeated1000ProgrammaticCycles": true
+  },
+  "retentionRuns": [
+    {
+      "iterations": 1,
+      "probe": {
+        "iterations": 1,
+        "elapsedMs": 17.9,
+        "finalCount": 3,
+        "finalStatus": "Scope disposed"
+      },
+      "metrics": {
+        "baseline": {
+          "JSHeapUsedSize": 828176,
+          "JSHeapTotalSize": 1310720,
+          "Documents": 1,
+          "Nodes": 860,
+          "JSEventListeners": 2,
+          "LayoutObjects": 523
+        },
+        "postDisposeNoGC": {
+          "JSHeapUsedSize": 1353492,
+          "JSHeapTotalSize": 3670016,
+          "Documents": 1,
+          "Nodes": 35549,
+          "JSEventListeners": 2,
+          "LayoutObjects": 1322
+        },
+        "postDisposeWithGC": {
+          "JSHeapUsedSize": 788352,
+          "JSHeapTotalSize": 1310720,
+          "Documents": 1,
+          "Nodes": 1308,
+          "JSEventListeners": 2,
+          "LayoutObjects": 803
+        },
+        "heapDeltaBytes": -39824,
+        "nodeDelta": 448,
+        "listenerDelta": 0
+      }
+    },
+    {
+      "iterations": 100,
+      "probe": {
+        "iterations": 100,
+        "elapsedMs": 2953.4,
+        "finalCount": 3,
+        "finalStatus": "Scope disposed"
+      },
+      "metrics": {
+        "baseline": {
+          "JSHeapUsedSize": 788352,
+          "JSHeapTotalSize": 1310720,
+          "Documents": 1,
+          "Nodes": 1308,
+          "JSEventListeners": 2,
+          "LayoutObjects": 803
+        },
+        "postDisposeNoGC": {
+          "JSHeapUsedSize": 14772980,
+          "JSHeapTotalSize": 36175872,
+          "Documents": 1,
+          "Nodes": 222025,
+          "JSEventListeners": 2,
+          "LayoutObjects": 1707
+        },
+        "postDisposeWithGC": {
+          "JSHeapUsedSize": 953400,
+          "JSHeapTotalSize": 1572864,
+          "Documents": 1,
+          "Nodes": 1740,
+          "JSEventListeners": 2,
+          "LayoutObjects": 1073
+        },
+        "heapDeltaBytes": 165048,
+        "nodeDelta": 432,
+        "listenerDelta": 0
+      }
+    },
+    {
+      "iterations": 1000,
+      "probe": {
+        "iterations": 1000,
+        "elapsedMs": 29079.7,
+        "finalCount": 3,
+        "finalStatus": "Scope disposed"
+      },
+      "metrics": {
+        "baseline": {
+          "JSHeapUsedSize": 953400,
+          "JSHeapTotalSize": 1572864,
+          "Documents": 1,
+          "Nodes": 1740,
+          "JSEventListeners": 2,
+          "LayoutObjects": 1073
+        },
+        "postDisposeNoGC": {
+          "JSHeapUsedSize": 4826716,
+          "JSHeapTotalSize": 69468160,
+          "Documents": 1,
+          "Nodes": 353234,
+          "JSEventListeners": 2,
+          "LayoutObjects": 1923
+        },
+        "postDisposeWithGC": {
+          "JSHeapUsedSize": 1007604,
+          "JSHeapTotalSize": 1835008,
+          "Documents": 1,
+          "Nodes": 1740,
+          "JSEventListeners": 2,
+          "LayoutObjects": 1073
+        },
+        "heapDeltaBytes": 54204,
+        "nodeDelta": 0,
+        "listenerDelta": 0
+      }
+    }
+  ],
+  "summary": {
+    "scopeCreatedAndExercised": true,
+    "scopeDisposedReported": true,
+    "staleClicksBlocked": true,
+    "programmaticScopeVerified": true,
+    "repeat1000CyclesSuccessful": true,
+    "zeroConsoleErrors": true,
+    "listenerLeakFree": true,
+    "nodeLeakFree": true,
+    "heapBounded": true
+  }
+}

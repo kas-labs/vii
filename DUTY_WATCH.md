@@ -4564,5 +4564,52 @@ PR: [#116](https://github.com/kas-labs/vii/pull/116) draft
 
 ### Remaining / recovery
 
-- Commit changes, push `test/query-cancellation-gc`, and open a draft PR against `main`.
-- Await review before proceeding to slice P5.4.
+- PR #116 opened for P5.3 Cancellation, Freshness, Invalidation, and GC prototype.
+
+## 2026-08-22 01:14 CEST | Implement P5.4 Mutations and Optimistic Transactions prototype
+
+Status: completed
+Branch: test/query-mutations
+PR: [#117](https://github.com/kas-labs/vii/pull/117) draft
+
+### Scope
+
+- Execute the P5.4 Mutations and Optimistic Transactions prototype slice under `research/query/`
+  following RFC 0024 and the Phase 5 roadmap.
+- Validate independent mutation execution lifecycle (`idle -> pending -> success / error`),
+  native `AbortSignal` cancellation (`abort != error`), explicit optimistic cache updates,
+  and mandatory concurrent mutation race protection (Mutation A starts, Mutation B starts,
+  Mutation B succeeds, Mutation A fails late: A's failure rollback does not clobber B's accepted state).
+
+### Changes
+
+- Added `research/query/mutation-record.ts` managing mutation execution, snapshot state,
+  AbortController lifecycle, and `onMutate`/`onSuccess`/`onError`/`onSettled` hooks.
+- Updated `research/query/query-record.ts` and `research/query/query-client-prototype.ts`
+  with `setOptimisticData()` providing generation-protected `rollback()` callbacks,
+  functional `setQueryData()`, and `createMutation()`.
+- Added `research/query/query-mutations.test.ts` (7 unit tests covering resolution, rejection,
+  optimistic success, rollback on failure, the mandatory concurrent race fixture, cancellation,
+  and Scope lifecycle disposal).
+- Updated `research/query/README.md` and `docs/quality/QUERY_RESEARCH_BASELINE.md`.
+- Updated `PROJECT_STATE.md` with durable P5.4 conclusions.
+
+### Validation
+
+- `pnpm exec vitest run research/query/*.test.ts`: passed (6 files, 51 tests).
+- `pnpm exec tsc --noEmit -p research/query/tsconfig.json`: passed.
+- `pnpm format:check`: passed.
+- `pnpm lint`: passed.
+- `git diff --check`: passed.
+- Repository `pnpm validate`: format, lint, typecheck, test, build, and Core/CLI Core pack-checks passed.
+
+### Architecture / compatibility
+
+- All code remains internal throwaway research under `research/query/`.
+- No public `@vii-labs/query` package or Core dependencies added.
+- SSR Request Scope, dehydration, and hydration remain deferred to P5.5.
+
+### Remaining / recovery
+
+- Commit changes, push `test/query-mutations`, and open a draft PR against `main`.
+- Await review before proceeding to slice P5.5.

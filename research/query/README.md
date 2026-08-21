@@ -1,12 +1,13 @@
-# Vii Query Research: Prototypes (P5.1, P5.2 & P5.3)
+# Vii Query Research: Prototypes (P5.1, P5.2, P5.3 & P5.4)
 
 > **Throwaway research only.** This directory is not a package, public API, support fixture, or production implementation.
 
-This directory contains research prototypes validating the foundational semantics of Phase 5 Server State Coordination:
+This directory contains research prototypes validating foundational semantics of Phase 5 Server State Coordination:
 
 - **P5.1**: Deterministic QueryKey identity, canonicalization, hash bucket indexing, collision safety, exact & structural family matching.
 - **P5.2**: Explicit QueryClient ownership, QueryRecord state separation, in-flight request deduplication, execution generation tracking, and framework-neutral QueryObservers.
 - **P5.3**: Native `AbortSignal` fetch cancellation (`abort != error`), superseding request aborts, freshness (`staleTime`), invalidation (`invalidate != remove`), inactive retention & GC (`gcTime`), and Vii Core `Scope` integration.
+- **P5.4**: Mutation execution lifecycle (`idle -> pending -> success / error`), optimistic cache transactions, generation-protected rollback, and concurrent mutation race safety.
 
 ## Verification Commands
 
@@ -41,105 +42,71 @@ Query identity is governed by deterministic value structure rather than function
 - Cyclic structures in arrays or objects (cycle detection via active traversal set)
 - Prototype pollution properties (`__proto__`, `constructor`, `prototype` as own keys)
 
-### Structural Immutability
-
-The validator and canonicalizer never mutate input arrays or objects.
-
 ---
 
 ## 2. Canonical Representation vs. Hash Indexing (P5.1)
 
-```text
-QueryKey  ->  Canonical String  ->  32-bit FNV-1a Hash  ->  Cache Bucket Index
-             (Semantic Identity)   (Index Optimization)     (Collision Fallback)
-```
-
 - **Semantic Truth**: Canonical string serialization is the sole source of semantic equality.
 - **Index Optimization**: 32-bit FNV-1a hash maps keys to cache bucket entries.
-- **Collision Safety**: When multiple distinct keys produce the same hash bucket (verified with synthetic 100% collision fixtures), records are stored within the bucket and disambiguated using full canonical string equality. Unrelated keys never alias or overwrite data.
+- **Collision Safety**: Disambiguated using full canonical string equality within buckets (verified with 100% collision test suites).
 
 ---
 
 ## 3. QueryRecord State Separation & Deduplication (P5.2)
 
-### State Separation
-
-Data state and fetch execution state remain strictly independent:
-
-```ts
-interface QuerySnapshot<T> {
-  readonly data: T | undefined;
-  readonly error: unknown | undefined;
-  readonly status: "empty" | "success" | "error";
-  readonly fetchStatus: "idle" | "fetching";
-  readonly dataUpdatedAt: number;
-  readonly errorUpdatedAt: number;
-  readonly observerCount: number;
-  readonly generation: number;
-  readonly isInvalidated: boolean;
-}
-```
-
-This permits a cached successful Query to remain usable and valid while a background refetch is in-flight (`status = success`, `fetchStatus = fetching`).
-
-### Concurrent Request Deduplication
-
-Within a single `ResearchQueryClient`, equivalent concurrent calls to `fetchQuery()` for the same canonical key share a single in-flight `Promise<T>`.
-
-### Execution Generations & Stale Completion Rejection
-
-Every fetch execution receives an incremented generation ID. If a newer execution supersedes an older in-flight request, late completion from the older request is discarded deterministically and cannot overwrite fresh cache data.
+- **Data vs Fetch Status**: Data status (`empty`, `success`, `error`) and fetch status (`idle`, `fetching`) remain strictly independent.
+- **Request Deduplication**: Concurrent calls to `fetchQuery()` for the same key share a single in-flight `Promise<T>`.
+- **Execution Generations**: Incrementing generation counter rejects stale late completions from superseded requests.
 
 ---
 
 ## 4. Cancellation, Freshness & Inactive GC (P5.3)
 
-### AbortSignal-Native Cancellation (`abort != error`)
-
-Every `queryFn` receives `{ signal: AbortSignal }`. When an in-flight background refetch is aborted or superseded:
-
-- Existing valid data is preserved (`status = 'success'`, `data = cachedData`).
-- `fetchStatus` resets to `'idle'`.
-- Abort is not recorded as a query failure error (`error = undefined`).
-
-### Freshness & Invalidation (`invalidate != remove`, `stale != missing`)
-
-- `staleTime` determines when data becomes stale (defaults to `0`).
-- `invalidateQueries()` marks matching records invalidated / stale immediately.
-- Invalidation never deletes cached data; it remains available for instant UI rendering while background refetches coordinate.
-- Supports exact key, structural family prefix matching (`['todos']` matches `['todos', 1]`), and custom predicates.
-
-### Inactive Retention & GC (`gcTime`)
-
-- **Active Protection**: Active queries (with >= 1 observer) are never garbage collected regardless of elapsed time.
-- **Inactive Countdown**: When observer count drops to 0, an inactive GC timer is scheduled (default 5 minutes).
-- **GC Cancellation**: If a new observer attaches before the GC timer fires, the timer is cancelled immediately.
-- **Eviction**: On GC timer expiry, the inactive query record is removed from the cache.
-
-### Vii Core Scope Integration
-
-`QueryObserver` implements `ViiResource` (`{ dispose(): void }`), allowing direct integration with Vii Core `Scope.use(observer)`. Disposing the scope synchronously cleans up observers and initiates the GC countdown.
+- **`abort != error`**: Background refetch cancellation resets `fetchStatus` to `idle` without destroying valid cached data.
+- **`staleTime` & Invalidation**: Invalidation marks data stale without deleting cache entries (`invalidate != remove`, `stale != missing`).
+- **Inactive Retention & GC (`gcTime`)**: Active queries are never collected; inactive queries arm a GC eviction timer that is cancelled upon re-subscription.
+- **Vii Core Scope Integration**: `QueryObserver` implements `ViiResource` (`{ dispose(): void }`), allowing clean cleanup via `scope.use(observer)`.
 
 ---
 
-## 5. Performance Baselines
+## 5. Mutations & Optimistic Transactions (P5.4)
+
+### Mutation Model
+
+Mutations are remote write executions separate from Query cache entries:
+
+- State lifecycle: `idle -> pending -> success / error`.
+- Native `AbortSignal` cancellation support.
+- Standard lifecycle hooks: `onMutate`, `onSuccess`, `onError`, `onSettled`.
+
+### Optimistic Cache Transactions & Rollback
+
+- `onMutate` applies optimistic changes via `client.setOptimisticData(key, data)` or `client.setQueryData(key, updater)`.
+- `client.setOptimisticData` returns an explicit `rollback()` callback.
+- **Generation-Protected Concurrency**:
+  When Mutation A starts (`gen = 1`), Mutation B starts (`gen = 2`), Mutation B succeeds and writes server data (`gen = 3`), and Mutation A fails late:
+  Mutation A's `rollback()` checks its captured generation against the current record generation. Because a newer mutation has been accepted (`gen 3 !== gen 1`), A's rollback is safely skipped, preventing it from clobbering B's accepted update.
+
+---
+
+## 6. Performance Baselines
 
 Measurements collected on Apple Silicon (Node `v22.17.0`, 10,000 iterations, 5 samples):
 
 | Operation                            | Min (ms) | P50 (ms) | Mean (ms) | Throughput (ops/sec) |
 | ------------------------------------ | -------- | -------- | --------- | -------------------- |
-| `canonicalize-small-key`             | 5.28     | 7.30     | 8.64      | ~1,157,000           |
-| `canonicalize-nested-key`            | 4.48     | 7.66     | 7.40      | ~1,351,000           |
-| `canonicalize-object-key`            | 9.09     | 12.32    | 12.98     | ~770,000             |
-| `naive-canonicalize-object`          | 9.27     | 11.79    | 14.00     | ~714,000             |
-| `exact-cache-lookup`                 | 6.61     | 9.40     | 11.73     | ~852,000             |
-| `naive-cache-lookup`                 | 2.94     | 4.98     | 5.68      | ~1,761,000           |
-| `cache-insert-update`                | 6.33     | 7.01     | 9.67      | ~1,034,000           |
-| `family-match-1000-items` (100 runs) | 34.60    | 42.33    | 43.03     | ~2,324               |
+| `canonicalize-small-key`             | 1.94     | 2.34     | 4.74      | ~2,108,000           |
+| `canonicalize-nested-key`            | 4.15     | 4.78     | 4.91      | ~2,036,000           |
+| `canonicalize-object-key`            | 6.71     | 7.00     | 7.32      | ~1,365,000           |
+| `naive-canonicalize-object`          | 5.44     | 5.55     | 6.44      | ~1,552,000           |
+| `exact-cache-lookup`                 | 4.27     | 4.66     | 4.86      | ~2,056,000           |
+| `naive-cache-lookup`                 | 2.41     | 2.48     | 3.14      | ~3,179,000           |
+| `cache-insert-update`                | 4.65     | 5.22     | 5.41      | ~1,849,000           |
+| `family-match-1000-items` (100 runs) | 18.79    | 19.52    | 19.55     | ~5,114               |
 
 ---
 
-## 6. Roadmap Next Steps
+## 7. Roadmap Next Steps
 
-- **Completed**: P5.1 (QueryKey & Cache), P5.2 (QueryClient, Observers, Deduplication & Generations), P5.3 (Cancellation, Freshness, Invalidation & GC).
-- **Next Slice**: **P5.4 — Mutations and Optimistic Transactions Prototype** (mutation lifecycle, optimistic cache transactions, rollback, reconciliation).
+- **Completed**: P5.1 (QueryKey & Cache), P5.2 (QueryClient, Observers, Deduplication & Generations), P5.3 (Cancellation, Freshness, Invalidation & GC), P5.4 (Mutations & Optimistic Transactions).
+- **Next Slice**: **P5.5 — SSR Request Scope and Hydration Prototype** (`dehydrate`, versioned wire envelope, `hydrate`, request-local SSR isolation).

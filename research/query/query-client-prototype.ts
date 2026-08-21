@@ -1,5 +1,5 @@
 /**
- * @file ResearchQueryClient prototype with cancellation, freshness, invalidation, and GC.
+ * @file ResearchQueryClient prototype with cancellation, freshness, invalidation, GC, and mutations.
  * Research only: not a public package API or production implementation.
  */
 
@@ -8,9 +8,11 @@ import {
   type QuerySnapshot,
   type FetchOptions,
   type QueryFunction,
+  type OptimisticResult,
   QueryRecord,
 } from "./query-record.js";
 import { QueryObserver, type ObserverListener } from "./query-observer.js";
+import { MutationRecord, type MutationOptions } from "./mutation-record.js";
 
 export interface QueryClientConfig {
   readonly defaultStaleTime?: number;
@@ -80,6 +82,12 @@ export class ResearchQueryClient {
     return observer;
   }
 
+  createMutation<TData = unknown, TVariables = unknown, TContext = unknown>(
+    options: MutationOptions<TData, TVariables, TContext>,
+  ): MutationRecord<TData, TVariables, TContext> {
+    return new MutationRecord<TData, TVariables, TContext>(options);
+  }
+
   cancelQueries(filters?: QueryFilters): void {
     const matching = this.filterRecords(filters);
     for (const record of matching) {
@@ -106,9 +114,20 @@ export class ResearchQueryClient {
     return record?.getSnapshot();
   }
 
-  setQueryData<T>(key: QueryKey, data: T): void {
+  setQueryData<T>(key: QueryKey, updaterOrData: T | ((prev: T | undefined) => T)): T {
     const record = this.getRecord<T>(key);
-    record.setData(data);
+    const prev = record.getSnapshot().data;
+    const next =
+      typeof updaterOrData === "function"
+        ? (updaterOrData as (prev: T | undefined) => T)(prev)
+        : updaterOrData;
+    record.setData(next);
+    return next;
+  }
+
+  setOptimisticData<T>(key: QueryKey, data: T): OptimisticResult {
+    const record = this.getRecord<T>(key);
+    return record.setOptimisticData(data);
   }
 
   isStale(key: QueryKey, staleTime = this.defaultStaleTime): boolean {

@@ -37,6 +37,51 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-22 00:25 CEST | Formalize Core Alpha numeric release budgets
+
+Status: completed
+Branch: `docs/numeric-release-budgets`
+PR: #112 (draft)
+
+### Scope
+
+- Formalize binding Numeric Release Budgets for `@vii-labs/core` Alpha releases based on reproducible
+  empirical baselines in `docs/quality/PERFORMANCE_BUDGETS.md`.
+- Define explicit thresholds for:
+  - Transfer and bundle size (Core ESM artifact <= 15 kB raw / <= 5 kB gzip, React/Angular/Vue adapters,
+    Vanilla reference consumer output).
+  - Browser memory lifecycle and retention (0 retained DOM nodes, 0 retained event listeners, post-GC
+    compaction delta <= 100 kB, 0 console errors).
+  - State execution and throughput (State >= 8M ops/s, Computed >= 4M ops/s, Batch >= 800k ops/s,
+    Scope cycle >= 1.5M ops/s, Diagnostics `off` overhead <= 20%).
+  - Deployment security and CSP gates (0 violations under strict CSP & Trusted Types, 0 eval sinks).
+  - Regression verification protocol for future PRs.
+
+### Changes
+
+- Updated `docs/quality/PERFORMANCE_BUDGETS.md`: added Core Alpha Numeric Release Budgets section with
+  explicit release threshold tables.
+- Updated `PROJECT_STATE.md`: documented formalized release budgets in Phase 4 gate audit and baseline
+  inventory.
+- No Vii Core runtime, public API, package exports, Flow research, or Vue consumer code changed.
+
+### Validation
+
+- Repository validation: `pnpm format:check`, `git diff --check`, `pnpm validate` passed with exit code 0.
+- Documentation structure verified against `CODE_QUALITY_STANDARDS.md`.
+
+### Architecture / compatibility
+
+- Quality governance update only; no Core runtime, public API, package boundary, adapter behavior, Flow
+  research, or dependency changed.
+- No Vue consumer added.
+- Structural thresholds directly derived from measured and reproducible local baselines.
+
+### Remaining / recovery
+
+- Open a focused draft PR against `main` for review.
+- External alpha testing remains a separate open gate.
+
 ## 2026-08-22 00:15 CEST | Validate Vanilla browser CSP and Trusted Types baseline
 
 Status: completed

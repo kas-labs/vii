@@ -123,11 +123,11 @@ gzip CSS; Vanilla emitted 19 modules with 11.76 kB raw / 4.42 kB gzip JavaScript
 performance comparisons, numeric release budgets, or production memory claims.
 The current Phase 4 gate audit marks the two packed real consumers, lifecycle cleanup evidence,
 reproducible bundle/type-check baselines, bounded privacy/security fixtures, browser heap/post-disposal
-retention baseline, browser CSP and Trusted Types enforcement baseline, and documentation-backed
-compatibility checks as evidenced for their stated scopes. Internal Phase 4 dogfood is therefore
-complete for this bounded evidence set; it is not an external alpha, support commitment, or universal
-compatibility/performance/security claim. External alpha testing and numeric release budgets remain
-separate open gates. These gaps do not block the framework-agnostic Core or require speculative API
+retention baseline, browser CSP and Trusted Types enforcement baseline, numeric release budgets,
+and documentation-backed compatibility checks as evidenced for their stated scopes. Internal Phase 4
+dogfood is therefore complete for this bounded evidence set; it is not an external alpha, support
+commitment, or universal compatibility/performance/security claim. External alpha testing remains a
+separate open gate. These gaps do not block the framework-agnostic Core or require speculative API
 expansion; each needs a separately approved validation or release decision.
 The second external Phase 4 consumer is a Vii-native Vanilla DOM onboarding application named
 `vii-reference-vanilla-onboarding`. It uses only the packed Core artifact at the application boundary,
@@ -202,6 +202,11 @@ Scope lifecycles executed with zero `securitypolicyviolation` events and zero co
 enforcement was confirmed via negative probes (`eval()` execution blocked by Chromium CSP with `EvalError`).
 The methodology and limitations are documented in `docs/quality/VANILLA_BROWSER_CSP_BASELINE.md`; this is
 reproducible client hardening evidence, not a penetration test, compliance certification, or external alpha.
+Official Numeric Release Budgets for Core Alpha are now formalized in `docs/quality/PERFORMANCE_BUDGETS.md`,
+establishing binding thresholds based on the empirical baselines: Core ESM artifact $\le$ 15.0 kB raw /
+$\le$ 5.0 kB gzip; zero retained DOM nodes and event listeners post-disposal across 1,000 cycles; post-GC heap
+growth $\le$ 100.0 kB; State throughput $\ge$ 8M ops/s and Computed $\ge$ 4M ops/s; diagnostics `off` overhead
+$\le$ 20%; zero CSP violations under strict policies; and zero dynamic code evaluation sinks.
 The internal dogfood process is now documented in docs/alpha/INTERNAL_DOGFOOD_PROTOCOL.md with a
 clean-install gate for packed @vii-labs/core@next, required test/typecheck/build/dev checks, and a
 Vanilla browser smoke checklist. The Markdown issue template at

@@ -1,8 +1,11 @@
-# Vii Query Research: QueryKey & QueryCache Prototype (P5.1)
+# Vii Query Research: Prototypes (P5.1 & P5.2)
 
 > **Throwaway research only.** This directory is not a package, public API, support fixture, or production implementation.
 
-This prototype validates deterministic QueryKey identity, canonicalization, hash-indexed cache indexing, exact matching, structural family/prefix matching, and pathological input robustness prior to broader QueryClient lifecycle design in Phase 5.
+This directory contains research prototypes validating the foundational semantics of Phase 5 Server State Coordination:
+
+- **P5.1**: Deterministic QueryKey identity, canonicalization, hash bucket indexing, collision safety, exact & structural family matching.
+- **P5.2**: Explicit QueryClient ownership, QueryRecord state separation, in-flight request deduplication, execution generation tracking, and framework-neutral QueryObservers.
 
 ## Verification Commands
 
@@ -15,7 +18,7 @@ pnpm exec tsc --noEmit -p research/query/tsconfig.json
 
 ---
 
-## 1. QueryKey Representation & Identity Rules
+## 1. QueryKey Representation & Identity (P5.1)
 
 Query identity is governed by deterministic value structure rather than function or reference identity:
 
@@ -23,7 +26,7 @@ Query identity is governed by deterministic value structure rather than function
 
 - `null`
 - `boolean` (`true`, `false`)
-- Finite `number` (`-0` canonicalizes to `"0"`; `NaN`, `+Infinity`, `-Infinity` are rejected)
+- Finite `number` (`-0` normalizes to `"0"`; `NaN`, `+Infinity`, `-Infinity` are rejected)
 - `string`
 - `Array<QueryKey>` (element ordering preserved)
 - Plain `Record<string, QueryKey>` (prototype is `Object.prototype` or `null`, string keys sorted lexicographically)
@@ -43,7 +46,7 @@ The validator and canonicalizer never mutate input arrays or objects.
 
 ---
 
-## 2. Canonical Representation vs. Hash Indexing
+## 2. Canonical Representation vs. Hash Indexing (P5.1)
 
 ```text
 QueryKey  ->  Canonical String  ->  32-bit FNV-1a Hash  ->  Cache Bucket Index
@@ -56,49 +59,77 @@ QueryKey  ->  Canonical String  ->  32-bit FNV-1a Hash  ->  Cache Bucket Index
 
 ---
 
-## 3. Exact and Structural Family Matching
+## 3. QueryRecord State Separation & Deduplication (P5.2)
 
-- **Exact Matching**: Two keys match if their canonical strings are identical.
-- **Family / Prefix Matching**:
-  - For array query keys, candidate matches if it starts with all prefix elements in order:
-    - `['todos']` matches `['todos']`, `['todos', 1]`, `['todos', { status: 'done' }]`
-    - `['todos', { status: 'done' }]` matches `['todos', { status: 'done' }, 'details']`
-  - Array boundaries are unambiguous: `['todos', 'all']` does not match `['todos-all']`.
-  - Object nodes participate by full canonical equality at their specific position.
+### State Separation
+
+Data state and fetch execution state remain strictly independent:
+
+```ts
+interface QuerySnapshot<T> {
+  readonly data: T | undefined;
+  readonly error: unknown | undefined;
+  readonly status: "empty" | "success" | "error";
+  readonly fetchStatus: "idle" | "fetching";
+  readonly dataUpdatedAt: number;
+  readonly errorUpdatedAt: number;
+  readonly observerCount: number;
+  readonly generation: number;
+}
+```
+
+This permits a cached successful Query to remain usable and valid while a background refetch is in-flight (`status = success`, `fetchStatus = fetching`).
+
+### Concurrent Request Deduplication
+
+Within a single `ResearchQueryClient`, equivalent concurrent calls to `fetchQuery()` for the same canonical key share a single in-flight `Promise<T>`.
+
+```text
+Observer A \
+Observer B  -> QueryRecord -> 1 underlying execution
+Observer C /
+```
+
+### Execution Generations & Stale Completion Rejection
+
+Every fetch execution receives an incremented generation ID. If a newer execution supersedes an older in-flight request, late completion from the older request is discarded deterministically and cannot overwrite fresh cache data.
 
 ---
 
-## 4. Complexity Bounds & Pathological Input Protection
+## 4. QueryClient Ownership & Isolation (P5.2)
 
-To prevent resource exhaustion from hostile or unbounded inputs, the canonicalizer enforces configurable limits:
-
-- Maximum nesting depth: `64`
-- Maximum node count: `10,000`
-- Maximum string length: `1,048,576` characters (1 MB)
-
-Exceeding these limits throws `QueryKeyValidationError` with error code `ERR_QUERY_KEY_LIMIT_EXCEEDED`.
+- **No Global Cache Singleton**: All state is owned by an explicit `ResearchQueryClient` instance.
+- **SSR Request Isolation**: Separate `ResearchQueryClient` instances never share cache entries or deduplicate requests with each other.
 
 ---
 
-## 5. Performance Baselines
+## 5. Framework-Neutral QueryObserver (P5.2)
+
+- Provides a clean snapshot observation interface.
+- Supports explicit disposal (`observer.dispose()`).
+- Multiple observers can attach to one record; disposing one observer leaves remaining observers and in-flight work unaffected.
+- 1,000 subscribe/dispose cycles verify zero listener retention leaks.
+
+---
+
+## 6. Performance Baselines
 
 Measurements collected on Apple Silicon (Node `v22.17.0`, 10,000 iterations, 5 samples):
 
 | Operation                            | Min (ms) | P50 (ms) | Mean (ms) | Throughput (ops/sec) |
 | ------------------------------------ | -------- | -------- | --------- | -------------------- |
-| `canonicalize-small-key`             | 1.67     | 3.61     | 4.57      | ~2,180,000           |
-| `canonicalize-nested-key`            | 4.36     | 5.81     | 5.78      | ~1,730,000           |
-| `canonicalize-object-key`            | 9.25     | 11.27    | 11.31     | ~884,000             |
-| `naive-canonicalize-object`          | 7.37     | 9.34     | 9.59      | ~1,042,000           |
-| `exact-cache-lookup`                 | 8.30     | 10.84    | 10.20     | ~980,000             |
-| `naive-cache-lookup`                 | 3.50     | 5.74     | 7.52      | ~1,329,000           |
-| `cache-insert-update`                | 8.75     | 12.94    | 18.21     | ~549,000             |
-| `family-match-1000-items` (100 runs) | 38.17    | 42.09    | 46.11     | ~2,170               |
-
-_Observations_: Full validation with cycle detection, prototype protection, and limits adds a minor ~15% overhead over naive `JSON.stringify` while guaranteeing total determinism and security against hostile or invalid inputs.
+| `canonicalize-small-key`             | 1.53     | 3.15     | 3.47      | ~2,880,000           |
+| `canonicalize-nested-key`            | 3.84     | 3.93     | 3.96      | ~2,524,000           |
+| `canonicalize-object-key`            | 6.73     | 8.13     | 8.03      | ~1,245,000           |
+| `naive-canonicalize-object`          | 6.39     | 6.82     | 7.48      | ~1,336,000           |
+| `exact-cache-lookup`                 | 7.27     | 28.31    | 29.11     | ~343,000             |
+| `naive-cache-lookup`                 | 3.57     | 4.52     | 7.02      | ~1,423,000           |
+| `cache-insert-update`                | 5.20     | 6.05     | 6.47      | ~1,546,000           |
+| `family-match-1000-items` (100 runs) | 20.02    | 21.76    | 21.51     | ~4,649               |
 
 ---
 
-## 6. Phase 5 Roadmap Boundary
+## 7. Roadmap Next Steps
 
-This slice completes **P5.1**. The next approved slice is **P5.2** (QueryClient, QueryRecord, observer registry, deduplication, execution generation). No public API, mutations, observers, or framework adapters exist in this slice.
+- **Completed**: P5.1 (QueryKey & Cache), P5.2 (QueryClient, Observers, Deduplication & Generations).
+- **Next Slice**: **P5.3 — Cancellation, Freshness, Inactive Retention & GC Prototype** (AbortSignal integration, `staleTime`, `gcTime`, manual invalidation).

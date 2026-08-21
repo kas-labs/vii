@@ -3,6 +3,8 @@
  * Research only: not a public package API or production implementation.
  */
 
+import { type QueryDiagnosticSink, emitDiagnostic } from "./query-diagnostics.js";
+
 export type MutationStatus = "idle" | "pending" | "success" | "error";
 
 export interface MutationSnapshot<TData = unknown, TVariables = unknown> {
@@ -28,6 +30,7 @@ export type MutationFunction<TData, TVariables> = (
 
 export interface MutationOptions<TData = unknown, TVariables = unknown, TContext = unknown> {
   readonly mutationFn: MutationFunction<TData, TVariables>;
+  readonly sink?: QueryDiagnosticSink | undefined;
   readonly onMutate?: (variables: TVariables) => Promise<TContext> | TContext;
   readonly onSuccess?: (
     data: TData,
@@ -53,9 +56,11 @@ export class MutationRecord<TData = unknown, TVariables = unknown, TContext = un
   private activeAbortController?: AbortController | undefined;
   private readonly listeners = new Set<MutationListener<TData, TVariables>>();
   private disposed = false;
+  private sink?: QueryDiagnosticSink | undefined;
 
   constructor(options: MutationOptions<TData, TVariables, TContext>) {
     this.options = options;
+    this.sink = options.sink;
     this.snapshot = {
       data: undefined,
       error: undefined,
@@ -99,14 +104,16 @@ export class MutationRecord<TData = unknown, TVariables = unknown, TContext = un
 
     const controller = new AbortController();
     this.activeAbortController = controller;
+    const startTime = Date.now();
 
     this.snapshot = {
       data: undefined,
       error: undefined,
       variables,
       status: "pending",
-      submittedAt: Date.now(),
+      submittedAt: startTime,
     };
+    emitDiagnostic(this.sink, { type: "mutation:started", timestamp: startTime });
     this.notify();
 
     let mutateContext: TContext | undefined;
@@ -119,8 +126,14 @@ export class MutationRecord<TData = unknown, TVariables = unknown, TContext = un
         signal: controller.signal,
       });
 
+      const durationMs = Date.now() - startTime;
       if (controller.signal.aborted) {
         this.snapshot = { ...this.snapshot, status: "idle" };
+        emitDiagnostic(this.sink, {
+          type: "mutation:cancelled",
+          timestamp: Date.now(),
+          durationMs,
+        });
         this.notify();
         throw new DOMException("Mutation aborted", "AbortError");
       }
@@ -132,6 +145,7 @@ export class MutationRecord<TData = unknown, TVariables = unknown, TContext = un
         status: "success",
         submittedAt: this.snapshot.submittedAt,
       };
+      emitDiagnostic(this.sink, { type: "mutation:succeeded", timestamp: Date.now(), durationMs });
       this.notify();
 
       if (this.options.onSuccess) {
@@ -143,8 +157,14 @@ export class MutationRecord<TData = unknown, TVariables = unknown, TContext = un
 
       return result;
     } catch (error) {
+      const durationMs = Date.now() - startTime;
       if (controller.signal.aborted) {
         this.snapshot = { ...this.snapshot, status: "idle" };
+        emitDiagnostic(this.sink, {
+          type: "mutation:cancelled",
+          timestamp: Date.now(),
+          durationMs,
+        });
         this.notify();
         throw error;
       }
@@ -156,6 +176,12 @@ export class MutationRecord<TData = unknown, TVariables = unknown, TContext = un
         status: "error",
         submittedAt: this.snapshot.submittedAt,
       };
+      emitDiagnostic(this.sink, {
+        type: "mutation:failed",
+        timestamp: Date.now(),
+        durationMs,
+        reason: error instanceof Error ? error.name : "Error",
+      });
       this.notify();
 
       if (this.options.onError) {

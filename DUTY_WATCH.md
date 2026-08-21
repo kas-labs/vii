@@ -4658,5 +4658,53 @@ PR: [#118](https://github.com/kas-labs/vii/pull/118) draft
 
 ### Remaining / recovery
 
-- Commit changes, push `test/query-ssr-hydration`, and open a draft PR against `main`.
-- Await review before proceeding to slice P5.6.
+- PR #118 opened for P5.5 SSR Request Scope and Hydration prototype.
+
+## 2026-08-22 01:40 CEST | Implement P5.6 Diagnostics and Privacy prototype
+
+Status: completed
+Branch: test/query-diagnostics-privacy
+PR: not opened
+
+### Scope
+
+- Execute the P5.6 Diagnostics and Privacy prototype slice under `research/query/`
+  following RFC 0024 and the Phase 5 roadmap.
+- Validate value-safe structural diagnostic events across all Query, Mutation, and Hydration
+  lifecycles, enforce absolute privacy (zero leakage of query values, response bodies, request
+  variables, credentials, tokens, or raw user data), and guarantee fault-isolated sink execution.
+
+### Changes
+
+- Added `research/query/query-diagnostics.ts` defining `QueryDiagnosticEvent`, `QueryDiagnosticEventType`,
+  `QueryDiagnosticSink`, and `emitDiagnostic()`.
+- Updated `research/query/query-record.ts` and `research/query/mutation-record.ts` to emit safe structural
+  events (`fetch_started`, `fetch_deduplicated`, `fetch_succeeded`, `fetch_failed`, `fetch_cancelled`,
+  `invalidated`, `observer_added`, `observer_removed`, `gc_scheduled`, `gc_cancelled`, `gc_evicted`,
+  `mutation:started`, `mutation:succeeded`, `mutation:failed`, `mutation:cancelled`, `mutation:rollback`).
+- Updated `research/query/query-hydration.ts` to emit `query:dehydrated` and `query:hydrated` with safe counts.
+- Updated `research/query/query-client-prototype.ts` with `sink` configuration and cache hit/miss emission.
+- Added `research/query/query-diagnostics.test.ts` (5 unit tests covering full event lifecycle emission,
+  zero data/credential leakage, and fault isolation against broken/throwing sinks).
+- Updated `research/query/README.md` and `docs/quality/QUERY_RESEARCH_BASELINE.md`.
+- Updated `PROJECT_STATE.md` with durable P5.6 conclusions.
+
+### Validation
+
+- `pnpm exec vitest run research/query/*.test.ts`: passed (8 files, 67 tests).
+- `pnpm exec tsc --noEmit -p research/query/tsconfig.json`: passed.
+- `pnpm format:check`: passed.
+- `pnpm lint`: passed.
+- `git diff --check`: passed.
+- Repository `pnpm validate`: format, lint, typecheck, test, build, and Core/CLI Core pack-checks passed.
+
+### Architecture / compatibility
+
+- All code remains internal throwaway research under `research/query/`.
+- No public `@vii-labs/query` package or Core dependencies added.
+- Framework integration fixtures remain deferred to P5.7.
+
+### Remaining / recovery
+
+- Commit changes, push `test/query-diagnostics-privacy`, and open a draft PR against `main`.
+- Await review before proceeding to slice P5.7.

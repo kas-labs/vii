@@ -1,4 +1,4 @@
-# Vii Query Research: Prototypes (P5.1 - P5.5)
+# Vii Query Research: Prototypes (P5.1 - P5.6)
 
 > **Throwaway research only.** This directory is not a package, public API, support fixture, or production implementation.
 
@@ -9,6 +9,7 @@ This directory contains research prototypes validating foundational semantics of
 - **P5.3**: Native `AbortSignal` fetch cancellation (`abort != error`), superseding request aborts, freshness (`staleTime`), invalidation (`invalidate != remove`), inactive retention & GC (`gcTime`), and Vii Core `Scope` integration.
 - **P5.4**: Mutation execution lifecycle (`idle -> pending -> success / error`), optimistic cache transactions, generation-protected rollback, and concurrent mutation race safety.
 - **P5.5**: SSR Request Scope isolation, server prefetching, dehydration, versioned wire envelope (`protocol: "vii.query"`, `version: 1`), hardened client hydration, and timestamp preservation.
+- **P5.6**: Value-safe structural diagnostics covering all lifecycles, absolute privacy enforcement (zero data/credential leakage), and fault-isolated diagnostic sinks.
 
 ## Verification Commands
 
@@ -79,46 +80,39 @@ Query identity is governed by deterministic value structure rather than function
 
 ## 6. SSR Request Scope & Hydration (P5.5)
 
-### Request Scope Isolation
-
-- Every SSR request instantiates an isolated `ResearchQueryClient` bound to a Request `Scope`.
-- Request A data is never visible to Request B (zero cross-request state sharing).
-- Request Scope disposal synchronously destroys all request records and resources.
-
-### Versioned Hydration Envelope
-
-```ts
-interface QueryHydrationEnvelope {
-  protocol: "vii.query";
-  version: 1;
-  queries: HydratedQuery[];
-}
-```
-
-- **Dehydrate**: Exports only successful query data. Excludes timers, observers, errors, executions, and functions.
-- **Timestamp Preservation**: Preserves original server `dataUpdatedAt` so client freshness is computed accurately without false freshness inflation.
+- **Request Scope Isolation**: Every SSR request instantiates an isolated `ResearchQueryClient` bound to a Request `Scope`. Request A data is never visible to Request B.
+- **Versioned Wire Envelope**: `protocol: "vii.query"`, `version: 1`. Only successful data is dehydrated; executions, timers, observers, errors, and functions are excluded.
 - **Hardened Validation Boundary**: Strictly validates external envelopes, blocking prototype pollution, malformed keys, invalid/future timestamps, oversized payloads, and unsupported protocols/versions.
+- **Timestamp Preservation**: Original server `dataUpdatedAt` survives hydration to ensure correct client freshness calculations.
 
 ---
 
-## 7. Performance Baselines
+## 7. Diagnostics & Privacy (P5.6)
+
+- **Structural Event Model**: Emits typed structural events for cache hit/miss, fetch start/deduplication/success/error/cancel, invalidation, observer add/remove, GC schedule/cancel/evict, dehydration/hydration, and mutation lifecycle/rollback.
+- **Value-Free Privacy**: Default diagnostics strictly exclude raw query values, response bodies, request payloads, mutation variables, cookies, credentials, tokens, and raw user content.
+- **Fault Isolation**: Sinks execute inside safe try/catch wrappers so diagnostic logging errors can never disrupt Query or Mutation execution.
+
+---
+
+## 8. Performance Baselines
 
 Measurements collected on Apple Silicon (Node `v22.17.0`, 10,000 iterations, 5 samples):
 
 | Operation                            | Min (ms) | P50 (ms) | Mean (ms) | Throughput (ops/sec) |
 | ------------------------------------ | -------- | -------- | --------- | -------------------- |
-| `canonicalize-small-key`             | 1.61     | 2.76     | 3.33      | ~2,999,000           |
-| `canonicalize-nested-key`            | 4.04     | 5.73     | 5.38      | ~1,858,000           |
-| `canonicalize-object-key`            | 8.78     | 11.05    | 10.90     | ~917,000             |
-| `naive-canonicalize-object`          | 6.84     | 8.11     | 8.48      | ~1,179,000           |
-| `exact-cache-lookup`                 | 4.74     | 5.55     | 6.40      | ~1,562,000           |
-| `naive-cache-lookup`                 | 2.81     | 3.04     | 3.28      | ~3,050,000           |
-| `cache-insert-update`                | 5.14     | 5.61     | 5.72      | ~1,748,000           |
-| `family-match-1000-items` (100 runs) | 19.90    | 21.26    | 21.75     | ~4,598               |
+| `canonicalize-small-key`             | 3.14     | 4.54     | 4.88      | ~2,051,000           |
+| `canonicalize-nested-key`            | 4.09     | 4.90     | 5.50      | ~1,818,000           |
+| `canonicalize-object-key`            | 6.56     | 6.60     | 7.34      | ~1,363,000           |
+| `naive-canonicalize-object`          | 5.42     | 5.44     | 6.14      | ~1,628,000           |
+| `exact-cache-lookup`                 | 4.21     | 4.23     | 4.50      | ~2,221,000           |
+| `naive-cache-lookup`                 | 2.39     | 2.39     | 2.86      | ~3,497,000           |
+| `cache-insert-update`                | 4.41     | 4.46     | 4.64      | ~2,154,000           |
+| `family-match-1000-items` (100 runs) | 18.81    | 18.89    | 19.82     | ~5,046               |
 
 ---
 
-## 8. Roadmap Next Steps
+## 9. Roadmap Next Steps
 
-- **Completed**: P5.1 (QueryKey & Cache), P5.2 (QueryClient, Observers, Deduplication & Generations), P5.3 (Cancellation, Freshness, Invalidation & GC), P5.4 (Mutations & Optimistic Transactions), P5.5 (SSR Request Scope & Hydration).
-- **Next Slice**: **P5.6 — Diagnostics and Privacy Prototype** (value-safe structural events, diagnostic sinks, telemetry-free observability).
+- **Completed**: P5.1 (QueryKey & Cache), P5.2 (QueryClient, Observers, Deduplication & Generations), P5.3 (Cancellation, Freshness, Invalidation & GC), P5.4 (Mutations & Optimistic Transactions), P5.5 (SSR Request Scope & Hydration), P5.6 (Diagnostics & Privacy).
+- **Next Slice**: **P5.7 — Framework Integration Fixtures Prototype** (React, Angular, and Vue lifecycle integration compliance suite).

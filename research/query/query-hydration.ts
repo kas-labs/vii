@@ -6,6 +6,7 @@
 import { type QueryKey, validateQueryKey } from "./query-key.js";
 import { type ResearchQueryClient } from "./query-client-prototype.js";
 import { type QueryRecord } from "./query-record.js";
+import { emitDiagnostic } from "./query-diagnostics.js";
 
 export class HydrationValidationError extends Error {
   readonly code: string;
@@ -58,6 +59,12 @@ export function dehydrate(
       });
     }
   }
+
+  emitDiagnostic(client.sink, {
+    type: "query:dehydrated",
+    timestamp: Date.now(),
+    count: queries.length,
+  });
 
   return {
     protocol: "vii.query",
@@ -140,6 +147,12 @@ export function hydrate(
     client.setQueryData(entry.key as QueryKey, entry.data, ts);
     hydratedCount += 1;
   }
+
+  emitDiagnostic(client.sink, {
+    type: "query:hydrated",
+    timestamp: Date.now(),
+    count: hydratedCount,
+  });
 
   return { hydratedCount };
 }

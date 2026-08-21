@@ -41,7 +41,7 @@ PR: <number or not opened>
 
 Status: completed
 Branch: `perf/flow-async-comparison`
-PR: not opened
+PR: #101 (draft)
 
 ### Scope
 
@@ -88,8 +88,8 @@ PR: not opened
 
 ### Remaining / recovery
 
-- Commit, push the focused branch, and open a draft PR against `test/flow-research-fixtures`; do not
-  merge without maintainer confirmation.
+- Draft PR #101 is open against `test/flow-research-fixtures`; review is pending and merge requires
+  maintainer confirmation.
 - Next research candidates remain real consumers, broader memory/allocation/bundle evidence, native
   AsyncIterable/ReadableStream runtime measurements, and explicit async cancellation-rejection
   surfacing research.

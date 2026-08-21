@@ -4706,5 +4706,47 @@ PR: [#119](https://github.com/kas-labs/vii/pull/119) draft
 
 ### Remaining / recovery
 
-- Commit changes, push `test/query-diagnostics-privacy`, and open a draft PR against `main`.
-- Await review before proceeding to slice P5.7.
+- PR #119 opened for P5.6 Diagnostics and Privacy prototype.
+
+## 2026-08-22 01:50 CEST | Implement P5.7 Framework Integration Fixtures prototype
+
+Status: completed
+Branch: test/query-framework-fixtures
+PR: [#120](https://github.com/kas-labs/vii/pull/120) draft
+
+### Scope
+
+- Execute the P5.7 Framework Integration Fixtures prototype slice under `research/query/`
+  following RFC 0024 and the Phase 5 roadmap.
+- Validate thin reactive adapter bridges for React (`useSyncExternalStore`), Angular (`Signal` + `DestroyRef`),
+  and Vue (`ShallowRef` + scope disposal) against a single shared Query Compliance Suite, proving exact
+  behavioral parity and complete decoupling from Query Core.
+
+### Changes
+
+- Added `research/query/query-adapters.ts` defining thin reactive bridges for React, Angular, and Vue.
+- Added `research/query/query-adapters.test.ts` (19 unit tests running the shared compliance suite across
+  React, Angular, and Vue fixtures, verifying reads, fetch updates, invalidation, cancellation, unmount GC
+  scheduling, mutation state binding, and Core standalone operation).
+- Updated `research/query/README.md` and `docs/quality/QUERY_RESEARCH_BASELINE.md`.
+- Updated `PROJECT_STATE.md` with durable P5.7 conclusions.
+
+### Validation
+
+- `pnpm exec vitest run research/query/*.test.ts`: passed (9 files, 86 tests).
+- `pnpm exec tsc --noEmit -p research/query/tsconfig.json`: passed.
+- `pnpm format:check`: passed.
+- `pnpm lint`: passed.
+- `git diff --check`: passed.
+- Repository `pnpm validate`: format, lint, typecheck, test, build, and Core/CLI Core pack-checks passed.
+
+### Architecture / compatibility
+
+- All code remains internal throwaway research under `research/query/`.
+- No public `@vii-labs/query` package or Core dependencies added.
+- Performance and build-vs-buy gate remains deferred to P5.8.
+
+### Remaining / recovery
+
+- Commit changes, push `test/query-framework-fixtures`, and open a draft PR against `main`.
+- Await review before proceeding to slice P5.8.

@@ -1,4 +1,4 @@
-# Vii Query Research: Prototypes (P5.1 - P5.6)
+# Vii Query Research: Prototypes (P5.1 - P5.7)
 
 > **Throwaway research only.** This directory is not a package, public API, support fixture, or production implementation.
 
@@ -10,6 +10,7 @@ This directory contains research prototypes validating foundational semantics of
 - **P5.4**: Mutation execution lifecycle (`idle -> pending -> success / error`), optimistic cache transactions, generation-protected rollback, and concurrent mutation race safety.
 - **P5.5**: SSR Request Scope isolation, server prefetching, dehydration, versioned wire envelope (`protocol: "vii.query"`, `version: 1`), hardened client hydration, and timestamp preservation.
 - **P5.6**: Value-safe structural diagnostics covering all lifecycles, absolute privacy enforcement (zero data/credential leakage), and fault-isolated diagnostic sinks.
+- **P5.7**: Shared Query compliance suite across React (`useSyncExternalStore`), Angular (`Signal` + `DestroyRef`), and Vue (`ShallowRef` + scope disposal) adapter bridges, proving complete core decoupling.
 
 ## Verification Commands
 
@@ -95,24 +96,33 @@ Query identity is governed by deterministic value structure rather than function
 
 ---
 
-## 8. Performance Baselines
+## 8. Framework Integration Fixtures (P5.7)
+
+- **Thin Reactive Bridges**: Adapters for React (`useSyncExternalStore`), Angular (`Signal` + `DestroyRef`), and Vue (`ShallowRef` + scope disposal) adapt `QueryObserver` and `MutationRecord` snapshots.
+- **Strict Decoupling**: Adapters contain zero cache, deduplication, invalidation, freshness, or GC logic.
+- **Shared Compliance Suite**: Identical compliance tests run across React, Angular, and Vue fixtures, verifying parity in reads, fetch updates, invalidation, cancellation, unmount GC scheduling, and mutation states.
+- **Core Independence**: Query Core functions identically without any framework adapter present.
+
+---
+
+## 9. Performance Baselines
 
 Measurements collected on Apple Silicon (Node `v22.17.0`, 10,000 iterations, 5 samples):
 
 | Operation                            | Min (ms) | P50 (ms) | Mean (ms) | Throughput (ops/sec) |
 | ------------------------------------ | -------- | -------- | --------- | -------------------- |
-| `canonicalize-small-key`             | 3.14     | 4.54     | 4.88      | ~2,051,000           |
-| `canonicalize-nested-key`            | 4.09     | 4.90     | 5.50      | ~1,818,000           |
-| `canonicalize-object-key`            | 6.56     | 6.60     | 7.34      | ~1,363,000           |
-| `naive-canonicalize-object`          | 5.42     | 5.44     | 6.14      | ~1,628,000           |
-| `exact-cache-lookup`                 | 4.21     | 4.23     | 4.50      | ~2,221,000           |
-| `naive-cache-lookup`                 | 2.39     | 2.39     | 2.86      | ~3,497,000           |
-| `cache-insert-update`                | 4.41     | 4.46     | 4.64      | ~2,154,000           |
-| `family-match-1000-items` (100 runs) | 18.81    | 18.89    | 19.82     | ~5,046               |
+| `canonicalize-small-key`             | 1.80     | 3.08     | 4.23      | ~2,362,000           |
+| `canonicalize-nested-key`            | 5.21     | 6.87     | 6.60      | ~1,514,000           |
+| `canonicalize-object-key`            | 11.31    | 15.40    | 16.95     | ~589,000             |
+| `naive-canonicalize-object`          | 9.98     | 17.24    | 19.06     | ~524,000             |
+| `exact-cache-lookup`                 | 5.18     | 6.28     | 6.75      | ~1,480,000           |
+| `naive-cache-lookup`                 | 3.00     | 3.98     | 4.87      | ~2,054,000           |
+| `cache-insert-update`                | 5.84     | 6.19     | 6.51      | ~1,535,000           |
+| `family-match-1000-items` (100 runs) | 23.14    | 29.83    | 29.26     | ~3,417               |
 
 ---
 
-## 9. Roadmap Next Steps
+## 10. Roadmap Next Steps
 
-- **Completed**: P5.1 (QueryKey & Cache), P5.2 (QueryClient, Observers, Deduplication & Generations), P5.3 (Cancellation, Freshness, Invalidation & GC), P5.4 (Mutations & Optimistic Transactions), P5.5 (SSR Request Scope & Hydration), P5.6 (Diagnostics & Privacy).
-- **Next Slice**: **P5.7 — Framework Integration Fixtures Prototype** (React, Angular, and Vue lifecycle integration compliance suite).
+- **Completed**: P5.1 (QueryKey & Cache), P5.2 (QueryClient, Observers, Deduplication & Generations), P5.3 (Cancellation, Freshness, Invalidation & GC), P5.4 (Mutations & Optimistic Transactions), P5.5 (SSR Request Scope & Hydration), P5.6 (Diagnostics & Privacy), P5.7 (Framework Integration Fixtures).
+- **Next Slice**: **P5.8 — Performance and build-vs-buy gate** (comprehensive comparative analysis, bundle-size assessment, and architecture graduation gate).

@@ -37,6 +37,63 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-21 02:55 CEST | Add Flow temporal and async comparison baseline
+
+Status: completed
+Branch: `perf/flow-async-comparison`
+PR: #101 (draft)
+
+### Scope
+
+- Continue the approved Flow Research plan with a deterministic temporal/async comparison after
+  the merged synchronous and TypeScript/complexity baselines.
+
+### Changes
+
+- Added `research/flow/flow-async-comparison.test.ts` with direct callbacks, RxJS, functional
+  prototype, and fluent prototype runners on the same Promise plus AbortSignal fixture.
+- Added deterministic debounce, stale-result switching, fresh disposal, Scope disposal, lifecycle
+  cycles, structural output, and explicit limitations.
+- Added `docs/quality/FLOW_ASYNC_COMPARISON_BASELINE.md` with exact environment, commands, raw
+  samples, structural results, and the prototype completed-inner lifecycle distinction.
+- Synchronized the Flow brief, documentation index, and durable project state. No Core/API/package
+  or consumer repository changes were made.
+
+### Validation
+
+- `pnpm exec vitest run research/flow/flow-research.test.ts research/flow/flow-real-clock.test.ts
+  research/flow/flow-platform-robustness.test.ts research/flow/flow-comparison.test.ts
+  research/flow/flow-async-comparison.test.ts`: passed; 5 files and 21 tests passed.
+- `pnpm exec tsc --noEmit -p research/flow/tsconfig.json`: passed.
+- Prettier check and `git diff --check`: passed.
+- `pnpm validate`: passed with approved registry access; format, lint, typecheck, repository tests,
+  builds, packed consumer validation, and packed CLI Core clean-consumer validation all passed. The
+  initial sandboxed run reached packed consumer validation but stopped on
+  registry `ENOTFOUND`; this was an environment/network boundary, not a code failure.
+- Registry diagnosis confirms the error is DNS/network access to `registry.npmjs.org`; use approved
+  registry access or a pre-populated/offline store for sandboxed runs. No repository workaround was
+  added.
+
+### Architecture / compatibility
+
+- Flow remains Research-only. The fixture does not create a package or public API, does not import
+  Task, and does not change `ViiResource.dispose(): void`, Core, package manifests, lockfiles, or
+  consumer support claims.
+- Structural output excludes emitted values and user content. Real browser/network/worker/platform
+  integration, bundle, allocation, broader memory, and async cancellation-rejection surfacing remain
+  deferred.
+- The comparison records one lifecycle distinction: the throwaway prototype releases a completed
+  inner branch before later disposal, while direct/RxJS adapters report an additional abort teardown.
+  This is evidence for design review, not a selected public semantic.
+
+### Remaining / recovery
+
+- Draft PR #101 is open against `test/flow-research-fixtures`; review is pending and merge requires
+  maintainer confirmation.
+- Next research candidates remain real consumers, broader memory/allocation/bundle evidence, native
+  AsyncIterable/ReadableStream runtime measurements, and explicit async cancellation-rejection
+  surfacing research.
+
 ## 2026-08-21 02:35 CEST | Add Flow TypeScript and complexity baseline
 
 Status: completed

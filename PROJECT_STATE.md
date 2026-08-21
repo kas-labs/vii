@@ -244,8 +244,14 @@ Subjects are explicit multicast sources, unsubscription is distinct from complet
 AbortSignal, AsyncIterator, and ReadableStream cleanup remain asynchronous platform boundaries.
 The first comparison record is in `docs/quality/FLOW_COMPARISON_BASELINE.md`; a separate bounded
 TypeScript/complexity record now captures cold and incremental `tsc --extendedDiagnostics` output and
-the transitive type surfaces of the three baselines. Bundle/tree-shaking, allocation, broader memory,
-temporal, async runtime, and real-consumer measurements remain deferred.
+the transitive type surfaces of the three baselines. The deterministic temporal/async record is in
+`docs/quality/FLOW_ASYNC_COMPARISON_BASELINE.md`; it captures latest-result correctness, stale
+suppression, AbortSignal initiation, fresh disposal cutoff, timer-boundary observations, and
+1,000-cycle lifecycle samples. It also exposes a prototype distinction where completed inner
+ownership is released before later disposal; this is evidence for design review, not a public
+semantic decision. Bundle/tree-shaking, allocation, broader memory, real-clock throughput,
+platform-stream runtime, and asynchronous cancellation rejection surfacing remain deferred. Flow
+remains Research-only and Core synchronous `ViiResource.dispose(): void` is unchanged.
 
 The durable rendering direction is progressive and CSR-first. A future native Vii application may
 remain fully client-rendered without adopting hydration, request-server lifecycle, streaming, edge,

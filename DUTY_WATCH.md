@@ -4754,7 +4754,7 @@ PR: [#120](https://github.com/kas-labs/vii/pull/120) draft
 
 Status: completed
 Branch: test/query-build-vs-buy-gate
-PR: not opened
+PR: [#121](https://github.com/kas-labs/vii/pull/121) draft
 
 ### Scope
 

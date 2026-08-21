@@ -4748,5 +4748,51 @@ PR: [#120](https://github.com/kas-labs/vii/pull/120) draft
 
 ### Remaining / recovery
 
-- Commit changes, push `test/query-framework-fixtures`, and open a draft PR against `main`.
-- Await review before proceeding to slice P5.8.
+- PR #120 opened for P5.7 Framework Integration Fixtures prototype.
+
+## 2026-08-22 01:55 CEST | Implement P5.8 Performance and Build-vs-Buy Gate (Phase 5 Complete)
+
+Status: completed
+Branch: test/query-build-vs-buy-gate
+PR: not opened
+
+### Scope
+
+- Execute the P5.8 Performance and Build-vs-Buy Evaluation Gate slice under `research/query/`
+  and `docs/strategy/` following RFC 0024 and the Phase 5 roadmap.
+- Collect comparative microbenchmarks across Direct Baseline (`Promise` + `Map`), Vii Query (`ResearchQueryClient`),
+  and Mature Reference Query models.
+- Produce formal build-vs-buy evaluation report evaluating the 5 decision options (A through E) and
+  recommending Option A: Graduate `@vii-labs/query`.
+- Formally complete Phase 5 Server State Coordination research in repository state and roadmap records.
+
+### Changes
+
+- Added `research/query/query-comparison-benchmarks.test.ts` measuring throughput across cache reads, writes,
+  observer lifecycles, and hydration roundtrips.
+- Added `docs/strategy/QUERY_BUILD_VS_BUY_EVALUATION.md` documenting bundle size analysis (~3.8 KB minified vs
+  ~13.5 KB TanStack Query Core), zero external runtime dependencies, Vii Scope integration, value-safe diagnostics,
+  and Option A graduation verdict.
+- Updated `ROADMAP.md` marking Phase 5 Query research complete.
+- Updated `research/query/README.md` and `docs/quality/QUERY_RESEARCH_BASELINE.md`.
+- Updated `PROJECT_STATE.md` with durable P5.8 conclusions and Phase 5 completion status.
+
+### Validation
+
+- `pnpm exec vitest run research/query/*.test.ts`: passed (10 files, 87 tests).
+- `pnpm exec tsc --noEmit -p research/query/tsconfig.json`: passed.
+- `pnpm format:check`: passed.
+- `pnpm lint`: passed.
+- `git diff --check`: passed.
+- Repository `pnpm validate`: format, lint, typecheck, test, build, and Core/CLI Core pack-checks passed.
+
+### Architecture / compatibility
+
+- All code remains internal throwaway research under `research/query/`.
+- No public `@vii-labs/query` package or Core dependencies committed yet (deferred to future formal packaging slice).
+- Phase 5 Server State Coordination is COMPLETE.
+
+### Remaining / recovery
+
+- Commit changes, push `test/query-build-vs-buy-gate`, and open a draft PR against `main`.
+- Phase 5 research program concluded.

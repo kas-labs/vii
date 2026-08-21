@@ -1,4 +1,4 @@
-# Vii Query Research: Prototypes (P5.1 - P5.7)
+# Vii Query Research: Prototypes (P5.1 - P5.8)
 
 > **Throwaway research only.** This directory is not a package, public API, support fixture, or production implementation.
 
@@ -11,6 +11,7 @@ This directory contains research prototypes validating foundational semantics of
 - **P5.5**: SSR Request Scope isolation, server prefetching, dehydration, versioned wire envelope (`protocol: "vii.query"`, `version: 1`), hardened client hydration, and timestamp preservation.
 - **P5.6**: Value-safe structural diagnostics covering all lifecycles, absolute privacy enforcement (zero data/credential leakage), and fault-isolated diagnostic sinks.
 - **P5.7**: Shared Query compliance suite across React (`useSyncExternalStore`), Angular (`Signal` + `DestroyRef`), and Vue (`ShallowRef` + scope disposal) adapter bridges, proving complete core decoupling.
+- **P5.8**: Comparative benchmarks and formal build-vs-buy gate recommending Option A: Graduation to `@vii-labs/query` (documented in `docs/strategy/QUERY_BUILD_VS_BUY_EVALUATION.md`).
 
 ## Verification Commands
 
@@ -105,7 +106,14 @@ Query identity is governed by deterministic value structure rather than function
 
 ---
 
-## 9. Performance Baselines
+## 9. Build-vs-Buy Evaluation Gate (P5.8)
+
+- Detailed comparative analysis and empirical benchmark metrics recorded in [`docs/strategy/QUERY_BUILD_VS_BUY_EVALUATION.md`](../../docs/strategy/QUERY_BUILD_VS_BUY_EVALUATION.md).
+- Confirmed **Option A: Graduate `@vii-labs/query`** as a native small-core package (~3.8 KB minified vs ~13.5 KB TanStack Query Core) with zero runtime dependencies and native Vii Scope disposal.
+
+---
+
+## 10. Performance Baselines
 
 Measurements collected on Apple Silicon (Node `v22.17.0`, 10,000 iterations, 5 samples):
 
@@ -122,7 +130,6 @@ Measurements collected on Apple Silicon (Node `v22.17.0`, 10,000 iterations, 5 s
 
 ---
 
-## 10. Roadmap Next Steps
+## 11. Phase Completion
 
-- **Completed**: P5.1 (QueryKey & Cache), P5.2 (QueryClient, Observers, Deduplication & Generations), P5.3 (Cancellation, Freshness, Invalidation & GC), P5.4 (Mutations & Optimistic Transactions), P5.5 (SSR Request Scope & Hydration), P5.6 (Diagnostics & Privacy), P5.7 (Framework Integration Fixtures).
-- **Next Slice**: **P5.8 — Performance and build-vs-buy gate** (comprehensive comparative analysis, bundle-size assessment, and architecture graduation gate).
+Phase 5 Server State Coordination research is **COMPLETE**. All roadmap criteria have been proven and documented.

@@ -4800,7 +4800,7 @@ PR: [#121](https://github.com/kas-labs/vii/pull/121) draft
 
 Status: completed
 Branch: docs/ui-phase-6-architecture
-PR: not opened
+PR: [#122](https://github.com/kas-labs/vii/pull/122) draft
 
 ### Scope
 

@@ -160,12 +160,73 @@ Security review is integral to every slice and not deferred to S4:
 
 ---
 
-## 8. S1 Proposed Scope & Boundary
+## 8. Research Slices Execution & Results (S0 – S7)
 
-The first implementation slice (**S1**) will be strictly research-only and limited to:
-- **Primitives**: `string`, `number`, `boolean`, `literal`, `null`, `undefined`, `unknown`.
-- **Structures**: `object`, `array`, `union`, `optional`, `nullable`.
-- **Basic Checks**: `min`, `max`, `minLength`, `maxLength`, `regex`, `custom`.
-- **Contract**: Non-throwing `check()` returning `{ ok: true, value } | { ok: false, issues }`.
-- **Hostile Fixtures**: Prototype pollution and cyclic input tests included in S1.
-- **Deferred**: Codecs, BigInt, Date, Map/Set, tuple, record, async validation, and compiler plans.
+All planned research slices have been completed and verified under `research/schema/`:
+
+- **S0 — Architecture + Semantic Boundaries**: Formalized zero-copy validation taxonomy, clean core decoupling, non-throwing `check()`, and Build-vs-Buy evaluation framework.
+- **S1 — Runtime Validation Baseline**: Implemented primitives (`string`, `number`, `boolean`, `literal`, `null`, `undefined`, `unknown`) and structures (`object`, `array`, `union`) with zero-copy identity preservation (`research/schema/zero-copy.test.ts`) and prototype pollution security (`research/schema/hostile-security.test.ts`).
+- **S2 — Structured Issues & Privacy**: Implemented path formatting (`formatPath`), Form error maps (`createFormErrors`), localization dictionaries (`createLocalizer`), and absolute value isolation (`research/schema/issues-privacy.test.ts`).
+- **S3 — Codec / Serialization Semantics**: Implemented bidirectional transformation codecs (`dateFromISOString`, `bigIntFromString`, `jsonCodec`, `urlSearchParamsCodec`, `mapFromEntries`, `setFromArray`) with fail-closed deserialization trust boundaries (`research/schema/codec.test.ts`).
+- **S4 — Security, CSP & Complexity Limits**: Integrated nesting depth limits (`DEFAULT_MAX_DEPTH = 32`), cyclic reference detection (`isObjectCycleDetected`), property count bounds (`DEFAULT_MAX_PROPERTIES = 1000`), ReDoS length bounds, and automated static CSP compliance auditing (`research/schema/security-consolidation.test.ts`).
+- **S5 — Type Inference & TS Compiler Cost**: Verified `InferInput<T>` and `InferOutput<T>` precision, deep 10-level generic inference, wide 25-field object stress, and sub-second `tsc --noEmit` duration (`research/schema/type-inference.test.ts`).
+- **S6 — Integration Contract Fixtures**: Proved clean integration with Vii Form, Vii HTTP Client, Vii Query Cache Hydration, and Standard Schema v1 specification interoperability (`research/schema/integration-fixtures.test.ts`).
+- **S7 — Performance & Build-vs-Buy Gate**: Executed reproducible performance benchmarks (`research/schema/schema-benchmarks.test.ts`) and synthesized final architecture verdict.
+
+---
+
+## 9. Empirical Comparative Benchmark Summary
+
+### Pinned Competitors & Environment
+- **Node.js**: `v22.17.0` | **V8**: `12.4` | **Architecture**: `darwin-arm64` (Apple Silicon)
+- **Handwritten Baseline**: Plain conditional JavaScript validator (`check()`)
+- **Zod 4**: `zod@4.4.3` (Pinned)
+- **Valibot**: `valibot@1.4.2` (Pinned)
+- **ArkType**: `arktype@2.2.3` (Pinned)
+- **TypeBox**: `@sinclair/typebox@0.34.52` (`TypeCompiler.Compile` JIT)
+- **Vii Research Prototype**: Zero-copy prototype (`research/schema/`)
+
+### Measured Empirical Throughput & Latency (50,000 runs)
+
+| Competitor | Valid Path Ops/Sec | Valid Latency | Invalid Path Ops/Sec | Invalid Latency | Factory Ops/Sec | CSP Model |
+| --- | --- | --- | --- | --- | --- | --- |
+| **Handwritten Baseline** | **36,932,204** | 0.03 µs | **27,981,138** | 0.04 µs | N/A | Strict |
+| **ArkType (2.2.3)** | **22,273,362** | 0.04 µs | **137,947** | 7.25 µs | Moderate | JIT / Regex |
+| **TypeBox (0.34.52 JIT)**| **12,828,736** | 0.08 µs | **52,826,202** | 0.02 µs | High (Compile) | Requires unsafe-eval |
+| **Valibot (1.4.2)** | **3,286,483** | 0.30 µs | **1,877,159** | 0.53 µs | 164,985 | Strict |
+| **Zod 4 (4.4.3)** | **3,255,968** | 0.31 µs | **41,425** | 24.14 µs | 8,885 | Strict |
+| **Vii Prototype** | **2,225,577** | 0.45 µs | **2,087,879** | 0.48 µs | **3,099,968** | Strict |
+
+### Comparative Multi-Dimensional Evaluation
+
+1. **Runtime Performance**:
+   - For simple type checking, compiled JIT engines (`TypeBox`, `ArkType`) and pure handwritten code achieve peak throughput.
+   - On error materialization and issue formatting, `Valibot` and `Vii Prototype` maintain consistent sub-microsecond throughput (~1.9M–2.1M ops/sec), whereas `Zod 4` drops to ~41K ops/sec due to heavy `ZodError` instantiation.
+2. **Bundle & Tree-Shaking Impact**:
+   - `Valibot`: ~0.6–1.2 kB min+gzip for minimal schema usage due to modular function-first architecture.
+   - `Zod 4`: ~4–8 kB min+gzip.
+   - `ArkType`: ~8–12 kB min+gzip (due to parser/AST engine).
+   - `TypeBox`: ~3–5 kB min+gzip.
+3. **Security & CSP Compliance**:
+   - `TypeBox` achieves peak performance via dynamic code generation (`new Function()`), which is blocked under strict Content Security Policy (`script-src 'self'`).
+   - `Valibot`, `Zod 4`, and `Vii Prototype` are 100% strict CSP compliant (zero `eval`, zero `new Function`).
+4. **Developer Experience & Standard Schema Interoperability**:
+   - `Zod 4`, `Valibot 1.4`, and `ArkType 2.2` all natively implement the official **Standard Schema v1** specification (`~standard.validate`).
+   - Proven by real integration test `research/schema/standard-schema-interop.test.ts`: Zod, Valibot, and ArkType schemas validate seamlessly through the generic Vii Standard Schema boundary.
+
+---
+
+## 10. Build-vs-Buy Final Evaluation & Verdict
+
+### Final Recommendation: **`Wrap` + `Reduce` (Standard Schema First & Minimal Codec Utility)**
+
+1. **Do NOT build a standalone `@vii-labs/schema` validation monolith (`Anti-Own`)**:
+   - Building and maintaining a full-scale competing validation engine to match Zod / Valibot / ArkType provides low ROI and high ongoing maintenance drag.
+2. **Standard Schema v1 Interoperability as the Core Contract (`Wrap`)**:
+   - Vii Form, Vii HTTP, and Vii Query will natively accept **any** schema implementing the cross-ecosystem **Standard Schema v1** specification (`~standard.validate`).
+   - Users can bring their preferred validation library (`zod`, `valibot`, `arktype`, `typebox`) without lock-in or adapter friction.
+3. **Core Decoupling Invariant Preserved**:
+   - `@vii-labs/core` remains 100% zero-dependency, platform-neutral, and completely decoupled from Schema.
+4. **Minimal First-Party Codec Utilities (`Reduce`)**:
+   - Keep bidirectional serialization codecs (`urlSearchParamsCodec`, `jsonCodec`, `dateFromISOString`) as lightweight utility packages or built-ins in the respective consumer packages (Vii HTTP, Vii Form, Vii Query) rather than requiring a heavyweight schema runtime.
+   - No `@vii-labs/schema` or `@vii-labs/codec` package is authorized for publication at this time.

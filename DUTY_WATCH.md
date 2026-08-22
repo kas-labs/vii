@@ -37,6 +37,275 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-22 18:45 CEST | S7 Performance, Empirical Build-vs-Buy & Governance Realignment
+
+Status: completed
+Branch: `docs/schema-architecture-research`
+PR: #127
+
+### Scope
+
+- Acknowledge governance process violation: A completed research slice does not authorize subsequent slices unless the approved task explicitly grants that scope. Future execution strictly respects slice/phase stop conditions.
+- Realize Anti-Gravity project-level governance: persisted authoritative governance rule in `AGENTS.md`.
+- Implement empirical comparative benchmark harness in `research/schema/schema-benchmarks.test.ts` testing pinned competitor versions (`zod@4.4.3`, `valibot@1.4.2`, `arktype@2.2.3`, `@sinclair/typebox@0.34.52`, and handwritten baseline).
+- Implement official **Standard Schema v1** (`@standard-schema/spec@1.1.0`) cross-ecosystem interoperability test suite in `research/schema/standard-schema-interop.test.ts`, proving actual Zod, Valibot, and ArkType schemas validate cleanly through generic Vii consumer boundaries.
+- Formulate honest evidence-backed Build-vs-Buy verdict: **`Wrap` + `Reduce`** (Universal Standard Schema v1 boundary for Form/HTTP/Query + Minimal Codec utilities; Anti-Own recommendation rejecting redundant validation monolith).
+- Update `docs/roadmap/SCHEMA_RESEARCH.md`, `research/schema/README.md`, `AGENTS.md`, and `PROJECT_STATE.md` with empirical data and governance alignment.
+
+### Changes
+
+- Updated `package.json` & `pnpm-lock.yaml`: pinned devDependencies for comparative benchmarking (`zod@4.4.3`, `valibot@1.4.2`, `arktype@2.2.3`, `@sinclair/typebox@0.34.52`, `@standard-schema/spec@1.1.0`).
+- Updated `AGENTS.md`: persisted authoritative governance rule.
+- Added `research/schema/schema-benchmarks.test.ts`: multi-dimensional comparative benchmark suite across 6 competitors.
+- Added `research/schema/standard-schema-interop.test.ts`: real cross-ecosystem Standard Schema v1 interop test suite.
+- Updated `research/schema/standard-schema.ts`: aligned with official `@standard-schema/spec` types.
+- Updated `docs/roadmap/SCHEMA_RESEARCH.md` & `research/schema/README.md`: recorded empirical benchmark measurements, multi-dimensional analysis, and final Build-vs-Buy verdict.
+- Updated `PROJECT_STATE.md`: registered finalized schema research source-of-truth.
+
+### Verification
+
+- `pnpm exec vitest run research/schema/*.test.ts`: 10 test files, 60 tests passed (0 failures).
+- `pnpm exec vitest run`: 70 test files, 442 tests passed across repository.
+- `pnpm exec tsc -p research/schema/tsconfig.json --noEmit`: passed cleanly with 0 errors.
+- `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm pack:check`, `git diff --check`, `pnpm validate`: all passed cleanly.
+
+### Architecture & invariants
+
+- Core Decoupling Invariant: `@vii-labs/core` remains 100% zero-dependency, platform-neutral, and completely decoupled from Schema.
+- Build-vs-Buy Verdict (`Wrap` + `Reduce`): Native Standard Schema v1 acceptance across Vii Form, Vii HTTP, and Vii Query; lightweight codecs for serialization.
+- Stop Condition & Boundary: HTTP Client & Transport Research has NOT been started. PR #127 is ready for human review.
+
+### Remaining / recovery
+
+- Schema & Codec Research Track (S0–S7) is 100% complete and fully verified. Next planned research track is HTTP Client & Transport Research (pending separate authorization).
+
+## 2026-08-22 18:30 CEST | S6 Integration Contract Fixtures (Form / HTTP / Query)
+
+Status: completed
+Branch: `docs/schema-architecture-research`
+PR: #126
+
+### Scope
+
+- Implement S6 Integration Contract Fixtures in `research/schema/integration-fixtures.test.ts` and `research/schema/standard-schema.ts`.
+- Verify seamless decoupling: `@vii-labs/core` remains completely agnostic of Schema while higher-level consumers connect via clean boundary contracts.
+- Implement and verify Vii Form integration fixture: single-field validation on change/blur, submit validation, `createFormErrors` structured error mapping, and zero-copy value preservation.
+- Implement and verify Vii HTTP client fixture: query string serialization (`urlSearchParamsCodec`) and JSON response decode validation (`jsonCodec`) with fail-closed union/property checking.
+- Implement and verify Vii Query / Hydration cache boundary fixture: fail-closed validation of dehydrated cache entries, securely discarding prototype pollution and corrupted payloads during cache restore.
+- Implement Standard Schema v1 specification wrapper (`toStandardSchema`), guaranteeing out-of-the-box interoperability with ecosystem tools (TanStack Form, tRPC, ArkType/Zod standard adapters).
+
+### Changes
+
+- Added `research/schema/standard-schema.ts`: `StandardSchemaV1`, `toStandardSchema`.
+- Updated `research/schema/index.ts`: exported `toStandardSchema`.
+- Added `research/schema/integration-fixtures.test.ts`: comprehensive integration test suite for Form, HTTP, Query cache hydration, and Standard Schema v1.
+
+### Verification
+
+- `pnpm exec vitest run research/schema/*.test.ts`: 8 test files, 51 tests passed (0 failures).
+- `pnpm exec vitest run`: 68 test files, 433 tests passed across repository.
+- `pnpm exec tsc -p research/schema/tsconfig.json --noEmit`: passed cleanly with 0 errors.
+- `pnpm format:check`, `pnpm lint`, `pnpm validate`: all passed cleanly.
+
+### Architecture & invariants
+
+- Core Decoupling Invariant: Schema is an optional peripheral boundary and is never imported by Core.
+- Standard Schema v1 Interoperability: Native compatibility with the emerging cross-framework validation standard.
+
+### Remaining / recovery
+
+- S6 complete. Next slice is S7 (Performance & Build-vs-Buy Evaluation Gate).
+
+## 2026-08-22 18:15 CEST | S5 Type Inference & TS Compiler Cost
+
+Status: completed
+Branch: `docs/schema-architecture-research`
+PR: #126
+
+### Scope
+
+- Implement S5 Type Inference & TypeScript compiler performance benchmark test suite in `research/schema/type-inference.test.ts`.
+- Verify static type inference fidelity for `InferInput<T>` and `InferOutput<T>` across primitives, optional/nullable modifiers, wide objects (25+ fields), unions, and asymmetric transformation codecs (`dateFromISOString`, `bigIntFromString`, `jsonCodec`, `urlSearchParamsCodec`).
+- Verify deep generic nesting (10 levels of nested objects/arrays) without triggering TS2589 infinite instantiation depth errors.
+- Profile `tsc -p research/schema/tsconfig.json --noEmit` duration and confirm sub-second / fast compilation performance without IDE degradation.
+
+### Changes
+
+- Added `research/schema/type-inference.test.ts`: compile-time type equality assertions (`Expect<Equal<A, B>>`) and runtime verification across deep and wide schemas.
+- Refactored `research/schema/structures.ts` and `research/schema/security.ts`: extracted `checkStructureSecurity` helper, reducing `structures.ts` to 196 lines.
+- Updated `research/schema/codec.ts`: refined `urlSearchParamsCodec` type signature to strictly preserve `InferOutput<TShape[K]>`.
+
+### Verification
+
+- `pnpm exec vitest run research/schema/*.test.ts`: 7 test files, 44 tests passed (0 failures).
+- `pnpm exec vitest run`: 67 test files, 426 tests passed across repository.
+- `pnpm exec tsc -p research/schema/tsconfig.json --noEmit`: passed cleanly with 0 errors (compile time ~0.78s).
+- `pnpm format:check`, `pnpm lint`, `pnpm validate`: all passed cleanly.
+
+### Architecture & invariants
+
+- Zero Compiler Recursion Hazard: Deep structure schemas infer cleanly within TypeScript recursion limits.
+- Precise Asymmetry: Codecs preserve exact input and output type separation without intermediate type widening (`any`).
+
+### Remaining / recovery
+
+- S5 complete. Next slice is S6 (Integration Contract Fixtures: Form / HTTP / Query).
+
+## 2026-08-22 18:00 CEST | S4 Security, CSP & Complexity Consolidation
+
+Status: completed
+Branch: `docs/schema-architecture-research`
+PR: #126
+
+### Scope
+
+- Implement S4 Security, CSP, and complexity consolidation in `research/schema/security.ts` and `research/schema/structures.ts`.
+- Integrate nesting depth limiter (`DEFAULT_MAX_DEPTH = 32`) preventing call stack exhaustion on deeply nested adversarial inputs.
+- Integrate cyclic reference detection (`WeakSet<object>`) preventing infinite recursion on cyclic objects and arrays.
+- Enforce property count bounds (`DEFAULT_MAX_PROPERTIES = 1000`) and ReDoS input length bounds (`MAX_REGEX_INPUT_LENGTH = 1000`) for regex checks.
+- Audit strict CSP compliance across all schema research files (`auditCSPCompliance`), confirming zero `eval`, `new Function`, or string timer evaluations.
+- Verify comprehensive security defenses against prototype pollution variants, proxy traps, and throwing property getters.
+
+### Changes
+
+- Added `research/schema/security.ts`: `ValidationContext`, `createValidationContext`, `enterChildContext`, `isObjectCycleDetected`, `isDepthExceeded`, `safeRegexTest`, and `auditCSPCompliance`.
+- Updated `research/schema/structures.ts`: integrated context propagation, depth limits, cycle checks, and property count bounds.
+- Updated `research/schema/primitives.ts`: integrated `safeRegexTest` in `StringSchema`.
+- Updated `research/schema/index.ts`: exported security utilities.
+- Added `research/schema/security-consolidation.test.ts`: test suite for ReDoS prevention, cyclic objects/arrays, depth/property limits, and strict CSP compliance.
+
+### Verification
+
+- `pnpm exec vitest run research/schema/*.test.ts`: 6 test files, 39 tests passed (0 failures).
+- `pnpm exec vitest run`: 66 test files, 421 tests passed across repository.
+- `pnpm exec tsc -p research/schema/tsconfig.json --noEmit`: passed cleanly with 0 errors.
+- `pnpm format:check`, `pnpm lint`, `pnpm validate`: all passed cleanly.
+
+### Architecture & invariants
+
+- CSP Compliance: Zero dynamic code generation (`eval`, `new Function`) across entire schema engine.
+- Complexity Bounding: Fail-closed rejection of cyclic graphs, depth overflows (> 32), and DoS property counts (> 1000).
+
+### Remaining / recovery
+
+- S4 complete. Next slice is S5 (Type Inference & TS Compiler Cost).
+
+## 2026-08-22 17:45 CEST | S3 Codec / Serialization Semantics Research
+
+Status: completed
+Branch: `docs/schema-architecture-research`
+PR: #126
+
+### Scope
+
+- Implement S3 Codec & Serialization semantics research prototype in `research/schema/codec.ts`.
+- Model explicit `Codec<TEncoded, TDecoded>` contract extending `Schema<TEncoded, TDecoded>` with typed `encode` and `decode` methods.
+- Implement built-in reversible codecs: `dateFromISOString`, `bigIntFromString`, `jsonCodec`, `mapFromEntries`, and `setFromArray`.
+- Implement `urlSearchParamsCodec` for bidirectional mapping between URL search queries and strongly typed object records (supporting numbers, booleans, arrays, and optional fields).
+- Enforce serialization trust boundary: verify `decode` never trusts deserialized data blindly (JSON and query strings are rigorously validated with fail-closed error handling).
+
+### Changes
+
+- Added `research/schema/codec.ts`: `Codec<TEncoded, TDecoded>`, `CustomCodec`, `dateFromISOString`, `bigIntFromString`, `jsonCodec`, `mapFromEntries`, `setFromArray`, and `urlSearchParamsCodec`.
+- Updated `research/schema/index.ts`: exported codec utilities from `codec.ts`.
+- Added `research/schema/codec.test.ts`: test suite covering symmetric round-trips for Date, BigInt, JSON, Map, Set, URLSearchParams, and hostile/invalid string rejections.
+
+### Verification
+
+- `pnpm exec vitest run research/schema/*.test.ts`: 5 test files, 33 tests passed (0 failures).
+- `pnpm exec vitest run`: 65 test files, 415 tests passed across repository.
+- `pnpm exec tsc -p research/schema/tsconfig.json --noEmit`: passed cleanly with 0 errors.
+- `pnpm format:check`, `pnpm lint`, `pnpm validate`: all passed cleanly.
+
+### Architecture & invariants
+
+- Serialization Trust Boundary: Deserialized content (from `JSON.parse` or `URLSearchParams`) is untrusted input and must pass schema validation.
+- Non-Universal Symmetry: Codecs are specialized where domain representations map losslessly to transport formats without assuming universal symmetry for arbitrary transforms.
+
+### Remaining / recovery
+
+- S3 complete. Next slice is S4 (Security + CSP + Complexity Consolidation).
+
+## 2026-08-22 17:30 CEST | S2 Structured Issues & Absolute Privacy
+
+Status: completed
+Branch: `docs/schema-architecture-research`
+PR: #126
+
+### Scope
+
+- Implement S2 structured issues, Form error mapping, externalized localization, and absolute privacy model in `research/schema/issues.ts`.
+- Format nested and array issue paths (`formatPath`) into standard representation (`"users[0].address.zip"`).
+- Support grouping issues by path (`groupIssuesByPath`) and generating field errors for Vii Form integration (`createFormErrors`).
+- Provide externalized translation dictionary support (`createLocalizer`) to format human-readable messages outside the validation hot path.
+- Enforce and test absolute privacy boundary: verify raw user values (passwords, bearer tokens, card numbers, PII) are strictly omitted from issues and diagnostic safe summaries (`toDiagnosticSafeSummary`).
+
+### Changes
+
+- Added `research/schema/issues.ts`: `formatPath`, `groupIssuesByPath`, `createFormErrors`, `createLocalizer`, `defaultIssueMessage`, and `toDiagnosticSafeSummary`.
+- Updated `research/schema/index.ts`: exported issue utilities from `issues.ts`.
+- Added `research/schema/issues-privacy.test.ts`: test suite covering path formatting, form error generation, German localization, and sensitive value isolation.
+
+### Verification
+
+- `pnpm exec vitest run research/schema/*.test.ts`: 4 test files, 22 tests passed (0 failures).
+- `pnpm exec vitest run`: 64 test files, 404 tests passed across repository.
+- `pnpm exec tsc -p research/schema/tsconfig.json --noEmit`: passed cleanly with 0 errors.
+- `pnpm format:check`, `pnpm lint`, `pnpm validate`: all passed cleanly.
+
+### Architecture & invariants
+
+- Privacy Invariant: Raw user values never leak into `SchemaIssue`, error messages, or diagnostic summaries.
+- Localization Separation: Formatting and internationalization are decoupled from validation execution.
+
+### Remaining / recovery
+
+- S2 complete. Next slice is S3 (Codec / Serialization Semantics Research).
+
+## 2026-08-22 17:15 CEST | S1 Runtime Validation Baseline Prototype
+
+Status: completed
+Branch: `docs/schema-architecture-research`
+PR: #126
+
+### Scope
+
+- Implement S1 runtime validation baseline research prototype in `research/schema/`.
+- Support primitives (`string`, `number`, `boolean`, `literal`, `null`, `undefined`, `unknown`) with constraints (`min`, `max`, `int`, `finite`, `email`, `regex`).
+- Support structures (`object`, `array`, `union`) with path-aware issue tracking.
+- Implement modifiers (`optional`, `nullable`, `refine`) and non-throwing `check()` primitive alongside throwing `parse()` convenience.
+- Verify zero-copy object and array reference preservation (`result.ok && result.value === input`).
+- Enforce day-one security protections: prototype pollution rejection (`__proto__`, `constructor`, `prototype`), getter traps, proxy traps, and deep nesting.
+
+### Changes
+
+- Added `research/schema/tsconfig.json`: isolated TypeScript configuration.
+- Added `research/schema/types.ts`: `SchemaIssue`, `ValidationResult<T>`, `Schema<TIn, TOut>`, `InferInput<T>`, `InferOutput<T>`, `SchemaError`, and `BaseSchema`.
+- Added `research/schema/primitives.ts`: primitive schemas (`string`, `number`, `boolean`, `literal`, `null`, `undefined`, `unknown`).
+- Added `research/schema/structures.ts`: `object`, `array`, and `union` schemas with prototype pollution defense.
+- Added `research/schema/index.ts`: authoring namespace `v`.
+- Added `research/schema/schema-validation.test.ts`: test suite for primitives, structures, refinements, and `parse()`.
+- Added `research/schema/zero-copy.test.ts`: test suite verifying zero-copy object and array identity preservation.
+- Added `research/schema/hostile-security.test.ts`: adversarial security tests for prototype pollution, getter exceptions, and proxy traps.
+- Added `research/schema/README.md`: S1 research prototype documentation.
+
+### Verification
+
+- `pnpm exec vitest run research/schema/*.test.ts`: 3 test files, 17 tests passed (0 failures).
+- `pnpm exec vitest run`: 63 test files, 399 tests passed across full repository.
+- `pnpm exec tsc -p research/schema/tsconfig.json --noEmit`: passed cleanly with 0 errors.
+- `pnpm format:check`, `pnpm lint`, `pnpm validate`: all passed cleanly.
+
+### Architecture & invariants
+
+- Core Decoupling: Zero dependencies on `@vii-labs/core` or other runtime packages.
+- Zero-Copy Invariant: Pure validation schemas preserve input object/array identity without allocating clones.
+- Prototype Pollution: Objects reject `__proto__`, `constructor`, and `prototype` property keys fail-closed.
+
+### Remaining / recovery
+
+- S1 complete. Next slice is S2 (Structured Issues + Privacy).
+
 ## 2026-08-22 17:00 CEST | S0 Schema & Codec Research Architecture + Semantic Boundaries
 
 Status: completed

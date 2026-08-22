@@ -394,7 +394,7 @@ Use the following ownership model rather than duplicating rules:
 - agent task triage and routing preflight: `docs/governance/AGENT_TASK_TRIAGE_POLICY.md`;
 - product boundaries: `docs/strategy/PRODUCT_BOUNDARIES.md`;
 - ecosystem capability ownership and reuse rule: `docs/strategy/ECOSYSTEM_CAPABILITY_STRATEGY.md`;
-- Schema research roadmap and architecture: `docs/roadmap/SCHEMA_RESEARCH.md`, `docs/architecture/SCHEMA_ARCHITECTURE.md`, `docs/quality/SCHEMA_BENCHMARK_PLAN.md`;
+- Schema research roadmap and architecture: `docs/roadmap/SCHEMA_RESEARCH.md`, `docs/architecture/SCHEMA_ARCHITECTURE.md`, `docs/quality/SCHEMA_BENCHMARK_PLAN.md`, `research/schema/README.md`;
 - Form research: `docs/architecture/FORM_ARCHITECTURE.md`;
 - HTTP transport research: `docs/architecture/HTTP_CLIENT.md`;
 - native template control-flow research: `docs/architecture/TEMPLATE_CONTROL_FLOW.md`;

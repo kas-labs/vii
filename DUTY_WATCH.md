@@ -41,7 +41,7 @@ PR: <number or not opened>
 
 Status: completed
 Branch: `feat/http-middleware-pipeline`
-PR: not opened
+PR: #130
 
 ### Scope
 

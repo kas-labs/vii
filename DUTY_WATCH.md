@@ -37,6 +37,42 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-22 17:45 CEST | S3 Codec / Serialization Semantics Research
+
+Status: completed
+Branch: `docs/schema-architecture-research`
+PR: #126
+
+### Scope
+
+- Implement S3 Codec & Serialization semantics research prototype in `research/schema/codec.ts`.
+- Model explicit `Codec<TEncoded, TDecoded>` contract extending `Schema<TEncoded, TDecoded>` with typed `encode` and `decode` methods.
+- Implement built-in reversible codecs: `dateFromISOString`, `bigIntFromString`, `jsonCodec`, `mapFromEntries`, and `setFromArray`.
+- Implement `urlSearchParamsCodec` for bidirectional mapping between URL search queries and strongly typed object records (supporting numbers, booleans, arrays, and optional fields).
+- Enforce serialization trust boundary: verify `decode` never trusts deserialized data blindly (JSON and query strings are rigorously validated with fail-closed error handling).
+
+### Changes
+
+- Added `research/schema/codec.ts`: `Codec<TEncoded, TDecoded>`, `CustomCodec`, `dateFromISOString`, `bigIntFromString`, `jsonCodec`, `mapFromEntries`, `setFromArray`, and `urlSearchParamsCodec`.
+- Updated `research/schema/index.ts`: exported codec utilities from `codec.ts`.
+- Added `research/schema/codec.test.ts`: test suite covering symmetric round-trips for Date, BigInt, JSON, Map, Set, URLSearchParams, and hostile/invalid string rejections.
+
+### Verification
+
+- `pnpm exec vitest run research/schema/*.test.ts`: 5 test files, 33 tests passed (0 failures).
+- `pnpm exec vitest run`: 65 test files, 415 tests passed across repository.
+- `pnpm exec tsc -p research/schema/tsconfig.json --noEmit`: passed cleanly with 0 errors.
+- `pnpm format:check`, `pnpm lint`, `pnpm validate`: all passed cleanly.
+
+### Architecture & invariants
+
+- Serialization Trust Boundary: Deserialized content (from `JSON.parse` or `URLSearchParams`) is untrusted input and must pass schema validation.
+- Non-Universal Symmetry: Codecs are specialized where domain representations map losslessly to transport formats without assuming universal symmetry for arbitrary transforms.
+
+### Remaining / recovery
+
+- S3 complete. Next slice is S4 (Security + CSP + Complexity Consolidation).
+
 ## 2026-08-22 17:30 CEST | S2 Structured Issues & Absolute Privacy
 
 Status: completed

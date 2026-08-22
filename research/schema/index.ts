@@ -9,6 +9,7 @@ import {
 } from "./primitives.js";
 import { array, object, union } from "./structures.js";
 
+export * from "./codec.js";
 export * from "./issues.js";
 export * from "./primitives.js";
 export * from "./structures.js";

@@ -41,7 +41,7 @@ PR: <number or not opened>
 
 Status: completed
 Branch: `feat/http-cancellation-timeout-scope`
-PR: not opened
+PR: #131
 
 ### Scope
 

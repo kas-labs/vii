@@ -11,6 +11,7 @@ Before every non-trivial task, read:
 - `CONTRIBUTING.md`
 - `docs/strategy/PRODUCT_BOUNDARIES.md`
 - `docs/governance/CODE_QUALITY_STANDARDS.md`
+- `docs/governance/FEATURE_ACCEPTANCE_GATE.md`
 - `docs/governance/RFC_PROCESS.md`
 - `docs/governance/API_STABILITY.md`
 - relevant RFCs, ADRs, tests, benchmarks, and package documentation
@@ -61,6 +62,28 @@ architecture, RFC/ADR, security, privacy, approval, branch, validation, or publi
 - Public API, package-boundary, compatibility, privacy, security, and migration changes follow the RFC/ADR rules in `docs/governance/`.
 - Treat bundle size, memory lifecycle, SSR safety, tree-shaking, diagnostics, compatibility, and packed artifacts as product behavior, not optional cleanup.
 - Prefer evidence over claims. Performance or compatibility statements require reproducible tests, benchmarks, fixtures, or artifact inspection.
+
+## Feature acceptance and verification
+
+Follow `docs/governance/FEATURE_ACCEPTANCE_GATE.md` for every behavior-changing implementation.
+
+A feature is not complete because the happy path works or because code compiles. Before merge, the
+change must have proportionate evidence for the risks it creates or modifies, including:
+
+- functional correctness tests for the intended behavior;
+- regression coverage for established behavior and bug fixes;
+- integration, adapter, consumer, package, browser, SSR, or platform fixtures at the affected boundary;
+- failure, cancellation, disposal, concurrency, rollback, and recovery tests when applicable;
+- adversarial/security and privacy tests for changed attack surfaces;
+- compatibility, accessibility, bundle, memory, or performance evidence when those product claims are affected;
+- focused checks, `git diff --check`, repository validation, CI, and complete-diff review before claiming completion.
+
+Automated tests cannot prove that software has no vulnerabilities. Security completion means the
+relevant threat surface was reviewed, applicable adversarial tests pass, known findings are resolved
+or explicitly accepted under governance, and no known exploitable weakness is hidden by the change.
+
+Agents must identify required evidence during preflight, implement tests together with behavior, and
+stop rather than claim completion when a required gate cannot be demonstrated.
 
 ## Branches, commits, and pull requests
 

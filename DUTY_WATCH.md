@@ -37,6 +37,42 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-22 17:30 CEST | S2 Structured Issues & Absolute Privacy
+
+Status: completed
+Branch: `docs/schema-architecture-research`
+PR: #126
+
+### Scope
+
+- Implement S2 structured issues, Form error mapping, externalized localization, and absolute privacy model in `research/schema/issues.ts`.
+- Format nested and array issue paths (`formatPath`) into standard representation (`"users[0].address.zip"`).
+- Support grouping issues by path (`groupIssuesByPath`) and generating field errors for Vii Form integration (`createFormErrors`).
+- Provide externalized translation dictionary support (`createLocalizer`) to format human-readable messages outside the validation hot path.
+- Enforce and test absolute privacy boundary: verify raw user values (passwords, bearer tokens, card numbers, PII) are strictly omitted from issues and diagnostic safe summaries (`toDiagnosticSafeSummary`).
+
+### Changes
+
+- Added `research/schema/issues.ts`: `formatPath`, `groupIssuesByPath`, `createFormErrors`, `createLocalizer`, `defaultIssueMessage`, and `toDiagnosticSafeSummary`.
+- Updated `research/schema/index.ts`: exported issue utilities from `issues.ts`.
+- Added `research/schema/issues-privacy.test.ts`: test suite covering path formatting, form error generation, German localization, and sensitive value isolation.
+
+### Verification
+
+- `pnpm exec vitest run research/schema/*.test.ts`: 4 test files, 22 tests passed (0 failures).
+- `pnpm exec vitest run`: 64 test files, 404 tests passed across repository.
+- `pnpm exec tsc -p research/schema/tsconfig.json --noEmit`: passed cleanly with 0 errors.
+- `pnpm format:check`, `pnpm lint`, `pnpm validate`: all passed cleanly.
+
+### Architecture & invariants
+
+- Privacy Invariant: Raw user values never leak into `SchemaIssue`, error messages, or diagnostic summaries.
+- Localization Separation: Formatting and internationalization are decoupled from validation execution.
+
+### Remaining / recovery
+
+- S2 complete. Next slice is S3 (Codec / Serialization Semantics Research).
+
 ## 2026-08-22 17:15 CEST | S1 Runtime Validation Baseline Prototype
 
 Status: completed

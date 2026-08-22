@@ -37,6 +37,60 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-23 01:55 CEST | H7 SSR Security & SSRF Protection
+
+Status: completed
+Branch: `feat/http-ssr-security-ssrf`
+PR: not opened
+
+### Scope
+
+- Implement H7 (SSR Security + Private Network Defenses) throwaway research prototype in `research/http/`.
+- Enforce SSR execution safety: zero process-wide mutable state, request-scoped client instances.
+- Implement private IP and SSRF protection (`isPrivateIpv4`, `isPrivateIpv6`, `isPrivateOrRestrictedHost`):
+  - RFC 1918 private IPv4 (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`).
+  - Loopback (`127.0.0.0/8`, `::1`, `localhost`, `*.localhost`).
+  - RFC 3927 Link-Local / Cloud Metadata (`169.254.169.254`, `fd00:ec2::254`, `metadata.google.internal`, `instance-data`).
+  - IPv6 Unique-Local (`fc00::/7`).
+- Implement `SecurityPolicy` evaluation (`validateUrlSecurity`): `allowPrivateNetworks`, `allowedHosts`, `blockedHosts`.
+- Implement `stripSensitiveHeaders` for cross-origin redirection protection (removing `Authorization`, `Cookie`, `Proxy-Authorization`, `X-Api-Key`, etc.).
+- Add `HttpSecurityError` and `isHttpSecurityError` error taxonomy class and predicate.
+- Add test suite in `research/http/security.test.ts` and update `research/http/README.md`.
+- Update `DUTY_WATCH.md`.
+
+### Changes
+
+- Added `research/http/security.ts`: `SecurityPolicy`, `isPrivateIpv4`, `isPrivateIpv6`, `isPrivateOrRestrictedHost`, `validateUrlSecurity`, and `stripSensitiveHeaders`.
+- Updated `research/http/errors.ts`: added `HttpSecurityError`, `HttpSecurityErrorOptions`, and `isHttpSecurityError` predicate.
+- Updated `research/http/types.ts`: added `security` option to `HttpClientConfig` and `HttpRequestOptions`.
+- Updated `research/http/client.ts`: validated URL security prior to network transport and merged security in `.extend()`.
+- Updated `research/http/index.ts`: exported security types, error, and utilities.
+- Added `research/http/security.test.ts`: 7 test cases covering IPv4/IPv6 private IP detection, cloud metadata endpoints, host allowlist/blocklist enforcement, cross-origin sensitive header stripping, pre-flight client request blocking, and error predicates.
+- Updated `research/http/README.md`: documented H7 capabilities and non-goals.
+
+### Validation
+
+- `pnpm exec vitest run research/http/*.test.ts`: 10 test files, 82 tests passed (0 failures).
+- `pnpm exec tsc -p research/http/tsconfig.json --noEmit`: passed cleanly with 0 errors.
+- `pnpm format:check`: passed cleanly.
+- `pnpm lint`: passed cleanly.
+- `pnpm typecheck`: passed cleanly.
+- `pnpm test`: all packages and fixtures passed cleanly.
+- `pnpm validate`: passed cleanly (all builds, tests, and packed-artifact checks passed).
+- `git diff --check`: passed cleanly with zero whitespace/formatting errors.
+
+### Architecture / compatibility
+
+- Zero package creation or public API changes: H7 is strictly an isolated research prototype under `research/http/`.
+- No `@vii-labs/core` dependency or bundle impact.
+- Zero external runtime dependencies.
+- Confirmed stop condition: H8 (Observability + Tracing + Metrics) has NOT been started.
+
+### Remaining / recovery
+
+- Await maintainer review of H7 SSR security prototype.
+- Future work: H8 (Observability + Tracing + Metrics) only when authorized.
+
 ## 2026-08-23 01:25 CEST | H6 HTTP Streaming & Server-Sent Events (SSE) Engine
 
 Status: completed

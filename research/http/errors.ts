@@ -1,5 +1,5 @@
 /**
- * Vii HTTP Client & Transport Research — Structured Error Taxonomy (H4 Baseline)
+ * Vii HTTP Client & Transport Research — Structured Error Taxonomy (H4-H7 Baseline)
  *
  * Research Prototype: Not a production package.
  */
@@ -96,6 +96,23 @@ export class HttpValidationError extends HttpError {
   }
 }
 
+export interface HttpSecurityErrorOptions extends ErrorOptions {
+  readonly url: string;
+  readonly reason: "private_network" | "blocked_host" | "not_allowed_host" | "invalid_url" | string;
+}
+
+export class HttpSecurityError extends HttpError {
+  override readonly name = "HttpSecurityError" as const;
+  readonly url: string;
+  readonly reason: string;
+
+  constructor(message: string, options: HttpSecurityErrorOptions) {
+    super(message, options);
+    this.url = options.url;
+    this.reason = options.reason;
+  }
+}
+
 export function isHttpStatusError(error: unknown): error is HttpStatusError {
   return (
     error instanceof HttpStatusError ||
@@ -136,6 +153,16 @@ export function isHttpValidationError(error: unknown): error is HttpValidationEr
   );
 }
 
+export function isHttpSecurityError(error: unknown): error is HttpSecurityError {
+  return (
+    error instanceof HttpSecurityError ||
+    (typeof error === "object" &&
+      error !== null &&
+      "name" in error &&
+      error.name === "HttpSecurityError")
+  );
+}
+
 export function isHttpError(error: unknown): error is HttpError {
   return (
     error instanceof HttpError ||
@@ -143,6 +170,7 @@ export function isHttpError(error: unknown): error is HttpError {
     isNetworkError(error) ||
     isHttpParseError(error) ||
     isHttpValidationError(error) ||
+    isHttpSecurityError(error) ||
     isTimeoutError(error) ||
     isAbortError(error)
   );

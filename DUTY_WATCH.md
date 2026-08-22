@@ -37,6 +37,43 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-22 17:00 CEST | S0 Schema & Codec Research Architecture + Semantic Boundaries
+
+Status: completed
+Branch: `docs/schema-architecture-research`
+PR: not opened
+
+### Scope
+
+- Establish S0 Schema & Codec research architecture and semantic boundaries in `docs/roadmap/SCHEMA_RESEARCH.md`.
+- Formalize precise definitions for Validation (zero-copy research target), Coercion (opt-in only), Transformation (allocating), Parsing, Refinement, and Defaulting.
+- Define `check()` non-throwing primitive and `parse()` convenience contract; specify `InferInput<T>` vs `InferOutput<T>` type models.
+- Establish structured error invariants and absolute privacy rules (zero raw user secrets in default issues or diagnostics).
+- Mark symmetric `Codec<A, B>` models as intentionally open for S3; establish serialization trust boundaries.
+- Define day-one security threats (Prototype Pollution, ReDoS, getters/proxies, CSP zero-eval) and build-vs-buy evaluation matrix for S7.
+- Propose minimal S1 prototype scope and formalize S0-S7 research roadmap.
+
+### Changes
+
+- Created `docs/roadmap/SCHEMA_RESEARCH.md`: complete S0 architecture baseline and durable S0-S7 roadmap.
+- Updated `PROJECT_STATE.md`: registered `docs/roadmap/SCHEMA_RESEARCH.md` in source-of-truth index.
+
+### Verification
+
+- Validated repository with `pnpm format:check`, `pnpm lint`, `git diff --check`, and `pnpm validate`.
+- 10/10 package builds and packed clean-consumer fixtures verified cleanly.
+
+### Architecture & invariants
+
+- Core Decoupling: Vii Core does NOT depend on Schema.
+- Provider Neutrality: Vii Form and HTTP use generic schema adapters and do not mandate a first-party Vii Schema package.
+- Privacy Boundary: Default schema issues and diagnostics never contain raw received user values.
+- Build-vs-Buy: S7 will evaluate Handwritten Baseline vs Zod 4 vs Valibot vs ArkType vs TypeBox vs Vii Prototype across 7 dimensions (Own, Reuse, Wrap, Reduce, Stop).
+
+### Remaining / recovery
+
+- S0 is complete. Do not automatically proceed to S1. Awaiting human review on draft PR before starting S1.
+
 ## 2026-08-22 16:00 CEST | P6.7 Performance, Accessibility, and Graduation Gate
 
 Status: completed

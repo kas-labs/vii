@@ -41,7 +41,7 @@ PR: <number or not opened>
 
 Status: completed
 Branch: `test/ui-tokens-dtcg-research`
-PR: not opened
+PR: #124
 
 ### Scope
 

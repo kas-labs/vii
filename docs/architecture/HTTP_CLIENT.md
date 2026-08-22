@@ -16,6 +16,8 @@ runtime portability, cancellation, testability, and Vii diagnostics.
 No public HTTP API is accepted by this document. Examples are illustrative and
 must pass RFC review before implementation support is claimed.
 
+For the active research roadmap, see `docs/roadmap/HTTP_CLIENT_RESEARCH.md`.
+
 ## Boundary: HTTP is transport, Query is server state
 
 The most important rule is:

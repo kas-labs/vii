@@ -170,7 +170,7 @@ HTTP   = transport and request/response lifecycle
 Schema = optional runtime data contract at trust boundaries
 ```
 
-See `docs/architecture/HTTP_CLIENT.md`.
+See `docs/roadmap/HTTP_CLIENT_RESEARCH.md` and `docs/architecture/HTTP_CLIENT.md`.
 
 ### Toolchain and testing
 

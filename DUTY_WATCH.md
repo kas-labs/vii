@@ -37,6 +37,54 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-22 19:15 CEST | H0 HTTP Client & Transport Research (Architecture + Semantic Boundaries)
+
+Status: completed
+Branch: `docs/http-client-research`
+PR: not opened
+
+### Scope
+
+- Define H0 semantic boundaries, transport contracts, and architecture for Vii HTTP research.
+- Clarify architectural invariants: Query owns server-state coordination, HTTP owns transport, Schema owns data validation.
+- Establish Fetch-first baseline and client ownership model (no global mutable singleton, request-scoped SSR isolation).
+- Define structured error taxonomy (`cancellation != failure`), functional onion middleware pipeline, explicit timeout, and composed `AbortSignal` cancellation.
+- Establish default policy: retries are disabled by default.
+- Integrate Standard Schema v1 (`@standard-schema/spec`) for runtime response validation without core schema dependencies.
+- Establish observational diagnostics protocol and day-one security/privacy baseline (cross-origin redirect credential stripping, SSRF risks, header redaction).
+- Define H0–H9 research roadmap and multi-dimensional verification matrix per `FEATURE_ACCEPTANCE_GATE.md`.
+- Formulate H9 Build-vs-Buy evaluation gate (`Own`, `Reuse`, `Wrap`, `Reduce`, `Stop`).
+- Update `docs/roadmap/HTTP_CLIENT_RESEARCH.md`, `docs/architecture/HTTP_CLIENT.md`, `ROADMAP.md`, `docs/roadmap/IMPLEMENTATION_ROADMAP.md`, and `PROJECT_STATE.md`.
+
+### Changes
+
+- Added `docs/roadmap/HTTP_CLIENT_RESEARCH.md`: durable research roadmap defining H0 architecture, semantic boundaries, taxonomy, security invariants, testing matrix, and H0–H9 sequence.
+- Updated `docs/architecture/HTTP_CLIENT.md`: linked to active HTTP research roadmap.
+- Updated `ROADMAP.md`: linked Vii HTTP capability to research roadmap.
+- Updated `docs/roadmap/IMPLEMENTATION_ROADMAP.md`: updated HTTP research track source-of-truth references.
+- Updated `PROJECT_STATE.md`: registered `HTTP_CLIENT_RESEARCH.md` in repository source-of-truth index.
+
+### Validation
+
+- `pnpm format:check`: passed cleanly.
+- `pnpm lint`: passed cleanly.
+- `pnpm typecheck`: passed cleanly.
+- `pnpm test`: 70 test files, 442 tests passed across repository.
+- `pnpm validate`: passed cleanly.
+- `git diff --check`: passed cleanly with zero whitespace/formatting errors.
+
+### Architecture / compatibility
+
+- Zero package creation or public API changes: H0 is strictly research and architecture documentation.
+- No `@vii-labs/core` dependency or bundle impact.
+- Standard Schema v1 contract decoupled from first-party schema engines.
+- Confirmed stop condition: H1 has NOT been started.
+
+### Remaining / recovery
+
+- Await maintainer review of H0 architecture and research roadmap.
+- Future work: H1 (Fetch-first Client Baseline) only when authorized.
+
 ## 2026-08-22 18:45 CEST | S7 Performance, Empirical Build-vs-Buy & Governance Realignment
 
 Status: completed

@@ -216,7 +216,7 @@ Research goals:
 - browser, Node, Bun, and Deno fixtures when support is claimed;
 - production-safe diagnostics.
 
-Primary architecture: `docs/architecture/HTTP_CLIENT.md`.
+Primary architecture and research roadmap: `docs/roadmap/HTTP_CLIENT_RESEARCH.md`, `docs/architecture/HTTP_CLIENT.md`.
 
 Vii HTTP must remain transport. It must not become another Query cache or server framework.
 

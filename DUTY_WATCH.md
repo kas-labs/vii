@@ -41,7 +41,7 @@ PR: <number or not opened>
 
 Status: completed
 Branch: `feat/http-streaming-sse`
-PR: not opened
+PR: #134
 
 ### Scope
 

@@ -398,6 +398,14 @@ Use the following ownership model rather than duplicating rules:
 - HTTP transport research: `docs/architecture/HTTP_CLIENT.md`;
 - native template control-flow research: `docs/architecture/TEMPLATE_CONTROL_FLOW.md`;
 - rendering strategy research: `docs/architecture/RENDERING_STRATEGY.md`;
+- UI Foundation roadmap and architecture: `docs/roadmap/PHASE_6_UI.md`, `docs/architecture/UI_ARCHITECTURE.md`;
+- Design Tokens architecture and build-vs-buy evaluation: `docs/architecture/DESIGN_TOKENS.md`, `docs/strategy/DESIGN_TOKENS_BUILD_VS_BUY_EVALUATION.md`;
+- UI Behaviors & DOM capabilities research: `research/ui-behaviors/README.md`;
+- Registry & Lockfile architecture research: `docs/architecture/REGISTRY_ARCHITECTURE.md`, `research/registry/README.md`;
+- Source Distribution mutation research: `research/source-distribution/README.md`;
+- Cross-Framework UI compliance research: `research/cross-framework-ui/README.md`;
+- UI Distribution Modes and Security Hardening research & strategy: `docs/strategy/UI_DISTRIBUTION_MODES_AND_SECURITY_HARDENING.md`, `research/security-hardening/README.md`;
+- Phase 6 UI Graduation Evaluation & Benchmarks: `docs/strategy/PHASE_6_UI_GRADUATION_EVALUATION.md`, `research/benchmarks-graduation/README.md`;
 - API compatibility: `docs/governance/API_STABILITY.md`;
 - RFC process: `docs/governance/RFC_PROCESS.md`;
 - ADR process: `docs/governance/ADR_PROCESS.md`;

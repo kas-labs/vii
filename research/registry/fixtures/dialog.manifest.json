@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "name": "dialog",
+  "type": "ui:component",
+  "version": "0.1.0",
+  "target": "react",
+  "mode": "source",
+  "description": "Accessible React Modal Dialog component",
+  "files": [
+    {
+      "source": "dialog.tsx",
+      "target": "components/ui/dialog.tsx",
+      "integrity": "sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU="
+    }
+  ],
+  "dependencies": [],
+  "tokens": ["color.background", "color.foreground", "radius.lg"],
+  "capabilities": ["focus-trap", "inert-background", "scroll-lock", "escape-dismiss"],
+  "provenance": {
+    "registryUrl": "https://registry.vii.dev",
+    "trustLevel": "official"
+  }
+}

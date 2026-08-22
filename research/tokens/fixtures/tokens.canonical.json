@@ -1,0 +1,216 @@
+{
+  "$schema": "https://www.designtokens.org/schemas/2025.10/format.json",
+  "$description": "Vii Canonical Design Tokens (DTCG 2025.10 Baseline)",
+  "color": {
+    "$type": "color",
+    "violet": {
+      "500": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.545, 0.361, 0.965],
+          "alpha": 1
+        }
+      },
+      "600": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.447, 0.231, 0.894],
+          "alpha": 1
+        }
+      }
+    },
+    "gray": {
+      "50": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.976, 0.98, 0.984],
+          "alpha": 1
+        }
+      },
+      "100": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.945, 0.961, 0.976],
+          "alpha": 1
+        }
+      },
+      "800": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.118, 0.161, 0.235],
+          "alpha": 1
+        }
+      },
+      "900": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.059, 0.09, 0.165],
+          "alpha": 1
+        }
+      },
+      "950": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.012, 0.027, 0.059],
+          "alpha": 1
+        }
+      }
+    },
+    "red": {
+      "600": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.863, 0.149, 0.149],
+          "alpha": 1
+        }
+      }
+    },
+    "white": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [1, 1, 1],
+        "alpha": 1
+      }
+    },
+    "black": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [0, 0, 0],
+        "alpha": 1
+      }
+    },
+    "background": {
+      "$value": "{color.white}",
+      "$description": "Default background surface color"
+    },
+    "foreground": {
+      "$value": "{color.gray.950}",
+      "$description": "Primary text and icon color"
+    },
+    "primary": {
+      "$value": "{color.violet.600}",
+      "$description": "Brand action color"
+    },
+    "primaryForeground": {
+      "$value": "{color.white}",
+      "$description": "Text color over primary brand surface"
+    },
+    "muted": {
+      "$value": "{color.gray.100}",
+      "$description": "Subdued background color"
+    },
+    "mutedForeground": {
+      "$value": "{color.gray.800}",
+      "$description": "Subdued secondary text color"
+    },
+    "danger": {
+      "$value": "{color.red.600}",
+      "$description": "Destructive or error indication color"
+    }
+  },
+  "space": {
+    "$type": "dimension",
+    "1": {
+      "$value": { "value": 0.25, "unit": "rem" }
+    },
+    "2": {
+      "$value": { "value": 0.5, "unit": "rem" }
+    },
+    "3": {
+      "$value": { "value": 0.75, "unit": "rem" }
+    },
+    "4": {
+      "$value": { "value": 1, "unit": "rem" }
+    },
+    "6": {
+      "$value": { "value": 1.5, "unit": "rem" }
+    },
+    "8": {
+      "$value": { "value": 2, "unit": "rem" }
+    }
+  },
+  "radius": {
+    "$type": "dimension",
+    "sm": {
+      "$value": { "value": 0.125, "unit": "rem" }
+    },
+    "md": {
+      "$value": { "value": 0.375, "unit": "rem" }
+    },
+    "lg": {
+      "$value": { "value": 0.5, "unit": "rem" }
+    },
+    "full": {
+      "$value": { "value": 9999, "unit": "px" }
+    }
+  },
+  "font": {
+    "size": {
+      "$type": "dimension",
+      "sm": {
+        "$value": { "value": 0.875, "unit": "rem" }
+      },
+      "base": {
+        "$value": { "value": 1, "unit": "rem" }
+      },
+      "lg": {
+        "$value": { "value": 1.125, "unit": "rem" }
+      }
+    }
+  },
+  "motion": {
+    "duration": {
+      "$type": "duration",
+      "fast": {
+        "$value": { "value": 150, "unit": "ms" }
+      },
+      "normal": {
+        "$value": { "value": 250, "unit": "ms" }
+      }
+    },
+    "easing": {
+      "$type": "cubicBezier",
+      "default": {
+        "$value": [0.4, 0, 0.2, 1]
+      }
+    }
+  },
+  "border": {
+    "$type": "color",
+    "default": {
+      "$value": "{color.gray.100}"
+    }
+  },
+  "focus": {
+    "$type": "color",
+    "ring": {
+      "$value": "{color.violet.600}"
+    }
+  },
+  "surface": {
+    "$type": "color",
+    "elevated": {
+      "$value": "{color.white}"
+    }
+  },
+  "button": {
+    "height": {
+      "$type": "dimension",
+      "md": {
+        "$value": "{space.8}"
+      }
+    }
+  },
+  "dialog": {
+    "maxWidth": {
+      "$type": "dimension",
+      "$value": { "value": 32, "unit": "rem" }
+    }
+  },
+  "input": {
+    "borderColor": {
+      "$type": "color",
+      "$value": "{border.default}"
+    }
+  }
+}

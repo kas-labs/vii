@@ -1,0 +1,43 @@
+{
+  "$schema": "https://www.designtokens.org/schemas/2025.10/format.json",
+  "$description": "Vii Dark Theme Semantic Token Overrides",
+  "color": {
+    "$type": "color",
+    "background": {
+      "$value": "{color.gray.950}"
+    },
+    "foreground": {
+      "$value": "{color.gray.50}"
+    },
+    "primary": {
+      "$value": "{color.violet.500}"
+    },
+    "primaryForeground": {
+      "$value": "{color.white}"
+    },
+    "muted": {
+      "$value": "{color.gray.900}"
+    },
+    "mutedForeground": {
+      "$value": "{color.gray.100}"
+    }
+  },
+  "surface": {
+    "$type": "color",
+    "elevated": {
+      "$value": "{color.gray.900}"
+    }
+  },
+  "border": {
+    "$type": "color",
+    "default": {
+      "$value": "{color.gray.800}"
+    }
+  },
+  "focus": {
+    "$type": "color",
+    "ring": {
+      "$value": "{color.violet.500}"
+    }
+  }
+}

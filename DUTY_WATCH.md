@@ -37,6 +37,62 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-23 00:35 CEST | H1 HTTP Client Baseline Prototype & Test Suite
+
+Status: completed
+Branch: `feat/http-client-baseline`
+PR: #129
+
+### Scope
+
+- Implement H1 (Fetch-first Client Baseline) throwaway research prototype in `research/http/`.
+- Prototype `createHttpClient(config)` factory for isolated, immutable HTTP client instances.
+- Implement deterministic URL resolution (`resolveUrl`) with `baseURL` joining, relative path normalization, and robust query serialization (`serializeQueryParams`).
+- Implement deterministic header merging (`mergeHeaders`) with case-insensitivity, record/Headers/tuple support, and explicit header deletion on `undefined`/`null`.
+- Implement method helpers (`get`, `post`, `put`, `patch`, `delete`, `head`, `options`, `request`).
+- Implement injected `fetch` capability and per-request overrides.
+- Implement immutable client inheritance (`extend`).
+- Add comprehensive test suite in `research/http/` covering URL resolution, headers merging, client lifecycle, method helpers, and hostile/edge cases.
+- Update `DUTY_WATCH.md` and `PROJECT_STATE.md`.
+
+### Changes
+
+- Added `research/http/types.ts`: TypeScript contracts for H1 baseline (`HttpClient`, `HttpClientConfig`, `HttpRequestOptions`, `HttpMethod`, `QueryParams`, `ExtendedHeadersInit`).
+- Added `research/http/url.ts`: deterministic URL and query parameter resolution.
+- Added `research/http/headers.ts`: case-insensitive header merging and deletion.
+- Added `research/http/client.ts`: immutable client implementation and `createHttpClient` factory.
+- Added `research/http/index.ts`: module entrypoint.
+- Added `research/http/tsconfig.json`: isolated typecheck configuration.
+- Added `research/http/README.md`: H1 research documentation.
+- Added `research/http/url.test.ts`: 12 test cases for URL composition and query serialization.
+- Added `research/http/headers.test.ts`: 6 test cases for header merging and deletion.
+- Added `research/http/client.test.ts`: 8 test cases for client execution, helpers, and `extend()`.
+- Added `research/http/hostile-fixtures.test.ts`: 5 test cases for edge cases, special characters, and prototype pollution defense.
+- Updated `PROJECT_STATE.md`: registered H1 research prototype in project state.
+
+### Validation
+
+- `pnpm exec vitest run research/http/*.test.ts`: 4 test files, 31 tests passed (0 failures).
+- `pnpm exec tsc -p research/http/tsconfig.json --noEmit`: passed cleanly with 0 errors.
+- `pnpm format:check`: passed cleanly.
+- `pnpm lint`: passed cleanly.
+- `pnpm typecheck`: passed cleanly.
+- `pnpm test`: all packages and fixtures passed cleanly.
+- `pnpm validate`: passed cleanly (all builds, tests, and packed-artifact checks passed).
+- `git diff --check`: passed cleanly with zero whitespace/formatting errors.
+
+### Architecture / compatibility
+
+- Zero package creation or public API changes: H1 is strictly an isolated research prototype under `research/http/`.
+- No `@vii-labs/core` dependency or bundle impact.
+- Retains zero-dependency, Fetch-first platform alignment.
+- Confirmed stop condition: H2 (Middleware Pipeline) has NOT been started.
+
+### Remaining / recovery
+
+- Await maintainer review of H1 prototype and evidence.
+- Future work: H2 (Middleware / Request Pipeline) only when authorized.
+
 ## 2026-08-22 19:15 CEST | H0 HTTP Client & Transport Research (Architecture + Semantic Boundaries)
 
 Status: completed

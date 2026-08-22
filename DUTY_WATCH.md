@@ -37,6 +37,55 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-23 01:25 CEST | H6 HTTP Streaming & Server-Sent Events (SSE) Engine
+
+Status: completed
+Branch: `feat/http-streaming-sse`
+PR: #134
+
+### Scope
+
+- Implement H6 (Streaming + SSE + Web Streams) throwaway research prototype in `research/http/`.
+- Implement native Web Streams (`ReadableStream`) async chunk iterator (`iterateStream`) with automatic reader cancellation on early break.
+- Implement chunk-boundary safe line iterator (`iterateLines`) supporting both `\n` and `\r\n` line endings.
+- Implement WHATWG Server-Sent Events (SSE) parser (`parseEventStream`) supporting custom event names, IDs, retry reconnection hints, multi-line data concatenation, and comment line filtering.
+- Implement JSON SSE event stream deserializer (`parseJsonEventStream`) with `HttpParseError` on invalid payloads.
+- Integrate streaming client methods in `HttpClient`: `client.stream()`, `client.streamLines()`, `client.streamEvents()`, `client.streamJsonEvents()`.
+- Add test suite in `research/http/streaming.test.ts` and update `research/http/README.md`.
+- Update `DUTY_WATCH.md`.
+
+### Changes
+
+- Added `research/http/streaming.ts`: `ServerSentEvent`, `JsonServerSentEvent`, `iterateStream`, `iterateLines`, `parseEventStream`, and `parseJsonEventStream`.
+- Updated `research/http/types.ts`: added streaming methods to `HttpClient` and responseType option.
+- Updated `research/http/client.ts`: implemented `stream`, `streamLines`, `streamEvents`, and `streamJsonEvents`.
+- Updated `research/http/index.ts`: exported streaming types and parsing utilities.
+- Added `research/http/streaming.test.ts`: 8 test cases covering raw byte iteration, chunk boundary line framing, reader cancellation on break, single/multi-line SSE parsing, trailing event flush, JSON SSE deserialization, JSON parse failure handling, and client streaming integration with `Accept: text/event-stream`.
+- Updated `research/http/README.md`: documented H6 capabilities and non-goals.
+
+### Validation
+
+- `pnpm exec vitest run research/http/*.test.ts`: 9 test files, 74 tests passed (0 failures).
+- `pnpm exec tsc -p research/http/tsconfig.json --noEmit`: passed cleanly with 0 errors.
+- `pnpm format:check`: passed cleanly.
+- `pnpm lint`: passed cleanly.
+- `pnpm typecheck`: passed cleanly.
+- `pnpm test`: all packages and fixtures passed cleanly.
+- `pnpm validate`: passed cleanly (all builds, tests, and packed-artifact checks passed).
+- `git diff --check`: passed cleanly with zero whitespace/formatting errors.
+
+### Architecture / compatibility
+
+- Zero package creation or public API changes: H6 is strictly an isolated research prototype under `research/http/`.
+- No `@vii-labs/core` dependency or bundle impact.
+- Zero external runtime dependencies.
+- Confirmed stop condition: H7 (SSR Security + Private Network Defenses) has NOT been started.
+
+### Remaining / recovery
+
+- Await maintainer review of H6 streaming prototype.
+- Future work: H7 (SSR Security + Private Network Defenses) only when authorized.
+
 ## 2026-08-23 01:15 CEST | H5 HTTP Retry Engine & Method Idempotency
 
 Status: completed

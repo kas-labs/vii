@@ -1,7 +1,7 @@
-# Vii HTTP Client & Transport Research — H1-H5 Prototype
+# Vii HTTP Client & Transport Research — H1-H6 Prototype
 
 > **Status**: Active Research Prototype (Throwaway)
-> **Current Slice**: H5 (Retry + Idempotency Engine)
+> **Current Slice**: H6 (Streaming + SSE + Web Streams)
 > **Governing Roadmap**: [`docs/roadmap/HTTP_CLIENT_RESEARCH.md`](../../docs/roadmap/HTTP_CLIENT_RESEARCH.md)
 > **Package Authorization**: **None** (Research only, no public package)
 
@@ -9,13 +9,13 @@
 
 ## 1. Overview
 
-This directory contains the throwaway research prototype for **H1 (Fetch-first Baseline)**, **H2 (Middleware Pipeline)**, **H3 (Cancellation + Timeout + Scope)**, **H4 (Error Taxonomy + Validation Boundary)**, and **H5 (Retry + Idempotency Engine)**.
+This directory contains the throwaway research prototype for **H1 (Fetch-first Baseline)**, **H2 (Middleware Pipeline)**, **H3 (Cancellation + Timeout + Scope)**, **H4 (Error Taxonomy + Validation Boundary)**, **H5 (Retry + Idempotency Engine)**, and **H6 (Streaming + SSE + Web Streams)**.
 
-The purpose of H5 is to research explicit opt-in retry policies (strictly disabled by default), exponential backoff with full jitter, standard `Retry-After` header parsing (both delta-seconds and HTTP-date), HTTP method idempotency enforcement (`GET`, `HEAD`, `PUT`, `DELETE`, `OPTIONS`), and immediate abort interruption during backoff delays.
+The purpose of H6 is to research native Web Streams (`ReadableStream`), async iteration (`for await (const chunk of response.stream())`), Server-Sent Events (SSE) line/event framing parser, backpressure, reader cancellation on early loop exit, and typed JSON event streams.
 
 ---
 
-## 2. Implemented Capabilities (H1 + H2 + H3 + H4 + H5)
+## 2. Implemented Capabilities (H1 + H2 + H3 + H4 + H5 + H6)
 
 1. **`createHttpClient(config)`**: Factory for creating immutable, isolated HTTP client instances.
 2. **Deterministic URL Resolution**:
@@ -48,15 +48,22 @@ The purpose of H5 is to research explicit opt-in retry policies (strictly disabl
    - **`Retry-After` Header Parsing**: Parses both delta-seconds (`Retry-After: 120`) and HTTP-date (`Retry-After: Wed, 21 Oct 2026 07:28:00 GMT`).
    - **Method Idempotency Guard**: Non-idempotent methods (`POST`, `PATCH`) are protected from automatic retry unless explicitly configured.
    - **Abort-Aware Backoff**: AbortSignal triggers immediately terminate retry sleep delays without waiting for timer expiration.
+9. **Streaming & Server-Sent Events (SSE) Engine (H6)**:
+   - `iterateStream`: Async iteration over raw `Uint8Array` stream chunks with backpressure and automatic reader cancellation on early break.
+   - `iterateLines`: Chunk-boundary line parsing for newline (`\n`) and CRLF (`\r\n`) formatted streams.
+   - `parseEventStream`: WHATWG Server-Sent Events (SSE) framing parser supporting custom `event`, `id`, `retry`, multiline `data`, and comment line filtering.
+   - `parseJsonEventStream`: Typed JSON event deserialization with `HttpParseError` on invalid payloads.
+   - Client helpers: `client.stream()`, `client.streamLines()`, `client.streamEvents()`, `client.streamJsonEvents()`.
 
 ---
 
-## 3. Explicit Non-Goals for H5
+## 3. Explicit Non-Goals for H6
 
-The following capabilities are deliberately excluded from H5 and assigned to future research slices:
+The following capabilities are deliberately excluded from H6 and assigned to future research slices:
 
-- **Web Streams & SSE Abstractions**: Deferred to **H6**.
 - **SSR Security & SSRF Defenses**: Deferred to **H7**.
+- **Observability & Diagnostics**: Deferred to **H8**.
+- **Graduation & Build-vs-Buy**: Deferred to **H9**.
 
 ---
 

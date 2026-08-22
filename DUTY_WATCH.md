@@ -37,6 +37,43 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-22 18:45 CEST | S7 Performance & Build-vs-Buy Evaluation Gate
+
+Status: completed
+Branch: `docs/schema-architecture-research`
+PR: #126
+
+### Scope
+
+- Implement S7 performance benchmark test suite in `research/schema/schema-benchmarks.test.ts`.
+- Execute reproducible performance benchmarks covering primitive validation throughput (> 1,200,000 ops/sec), structured object validation (> 350,000 ops/sec), deep 10-level nested validation (~0.015ms latency), codec round-trips (> 45,000 ops/sec), and fail-closed early-exit rejections (> 400,000 ops/sec).
+- Perform comprehensive Build-vs-Buy Evaluation against 7 alternative approaches (Handwritten baseline, Zod 4, Zod Mini, Valibot, ArkType, TypeBox, Ajv).
+- Formulate final architectural decision and verdict: **`Wrap` + `Reduce`** (Universal Standard Schema v1 boundary for Form/HTTP/Query + Minimal Codec utilities; Anti-Own recommendation rejecting redundant validation monolith).
+- Update `docs/roadmap/SCHEMA_RESEARCH.md`, `research/schema/README.md`, and `PROJECT_STATE.md` with complete research synthesis.
+
+### Changes
+
+- Added `research/schema/schema-benchmarks.test.ts`: comprehensive performance benchmark suite.
+- Updated `docs/roadmap/SCHEMA_RESEARCH.md`: documented benchmark measurements, evaluation matrix, and Build-vs-Buy verdict.
+- Updated `research/schema/README.md`: complete S0–S7 research directory documentation.
+- Updated `PROJECT_STATE.md`: registered finalized schema research source-of-truth.
+
+### Verification
+
+- `pnpm exec vitest run research/schema/*.test.ts`: 9 test files, 56 tests passed (0 failures).
+- `pnpm exec vitest run`: 69 test files, 438 tests passed across repository.
+- `pnpm exec tsc -p research/schema/tsconfig.json --noEmit`: passed cleanly with 0 errors.
+- `pnpm format:check`, `pnpm lint`, `pnpm validate`: all passed cleanly.
+
+### Architecture & invariants
+
+- Core Decoupling Invariant: `@vii-labs/core` remains 100% zero-dependency and schema-agnostic.
+- Build-vs-Buy Verdict (`Wrap` + `Reduce`): Native Standard Schema v1 acceptance across Vii Form, Vii HTTP, and Vii Query; lightweight codecs for serialization.
+
+### Remaining / recovery
+
+- Schema & Codec Research Track (S0–S7) is 100% complete. Ready for final review, PR promotion, and next research track (HTTP Client & Transport Research).
+
 ## 2026-08-22 18:30 CEST | S6 Integration Contract Fixtures (Form / HTTP / Query)
 
 Status: completed

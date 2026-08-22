@@ -1,10 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  dateFromISOString,
-  jsonCodec,
-  urlSearchParamsCodec,
-  v,
-} from "./index.js";
+import { dateFromISOString, jsonCodec, urlSearchParamsCodec, v } from "./index.js";
 
 describe("S7: Schema Performance Benchmarks", () => {
   it("achieves ultra-high primitive validation throughput (> 500,000 ops/sec)", () => {

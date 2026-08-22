@@ -41,7 +41,7 @@ PR: <number or not opened>
 
 Status: completed
 Branch: `feat/http-retry-idempotency`
-PR: not opened
+PR: #133
 
 ### Scope
 

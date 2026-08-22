@@ -37,6 +37,56 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-23 01:15 CEST | H5 HTTP Retry Engine & Method Idempotency
+
+Status: completed
+Branch: `feat/http-retry-idempotency`
+PR: #133
+
+### Scope
+
+- Implement H5 (Retry + Idempotency Engine) throwaway research prototype in `research/http/`.
+- Enforce core governance invariant: retries are strictly disabled by default (`retry: undefined` / 0 retries).
+- Implement exponential backoff with full jitter (`calculateBackoff`).
+- Implement standard `Retry-After` header parsing (`parseRetryAfter`) for both delta-seconds and HTTP-date formats.
+- Implement method idempotency guards: non-idempotent methods (`POST`, `PATCH`) are excluded from automatic retries unless explicitly configured.
+- Implement `executeWithRetry` retry execution runner integrated inside `HttpClient.request`.
+- Implement immediate `AbortSignal` cancellation during backoff sleep delays.
+- Add test suite in `research/http/retry.test.ts` and update `research/http/README.md`.
+- Update `DUTY_WATCH.md`.
+
+### Changes
+
+- Added `research/http/retry.ts`: `RetryPolicy`, `parseRetryAfter`, `calculateBackoff`, `normalizeRetryPolicy`, and `executeWithRetry`.
+- Updated `research/http/types.ts`: added `retry` property to `HttpClientConfig` and `HttpRequestOptions`.
+- Updated `research/http/client.ts`: integrated `executeWithRetry` inside `request()` and `.extend()`.
+- Updated `research/http/index.ts`: exported retry types and functions.
+- Added `research/http/retry.test.ts`: 9 test cases covering `Retry-After` parsing, backoff calculations with/without jitter, default disabled behavior, retry on 503/500 status, retry on network failure, POST idempotency protection, custom `retryOnMethods`, 429 rate limit backoff, and signal abort during backoff sleep.
+- Updated `research/http/README.md`: documented H5 capabilities and non-goals.
+
+### Validation
+
+- `pnpm exec vitest run research/http/*.test.ts`: 8 test files, 65 tests passed (0 failures).
+- `pnpm exec tsc -p research/http/tsconfig.json --noEmit`: passed cleanly with 0 errors.
+- `pnpm format:check`: passed cleanly.
+- `pnpm lint`: passed cleanly.
+- `pnpm typecheck`: passed cleanly.
+- `pnpm test`: all packages and fixtures passed cleanly.
+- `pnpm validate`: passed cleanly (all builds, tests, and packed-artifact checks passed).
+- `git diff --check`: passed cleanly with zero whitespace/formatting errors.
+
+### Architecture / compatibility
+
+- Zero package creation or public API changes: H5 is strictly an isolated research prototype under `research/http/`.
+- No `@vii-labs/core` dependency or bundle impact.
+- Zero external runtime dependencies.
+- Confirmed stop condition: H6 (Streaming + SSE + Web Streams) has NOT been started.
+
+### Remaining / recovery
+
+- Await maintainer review of H5 retry engine prototype.
+- Future work: H6 (Streaming + SSE + Web Streams) only when authorized.
+
 ## 2026-08-23 01:05 CEST | H4 HTTP Error Taxonomy & Standard Schema Validation
 
 Status: completed

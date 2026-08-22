@@ -1,5 +1,5 @@
 /**
- * Vii HTTP Client & Transport Research — Client Factory (H1-H4 Baseline)
+ * Vii HTTP Client & Transport Research — Client Factory (H1-H5 Baseline)
  *
  * Research Prototype: Not a production package.
  */
@@ -14,6 +14,7 @@ import {
 import { HttpParseError, HttpStatusError, NetworkError } from "./errors.js";
 import { mergeHeaders } from "./headers.js";
 import { composeMiddleware } from "./pipeline.js";
+import { executeWithRetry } from "./retry.js";
 import { validatePayload } from "./schema.js";
 import type {
   HttpClient,
@@ -32,6 +33,7 @@ class HttpClientImpl implements HttpClient {
       ...(config.baseURL !== undefined ? { baseURL: config.baseURL } : {}),
       ...(config.headers !== undefined ? { headers: mergeHeaders(config.headers) } : {}),
       ...(config.timeout !== undefined ? { timeout: config.timeout } : {}),
+      ...(config.retry !== undefined ? { retry: config.retry } : {}),
       ...(config.throwOnError !== undefined ? { throwOnError: config.throwOnError } : {}),
       ...(config.fetch !== undefined ? { fetch: config.fetch } : {}),
       ...(config.middleware !== undefined
@@ -101,6 +103,8 @@ class HttpClientImpl implements HttpClient {
 
     const request = new Request(resolvedUrl, init);
     const context: HttpRequestContext = options.context ?? {};
+    const effectiveRetry = options.retry ?? this.config.retry;
+
     const activeMiddleware = [...(this.config.middleware ?? []), ...(options.middleware ?? [])];
 
     const transport: HttpHandler = async (req) => {
@@ -121,7 +125,7 @@ class HttpClientImpl implements HttpClient {
 
     let response: Response;
     try {
-      response = await handler(request);
+      response = await executeWithRetry(request, handler, context, effectiveRetry);
     } finally {
       timeoutBinding?.cleanup();
       scopeBinding?.cleanup();
@@ -269,6 +273,7 @@ class HttpClientImpl implements HttpClient {
 
     const mergedHeaders = mergeHeaders(this.config.headers, childConfig.headers);
     const mergedTimeout = childConfig.timeout ?? this.config.timeout;
+    const mergedRetry = childConfig.retry ?? this.config.retry;
     const mergedThrowOnError = childConfig.throwOnError ?? this.config.throwOnError;
     const mergedFetch = childConfig.fetch ?? this.config.fetch;
     const mergedMiddleware = [...(this.config.middleware ?? []), ...(childConfig.middleware ?? [])];
@@ -277,6 +282,7 @@ class HttpClientImpl implements HttpClient {
       headers: mergedHeaders,
       ...(mergedBaseURL !== undefined ? { baseURL: mergedBaseURL } : {}),
       ...(mergedTimeout !== undefined ? { timeout: mergedTimeout } : {}),
+      ...(mergedRetry !== undefined ? { retry: mergedRetry } : {}),
       ...(mergedThrowOnError !== undefined ? { throwOnError: mergedThrowOnError } : {}),
       ...(mergedFetch !== undefined ? { fetch: mergedFetch } : {}),
       ...(mergedMiddleware.length > 0 ? { middleware: mergedMiddleware } : {}),

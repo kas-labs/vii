@@ -37,6 +37,50 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-22 17:15 CEST | S1 Runtime Validation Baseline Prototype
+
+Status: completed
+Branch: `docs/schema-architecture-research`
+PR: #126
+
+### Scope
+
+- Implement S1 runtime validation baseline research prototype in `research/schema/`.
+- Support primitives (`string`, `number`, `boolean`, `literal`, `null`, `undefined`, `unknown`) with constraints (`min`, `max`, `int`, `finite`, `email`, `regex`).
+- Support structures (`object`, `array`, `union`) with path-aware issue tracking.
+- Implement modifiers (`optional`, `nullable`, `refine`) and non-throwing `check()` primitive alongside throwing `parse()` convenience.
+- Verify zero-copy object and array reference preservation (`result.ok && result.value === input`).
+- Enforce day-one security protections: prototype pollution rejection (`__proto__`, `constructor`, `prototype`), getter traps, proxy traps, and deep nesting.
+
+### Changes
+
+- Added `research/schema/tsconfig.json`: isolated TypeScript configuration.
+- Added `research/schema/types.ts`: `SchemaIssue`, `ValidationResult<T>`, `Schema<TIn, TOut>`, `InferInput<T>`, `InferOutput<T>`, `SchemaError`, and `BaseSchema`.
+- Added `research/schema/primitives.ts`: primitive schemas (`string`, `number`, `boolean`, `literal`, `null`, `undefined`, `unknown`).
+- Added `research/schema/structures.ts`: `object`, `array`, and `union` schemas with prototype pollution defense.
+- Added `research/schema/index.ts`: authoring namespace `v`.
+- Added `research/schema/schema-validation.test.ts`: test suite for primitives, structures, refinements, and `parse()`.
+- Added `research/schema/zero-copy.test.ts`: test suite verifying zero-copy object and array identity preservation.
+- Added `research/schema/hostile-security.test.ts`: adversarial security tests for prototype pollution, getter exceptions, and proxy traps.
+- Added `research/schema/README.md`: S1 research prototype documentation.
+
+### Verification
+
+- `pnpm exec vitest run research/schema/*.test.ts`: 3 test files, 17 tests passed (0 failures).
+- `pnpm exec vitest run`: 63 test files, 399 tests passed across full repository.
+- `pnpm exec tsc -p research/schema/tsconfig.json --noEmit`: passed cleanly with 0 errors.
+- `pnpm format:check`, `pnpm lint`, `pnpm validate`: all passed cleanly.
+
+### Architecture & invariants
+
+- Core Decoupling: Zero dependencies on `@vii-labs/core` or other runtime packages.
+- Zero-Copy Invariant: Pure validation schemas preserve input object/array identity without allocating clones.
+- Prototype Pollution: Objects reject `__proto__`, `constructor`, and `prototype` property keys fail-closed.
+
+### Remaining / recovery
+
+- S1 complete. Next slice is S2 (Structured Issues + Privacy).
+
 ## 2026-08-22 17:00 CEST | S0 Schema & Codec Research Architecture + Semantic Boundaries
 
 Status: completed

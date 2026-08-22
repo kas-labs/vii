@@ -37,6 +37,58 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-23 00:45 CEST | H2 HTTP Middleware Pipeline & Context Propagation
+
+Status: completed
+Branch: `feat/http-middleware-pipeline`
+PR: #130
+
+### Scope
+
+- Implement H2 (Middleware / Request Pipeline) functional onion-style middleware engine in `research/http/`.
+- Implement `composeMiddleware` with deterministic array execution ordering (pre-dispatch 1 -> 2 -> transport -> post-dispatch 2 -> 1).
+- Implement non-wire `HttpRequestContext` propagation across the pipeline.
+- Implement request and response transformations in middleware.
+- Implement short-circuiting capability (returning a Response without calling transport).
+- Implement single-invocation guard against duplicate `next()` calls in middleware.
+- Implement error recovery and async exception propagation through the pipeline.
+- Integrate middleware in `createHttpClient` and child inheritance in `extend()`.
+- Add test suite in `research/http/middleware.test.ts` and update `research/http/README.md`.
+- Update `DUTY_WATCH.md`.
+
+### Changes
+
+- Added `research/http/pipeline.ts`: `composeMiddleware` functional onion pipeline runner with double-invocation guard.
+- Updated `research/http/types.ts`: added `HttpHandler`, `HttpMiddleware`, and `HttpRequestContext` types.
+- Updated `research/http/client.ts`: integrated middleware pipeline, per-request middleware, context handling, and `extend()` inheritance.
+- Updated `research/http/index.ts`: exported `composeMiddleware` and new types.
+- Added `research/http/middleware.test.ts`: 9 test cases covering onion ordering, request/response transformations, short-circuiting, context propagation, error recovery, double-call protection, `extend()` inheritance, and per-request middleware.
+- Updated `research/http/client.test.ts`: verified Request body text extraction and client functionality.
+- Updated `research/http/README.md`: documented H2 capabilities and non-goals.
+
+### Validation
+
+- `pnpm exec vitest run research/http/*.test.ts`: 5 test files, 40 tests passed (0 failures).
+- `pnpm exec tsc -p research/http/tsconfig.json --noEmit`: passed cleanly with 0 errors.
+- `pnpm format:check`: passed cleanly.
+- `pnpm lint`: passed cleanly.
+- `pnpm typecheck`: passed cleanly.
+- `pnpm test`: all packages and fixtures passed cleanly.
+- `pnpm validate`: passed cleanly (all builds, tests, and packed-artifact checks passed).
+- `git diff --check`: passed cleanly with zero whitespace/formatting errors.
+
+### Architecture / compatibility
+
+- Zero package creation or public API changes: H2 is strictly an isolated research prototype under `research/http/`.
+- No `@vii-labs/core` dependency or bundle impact.
+- Retains zero-dependency, Fetch-first platform alignment.
+- Confirmed stop condition: H3 (Cancellation + Timeout + Scope) has NOT been started.
+
+### Remaining / recovery
+
+- Await maintainer review of H2 middleware prototype and evidence.
+- Future work: H3 (Cancellation + Timeout + Scope) only when authorized.
+
 ## 2026-08-23 00:35 CEST | H1 HTTP Client Baseline Prototype & Test Suite
 
 Status: completed

@@ -1,5 +1,5 @@
 /**
- * Vii HTTP Client & Transport Research — Types (H1 Baseline)
+ * Vii HTTP Client & Transport Research — Types (H1-H2 Baseline)
  *
  * Research Prototype: Not a production package.
  */
@@ -17,6 +17,16 @@ export type HeaderValue = string | number | boolean | null | undefined;
 
 export type ExtendedHeadersInit = HeadersInit | Record<string, HeaderValue>;
 
+export type HttpRequestContext = Record<string, unknown>;
+
+export type HttpHandler = (request: Request) => Promise<Response>;
+
+export type HttpMiddleware = (
+  request: Request,
+  next: HttpHandler,
+  context: HttpRequestContext,
+) => Promise<Response>;
+
 export interface HttpRequestOptions extends Omit<
   RequestInit,
   "headers" | "method" | "body" | "signal"
@@ -27,12 +37,15 @@ export interface HttpRequestOptions extends Omit<
   readonly body?: BodyInit | null | undefined;
   readonly signal?: AbortSignal | null | undefined;
   readonly fetch?: typeof globalThis.fetch | undefined;
+  readonly context?: HttpRequestContext | undefined;
+  readonly middleware?: readonly HttpMiddleware[] | undefined;
 }
 
 export interface HttpClientConfig {
   readonly baseURL?: string | URL | undefined;
   readonly headers?: ExtendedHeadersInit | undefined;
   readonly fetch?: typeof globalThis.fetch | undefined;
+  readonly middleware?: readonly HttpMiddleware[] | undefined;
 }
 
 export interface HttpClient {

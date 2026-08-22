@@ -1,4 +1,5 @@
-import { lstat, mkdir, readFile, writeFile } from "node:fs/promises";
+import { constants } from "node:fs";
+import { mkdir, open, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { verifyContentIntegrity } from "../registry/integrity.js";
 import {
@@ -109,6 +110,26 @@ function validateFilePayloadIntegrities(
   }
 }
 
+type DestinationInspection = "missing" | "same" | "different" | "symlink";
+
+async function inspectDestination(
+  absTarget: string,
+  expectedContent: string,
+): Promise<DestinationInspection> {
+  let handle;
+  try {
+    handle = await open(absTarget, constants.O_RDONLY | constants.O_NOFOLLOW);
+    const content = await handle.readFile("utf8");
+    return content === expectedContent ? "same" : "different";
+  } catch (err: any) {
+    if (err?.code === "ENOENT") return "missing";
+    if (err?.code === "ELOOP" || err?.code === "EINVAL") return "symlink";
+    return "different";
+  } finally {
+    await handle?.close();
+  }
+}
+
 async function analyzeAndPlanFiles(
   projectRoot: string,
   manifest: RegistryItemManifest,
@@ -119,29 +140,10 @@ async function analyzeAndPlanFiles(
   for (const entry of manifest.files) {
     const absTarget = path.resolve(projectRoot, entry.target);
     const content = payloads[entry.source]!;
+    const inspection = await inspectDestination(absTarget, content);
 
-    try {
-      const stats = await lstat(absTarget);
-      if (stats.isSymbolicLink()) {
-        conflicts.push(
-          `Destination "${entry.target}" is a symbolic link and cannot be changed safely`,
-        );
-        continue;
-      }
-      const existingContent = await readFile(absTarget, "utf8");
-      if (existingContent === content) {
-        plannedFiles.push({
-          action: "skip",
-          source: entry.source,
-          target: entry.target,
-          content,
-          integrity: entry.integrity,
-        });
-      } else {
-        conflicts.push(`Destination "${entry.target}" already exists with local changes`);
-      }
-    } catch (err: any) {
-      if (err.code === "ENOENT") {
+    switch (inspection) {
+      case "missing":
         plannedFiles.push({
           action: "create",
           source: entry.source,
@@ -149,9 +151,24 @@ async function analyzeAndPlanFiles(
           content,
           integrity: entry.integrity,
         });
-      } else {
-        conflicts.push(`Failed to inspect destination "${entry.target}": ${err.message}`);
-      }
+        break;
+      case "same":
+        plannedFiles.push({
+          action: "skip",
+          source: entry.source,
+          target: entry.target,
+          content,
+          integrity: entry.integrity,
+        });
+        break;
+      case "symlink":
+        conflicts.push(
+          `Destination "${entry.target}" is a symbolic link and cannot be changed safely`,
+        );
+        break;
+      case "different":
+        conflicts.push(`Destination "${entry.target}" already exists with local changes`);
+        break;
     }
   }
 }

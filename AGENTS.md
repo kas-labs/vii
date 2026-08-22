@@ -18,6 +18,8 @@ Before every non-trivial task, read:
 
 Do not begin implementation from the user prompt alone when repository state matters. Verify important claims against current code, Git history, merged pull requests, tests, benchmarks, package artifacts, and CI.
 
+Vii repository governance is authoritative. Before every non-trivial task, restore current repository truth, read `AGENTS.md` and referenced governance, run canonical triage, respect slice/phase stop conditions, define verification before implementation, and never continue to another research slice or phase without explicit authorization. Local agent/environment success is not sufficient evidence when repository CI or canonical validation disagrees.
+
 Before implementation or proposing the next work item, apply the canonical triage contract in
 `docs/governance/AGENT_TASK_TRIAGE_POLICY.md` and print its verdict. The verdict makes the task's
 blast radius, ambiguity, risk, verification burden, unknowns, harness, model role, delegation,

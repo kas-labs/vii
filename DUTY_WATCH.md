@@ -41,7 +41,7 @@ PR: <number or not opened>
 
 Status: completed
 Branch: `feat/http-client-baseline`
-PR: not opened
+PR: #129
 
 ### Scope
 

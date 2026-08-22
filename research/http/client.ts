@@ -1,9 +1,10 @@
 /**
- * Vii HTTP Client & Transport Research — Client Factory (H1-H2 Baseline)
+ * Vii HTTP Client & Transport Research — Client Factory (H1-H3 Baseline)
  *
  * Research Prototype: Not a production package.
  */
 
+import { bindScopeSignal, composeSignals, createTimeoutSignal } from "./cancellation.js";
 import { mergeHeaders } from "./headers.js";
 import { composeMiddleware } from "./pipeline.js";
 import type {
@@ -22,6 +23,7 @@ class HttpClientImpl implements HttpClient {
     const frozenConfig: HttpClientConfig = {
       ...(config.baseURL !== undefined ? { baseURL: config.baseURL } : {}),
       ...(config.headers !== undefined ? { headers: mergeHeaders(config.headers) } : {}),
+      ...(config.timeout !== undefined ? { timeout: config.timeout } : {}),
       ...(config.fetch !== undefined ? { fetch: config.fetch } : {}),
       ...(config.middleware !== undefined
         ? { middleware: Object.freeze([...config.middleware]) }
@@ -35,6 +37,22 @@ class HttpClientImpl implements HttpClient {
     const headers = mergeHeaders(this.config.headers, options.headers);
     const fetchFn = options.fetch ?? this.config.fetch ?? globalThis.fetch;
 
+    const effectiveTimeout = options.timeout ?? this.config.timeout;
+    const timeoutBinding =
+      effectiveTimeout !== undefined && effectiveTimeout > 0
+        ? createTimeoutSignal(effectiveTimeout)
+        : undefined;
+
+    const scopeBinding = bindScopeSignal(options.scope);
+
+    const composedBinding = composeSignals([
+      options.signal,
+      timeoutBinding?.signal,
+      scopeBinding?.signal,
+    ]);
+
+    const activeSignal = composedBinding?.signal ?? options.signal;
+
     const method = options.method ?? "GET";
     const init: RequestInit = {
       method,
@@ -44,8 +62,8 @@ class HttpClientImpl implements HttpClient {
     if (options.body !== undefined && options.body !== null) {
       init.body = options.body;
     }
-    if (options.signal !== undefined) {
-      init.signal = options.signal;
+    if (activeSignal !== undefined) {
+      init.signal = activeSignal;
     }
     if (options.cache !== undefined) {
       init.cache = options.cache;
@@ -81,7 +99,14 @@ class HttpClientImpl implements HttpClient {
     };
 
     const handler = composeMiddleware(transport, activeMiddleware, context);
-    return handler(request);
+
+    try {
+      return await handler(request);
+    } finally {
+      timeoutBinding?.cleanup();
+      scopeBinding?.cleanup();
+      composedBinding?.cleanup();
+    }
   }
 
   get(url: string | URL, options?: Omit<HttpRequestOptions, "method">): Promise<Response> {
@@ -119,12 +144,14 @@ class HttpClientImpl implements HttpClient {
         : this.config.baseURL;
 
     const mergedHeaders = mergeHeaders(this.config.headers, childConfig.headers);
+    const mergedTimeout = childConfig.timeout ?? this.config.timeout;
     const mergedFetch = childConfig.fetch ?? this.config.fetch;
     const mergedMiddleware = [...(this.config.middleware ?? []), ...(childConfig.middleware ?? [])];
 
     const childOptions: HttpClientConfig = {
       headers: mergedHeaders,
       ...(mergedBaseURL !== undefined ? { baseURL: mergedBaseURL } : {}),
+      ...(mergedTimeout !== undefined ? { timeout: mergedTimeout } : {}),
       ...(mergedFetch !== undefined ? { fetch: mergedFetch } : {}),
       ...(mergedMiddleware.length > 0 ? { middleware: mergedMiddleware } : {}),
     };

@@ -37,6 +37,43 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-22 18:30 CEST | S6 Integration Contract Fixtures (Form / HTTP / Query)
+
+Status: completed
+Branch: `docs/schema-architecture-research`
+PR: #126
+
+### Scope
+
+- Implement S6 Integration Contract Fixtures in `research/schema/integration-fixtures.test.ts` and `research/schema/standard-schema.ts`.
+- Verify seamless decoupling: `@vii-labs/core` remains completely agnostic of Schema while higher-level consumers connect via clean boundary contracts.
+- Implement and verify Vii Form integration fixture: single-field validation on change/blur, submit validation, `createFormErrors` structured error mapping, and zero-copy value preservation.
+- Implement and verify Vii HTTP client fixture: query string serialization (`urlSearchParamsCodec`) and JSON response decode validation (`jsonCodec`) with fail-closed union/property checking.
+- Implement and verify Vii Query / Hydration cache boundary fixture: fail-closed validation of dehydrated cache entries, securely discarding prototype pollution and corrupted payloads during cache restore.
+- Implement Standard Schema v1 specification wrapper (`toStandardSchema`), guaranteeing out-of-the-box interoperability with ecosystem tools (TanStack Form, tRPC, ArkType/Zod standard adapters).
+
+### Changes
+
+- Added `research/schema/standard-schema.ts`: `StandardSchemaV1`, `toStandardSchema`.
+- Updated `research/schema/index.ts`: exported `toStandardSchema`.
+- Added `research/schema/integration-fixtures.test.ts`: comprehensive integration test suite for Form, HTTP, Query cache hydration, and Standard Schema v1.
+
+### Verification
+
+- `pnpm exec vitest run research/schema/*.test.ts`: 8 test files, 51 tests passed (0 failures).
+- `pnpm exec vitest run`: 68 test files, 433 tests passed across repository.
+- `pnpm exec tsc -p research/schema/tsconfig.json --noEmit`: passed cleanly with 0 errors.
+- `pnpm format:check`, `pnpm lint`, `pnpm validate`: all passed cleanly.
+
+### Architecture & invariants
+
+- Core Decoupling Invariant: Schema is an optional peripheral boundary and is never imported by Core.
+- Standard Schema v1 Interoperability: Native compatibility with the emerging cross-framework validation standard.
+
+### Remaining / recovery
+
+- S6 complete. Next slice is S7 (Performance & Build-vs-Buy Evaluation Gate).
+
 ## 2026-08-22 18:15 CEST | S5 Type Inference & TS Compiler Cost
 
 Status: completed

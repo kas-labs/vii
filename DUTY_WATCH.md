@@ -41,7 +41,7 @@ PR: <number or not opened>
 
 Status: completed
 Branch: `feat/http-ssr-security-ssrf`
-PR: not opened
+PR: #137
 
 ### Scope
 

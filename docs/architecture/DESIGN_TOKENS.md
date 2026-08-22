@@ -1,19 +1,20 @@
 # Vii Design Token Architecture
 
-Status: Draft
+Status: Draft / Research
 
 ## Purpose
 
-Vii design tokens provide a portable source of truth for visual decisions across source components, packaged components, Web Components, documentation, Figma integrations, and future mobile or desktop targets.
+Vii design tokens provide a portable source of truth for visual decisions across source components, packaged components, Custom Elements, documentation, design-tool integrations, and future platform targets.
 
 ## Principles
 
 - canonical tokens are platform-neutral;
 - semantic tokens are preferred in component code;
-- themes override semantic values without changing component structure;
+- themes override semantic values without changing component semantics;
 - component tokens are introduced only when semantic tokens are insufficient;
 - consumers may replace the Vii theme without forking component behavior;
-- generated outputs are build artifacts, not canonical sources.
+- generated outputs are build artifacts, not canonical sources;
+- Vii should not build a general-purpose token engine when a mature DTCG implementation can satisfy the validated need behind a replaceable boundary.
 
 ## Token layers
 
@@ -58,66 +59,88 @@ toast.shadow
 
 Component tokens must not become an uncontrolled duplicate design system.
 
-## Canonical format
+## Canonical format baseline
 
-The canonical token source should follow the Design Tokens Community Group format unless prototype work identifies a material incompatibility.
+The Phase 6 prototype targets the published DTCG 2025.10 format.
 
-Example:
+DTCG is a W3C Community Group specification, not a W3C Recommendation or Standards Track specification. The implementation must therefore keep the format boundary versioned and replaceable even while targeting the stable published report.
+
+A color token uses a typed structured color value rather than treating an arbitrary CSS color string as the canonical DTCG value.
+
+Illustrative 2025.10-style shape:
 
 ```json
 {
+  "$schema": "https://www.designtokens.org/schemas/2025.10/format.json",
   "color": {
     "primary": {
       "$type": "color",
-      "$value": "hsl(240 85.1% 71%)"
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [0.47, 0.46, 0.96],
+        "alpha": 1
+      }
     }
   }
 }
 ```
 
-The initial Vii accent is:
+Exact canonical brand components are established and tested by P6.1 rather than inferred from an old CSS-string example.
 
-```css
---vii-color-primary: hsl(240 85.1% 71%);
-```
+The application-level CSS representation remains replaceable and may use modern CSS color syntax when generated.
 
-The brand value must remain replaceable at application level.
+## Aliases and resolution
+
+Aliases are first-class token relationships. Resolution must:
+
+- preserve the canonical source;
+- detect unresolved aliases;
+- detect cycles;
+- reject invalid type substitutions;
+- remain deterministic across repeated runs;
+- avoid mutating input token objects.
+
+The prototype must document whether generated outputs contain resolved values, preserved references, or both.
 
 ## Generated outputs
 
-Potential generators:
+The first bounded Phase 6 prototype evaluates only:
 
-- CSS custom properties;
-- TypeScript constants;
+- CSS Custom Properties;
+- TypeScript constants or typed data;
+- JSON/tooling output.
+
+Later optional integrations may include:
+
+- Tailwind theme bridges;
 - Sass variables;
-- Tailwind theme bridge;
-- JSON for tooling;
-- Figma-compatible token files;
+- design-tool adapters;
 - React Native theme objects;
-- platform resources in later research phases.
+- platform resources.
 
-Not every output is committed for the first release.
+Later outputs are not prerequisites for P6.1 and are not public support promises.
 
 ## Theme model
 
-Initial themes:
+Initial web research covers:
 
 - light;
-- dark;
-- high contrast.
+- dark.
 
-Optional dimensions:
+High-contrast and forced-colors behavior must not be reduced to a normal color-theme override. Forced-colors is a platform accessibility mode and is validated separately at the component/browser boundary.
+
+Optional future dimensions include:
 
 - compact or comfortable density;
 - web, touch, and desktop profiles;
 - reduced motion;
 - brand themes.
 
-A theme changes tokens, not component semantics.
+A theme changes visual decisions, not component semantics.
 
 ## Naming rules
 
-Token names must describe meaning rather than current appearance.
+Token names describe meaning rather than current appearance.
 
 Prefer:
 
@@ -131,50 +154,79 @@ Avoid:
 purpleButtonBackground
 ```
 
-Names should remain valid if a theme changes the value from purple to another color.
+Names should remain valid if a brand or theme changes the rendered value.
+
+Generated output names must also be collision-safe after escaping and normalization.
 
 ## CSS variable boundary
 
-CSS custom properties are the primary web delivery mechanism.
+CSS Custom Properties are the primary web delivery candidate.
 
-Packaged Web Components read semantic variables through the host cascade. Source components may consume the same variables through plain CSS, CSS Modules, Sass, or Tailwind integration.
+Packaged Custom Elements may consume semantic variables through the host cascade where the selected Shadow DOM policy permits it. Source components may consume the same generated variables through plain CSS, CSS Modules, Sass, Tailwind integration, or another application-owned styling strategy.
 
-## Tailwind integration
+The token model must not require Shadow DOM or a specific CSS framework.
 
-Tailwind support is generated from canonical tokens.
+## Tailwind boundary
 
-Tailwind is not the canonical source and is not required inside Shadow DOM components.
+Tailwind support, if retained, is generated from canonical tokens.
 
-A consumer may select a Tailwind source template through the CLI without affecting users of plain CSS or packaged elements.
+Tailwind is not the canonical source and is not a required Vii UI runtime dependency.
 
-## Validation
+## Accessibility validation
 
-Token builds should validate:
+Token tooling can validate declared contrast relationships, but tokens alone cannot certify component accessibility.
 
-- references resolve;
-- cycles do not exist;
-- required semantic tokens are present;
-- light, dark, and high-contrast themes are complete;
-- color contrast requirements are testable;
-- generated names are stable;
-- generated outputs are deterministic.
+P6.1 should distinguish at least:
+
+- normal text contrast requirements;
+- large text contrast requirements;
+- non-text UI/component contrast where applicable;
+- focus indicator relationships where applicable.
+
+A generic `AA: pass` flag without the criterion and semantic pair is insufficient.
+
+Component-level accessibility still requires rendered-state, forced-colors, reduced-motion, keyboard, and assistive-technology evidence in later slices.
+
+## Validation and hostile input
+
+Token research should cover:
+
+- unsupported token types;
+- malformed typed values;
+- unresolved aliases;
+- reference cycles;
+- required semantic-token coverage;
+- duplicate generated names;
+- deterministic output;
+- excessive nesting and node counts;
+- oversized strings or metadata;
+- prototype-pollution-shaped keys;
+- non-mutating processing.
+
+Production limits are set only after representative fixtures establish realistic requirements.
 
 ## Versioning
 
-Removing or renaming a stable semantic token is a breaking change.
+Removing or renaming a stable semantic token is breaking once a token contract becomes stable.
 
 Adding a primitive token is normally non-breaking.
 
-Changing a token value may be visually breaking even when the TypeScript or CSS API remains compatible and must be documented in release notes.
+Changing a token value may be visually breaking even when structurally compatible and requires release-note visibility once a public token contract exists.
+
+No token names or generated APIs are stable merely because they appear in Phase 6 research fixtures.
 
 ## Relationship with the registry
 
-Registry items declare the semantic and component tokens they consume.
+Registry items may declare semantic and component tokens they consume so tooling can detect missing visual dependencies and explain installation requirements.
 
-This allows the CLI to:
+Registry tooling must treat canonical token data as declarative input. It must not execute token-provided code or scripts.
 
-- detect missing tokens;
-- install required theme files;
-- explain visual dependencies;
-- generate theme previews;
-- validate custom themes before applying components.
+## P6.1 build-vs-reuse gate
+
+Before Vii owns a production token compiler, compare:
+
+1. direct deterministic transformation of the narrow Vii fixture;
+2. a mature DTCG-capable transformation tool;
+3. the Vii throwaway prototype if one is built.
+
+A thin validation/configuration layer around mature tooling is a valid and preferred outcome when it preserves Vii semantics with less maintenance cost.

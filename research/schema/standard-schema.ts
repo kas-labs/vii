@@ -1,28 +1,28 @@
+import type { StandardSchemaV1 } from "@standard-schema/spec";
 import type { InferInput, InferOutput, Schema } from "./types.js";
 
-export interface StandardSchemaV1Issue {
-  readonly message: string;
-  readonly path?: readonly (string | number | symbol)[] | undefined;
+export type { StandardSchemaV1 };
+
+/**
+ * Generic consumer boundary: validates untrusted input using ANY Standard Schema v1 conforming schema
+ * (Zod, Valibot, ArkType, TypeBox, or Vii prototype).
+ */
+export async function validateStandardSchema<TOutput>(
+  schema: StandardSchemaV1<any, TOutput>,
+  input: unknown,
+): Promise<
+  { ok: true; value: TOutput } | { ok: false; issues: readonly StandardSchemaV1.Issue[] }
+> {
+  const result = await schema["~standard"].validate(input);
+  if (!result.issues) {
+    return { ok: true, value: result.value };
+  }
+  return { ok: false, issues: result.issues };
 }
 
-export type StandardSchemaV1Result<Output> =
-  | { readonly value: Output; readonly issues?: undefined }
-  | { readonly issues: readonly StandardSchemaV1Issue[]; readonly value?: undefined };
-
-export interface StandardSchemaV1<Input = unknown, Output = Input> {
-  readonly "~standard": {
-    readonly version: 1;
-    readonly vendor: "vii";
-    readonly validate: (
-      value: unknown,
-    ) => StandardSchemaV1Result<Output> | Promise<StandardSchemaV1Result<Output>>;
-    readonly types?: {
-      readonly input: Input;
-      readonly output: Output;
-    };
-  };
-}
-
+/**
+ * Converts a Vii research schema into an official Standard Schema v1 object.
+ */
 export function toStandardSchema<TSchema extends Schema<any, any>>(
   schema: TSchema,
 ): StandardSchemaV1<InferInput<TSchema>, InferOutput<TSchema>> {
@@ -41,6 +41,10 @@ export function toStandardSchema<TSchema extends Schema<any, any>>(
             path: issue.path,
           })),
         };
+      },
+      types: {
+        input: undefined as any as InferInput<TSchema>,
+        output: undefined as any as InferOutput<TSchema>,
       },
     },
   };

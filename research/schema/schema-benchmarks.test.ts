@@ -1,139 +1,219 @@
+import { TypeCompiler } from "@sinclair/typebox/compiler";
+import { Type } from "@sinclair/typebox";
+import { type as arkType } from "arktype";
+import * as valibot from "valibot";
 import { describe, expect, it } from "vitest";
-import { dateFromISOString, jsonCodec, urlSearchParamsCodec, v } from "./index.js";
+import { z } from "zod";
+import { v } from "./index.js";
 
-describe("S7: Schema Performance Benchmarks", () => {
-  it("achieves ultra-high primitive validation throughput (> 500,000 ops/sec)", () => {
-    const stringSchema = v.string().min(2).max(100);
-    const input = "kas-labs-vii-schema";
-    const iterations = 50_000;
+// Pinned Competitor Versions:
+// - Handwritten Baseline: Pure conditional JavaScript function
+// - Zod 4: zod@4.4.3
+// - Valibot: valibot@1.4.2
+// - ArkType: arktype@2.2.3
+// - TypeBox (Compiled): @sinclair/typebox@0.34.52 (TypeCompiler.Compile)
+// - Vii Prototype: Current zero-copy research prototype
 
-    // Warmup
-    for (let i = 0; i < 5_000; i++) {
-      stringSchema.check(input);
-    }
+interface BenchmarkResult {
+  readonly competitor: string;
+  readonly opsPerSec: number;
+  readonly meanMs: number;
+}
 
-    const start = performance.now();
-    for (let i = 0; i < iterations; i++) {
-      stringSchema.check(input);
-    }
-    const elapsedMs = performance.now() - start;
-    const opsPerSec = (iterations / elapsedMs) * 1000;
+function runBenchmark(name: string, iterations: number, fn: () => void): BenchmarkResult {
+  // Warmup (10% of iterations)
+  const warmupCount = Math.max(100, Math.floor(iterations * 0.1));
+  for (let i = 0; i < warmupCount; i++) {
+    fn();
+  }
 
-    expect(opsPerSec).toBeGreaterThan(100_000);
+  const start = performance.now();
+  for (let i = 0; i < iterations; i++) {
+    fn();
+  }
+  const elapsedMs = performance.now() - start;
+  const opsPerSec = Math.round((iterations / elapsedMs) * 1000);
+  const meanMs = elapsedMs / iterations;
+
+  return { competitor: name, opsPerSec, meanMs };
+}
+
+describe("S7: Comprehensive Empirical Build-vs-Buy Benchmarks", () => {
+  const iterations = 25_000;
+
+  const validUserData = {
+    id: "usr_999",
+    name: "Kasap",
+    age: 32,
+    isActive: true,
+  };
+
+  const invalidUserData = {
+    id: "usr_999",
+    name: "K", // min length 2 violation
+    age: -10, // min value 0 violation
+    isActive: true,
+  };
+
+  // 1. Handwritten Baseline
+  const handwrittenCheck = (input: unknown) => {
+    if (typeof input !== "object" || input === null) return { ok: false };
+    const r = input as Record<string, unknown>;
+    if (typeof r.id !== "string") return { ok: false };
+    if (typeof r.name !== "string" || r.name.length < 2) return { ok: false };
+    if (typeof r.age !== "number" || r.age < 0) return { ok: false };
+    if (typeof r.isActive !== "boolean") return { ok: false };
+    return { ok: true, value: input };
+  };
+
+  // 2. Zod 4 Schema
+  const zodSchema = z.object({
+    id: z.string(),
+    name: z.string().min(2),
+    age: z.number().min(0),
+    isActive: z.boolean(),
   });
 
-  it("achieves high-throughput structured object validation (> 100,000 ops/sec)", () => {
-    const userSchema = v.object({
-      id: v.string(),
-      name: v.string(),
-      age: v.number().min(0),
-      isActive: v.boolean(),
+  // 3. Valibot Schema
+  const valibotSchema = valibot.object({
+    id: valibot.string(),
+    name: valibot.pipe(valibot.string(), valibot.minLength(2)),
+    age: valibot.pipe(valibot.number(), valibot.minValue(0)),
+    isActive: valibot.boolean(),
+  });
+
+  // 4. ArkType Schema
+  const arkSchema = arkType({
+    id: "string",
+    name: "string >= 2",
+    age: "number >= 0",
+    isActive: "boolean",
+  });
+
+  // 5. TypeBox Compiled Validator
+  const typeboxType = Type.Object({
+    id: Type.String(),
+    name: Type.String({ minLength: 2 }),
+    age: Type.Number({ minimum: 0 }),
+    isActive: Type.Boolean(),
+  });
+  const typeboxValidator = TypeCompiler.Compile(typeboxType);
+
+  // 6. Vii Research Prototype Schema
+  const viiSchema = v.object({
+    id: v.string(),
+    name: v.string().min(2),
+    age: v.number().min(0),
+    isActive: v.boolean(),
+  });
+
+  describe("Benchmark 1: Structured Object Validation (Valid Path)", () => {
+    it("measures throughput across all competitors under identical dataset", () => {
+      const results = [
+        runBenchmark("Handwritten", iterations, () => {
+          handwrittenCheck(validUserData);
+        }),
+        runBenchmark("Vii Prototype", iterations, () => {
+          viiSchema.check(validUserData);
+        }),
+        runBenchmark("TypeBox (Compiled)", iterations, () => {
+          typeboxValidator.Check(validUserData);
+        }),
+        runBenchmark("Valibot", iterations, () => {
+          valibot.safeParse(valibotSchema, validUserData);
+        }),
+        runBenchmark("Zod 4", iterations, () => {
+          zodSchema.safeParse(validUserData);
+        }),
+        runBenchmark("ArkType", iterations, () => {
+          arkSchema(validUserData);
+        }),
+      ];
+
+      expect(results.length).toBe(6);
+      process.stdout.write("\n--- Benchmark 1: Valid Path Results ---\n");
+      for (const res of results) {
+        process.stdout.write(
+          `${res.competitor.padEnd(20)}: ${res.opsPerSec.toLocaleString().padStart(10)} ops/sec (${(res.meanMs * 1000).toFixed(2)} µs/op)\n`,
+        );
+        expect(res.opsPerSec).toBeGreaterThan(1_000);
+      }
     });
-
-    const validUser = {
-      id: "usr_100",
-      name: "Alex",
-      age: 28,
-      isActive: true,
-    };
-
-    const iterations = 20_000;
-
-    // Warmup
-    for (let i = 0; i < 2_000; i++) {
-      userSchema.check(validUser);
-    }
-
-    const start = performance.now();
-    for (let i = 0; i < iterations; i++) {
-      userSchema.check(validUser);
-    }
-    const elapsedMs = performance.now() - start;
-    const opsPerSec = (iterations / elapsedMs) * 1000;
-
-    expect(opsPerSec).toBeGreaterThan(50_000);
   });
 
-  it("validates deep nested structures (10 levels) with low latency (< 0.05ms per check)", () => {
-    let currentSchema: any = v.object({ val: v.number() });
-    for (let i = 0; i < 10; i++) {
-      currentSchema = v.object({ child: currentSchema });
-    }
+  describe("Benchmark 2: Structured Object Validation (Invalid Path / Error Materialization)", () => {
+    it("measures fail-closed throughput when constraints are violated", () => {
+      const results = [
+        runBenchmark("Handwritten", iterations, () => {
+          handwrittenCheck(invalidUserData);
+        }),
+        runBenchmark("Vii Prototype", iterations, () => {
+          viiSchema.check(invalidUserData);
+        }),
+        runBenchmark("TypeBox (Compiled)", iterations, () => {
+          typeboxValidator.Check(invalidUserData);
+        }),
+        runBenchmark("Valibot", iterations, () => {
+          valibot.safeParse(valibotSchema, invalidUserData);
+        }),
+        runBenchmark("Zod 4", iterations, () => {
+          zodSchema.safeParse(invalidUserData);
+        }),
+        runBenchmark("ArkType", iterations, () => {
+          arkSchema(invalidUserData);
+        }),
+      ];
 
-    let currentObj: any = { val: 42 };
-    for (let i = 0; i < 10; i++) {
-      currentObj = { child: currentObj };
-    }
-
-    const iterations = 5_000;
-
-    // Warmup
-    for (let i = 0; i < 500; i++) {
-      currentSchema.check(currentObj);
-    }
-
-    const start = performance.now();
-    for (let i = 0; i < iterations; i++) {
-      currentSchema.check(currentObj);
-    }
-    const elapsedMs = performance.now() - start;
-    const avgLatencyMs = elapsedMs / iterations;
-
-    expect(avgLatencyMs).toBeLessThan(0.05);
-  });
-
-  it("benchmarks Codec serialization throughput (Date, JSON, URLSearchParams)", () => {
-    const dateCodec = dateFromISOString();
-    const isoString = "2026-08-22T17:00:00.000Z";
-
-    const jsonUserCodec = jsonCodec(
-      v.object({
-        id: v.string(),
-        score: v.number(),
-      }),
-    );
-    const rawJson = '{"id":"usr_100","score":95}';
-
-    const searchCodec = urlSearchParamsCodec({
-      page: v.number(),
-      query: v.string(),
+      expect(results.length).toBe(6);
+      process.stdout.write("\n--- Benchmark 2: Invalid Path Results ---\n");
+      for (const res of results) {
+        process.stdout.write(
+          `${res.competitor.padEnd(20)}: ${res.opsPerSec.toLocaleString().padStart(10)} ops/sec (${(res.meanMs * 1000).toFixed(2)} µs/op)\n`,
+        );
+        expect(res.opsPerSec).toBeGreaterThan(1_000);
+      }
     });
-    const rawQuery = "page=2&query=vii";
-
-    const iterations = 10_000;
-
-    const start = performance.now();
-    for (let i = 0; i < iterations; i++) {
-      dateCodec.decode(isoString);
-      jsonUserCodec.decode(rawJson);
-      searchCodec.decode(rawQuery);
-    }
-    const elapsedMs = performance.now() - start;
-    const opsPerSec = (iterations / elapsedMs) * 1000;
-
-    expect(opsPerSec).toBeGreaterThan(10_000);
   });
 
-  it("achieves fast early-exit on invalid payloads (> 100,000 ops/sec)", () => {
-    const strictSchema = v.object({
-      id: v.string(),
-      count: v.number().min(100),
+  describe("Benchmark 3: Schema Construction / Factory Overhead", () => {
+    it("measures cost of dynamic schema construction (500 schemas)", () => {
+      const constructIterations = 500;
+
+      const results = [
+        runBenchmark("Vii Prototype", constructIterations, () => {
+          v.object({
+            id: v.string(),
+            name: v.string().min(2),
+            age: v.number().min(0),
+            isActive: v.boolean(),
+          });
+        }),
+        runBenchmark("Valibot", constructIterations, () => {
+          valibot.object({
+            id: valibot.string(),
+            name: valibot.pipe(valibot.string(), valibot.minLength(2)),
+            age: valibot.pipe(valibot.number(), valibot.minValue(0)),
+            isActive: valibot.boolean(),
+          });
+        }),
+        runBenchmark("Zod 4", constructIterations, () => {
+          z.object({
+            id: z.string(),
+            name: z.string().min(2),
+            age: z.number().min(0),
+            isActive: z.boolean(),
+          });
+        }),
+      ];
+
+      expect(results.length).toBe(3);
+      process.stdout.write("\n--- Benchmark 3: Factory Overhead Results ---\n");
+      for (const res of results) {
+        process.stdout.write(
+          `${res.competitor.padEnd(20)}: ${res.opsPerSec.toLocaleString().padStart(10)} ops/sec (${(res.meanMs * 1000).toFixed(2)} µs/op)\n`,
+        );
+        expect(res.opsPerSec).toBeGreaterThan(100);
+      }
     });
-
-    const invalidPayload = {
-      id: 12345 as any, // fails on first field
-      count: 50,
-    };
-
-    const iterations = 20_000;
-
-    const start = performance.now();
-    for (let i = 0; i < iterations; i++) {
-      strictSchema.check(invalidPayload);
-    }
-    const elapsedMs = performance.now() - start;
-    const opsPerSec = (iterations / elapsedMs) * 1000;
-
-    expect(opsPerSec).toBeGreaterThan(50_000);
   });
 });

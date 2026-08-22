@@ -1,12 +1,20 @@
 /**
- * Vii HTTP Client & Transport Research — Client Factory (H1-H3 Baseline)
+ * Vii HTTP Client & Transport Research — Client Factory (H1-H4 Baseline)
  *
  * Research Prototype: Not a production package.
  */
 
-import { bindScopeSignal, composeSignals, createTimeoutSignal } from "./cancellation.js";
+import {
+  bindScopeSignal,
+  composeSignals,
+  createTimeoutSignal,
+  isAbortError,
+  isTimeoutError,
+} from "./cancellation.js";
+import { HttpParseError, HttpStatusError, NetworkError } from "./errors.js";
 import { mergeHeaders } from "./headers.js";
 import { composeMiddleware } from "./pipeline.js";
+import { validatePayload } from "./schema.js";
 import type {
   HttpClient,
   HttpClientConfig,
@@ -24,6 +32,7 @@ class HttpClientImpl implements HttpClient {
       ...(config.baseURL !== undefined ? { baseURL: config.baseURL } : {}),
       ...(config.headers !== undefined ? { headers: mergeHeaders(config.headers) } : {}),
       ...(config.timeout !== undefined ? { timeout: config.timeout } : {}),
+      ...(config.throwOnError !== undefined ? { throwOnError: config.throwOnError } : {}),
       ...(config.fetch !== undefined ? { fetch: config.fetch } : {}),
       ...(config.middleware !== undefined
         ? { middleware: Object.freeze([...config.middleware]) }
@@ -94,19 +103,56 @@ class HttpClientImpl implements HttpClient {
     const context: HttpRequestContext = options.context ?? {};
     const activeMiddleware = [...(this.config.middleware ?? []), ...(options.middleware ?? [])];
 
-    const transport: HttpHandler = (req) => {
-      return fetchFn(req.url, req);
+    const transport: HttpHandler = async (req) => {
+      try {
+        return await fetchFn(req.url, req);
+      } catch (err) {
+        if (isAbortError(err) || isTimeoutError(err)) {
+          throw err;
+        }
+        throw new NetworkError(err instanceof Error ? err.message : "Network request failed", {
+          request: req,
+          cause: err,
+        });
+      }
     };
 
     const handler = composeMiddleware(transport, activeMiddleware, context);
 
+    let response: Response;
     try {
-      return await handler(request);
+      response = await handler(request);
     } finally {
       timeoutBinding?.cleanup();
       scopeBinding?.cleanup();
       composedBinding?.cleanup();
     }
+
+    const shouldThrow = options.throwOnError ?? this.config.throwOnError ?? false;
+    if (shouldThrow && !response.ok) {
+      let errorData: unknown;
+      try {
+        const cloned = response.clone();
+        const text = await cloned.text();
+        try {
+          errorData = JSON.parse(text);
+        } catch {
+          errorData = text;
+        }
+      } catch {
+        errorData = undefined;
+      }
+
+      throw new HttpStatusError(`HTTP ${response.status} ${response.statusText || "Error"}`, {
+        status: response.status,
+        statusText: response.statusText,
+        response,
+        request,
+        data: errorData,
+      });
+    }
+
+    return response;
   }
 
   get(url: string | URL, options?: Omit<HttpRequestOptions, "method">): Promise<Response> {
@@ -137,6 +183,84 @@ class HttpClientImpl implements HttpClient {
     return this.request(url, { ...options, method: "OPTIONS" });
   }
 
+  async requestJson<T = unknown>(
+    url: string | URL,
+    options: HttpRequestOptions<T> = {},
+  ): Promise<T> {
+    const jsonHeaders = mergeHeaders({ Accept: "application/json" }, options.headers);
+    const resolvedOptions: HttpRequestOptions<T> = {
+      ...options,
+      headers: jsonHeaders,
+      throwOnError: options.throwOnError ?? true,
+    };
+
+    const response = await this.request(url, resolvedOptions);
+    const rawText = await response.text();
+
+    if (response.status === 204 || rawText.trim() === "") {
+      if (options.schema) {
+        const dummyRequest = new Request(resolveUrl(url, this.config.baseURL, options.query));
+        return validatePayload(options.schema, undefined, response, dummyRequest);
+      }
+      return undefined as T;
+    }
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(rawText);
+    } catch (err) {
+      const dummyRequest = new Request(resolveUrl(url, this.config.baseURL, options.query));
+      throw new HttpParseError("Failed to parse response body as JSON", {
+        response,
+        request: dummyRequest,
+        rawText,
+        cause: err,
+      });
+    }
+
+    if (options.schema) {
+      const dummyRequest = new Request(resolveUrl(url, this.config.baseURL, options.query));
+      return validatePayload(options.schema, parsed, response, dummyRequest);
+    }
+
+    return parsed as T;
+  }
+
+  getJson<T = unknown>(
+    url: string | URL,
+    options?: Omit<HttpRequestOptions<T>, "method">,
+  ): Promise<T> {
+    return this.requestJson<T>(url, { ...options, method: "GET" });
+  }
+
+  postJson<T = unknown>(
+    url: string | URL,
+    options?: Omit<HttpRequestOptions<T>, "method">,
+  ): Promise<T> {
+    return this.requestJson<T>(url, { ...options, method: "POST" });
+  }
+
+  putJson<T = unknown>(
+    url: string | URL,
+    options?: Omit<HttpRequestOptions<T>, "method">,
+  ): Promise<T> {
+    return this.requestJson<T>(url, { ...options, method: "PUT" });
+  }
+
+  patchJson<T = unknown>(
+    url: string | URL,
+    options?: Omit<HttpRequestOptions<T>, "method">,
+  ): Promise<T> {
+    return this.requestJson<T>(url, { ...options, method: "PATCH" });
+  }
+
+  deleteJson<T = unknown>(
+    url: string | URL,
+    options?: Omit<HttpRequestOptions<T>, "method">,
+  ): Promise<T> {
+    return this.requestJson<T>(url, { ...options, method: "DELETE" });
+  }
+
   extend(childConfig: HttpClientConfig): HttpClient {
     const mergedBaseURL =
       childConfig.baseURL !== undefined
@@ -145,6 +269,7 @@ class HttpClientImpl implements HttpClient {
 
     const mergedHeaders = mergeHeaders(this.config.headers, childConfig.headers);
     const mergedTimeout = childConfig.timeout ?? this.config.timeout;
+    const mergedThrowOnError = childConfig.throwOnError ?? this.config.throwOnError;
     const mergedFetch = childConfig.fetch ?? this.config.fetch;
     const mergedMiddleware = [...(this.config.middleware ?? []), ...(childConfig.middleware ?? [])];
 
@@ -152,6 +277,7 @@ class HttpClientImpl implements HttpClient {
       headers: mergedHeaders,
       ...(mergedBaseURL !== undefined ? { baseURL: mergedBaseURL } : {}),
       ...(mergedTimeout !== undefined ? { timeout: mergedTimeout } : {}),
+      ...(mergedThrowOnError !== undefined ? { throwOnError: mergedThrowOnError } : {}),
       ...(mergedFetch !== undefined ? { fetch: mergedFetch } : {}),
       ...(mergedMiddleware.length > 0 ? { middleware: mergedMiddleware } : {}),
     };

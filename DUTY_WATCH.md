@@ -37,6 +37,55 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-23 01:05 CEST | H4 HTTP Error Taxonomy & Standard Schema Validation
+
+Status: completed
+Branch: `feat/http-error-taxonomy-validation`
+PR: not opened
+
+### Scope
+
+- Implement H4 (Error Taxonomy + Validation Boundary) throwaway research prototype in `research/http/`.
+- Implement structured error taxonomy: `HttpError` (base), `HttpStatusError` (non-2xx responses with parsed error data), `NetworkError` (transport/DNS failures), `HttpParseError` (JSON deserialization failure), and `HttpValidationError` (Standard Schema failure).
+- Implement Standard Schema v1 (`@standard-schema/spec`) response payload validation boundary (`validatePayload`).
+- Implement typed JSON decoding helpers: `requestJson`, `getJson`, `postJson`, `putJson`, `patchJson`, and `deleteJson` with `204 No Content` handling.
+- Implement error predicates: `isHttpStatusError`, `isNetworkError`, `isHttpParseError`, `isHttpValidationError`, `isHttpError`.
+- Add test suite in `research/http/errors-validation.test.ts` and update `research/http/README.md`.
+- Update `DUTY_WATCH.md`.
+
+### Changes
+
+- Added `research/http/errors.ts`: `HttpError`, `HttpStatusError`, `NetworkError`, `HttpParseError`, `HttpValidationError`, and error predicates.
+- Added `research/http/schema.ts`: Standard Schema v1 type definitions and `validatePayload` runner.
+- Updated `research/http/types.ts`: added `schema`, `throwOnError`, `responseType`, and typed JSON methods to `HttpClient`.
+- Updated `research/http/client.ts`: integrated `NetworkError` mapping, `HttpStatusError` throwing on non-2xx status, and typed JSON decoding with schema validation.
+- Updated `research/http/index.ts`: exported error classes, predicates, and schema types.
+- Added `research/http/errors-validation.test.ts`: 7 test cases covering `HttpStatusError`, `NetworkError`, `HttpParseError`, `204 No Content`, Standard Schema v1 validation success, `HttpValidationError` on schema rejection, and error predicates.
+- Updated `research/http/README.md`: documented H4 capabilities and non-goals.
+
+### Validation
+
+- `pnpm exec vitest run research/http/*.test.ts`: 7 test files, 56 tests passed (0 failures).
+- `pnpm exec tsc -p research/http/tsconfig.json --noEmit`: passed cleanly with 0 errors.
+- `pnpm format:check`: passed cleanly.
+- `pnpm lint`: passed cleanly.
+- `pnpm typecheck`: passed cleanly.
+- `pnpm test`: all packages and fixtures passed cleanly.
+- `pnpm validate`: passed cleanly (all builds, tests, and packed-artifact checks passed).
+- `git diff --check`: passed cleanly with zero whitespace/formatting errors.
+
+### Architecture / compatibility
+
+- Zero package creation or public API changes: H4 is strictly an isolated research prototype under `research/http/`.
+- No `@vii-labs/core` dependency or bundle impact.
+- Zero core schema library dependencies: uses Standard Schema v1 specification boundary.
+- Confirmed stop condition: H5 (Retry + Idempotency Engine) has NOT been started.
+
+### Remaining / recovery
+
+- Await maintainer review of H4 error taxonomy and validation prototype.
+- Future work: H5 (Retry + Idempotency Engine) only when authorized.
+
 ## 2026-08-23 00:55 CEST | H3 HTTP Cancellation, Timeout & Scope Lifecycle
 
 Status: completed

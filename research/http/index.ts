@@ -1,21 +1,30 @@
 /**
- * Vii HTTP Client & Transport Research (H1-H3 Baseline)
+ * Vii HTTP Client & Transport Research (H1-H4 Baseline)
  *
  * Research Prototype: Not a production package.
  */
 
 export {
   AbortError,
+  HttpError,
+  HttpParseError,
+  HttpStatusError,
+  HttpValidationError,
+  NetworkError,
   TimeoutError,
-  bindScopeSignal,
-  composeSignals,
-  createTimeoutSignal,
   isAbortError,
+  isHttpError,
+  isHttpParseError,
+  isHttpStatusError,
+  isHttpValidationError,
+  isNetworkError,
   isTimeoutError,
-} from "./cancellation.js";
+} from "./errors.js";
+export { bindScopeSignal, composeSignals, createTimeoutSignal } from "./cancellation.js";
 export { createHttpClient } from "./client.js";
 export { mergeHeaders } from "./headers.js";
 export { composeMiddleware } from "./pipeline.js";
+export { validatePayload } from "./schema.js";
 export { isAbsoluteUrl, resolveUrl, serializeQueryParams } from "./url.js";
 export type {
   ExtendedHeadersInit,
@@ -30,4 +39,11 @@ export type {
   QueryParams,
   QueryParamValue,
 } from "./types.js";
+export type {
+  HttpParseErrorOptions,
+  HttpStatusErrorOptions,
+  HttpValidationErrorOptions,
+  NetworkErrorOptions,
+} from "./errors.js";
 export type { ScopeLike, SignalBinding } from "./cancellation.js";
+export type { StandardSchemaV1 } from "./schema.js";

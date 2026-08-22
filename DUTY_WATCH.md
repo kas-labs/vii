@@ -41,7 +41,7 @@ PR: <number or not opened>
 
 Status: completed
 Branch: `docs/http-client-research`
-PR: not opened
+PR: #128
 
 ### Scope
 

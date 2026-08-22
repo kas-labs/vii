@@ -1,5 +1,5 @@
 /**
- * Vii HTTP Client & Transport Research — Client Factory (H1-H5 Baseline)
+ * Vii HTTP Client & Transport Research — Client Factory (H1-H6 Baseline)
  *
  * Research Prototype: Not a production package.
  */
@@ -11,11 +11,19 @@ import {
   isAbortError,
   isTimeoutError,
 } from "./cancellation.js";
-import { HttpParseError, HttpStatusError, NetworkError } from "./errors.js";
+import { HttpError, HttpParseError, HttpStatusError, NetworkError } from "./errors.js";
 import { mergeHeaders } from "./headers.js";
 import { composeMiddleware } from "./pipeline.js";
 import { executeWithRetry } from "./retry.js";
 import { validatePayload } from "./schema.js";
+import {
+  iterateLines,
+  iterateStream,
+  parseEventStream,
+  parseJsonEventStream,
+  type JsonServerSentEvent,
+  type ServerSentEvent,
+} from "./streaming.js";
 import type {
   HttpClient,
   HttpClientConfig,
@@ -263,6 +271,66 @@ class HttpClientImpl implements HttpClient {
     options?: Omit<HttpRequestOptions<T>, "method">,
   ): Promise<T> {
     return this.requestJson<T>(url, { ...options, method: "DELETE" });
+  }
+
+  async stream(
+    url: string | URL,
+    options: HttpRequestOptions = {},
+  ): Promise<AsyncIterable<Uint8Array>> {
+    const response = await this.request(url, {
+      ...options,
+      throwOnError: options.throwOnError ?? true,
+    });
+    if (!response.body) {
+      throw new HttpError("Response has no body to stream");
+    }
+    return iterateStream(response.body);
+  }
+
+  async streamLines(
+    url: string | URL,
+    options: HttpRequestOptions = {},
+  ): Promise<AsyncIterable<string>> {
+    const response = await this.request(url, {
+      ...options,
+      throwOnError: options.throwOnError ?? true,
+    });
+    if (!response.body) {
+      throw new HttpError("Response has no body to stream");
+    }
+    return iterateLines(response.body);
+  }
+
+  async streamEvents(
+    url: string | URL,
+    options: HttpRequestOptions = {},
+  ): Promise<AsyncIterable<ServerSentEvent>> {
+    const sseHeaders = mergeHeaders({ Accept: "text/event-stream" }, options.headers);
+    const response = await this.request(url, {
+      ...options,
+      headers: sseHeaders,
+      throwOnError: options.throwOnError ?? true,
+    });
+    if (!response.body) {
+      throw new HttpError("Response has no body to stream");
+    }
+    return parseEventStream(response.body);
+  }
+
+  async streamJsonEvents<T = unknown>(
+    url: string | URL,
+    options: HttpRequestOptions = {},
+  ): Promise<AsyncIterable<JsonServerSentEvent<T>>> {
+    const sseHeaders = mergeHeaders({ Accept: "text/event-stream" }, options.headers);
+    const response = await this.request(url, {
+      ...options,
+      headers: sseHeaders,
+      throwOnError: options.throwOnError ?? true,
+    });
+    if (!response.body) {
+      throw new HttpError("Response has no body to stream");
+    }
+    return parseJsonEventStream<T>(response.body);
   }
 
   extend(childConfig: HttpClientConfig): HttpClient {

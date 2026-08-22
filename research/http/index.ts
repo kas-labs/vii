@@ -1,5 +1,5 @@
 /**
- * Vii HTTP Client & Transport Research (H1-H5 Baseline)
+ * Vii HTTP Client & Transport Research (H1-H6 Baseline)
  *
  * Research Prototype: Not a production package.
  */
@@ -31,6 +31,12 @@ export {
   parseRetryAfter,
 } from "./retry.js";
 export { validatePayload } from "./schema.js";
+export {
+  iterateLines,
+  iterateStream,
+  parseEventStream,
+  parseJsonEventStream,
+} from "./streaming.js";
 export { isAbsoluteUrl, resolveUrl, serializeQueryParams } from "./url.js";
 export type {
   ExtendedHeadersInit,
@@ -54,3 +60,4 @@ export type {
 export type { RetryPolicy } from "./retry.js";
 export type { ScopeLike, SignalBinding } from "./cancellation.js";
 export type { StandardSchemaV1 } from "./schema.js";
+export type { JsonServerSentEvent, ServerSentEvent } from "./streaming.js";

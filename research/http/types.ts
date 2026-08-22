@@ -1,5 +1,5 @@
 /**
- * Vii HTTP Client & Transport Research — Types (H1-H5 Baseline)
+ * Vii HTTP Client & Transport Research — Types (H1-H6 Baseline)
  *
  * Research Prototype: Not a production package.
  */
@@ -7,6 +7,7 @@
 import type { ScopeLike } from "./cancellation.js";
 import type { RetryPolicy } from "./retry.js";
 import type { StandardSchemaV1 } from "./schema.js";
+import type { JsonServerSentEvent, ServerSentEvent } from "./streaming.js";
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "HEAD" | "OPTIONS";
 
@@ -48,7 +49,7 @@ export interface HttpRequestOptions<T = unknown> extends Omit<
   readonly middleware?: readonly HttpMiddleware[] | undefined;
   readonly schema?: StandardSchemaV1<unknown, T> | undefined;
   readonly throwOnError?: boolean | undefined;
-  readonly responseType?: "json" | "text" | "blob" | "arrayBuffer" | undefined;
+  readonly responseType?: "json" | "text" | "blob" | "arrayBuffer" | "stream" | undefined;
 }
 
 export interface HttpClientConfig {
@@ -94,6 +95,17 @@ export interface HttpClient {
     url: string | URL,
     options?: Omit<HttpRequestOptions<T>, "method">,
   ): Promise<T>;
+
+  stream(url: string | URL, options?: HttpRequestOptions): Promise<AsyncIterable<Uint8Array>>;
+  streamLines(url: string | URL, options?: HttpRequestOptions): Promise<AsyncIterable<string>>;
+  streamEvents(
+    url: string | URL,
+    options?: HttpRequestOptions,
+  ): Promise<AsyncIterable<ServerSentEvent>>;
+  streamJsonEvents<T = unknown>(
+    url: string | URL,
+    options?: HttpRequestOptions,
+  ): Promise<AsyncIterable<JsonServerSentEvent<T>>>;
 
   extend(childConfig: HttpClientConfig): HttpClient;
 }

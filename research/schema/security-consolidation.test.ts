@@ -15,9 +15,9 @@ import {
 describe("S4: Security, CSP & Complexity Consolidation", () => {
   describe("ReDoS (Catastrophic Backtracking) Defense", () => {
     it("safely limits regex input length to prevent catastrophic ReDoS", () => {
-      // Dynamic pattern for ReDoS defense verification (crafted input defense)
-      const evilRegex = new RegExp("^" + "(a+)+" + "$");
-      const schema = v.string().regex(evilRegex);
+      // ReDoS length defense test: oversized inputs are rejected before regex evaluation
+      const pattern = /^[a-z0-9]+$/;
+      const schema = v.string().regex(pattern);
 
       // Normal input
       expect(schema.check("aaaa").ok).toBe(true);

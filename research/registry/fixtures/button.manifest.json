@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "name": "button",
+  "type": "ui:component",
+  "version": "0.1.0",
+  "target": "react",
+  "mode": "source",
+  "description": "Accessible React Button component",
+  "files": [
+    {
+      "source": "button.tsx",
+      "target": "components/ui/button.tsx",
+      "integrity": "sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU="
+    }
+  ],
+  "dependencies": [],
+  "tokens": ["color.primary", "color.primaryForeground", "radius.md"],
+  "capabilities": ["keyboard", "focus-visible"],
+  "provenance": {
+    "registryUrl": "https://registry.vii.dev",
+    "author": "Vii Foundation",
+    "license": "Apache-2.0",
+    "trustLevel": "official"
+  }
+}

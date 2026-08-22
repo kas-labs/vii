@@ -37,6 +37,314 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-22 16:00 CEST | P6.7 Performance, Accessibility, and Graduation Gate
+
+Status: completed
+Branch: `test/ui-tokens-dtcg-research`
+PR: not opened
+
+### Scope
+
+- Execute Phase 6 research slice P6.7: Performance, Accessibility, and Graduation Gate.
+- Benchmark token resolution throughput, behavior state machines, and DOM capability disposal.
+- Verify accessibility matrix: APG keyboard navigation contracts, high-contrast ratios, and AT smoke-testing boundary.
+- Formally evaluate the 5 graduation options and answer all 7 completion criteria from `docs/roadmap/PHASE_6_UI.md`.
+- Conclude Phase 6 UI Foundation research with formal acceptance of Option A (Graduated Bounded Vii UI Foundation).
+
+### Changes
+
+- Added `docs/strategy/PHASE_6_UI_GRADUATION_EVALUATION.md`: formal graduation decision and completion criteria answers.
+- Added `research/benchmarks-graduation/ui-benchmarks.test.ts`: benchmark test suite for throughput and lifecycle performance.
+- Added `research/benchmarks-graduation/a11y-matrix.test.ts`: accessibility matrix test suite for APG contracts, contrast, and AT policies.
+- Added `research/benchmarks-graduation/README.md`: research overview and verification guide.
+- Updated `PROJECT_STATE.md` with Graduation Evaluation strategy reference.
+
+### Validation
+
+- `pnpm exec vitest run research/benchmarks-graduation/*.test.ts`: 2 test files, 10 tests passed (0 failures).
+- `pnpm exec tsc --noEmit -p research/benchmarks-graduation/tsconfig.json`: passed cleanly (0 errors).
+- `pnpm exec vitest run`: 60 test files, 382 tests passed (0 failures).
+- `pnpm format:check`: passed.
+- `pnpm lint`: passed.
+
+### Architecture / compatibility
+
+- Zero runtime or public API changes (throwaway research only).
+- Verified graduation decision: Accept Option A (Bounded Vii UI Foundation: DTCG Tokens, Headless Behaviors, Declarative Registry, and Source Distribution).
+
+### Remaining / recovery
+
+- Phase 6 UI Foundation Research is 100% complete across all 7 slices (P6.1 to P6.7).
+- Ready for full branch commit and Pull Request submission.
+
+## 2026-08-22 15:52 CEST | P6.6 Distribution Modes & Security Hardening Consolidation
+
+Status: completed
+Branch: `test/ui-tokens-dtcg-research`
+PR: not opened
+
+### Scope
+
+- Execute Phase 6 research slice P6.6: Distribution Modes and Security Hardening Consolidation.
+- Formally evaluate Source Distribution vs Package Distribution vs Custom Elements trade-offs.
+- Establish architectural boundaries: Source Mode as primary for components/themes, Package Mode restricted to headless behaviors (`@vii-labs/ui-behaviors`).
+- Establish Custom Elements DOM boundary: Light DOM is mandatory for form-associated or cross-referencing ARIA components (`aria-controls`, `aria-labelledby`); Shadow DOM is restricted to isolated visual-only widgets.
+- Consolidate security hardening: strict Content Security Policy (CSP) & Trusted Types compliance (zero dynamic eval or innerHTML), token CSS generation, prototype pollution gating, and fail-closed path containment.
+
+### Changes
+
+- Added `docs/strategy/UI_DISTRIBUTION_MODES_AND_SECURITY_HARDENING.md`: formal evaluation and strategy decision document.
+- Added `research/security-hardening/csp-compliance.ts`: CSP compliance evaluator and safe stylesheet factory.
+- Added `research/security-hardening/dom-boundary.ts`: Light DOM vs Shadow DOM boundary evaluator.
+- Added `research/security-hardening/security-hardening.test.ts`: test suite for CSP safety, DOM boundary decisions, and token stylesheet generation.
+- Added `research/security-hardening/README.md`: research findings, distribution mode summary, and verification guide.
+- Updated `PROJECT_STATE.md` with Security Hardening & Distribution Modes strategy reference.
+
+### Validation
+
+- `pnpm exec vitest run research/security-hardening/*.test.ts`: 1 test file, 6 tests passed (0 failures).
+- `pnpm exec tsc --noEmit -p research/security-hardening/tsconfig.json`: passed cleanly (0 errors).
+- `pnpm exec vitest run`: 58 test files, 372 tests passed (0 failures).
+- `pnpm format:check`: passed.
+- `pnpm lint`: passed.
+
+### Architecture / compatibility
+
+- Zero runtime or public API changes (throwaway research only).
+- Verified decision: Source mode remains default; Light DOM is required for composite accessibility.
+
+### Remaining / recovery
+
+- Next slice in Phase 6: P6.7 (Performance, Accessibility, and Graduation Gate).
+
+## 2026-08-22 15:45 CEST | P6.5 Cross-Framework Compliance Slice
+
+Status: completed
+Branch: `test/ui-tokens-dtcg-research`
+PR: not opened
+
+### Scope
+
+- Execute Phase 6 research slice P6.5: Cross-Framework Compliance Slice.
+- Prove shared semantic contracts across 5 framework-native targets (Vanilla, React, Angular, Vue, Custom Elements).
+- Adapt vertical component slices (Button and Disclosure) using native lifecycle, inputs/props, events, and typing.
+- Build shared compliance test suite asserting identical behavioral, ARIA, and accessibility states across all 5 targets.
+- Verify lifecycle cleanup and complete core decoupling without introducing a monolithic universal wrapper.
+
+### Changes
+
+- Added `research/cross-framework-ui/types.ts`: shared component props and snapshot models.
+- Added `research/cross-framework-ui/vanilla/button.ts` & `vanilla/disclosure.ts`: pure DOM Vanilla adapters.
+- Added `research/cross-framework-ui/react/button.ts` & `react/disclosure.ts`: React hook and props adapters.
+- Added `research/cross-framework-ui/angular/button.ts` & `angular/disclosure.ts`: Angular class and Signal adapters.
+- Added `research/cross-framework-ui/vue/button.ts` & `vue/disclosure.ts`: Vue composable and reactive adapters.
+- Added `research/cross-framework-ui/custom-elements/button.ts` & `custom-elements/disclosure.ts`: Web Components Custom Elements adapters.
+- Added `research/cross-framework-ui/cross-framework-compliance.test.ts`: compliance test suite running identical semantic assertions across all 5 targets.
+- Added `research/cross-framework-ui/README.md`: compliance matrix documentation and verification guide.
+- Updated `PROJECT_STATE.md` with Cross-Framework UI research reference.
+
+### Validation
+
+- `pnpm exec vitest run research/cross-framework-ui/*.test.ts`: 1 test file, 25 tests passed (0 failures).
+- `pnpm exec tsc --noEmit -p research/cross-framework-ui/tsconfig.json`: passed cleanly (0 errors).
+- `pnpm exec vitest run`: 57 test files, 366 tests passed (0 failures).
+- `pnpm format:check`: passed.
+- `pnpm lint`: passed.
+
+### Architecture / compatibility
+
+- Zero runtime or public API changes (throwaway research only).
+- Verified principle: Target-specific adapters translate lifecycle and rendering semantics without duplicating shared domain behavior.
+
+### Remaining / recovery
+
+- Next slice in Phase 6: P6.6 (Distribution Modes & Security Hardening Review).
+
+## 2026-08-22 15:00 CEST | P6.4 Source Distribution Mutation Lifecycle
+
+Status: completed
+Branch: `test/ui-tokens-dtcg-research`
+PR: not opened
+
+### Scope
+
+- Execute Phase 6 research slice P6.4: Source Distribution Mutation Lifecycle.
+- Prove complete 9-phase mutation lifecycle (`resolve -> validate -> analyze -> plan -> preview -> apply -> validate-result -> record-lock -> report`).
+- Verify byte-for-byte non-mutating dry-run behavior.
+- Verify deterministic idempotency on repeated apply without redundant writes.
+- Verify local modification conflict detection without silent overwrites (no `--force` in initial slice).
+- Verify pre-mutation integrity verification and symbolic link containment protection.
+- Verify source detachment workflow cleanly removing lock tracking while preserving installed source files.
+
+### Changes
+
+- Added `research/source-distribution/types.ts`: mutation lifecycle phases, plans, validation, and report types.
+- Added `research/source-distribution/source-installer.ts`: 9-phase source installation engine and lockfile updater.
+- Added `research/source-distribution/source-installer.test.ts`: test suite for clean install, dry-run, idempotency, conflicts, symlinks, and detachment.
+- Added `research/source-distribution/README.md`: lifecycle phase documentation and verification guide.
+- Updated `PROJECT_STATE.md` with Source Distribution research reference.
+
+### Validation
+
+- `pnpm exec vitest run research/source-distribution/*.test.ts`: 1 test file, 7 tests passed (0 failures).
+- `pnpm exec tsc --noEmit -p research/source-distribution/tsconfig.json`: passed cleanly (0 errors).
+- `pnpm exec vitest run`: 56 test files, 341 tests passed (0 failures).
+- `pnpm format:check`: passed.
+- `pnpm lint`: passed.
+
+### Architecture / compatibility
+
+- Zero runtime or public API changes (throwaway research only).
+- Verified compatibility with existing CLI Core safety principles: all file writes are root-confined, atomic, no-follow symlink safe, and dry-run non-mutating.
+
+### Remaining / recovery
+
+- Next slice in Phase 6: P6.5 (Cross-Framework Compliance Slice).
+
+## 2026-08-22 03:05 CEST | P6.3 Registry Contract & Threat-Model Prototype
+
+Status: completed
+Branch: `test/ui-tokens-dtcg-research`
+PR: not opened
+
+### Scope
+
+- Execute Phase 6 research slice P6.3: Registry Contract and Threat-Model Prototype.
+- Prove declarative manifest parsing, versioning, item types, and target frameworks without executable installation code.
+- Implement strict threat-model validation: prototype pollution prevention, directory traversal rejection (`..`, `%2e%2e`), absolute path rejection, duplicate destination detection, and executable script blocking.
+- Implement cryptographic SHA-256 integrity verification for individual files and canonical manifests.
+- Implement deterministic lock state representation and serialization (`schemaVersion: 1`), tracking original hashes for local modification detection.
+- Prove clean source detachment semantics that preserve installed application-owned source files.
+
+### Changes
+
+- Added `research/registry/types.ts`: typed manifest schema, file entries, lock state, and provenance models.
+- Added `research/registry/manifest-validator.ts`: fail-closed manifest and path containment validator.
+- Added `research/registry/integrity.ts`: SHA-256 base64 hashing, content verification, and manifest integrity computation.
+- Added `research/registry/lockfile.ts`: deterministic lockfile serialization, local modification detection, and source detachment.
+- Added `research/registry/fixtures/button.manifest.json`: valid React button component manifest fixture.
+- Added `research/registry/fixtures/dialog.manifest.json`: valid React dialog modal manifest fixture with capabilities.
+- Added `research/registry/manifest-validator.test.ts`: test suite for schema validation, types, and prototype pollution.
+- Added `research/registry/security-path-containment.test.ts`: test suite for path containment and traversal attacks.
+- Added `research/registry/integrity-verification.test.ts`: test suite for cryptographic integrity and tampering detection.
+- Added `research/registry/lockfile-detachment.test.ts`: test suite for lockfile recording, serialization, modification check, and detachment.
+- Added `research/registry/README.md`: research findings, threat model table, and verification guide.
+- Updated `PROJECT_STATE.md` with Registry research references.
+
+### Validation
+
+- `pnpm exec vitest run research/registry/*.test.ts`: 4 test files, 19 tests passed (0 failures).
+- `pnpm exec tsc --noEmit -p research/registry/tsconfig.json`: passed cleanly (0 errors).
+- `pnpm exec vitest run`: 55 test files, 334 tests passed (0 failures).
+- `pnpm format:check`: passed.
+- `pnpm lint`: passed.
+
+### Architecture / compatibility
+
+- Zero runtime or public API changes (throwaway research only).
+- Gating rule verified: Security and path containment fixtures must gate registry parsing before mutation commands (P6.4) can rely on them.
+
+### Remaining / recovery
+
+- Next slice in Phase 6: P6.4 (Source Distribution Mutation Lifecycle).
+
+## 2026-08-22 02:55 CEST | P6.2 Accessibility Behavior Contracts & DOM Capability Boundary
+
+Status: completed
+Branch: `test/ui-tokens-dtcg-research`
+PR: not opened
+
+### Scope
+
+- Execute Phase 6 research slice P6.2: Accessibility Behavior Contracts and DOM Capability Boundary.
+- Prove framework-neutral behavior models for Disclosure, Tabs, and Dialog without framework dependencies.
+- Build explicit DOM Capabilities boundary for focus trapping, background inertness, scroll locking, escape dismissal, and outside click.
+- Verify WAI-ARIA APG pattern semantics, roving tabIndex, keyboard intent, and complete lifecycle disposal.
+- Record explicit boundary: automated checks and APG patterns do not substitute for production Assistive Technology (screen reader) verification.
+
+### Changes
+
+- Added `research/ui-behaviors/types.ts`: shared behavior contracts, keyboard intents, and DOM capability provider interfaces.
+- Added `research/ui-behaviors/disclosure.ts`: framework-neutral Disclosure behavior (APG Disclosure pattern).
+- Added `research/ui-behaviors/tabs.ts`: framework-neutral Tabs behavior with horizontal/vertical roving tabIndex and automatic/manual activation (APG Tabs pattern).
+- Added `research/ui-behaviors/dom-capabilities.ts`: DOM capabilities provider (`trapFocus`, `setInert`, `lockScroll`, `onEscape`, `onOutsideClick`).
+- Added `research/ui-behaviors/dialog.ts`: headless dialog state machine with attachable DOM capabilities (APG Dialog Modal pattern).
+- Added `research/ui-behaviors/disclosure-behavior.test.ts`: test suite for Disclosure state and keyboard intents.
+- Added `research/ui-behaviors/tabs-behavior.test.ts`: test suite for Tabs navigation, orientation, and roving tabIndex.
+- Added `research/ui-behaviors/dom-capabilities.test.ts`: test suite for focus trap, inertness, scroll locking, and cleanup.
+- Added `research/ui-behaviors/dialog-behavior.test.ts`: test suite for headless Node execution and DOM-integrated modal lifecycle.
+- Added `research/ui-behaviors/a11y-apg-review.test.ts`: test suite for WAI-ARIA APG compliance review.
+- Added `research/ui-behaviors/README.md`: research findings and architecture documentation.
+- Updated `PROJECT_STATE.md` with UI behaviors research reference.
+
+### Validation
+
+- `pnpm exec vitest run research/ui-behaviors/*.test.ts`: 5 test files, 22 tests passed (0 failures).
+- `pnpm exec tsc --noEmit -p research/ui-behaviors/tsconfig.json`: passed cleanly (0 errors).
+- `pnpm exec vitest run`: 51 test files, 315 tests passed (0 failures).
+- `pnpm format:check`: passed.
+- `pnpm lint`: passed.
+
+### Architecture / compatibility
+
+- Zero runtime or public API changes (throwaway research only).
+- Clear separation established: Pure interaction semantics remain framework-neutral; browser focus, scrolling, and inertness stay behind explicit DOM capability providers.
+
+### Remaining / recovery
+
+- Next slice in Phase 6: P6.3 (Registry Contract & Threat-Model Prototype).
+
+## 2026-08-22 02:15 CEST | P6.1 Design Token Format & Transformation Prototype
+
+Status: completed
+Branch: `test/ui-tokens-dtcg-research`
+PR: not opened
+
+### Scope
+
+- Execute Phase 6 research slice P6.1: Design Token Format / Transformation Prototype.
+- Target published DTCG 2025.10 specification as the research baseline.
+- Prototype 3-layer token hierarchy (Primitive -> Semantic -> Limited Component) across light and dark themes.
+- Build strict validation engine preventing prototype pollution, cycle dependencies, type mismatches, and CSS variable collisions.
+- Build mathematical WCAG 2.1 / 2.2 contrast evaluation distinguishing explicit criteria (AA/AAA Normal/Large, Non-text, Focus indicators).
+- Build deterministic generators for CSS Custom Properties, TypeScript definitions, and JSON manifests.
+- Conduct formal build-vs-buy evaluation comparing custom compiler, heavyweight external tooling, and lightweight direct transformation.
+
+### Changes
+
+- Added `research/tokens/dtcg-types.ts`: typed DTCG 2025.10 format definitions.
+- Added `research/tokens/token-validator.ts`: deep AST validation, prototype pollution checks, depth limits, type checks, and alias detection.
+- Added `research/tokens/token-resolver.ts`: topological alias resolution, cycle detection, and CSS variable name normalization.
+- Added `research/tokens/contrast-evaluator.ts`: sRGB/Display P3 relative luminance and WCAG 2.1/2.2 contrast ratio auditor.
+- Added `research/tokens/token-generator.ts`: deterministic CSS Custom Properties, TypeScript constants, and JSON manifest generation.
+- Added `research/tokens/fixtures/tokens.canonical.json`: 3-layer canonical tokens fixture.
+- Added `research/tokens/fixtures/theme.dark.json`: dark theme semantic overrides.
+- Added `research/tokens/token-validator.test.ts`: test suite for syntax, types, prototype pollution, and security limits.
+- Added `research/tokens/token-resolver.test.ts`: test suite for aliases, cycle detection, and variable collisions.
+- Added `research/tokens/token-contrast.test.ts`: test suite for WCAG 2.1/2.2 contrast criteria on light and dark themes.
+- Added `research/tokens/token-generator.test.ts`: test suite for deterministic CSS/TS/JSON generation.
+- Added `research/tokens/token-benchmarks.test.ts`: throughput (> 5,000 docs/s) and byte-stability benchmarks over 100 runs.
+- Added `research/tokens/README.md`: research findings, specification details, and verification guide.
+- Added `docs/strategy/DESIGN_TOKENS_BUILD_VS_BUY_EVALUATION.md`: formal build-vs-buy analysis and recommendations.
+- Updated `PROJECT_STATE.md` with UI Foundation and Design Tokens research references.
+
+### Validation
+
+- `pnpm exec vitest run research/tokens/*.test.ts`: 5 test files, 28 tests passed (0 failures).
+- `pnpm exec tsc --noEmit -p research/tokens/tsconfig.json`: passed cleanly (0 errors).
+- `pnpm exec vitest run`: 46 test files, 293 tests passed (0 failures).
+- `pnpm format:check`: passed.
+- `pnpm lint`: passed.
+
+### Architecture / compatibility
+
+- Zero runtime or public API changes (throwaway research and documentation only).
+- Recommendation: Vii will NOT own a heavyweight token compiler package. Instead, adopt standard DTCG 2025.10 JSON format with a lightweight transform/validator layer.
+
+### Remaining / recovery
+
+- Next slice in Phase 6: P6.2 (Accessibility Behavior Contracts & DOM Capability Boundary).
+
 ## 2026-08-22 00:25 CEST | Formalize Core Alpha numeric release budgets
 
 Status: completed

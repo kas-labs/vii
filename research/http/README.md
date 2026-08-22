@@ -1,7 +1,7 @@
-# Vii HTTP Client & Transport Research — H1-H6 Prototype
+# Vii HTTP Client & Transport Research — H1-H7 Prototype
 
 > **Status**: Active Research Prototype (Throwaway)
-> **Current Slice**: H6 (Streaming + SSE + Web Streams)
+> **Current Slice**: H7 (SSR Security + Private Network Defenses)
 > **Governing Roadmap**: [`docs/roadmap/HTTP_CLIENT_RESEARCH.md`](../../docs/roadmap/HTTP_CLIENT_RESEARCH.md)
 > **Package Authorization**: **None** (Research only, no public package)
 
@@ -9,13 +9,13 @@
 
 ## 1. Overview
 
-This directory contains the throwaway research prototype for **H1 (Fetch-first Baseline)**, **H2 (Middleware Pipeline)**, **H3 (Cancellation + Timeout + Scope)**, **H4 (Error Taxonomy + Validation Boundary)**, **H5 (Retry + Idempotency Engine)**, and **H6 (Streaming + SSE + Web Streams)**.
+This directory contains the throwaway research prototype for **H1 (Fetch-first Baseline)**, **H2 (Middleware Pipeline)**, **H3 (Cancellation + Timeout + Scope)**, **H4 (Error Taxonomy + Validation Boundary)**, **H5 (Retry + Idempotency Engine)**, **H6 (Streaming + SSE + Web Streams)**, and **H7 (SSR Security + Private Network Defenses)**.
 
-The purpose of H6 is to research native Web Streams (`ReadableStream`), async iteration (`for await (const chunk of response.stream())`), Server-Sent Events (SSE) line/event framing parser, backpressure, reader cancellation on early loop exit, and typed JSON event streams.
+The purpose of H7 is to research SSR execution safety, request-scoped client instances (zero process-wide global mutable state), host allowlisting/denylisting, private IP / SSRF protection (`127.0.0.1`, `10.0.0.0/8`, `169.254.169.254` cloud metadata, `::1`), and sensitive header stripping on cross-origin redirects.
 
 ---
 
-## 2. Implemented Capabilities (H1 + H2 + H3 + H4 + H5 + H6)
+## 2. Implemented Capabilities (H1 + H2 + H3 + H4 + H5 + H6 + H7)
 
 1. **`createHttpClient(config)`**: Factory for creating immutable, isolated HTTP client instances.
 2. **Deterministic URL Resolution**:
@@ -39,9 +39,9 @@ The purpose of H6 is to research native Web Streams (`ReadableStream`), async it
    - Vii `Scope` lifecycle binding with automatic inflight request abortion upon scope disposal.
    - Invariant: `cancellation != failure`.
 7. **Structured Error Taxonomy & Standard Schema Validation (H4)**:
-   - Base `HttpError` class with `HttpStatusError`, `NetworkError`, `HttpParseError`, and `HttpValidationError`.
+   - Base `HttpError` class with `HttpStatusError`, `NetworkError`, `HttpParseError`, `HttpValidationError`, and `HttpSecurityError`.
    - Standard Schema v1 response validation boundary (`validatePayload`) compatible with any Standard Schema v1 provider (Zod 4, Valibot, ArkType, Vii Prototype) with zero core schema dependencies.
-   - Error predicates: `isHttpStatusError`, `isNetworkError`, `isHttpParseError`, `isHttpValidationError`, `isHttpError`.
+   - Error predicates: `isHttpStatusError`, `isNetworkError`, `isHttpParseError`, `isHttpValidationError`, `isHttpSecurityError`, `isHttpError`.
 8. **Retry & Idempotency Engine (H5)**:
    - **Disabled by default**: Retries are strictly opt-in via `config.retry` or `options.retry`.
    - **Exponential Backoff with Full Jitter**: `Math.random() * Math.min(backoffMaxMs, backoffBaseMs * 2^(attempt - 1))`.
@@ -54,14 +54,18 @@ The purpose of H6 is to research native Web Streams (`ReadableStream`), async it
    - `parseEventStream`: WHATWG Server-Sent Events (SSE) framing parser supporting custom `event`, `id`, `retry`, multiline `data`, and comment line filtering.
    - `parseJsonEventStream`: Typed JSON event deserialization with `HttpParseError` on invalid payloads.
    - Client helpers: `client.stream()`, `client.streamLines()`, `client.streamEvents()`, `client.streamJsonEvents()`.
+10. **SSR Security & SSRF Defenses (H7)**:
+    - **Private IP / SSRF Filtering**: Accurate detection and restriction of RFC 1918, RFC 3927 (Link-Local / AWS & GCP metadata `169.254.169.254`), Loopback (`127.0.0.0/8`, `::1`, `localhost`), and IPv6 Unique-Local (`fc00::/7`).
+    - **Host Policy Enforcement**: Configurable `allowedHosts` (wildcards and RegExp) and `blockedHosts`.
+    - **Cross-Origin Sensitive Header Sanitization**: `stripSensitiveHeaders` removes `Authorization`, `Cookie`, `X-Api-Key`, etc. when traversing cross-origin boundaries.
+    - **Pre-flight Enforcement**: Disallowed requests fail immediately with `HttpSecurityError` prior to socket or network initialization.
 
 ---
 
-## 3. Explicit Non-Goals for H6
+## 3. Explicit Non-Goals for H7
 
-The following capabilities are deliberately excluded from H6 and assigned to future research slices:
+The following capabilities are deliberately excluded from H7 and assigned to future research slices:
 
-- **SSR Security & SSRF Defenses**: Deferred to **H7**.
 - **Observability & Diagnostics**: Deferred to **H8**.
 - **Graduation & Build-vs-Buy**: Deferred to **H9**.
 

@@ -1,5 +1,5 @@
 /**
- * Vii HTTP Client & Transport Research — Types (H1-H6 Baseline)
+ * Vii HTTP Client & Transport Research — Types (H1-H7 Baseline)
  *
  * Research Prototype: Not a production package.
  */
@@ -7,6 +7,7 @@
 import type { ScopeLike } from "./cancellation.js";
 import type { RetryPolicy } from "./retry.js";
 import type { StandardSchemaV1 } from "./schema.js";
+import type { SecurityPolicy } from "./security.js";
 import type { JsonServerSentEvent, ServerSentEvent } from "./streaming.js";
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "HEAD" | "OPTIONS";
@@ -44,6 +45,7 @@ export interface HttpRequestOptions<T = unknown> extends Omit<
   readonly timeout?: number | undefined;
   readonly scope?: ScopeLike | undefined;
   readonly retry?: RetryPolicy | number | boolean | undefined;
+  readonly security?: SecurityPolicy | undefined;
   readonly fetch?: typeof globalThis.fetch | undefined;
   readonly context?: HttpRequestContext | undefined;
   readonly middleware?: readonly HttpMiddleware[] | undefined;
@@ -57,6 +59,7 @@ export interface HttpClientConfig {
   readonly headers?: ExtendedHeadersInit | undefined;
   readonly timeout?: number | undefined;
   readonly retry?: RetryPolicy | number | boolean | undefined;
+  readonly security?: SecurityPolicy | undefined;
   readonly throwOnError?: boolean | undefined;
   readonly fetch?: typeof globalThis.fetch | undefined;
   readonly middleware?: readonly HttpMiddleware[] | undefined;

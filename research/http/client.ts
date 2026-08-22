@@ -1,5 +1,5 @@
 /**
- * Vii HTTP Client & Transport Research — Client Factory (H1-H6 Baseline)
+ * Vii HTTP Client & Transport Research — Client Factory (H1-H7 Baseline)
  *
  * Research Prototype: Not a production package.
  */
@@ -16,6 +16,7 @@ import { mergeHeaders } from "./headers.js";
 import { composeMiddleware } from "./pipeline.js";
 import { executeWithRetry } from "./retry.js";
 import { validatePayload } from "./schema.js";
+import { validateUrlSecurity } from "./security.js";
 import {
   iterateLines,
   iterateStream,
@@ -42,6 +43,7 @@ class HttpClientImpl implements HttpClient {
       ...(config.headers !== undefined ? { headers: mergeHeaders(config.headers) } : {}),
       ...(config.timeout !== undefined ? { timeout: config.timeout } : {}),
       ...(config.retry !== undefined ? { retry: config.retry } : {}),
+      ...(config.security !== undefined ? { security: config.security } : {}),
       ...(config.throwOnError !== undefined ? { throwOnError: config.throwOnError } : {}),
       ...(config.fetch !== undefined ? { fetch: config.fetch } : {}),
       ...(config.middleware !== undefined
@@ -53,6 +55,9 @@ class HttpClientImpl implements HttpClient {
 
   async request(url: string | URL, options: HttpRequestOptions = {}): Promise<Response> {
     const resolvedUrl = resolveUrl(url, this.config.baseURL, options.query);
+    const effectiveSecurity = options.security ?? this.config.security;
+    validateUrlSecurity(resolvedUrl, effectiveSecurity);
+
     const headers = mergeHeaders(this.config.headers, options.headers);
     const fetchFn = options.fetch ?? this.config.fetch ?? globalThis.fetch;
 
@@ -342,6 +347,7 @@ class HttpClientImpl implements HttpClient {
     const mergedHeaders = mergeHeaders(this.config.headers, childConfig.headers);
     const mergedTimeout = childConfig.timeout ?? this.config.timeout;
     const mergedRetry = childConfig.retry ?? this.config.retry;
+    const mergedSecurity = childConfig.security ?? this.config.security;
     const mergedThrowOnError = childConfig.throwOnError ?? this.config.throwOnError;
     const mergedFetch = childConfig.fetch ?? this.config.fetch;
     const mergedMiddleware = [...(this.config.middleware ?? []), ...(childConfig.middleware ?? [])];
@@ -351,6 +357,7 @@ class HttpClientImpl implements HttpClient {
       ...(mergedBaseURL !== undefined ? { baseURL: mergedBaseURL } : {}),
       ...(mergedTimeout !== undefined ? { timeout: mergedTimeout } : {}),
       ...(mergedRetry !== undefined ? { retry: mergedRetry } : {}),
+      ...(mergedSecurity !== undefined ? { security: mergedSecurity } : {}),
       ...(mergedThrowOnError !== undefined ? { throwOnError: mergedThrowOnError } : {}),
       ...(mergedFetch !== undefined ? { fetch: mergedFetch } : {}),
       ...(mergedMiddleware.length > 0 ? { middleware: mergedMiddleware } : {}),

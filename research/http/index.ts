@@ -1,5 +1,5 @@
 /**
- * Vii HTTP Client & Transport Research (H1-H6 Baseline)
+ * Vii HTTP Client & Transport Research (H1-H7 Baseline)
  *
  * Research Prototype: Not a production package.
  */
@@ -8,6 +8,7 @@ export {
   AbortError,
   HttpError,
   HttpParseError,
+  HttpSecurityError,
   HttpStatusError,
   HttpValidationError,
   NetworkError,
@@ -15,6 +16,7 @@ export {
   isAbortError,
   isHttpError,
   isHttpParseError,
+  isHttpSecurityError,
   isHttpStatusError,
   isHttpValidationError,
   isNetworkError,
@@ -31,6 +33,14 @@ export {
   parseRetryAfter,
 } from "./retry.js";
 export { validatePayload } from "./schema.js";
+export {
+  DEFAULT_SENSITIVE_HEADERS,
+  isPrivateIpv4,
+  isPrivateIpv6,
+  isPrivateOrRestrictedHost,
+  stripSensitiveHeaders,
+  validateUrlSecurity,
+} from "./security.js";
 export {
   iterateLines,
   iterateStream,
@@ -53,6 +63,7 @@ export type {
 } from "./types.js";
 export type {
   HttpParseErrorOptions,
+  HttpSecurityErrorOptions,
   HttpStatusErrorOptions,
   HttpValidationErrorOptions,
   NetworkErrorOptions,
@@ -60,4 +71,5 @@ export type {
 export type { RetryPolicy } from "./retry.js";
 export type { ScopeLike, SignalBinding } from "./cancellation.js";
 export type { StandardSchemaV1 } from "./schema.js";
+export type { SecurityPolicy } from "./security.js";
 export type { JsonServerSentEvent, ServerSentEvent } from "./streaming.js";

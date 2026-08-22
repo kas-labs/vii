@@ -41,7 +41,7 @@ PR: <number or not opened>
 
 Status: completed
 Branch: `feat/http-error-taxonomy-validation`
-PR: not opened
+PR: #132
 
 ### Scope
 

@@ -57,7 +57,7 @@ describe("createHttpClient (H1 Baseline)", () => {
 
     await client.post("/data", { body: "payload" });
     expect(mockFetch.mock.calls[1]![1].method).toBe("POST");
-    expect(mockFetch.mock.calls[1]![1].body).toBe("payload");
+    expect(await (mockFetch.mock.calls[1]![1] as Request).text()).toBe("payload");
 
     await client.put("/data", { body: "put-payload" });
     expect(mockFetch.mock.calls[2]![1].method).toBe("PUT");

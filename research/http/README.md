@@ -1,21 +1,21 @@
-# Vii HTTP Client & Transport Research — H1 Prototype
+# Vii HTTP Client & Transport Research — H1-H2 Prototype
 
-> **Status**: Active Research Prototype (Throwaway)  
-> **Current Slice**: H1 (Fetch-first Client Baseline)  
-> **Governing Roadmap**: [`docs/roadmap/HTTP_CLIENT_RESEARCH.md`](../../docs/roadmap/HTTP_CLIENT_RESEARCH.md)  
+> **Status**: Active Research Prototype (Throwaway)
+> **Current Slice**: H2 (Middleware / Request Pipeline)
+> **Governing Roadmap**: [`docs/roadmap/HTTP_CLIENT_RESEARCH.md`](../../docs/roadmap/HTTP_CLIENT_RESEARCH.md)
 > **Package Authorization**: **None** (Research only, no public package)
 
 ---
 
 ## 1. Overview
 
-This directory contains the throwaway research prototype for **H1 (Fetch-first Client Baseline)**.
+This directory contains the throwaway research prototype for **H1 (Fetch-first Client Baseline)** and **H2 (Middleware / Request Pipeline)**.
 
-The purpose of H1 is to investigate the minimal ergonomics and operational overhead of an explicit, immutable Fetch-based HTTP client without introducing any heavy runtime abstractions, middleware, or streaming layers.
+The purpose of H2 is to research functional onion-style middleware composition (`(request, next, context) => Promise<Response>`), context metadata propagation, request/response transformations, and short-circuiting.
 
 ---
 
-## 2. Implemented Capabilities (H1)
+## 2. Implemented Capabilities (H1 + H2)
 
 1. **`createHttpClient(config)`**: Factory for creating immutable, isolated HTTP client instances.
 2. **Deterministic URL Resolution**:
@@ -28,19 +28,25 @@ The purpose of H1 is to investigate the minimal ergonomics and operational overh
 4. **Method Helpers**:
    - Convenience helpers for standard HTTP verbs: `get()`, `post()`, `put()`, `patch()`, `delete()`, `head()`, `options()`.
    - Direct `request()` execution.
-5. **Injected Fetch Capability**:
+5. **Functional Onion Middleware Pipeline (H2)**:
+   - `composeMiddleware(transport, middleware, context)` provides Koa/Angular-style onion execution.
+   - Supports request & response transformations.
+   - Supports short-circuiting (e.g. mock responses / cache) without invoking transport.
+   - Non-wire `HttpRequestContext` propagation.
+   - Built-in guard against multiple `next()` invocations.
+   - Deterministic error propagation and upstream error recovery.
+6. **Injected Fetch Capability**:
    - Direct injection of `fetch` implementation at client creation or per-request override.
    - Enables frictionless unit testing with mocks and serverless runtime service bindings without global pollution.
-6. **Immutable Client Inheritance (`extend`)**:
-   - `.extend(childConfig)` returns a new client inheriting parent `baseURL` and default `headers` without mutating the parent instance.
+7. **Immutable Client Inheritance (`extend`)**:
+   - `.extend(childConfig)` returns a new client inheriting parent `baseURL`, default `headers`, and `middleware` without mutating the parent instance.
 
 ---
 
-## 3. Explicit Non-Goals for H1
+## 3. Explicit Non-Goals for H2
 
-The following capabilities are deliberately excluded from H1 and assigned to future research slices:
+The following capabilities are deliberately excluded from H2 and assigned to future research slices:
 
-- **Middleware / Interceptors**: Deferred to **H2**.
 - **Cancellation & Timeout Composition**: Deferred to **H3**.
 - **Error Taxonomy & Standard Schema v1 Response Validation**: Deferred to **H4**.
 - **Retry & Idempotency Engine**: Deferred to **H5** (Disabled by default).

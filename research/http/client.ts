@@ -1,11 +1,18 @@
 /**
- * Vii HTTP Client & Transport Research — Client Factory (H1 Baseline)
+ * Vii HTTP Client & Transport Research — Client Factory (H1-H2 Baseline)
  *
  * Research Prototype: Not a production package.
  */
 
 import { mergeHeaders } from "./headers.js";
-import type { HttpClient, HttpClientConfig, HttpRequestOptions } from "./types.js";
+import { composeMiddleware } from "./pipeline.js";
+import type {
+  HttpClient,
+  HttpClientConfig,
+  HttpHandler,
+  HttpRequestContext,
+  HttpRequestOptions,
+} from "./types.js";
 import { resolveUrl } from "./url.js";
 
 class HttpClientImpl implements HttpClient {
@@ -16,6 +23,9 @@ class HttpClientImpl implements HttpClient {
       ...(config.baseURL !== undefined ? { baseURL: config.baseURL } : {}),
       ...(config.headers !== undefined ? { headers: mergeHeaders(config.headers) } : {}),
       ...(config.fetch !== undefined ? { fetch: config.fetch } : {}),
+      ...(config.middleware !== undefined
+        ? { middleware: Object.freeze([...config.middleware]) }
+        : {}),
     };
     this.config = Object.freeze(frozenConfig);
   }
@@ -25,12 +35,13 @@ class HttpClientImpl implements HttpClient {
     const headers = mergeHeaders(this.config.headers, options.headers);
     const fetchFn = options.fetch ?? this.config.fetch ?? globalThis.fetch;
 
+    const method = options.method ?? "GET";
     const init: RequestInit = {
-      method: options.method ?? "GET",
+      method,
       headers,
     };
 
-    if (options.body !== undefined) {
+    if (options.body !== undefined && options.body !== null) {
       init.body = options.body;
     }
     if (options.signal !== undefined) {
@@ -61,7 +72,16 @@ class HttpClientImpl implements HttpClient {
       init.referrerPolicy = options.referrerPolicy;
     }
 
-    return fetchFn(resolvedUrl, init);
+    const request = new Request(resolvedUrl, init);
+    const context: HttpRequestContext = options.context ?? {};
+    const activeMiddleware = [...(this.config.middleware ?? []), ...(options.middleware ?? [])];
+
+    const transport: HttpHandler = (req) => {
+      return fetchFn(req.url, req);
+    };
+
+    const handler = composeMiddleware(transport, activeMiddleware, context);
+    return handler(request);
   }
 
   get(url: string | URL, options?: Omit<HttpRequestOptions, "method">): Promise<Response> {
@@ -100,11 +120,13 @@ class HttpClientImpl implements HttpClient {
 
     const mergedHeaders = mergeHeaders(this.config.headers, childConfig.headers);
     const mergedFetch = childConfig.fetch ?? this.config.fetch;
+    const mergedMiddleware = [...(this.config.middleware ?? []), ...(childConfig.middleware ?? [])];
 
     const childOptions: HttpClientConfig = {
       headers: mergedHeaders,
       ...(mergedBaseURL !== undefined ? { baseURL: mergedBaseURL } : {}),
       ...(mergedFetch !== undefined ? { fetch: mergedFetch } : {}),
+      ...(mergedMiddleware.length > 0 ? { middleware: mergedMiddleware } : {}),
     };
 
     return new HttpClientImpl(childOptions);

@@ -1,70 +1,92 @@
 # Vii UI Architecture
 
-Status: Draft
+Status: Draft / Research
 
 ## Purpose
 
-Vii UI is an open, accessible, cross-framework component system for React, Angular, Vue, Web Components, and Vanilla projects.
+Vii UI is a candidate open, accessible, cross-framework UI foundation for React, Angular, Vue, Custom Elements, and Vanilla projects.
 
-Its defining principle is ownership: developers may add source code to their projects, install maintained packages, or use framework-agnostic Custom Elements without being forced into one distribution model.
+Its defining principle is ownership: developers may add source code to their projects, consume maintained packages, or use standards-based Custom Elements without being forced into one distribution model.
+
+No distribution mode, package name, component API, registry protocol, or implementation engine is stable while the governing RFCs remain Draft.
 
 ## Product position
 
 > Accessible primitives. Open components. Any framework. Your code.
 
-Vii UI is inspired by the source-ownership model popularized by shadcn, but it is not React-only, Tailwind-only, or tied to one primitive engine.
+Vii UI is inspired by source-ownership systems such as shadcn, but it is not React-only, Tailwind-only, Web-Components-only, or tied to one primitive engine.
 
 ## Non-goals
 
 Vii UI is not:
 
-- a mandatory dependency of Vii State, Query, or Server;
-- a universal native renderer for every platform;
+- a mandatory dependency of Vii State, Query, Form, Flow, HTTP, or Server;
+- a universal native renderer;
 - a Tailwind-only component library;
-- exclusively a Web Components library;
-- a guarantee that identical DOM is appropriate for every framework;
-- a reason to place all component logic inside Shadow DOM;
-- a replacement for platform accessibility semantics.
+- exclusively a Custom Elements library;
+- a guarantee that identical DOM is appropriate across frameworks;
+- a reason to hide all behavior inside Shadow DOM;
+- a replacement for semantic HTML, browser accessibility APIs, or assistive-technology testing;
+- a universal cross-framework component compiler;
+- a registry service that can execute arbitrary installation code.
 
 ## Layered model
 
 ```text
-Vii UI Contracts
-→ Vii UI Behaviors
-→ Vii UI Primitives
-→ Framework or Element targets
-→ Styled components
-→ Compositions and application blocks
+UI contracts
+-> behavior state machines / interaction intent
+-> DOM and platform capabilities
+-> primitives
+-> framework / Vanilla / Custom Element targets
+-> styling and tokens
+-> compositions and application blocks
 ```
 
-### Contracts
+### UI contracts
 
 Framework-neutral definitions for:
 
-- component state;
-- events;
-- variants and sizes;
+- state and transitions;
+- controlled/uncontrolled ownership where relevant;
 - accessibility requirements;
-- form behavior;
-- overlay behavior;
-- keyboard interactions;
-- capability metadata.
+- keyboard intent;
+- form semantics;
+- overlay semantics;
+- capabilities and lifecycle requirements;
+- shared test cases.
+
+Contracts describe semantics. They must not be shaped as React props, Angular directives, Vue emits, DOM Event objects, or framework callbacks.
 
 ### Behaviors
 
-Renderless TypeScript logic for components such as:
+Renderless behavior may model deterministic interaction state such as:
 
-- disclosure;
-- tabs;
-- dialog;
-- menu;
-- selection;
-- listbox;
-- combobox;
-- tooltip;
-- toast.
+- disclosure expanded state;
+- tabs selection and navigation intent;
+- selection models;
+- menu/listbox state;
+- dialog open/close intent.
 
-Behaviors must not require Vii State. An optional Vii adapter may expose diagnostics and lifecycle integration.
+Behaviors must not require Vii State. An optional Vii integration may add Scope ownership or diagnostics only when it does not change behavior semantics.
+
+### DOM and platform capabilities
+
+Not all accessible UI behavior is framework-neutral pure state.
+
+The following belong behind explicit DOM/platform seams:
+
+- focus placement and restoration;
+- tabbable discovery and focus containment;
+- background inertness;
+- scroll locking;
+- portals and layering;
+- pointer, keyboard, and document/window event wiring;
+- geometry and positioning;
+- ResizeObserver / IntersectionObserver where needed;
+- form-associated Custom Element integration;
+- browser-specific compatibility behavior.
+
+A pure Node behavior test cannot prove Dialog focus trapping or browser accessibility.
 
 ### Primitives
 
@@ -72,124 +94,103 @@ Minimal accessible building blocks with little or no visual identity.
 
 ### Targets
 
-Vii UI may produce multiple targets:
+Research targets may include:
 
 - React source components;
 - Angular source components;
 - Vue source components;
-- packaged framework components;
-- Web Components;
-- Vanilla compositions.
+- Vanilla compositions;
+- Custom Elements;
+- maintained framework packages only if evidence justifies package mode.
 
-A target is a distribution and integration decision, not a separate product philosophy.
+A target is an integration/distribution choice, not a separate semantic product.
 
 ## Distribution modes
 
+RFC 0008 remains Draft. The following modes are research candidates.
+
 ### Source mode
 
-The CLI adds component source code to the consumer repository.
+The CLI may add component source files to the consumer repository.
 
 ```bash
 vii ui add dialog
 ```
 
-The application owns and may modify the files.
-
-Source mode is the default long-term experience because it provides maximum control and minimizes vendor lock-in.
+The application owns and may modify installed source. Source mode is the default research direction because it maximizes control and provides an explicit exit path.
 
 ### Package mode
 
-The application imports maintained components from versioned npm packages.
+Maintained npm packages may be evaluated for teams that prefer centralized upgrades.
 
-```ts
-import { Button } from '@kas-labs/vii-ui-react';
-```
-
-Package mode is useful for prototypes, centralized enterprise systems, and teams that prefer managed updates.
+Exact package names and package boundaries are intentionally not selected here. Package naming is a governed public-contract decision.
 
 ### Elements mode
 
-The application uses standards-based Custom Elements.
+Standards-based Custom Elements may provide framework-independent consumption for suitable components.
 
 ```html
 <vii-button>Save</vii-button>
 ```
 
-Elements mode is useful for Vanilla, mixed-framework products, microfrontends, embedded widgets, and gradual migrations.
+Custom Elements are not assumed to be the universal implementation source for React, Angular, Vue, or complex compositions.
 
 ## Framework-native experience
 
-Shared behavior does not justify awkward public APIs.
+Shared semantics do not justify awkward public APIs.
 
-Examples of expected native conventions:
+Each target may expose native conventions for:
 
-```tsx
-<ViiDialog open={open} onOpenChange={setOpen} />
-```
+- props/inputs;
+- events/outputs;
+- controlled state;
+- slots/content projection;
+- forms;
+- lifecycle;
+- typing.
 
-```html
-<vii-dialog [(open)]="open" />
-```
-
-```vue
-<ViiDialog v-model:open="open" />
-```
-
-Generated wrappers may cover simple elements. Complex components may require dedicated framework adapters to preserve lifecycle, forms, slots, events, and typing.
+Generated wrappers are evaluated against dedicated framework implementations. Neither approach is assumed correct for every component.
 
 ## Stencil boundary
 
-Stencil is a candidate implementation for the Web Components target because it provides Custom Elements tooling and framework wrapper generation.
+Stencil is a candidate implementation tool for Custom Element research.
 
-Stencil is not part of Vii UI's public architecture contract.
+Stencil is not a Vii public architecture contract and must not become a hidden requirement for source React, Angular, Vue, or Vanilla components.
 
-The following must remain portable:
+Portable assets include:
 
-- registry schema;
 - behavior contracts;
 - design tokens;
 - accessibility requirements;
-- framework source templates;
-- component metadata.
-
-Vii must be able to replace or supplement Stencil without invalidating the registry or product model.
+- component metadata;
+- registry data;
+- shared semantic test cases.
 
 ## Shadow DOM policy
 
-Shadow DOM is selected per component.
+Shadow DOM is selected per component after evidence.
 
-### Good candidates
+Good research candidates include simple encapsulated controls such as Button, Checkbox, Switch, Badge, Spinner, and Progress.
 
-- button;
-- checkbox;
-- switch;
-- badge;
-- avatar;
-- spinner;
-- progress.
+Light DOM or source-owned markup may be preferable for typography, layout, tables, navigation, form compositions, command palettes, date pickers, editors, and larger application blocks.
 
-### Prefer Light DOM or source-owned markup
+Selection criteria include:
 
-- typography;
-- layout;
-- table;
-- form layouts;
-- navigation structures;
-- data table;
-- command palette;
-- date picker;
-- editor;
-- complex application blocks.
-
-Selection criteria include composition, CSS cascade requirements, SSR, accessibility, performance, and consumer ownership.
+- composition and slots;
+- CSS cascade and consumer theming;
+- forms;
+- SSR/hydration;
+- accessibility and assistive-technology behavior;
+- performance;
+- consumer ownership.
 
 ## Styling
 
-Packaged Web Components use regular component CSS and semantic design tokens.
+Semantic design tokens are the portable styling boundary.
 
-Tailwind is an optional source-generation and consumer integration target. It is not a required runtime or internal styling engine.
+Tailwind is an optional source/template integration, not the canonical token source or a required runtime dependency.
 
-Supported source strategies may include:
+Source strategies may include:
 
 - plain CSS;
 - CSS Modules;
@@ -199,56 +200,80 @@ Supported source strategies may include:
 
 ## Native platform APIs
 
-Vii UI should prefer standards where they improve reliability, while retaining abstraction boundaries and fallbacks.
+Vii UI should prefer semantic HTML and native platform capabilities when they improve correctness and reduce code, while retaining compatibility seams.
 
-Candidates include:
+Research candidates include:
 
-- ElementInternals for form-associated elements;
-- the Popover API;
-- the dialog element;
+- `<dialog>`;
+- Popover API;
+- `inert`;
+- ElementInternals;
 - CSS Anchor Positioning;
 - Container Queries;
 - Declarative Shadow DOM.
 
-Native availability does not remove the need for accessibility and compatibility testing.
+Native availability does not remove the need for browser and assistive-technology testing.
 
-## Initial component scope
+## Initial validation strategy
 
-The first validation set should remain small:
+Do not implement the complete component list in parallel.
 
-1. Button
-2. Input
-3. Checkbox
-4. Switch
-5. Dialog
-6. Tabs
-7. Tooltip
+Use progressive vertical slices:
 
-Foundation utilities:
+1. Button or another simple semantic control for token/styling/distribution evidence.
+2. Disclosure for simple interactive behavior.
+3. Tabs for composite keyboard behavior.
+4. Dialog only after the DOM focus/layer capability boundary is explicit.
 
-- visually hidden;
-- focus management;
-- layer or portal abstraction;
-- tokens;
-- test utilities.
+Checkbox, Switch, Input, Tooltip, and later primitives may follow when they exercise a new boundary.
 
-Complex components such as Data Table, Date Picker, Rich Text Editor, and Scheduler are explicitly deferred.
+Complex components such as Data Table, Date Picker, Rich Text Editor, Scheduler, Combobox, and Command Palette are deferred until the foundation demonstrates clear value.
 
-## Accessibility
+## Accessibility contract
 
-Each component must define:
+Every interactive component must define:
 
-- semantic role and element strategy;
+- native element/ARIA strategy;
+- accessible-name requirements;
 - keyboard contract;
-- focus behavior;
-- labeling requirements;
-- screen-reader behavior;
-- disabled and readonly semantics;
-- reduced-motion behavior;
-- forced-colors behavior;
-- RTL considerations.
+- focus entry, movement, and restoration;
+- disabled and readonly semantics where relevant;
+- state relationships such as `aria-expanded`, `aria-selected`, or `aria-controls` where appropriate;
+- reduced-motion behavior when motion exists;
+- forced-colors/high-contrast behavior;
+- RTL behavior for directional interaction;
+- assistive-technology test expectations.
 
-Accessibility is a contract, not a final audit added after implementation.
+WAI-ARIA Authoring Practices are reference guidance for common patterns. APG examples are not production certification and automated audits alone cannot establish full accessibility support.
+
+Accessibility evidence should combine:
+
+- deterministic semantic/unit tests;
+- browser keyboard tests;
+- accessibility-tree or axe-style automated checks;
+- focus lifecycle tests;
+- forced-colors and reduced-motion checks where applicable;
+- manual assistive-technology smoke tests before public support claims.
+
+## Security model
+
+Security begins before registry or CLI writes.
+
+Research must address:
+
+- declarative-only registry content;
+- path traversal and absolute-path rejection;
+- symlink/root escape prevention;
+- duplicate destination handling;
+- integrity mismatch behavior;
+- prototype-pollution-shaped metadata;
+- generated content/template injection;
+- dependency-plan safety;
+- CSP / Trusted Types compatibility;
+- provenance and registry origin;
+- no hidden installation scripts.
+
+Security review is continuous across P6.1-P6.6, not a late final audit.
 
 ## Performance principles
 
@@ -257,19 +282,28 @@ Accessibility is a contract, not a final audit added after implementation.
 - no mandatory icon bundle;
 - no mandatory Vii State dependency;
 - no telemetry by default;
-- lazy registration where appropriate;
 - wrapper overhead measured independently;
-- package and source modes tested separately.
+- source/package/elements modes measured separately;
+- lifecycle disposal and retained-memory risk included where applicable.
+
+Numeric budgets are adopted only after reproducible baselines exist. Phase planning must not invent release thresholds first and measure later.
 
 ## Relationship with Vii diagnostics
 
-UI behaviors may emit structured development diagnostics through an optional adapter.
+UI integrations may emit structured development diagnostics through an optional adapter.
 
-Examples:
+Diagnostics must remain value-safe and observational. They must never be required for correct UI behavior or grant mutation authority.
 
-- dialog opened because trigger was activated;
-- focus moved to initial target;
-- selection changed through keyboard input;
-- invalid form value prevented submission.
+Possible structural events include focus ownership changes, interaction causes, selection transitions, and blocked invalid operations, but exact event schemas require separate evidence and governance.
 
-Diagnostics must never be required for correct UI behavior.
+## Relationship with Registry and CLI
+
+Registry items are declarative data plus files. CLI mutation follows the existing Analyze/Plan/Preview/Apply/Validate/Report safety model with registry-specific Resolve and integrity validation before mutation.
+
+The first source-distribution slice should use local fixtures before introducing remote registry transport. Dependency installation, force-overwrite behavior, remote trust, update merging, and signatures are separate decisions.
+
+## Phase 6 evidence gate
+
+See `docs/roadmap/PHASE_6_UI.md` for the bounded sequence.
+
+Research may graduate only when evidence supports the actual retained surface. Valid outcomes include a smaller Vii UI, reuse of mature accessibility primitives, a tokens/registry-only foundation, thin adapters, or stopping Vii-owned UI implementation when maintenance cost exceeds differentiated value.

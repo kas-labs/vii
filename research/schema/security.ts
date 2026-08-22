@@ -37,6 +37,39 @@ export function isDepthExceeded(context: ValidationContext): boolean {
   return context.depth > context.maxDepth;
 }
 
+export function checkStructureSecurity(
+  input: object,
+  path: readonly (string | number)[],
+  ctx: ValidationContext,
+  kind: "object" | "array",
+): { readonly ok: false; readonly issues: readonly any[] } | null {
+  if (isDepthExceeded(ctx)) {
+    return {
+      ok: false,
+      issues: [
+        {
+          code: "max_depth_exceeded",
+          expected: `nesting depth <= ${ctx.maxDepth}`,
+          path,
+        },
+      ],
+    };
+  }
+  if (isObjectCycleDetected(input, ctx)) {
+    return {
+      ok: false,
+      issues: [
+        {
+          code: "cyclic_reference",
+          expected: `acyclic ${kind} structure`,
+          path,
+        },
+      ],
+    };
+  }
+  return null;
+}
+
 export function safeRegexTest(pattern: RegExp, input: string): boolean {
   // Pre-check maximum input length to prevent catastrophic ReDoS backtracking
   if (input.length > MAX_REGEX_INPUT_LENGTH) {

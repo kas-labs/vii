@@ -1,9 +1,8 @@
 import {
+  checkStructureSecurity,
   createValidationContext,
   DEFAULT_MAX_PROPERTIES,
   enterChildContext,
-  isDepthExceeded,
-  isObjectCycleDetected,
   type ValidationContext,
 } from "./security.js";
 import {
@@ -33,39 +32,13 @@ export class ObjectSchema<TShape extends Record<string, Schema<any, any>>> exten
     context?: unknown,
   ): ValidationResult<{ [K in keyof TShape]: InferOutput<TShape[K]> }> {
     if (typeof input !== "object" || input === null || Array.isArray(input)) {
-      return {
-        ok: false,
-        issues: [{ code: "invalid_type", expected: "object", path }],
-      };
+      return { ok: false, issues: [{ code: "invalid_type", expected: "object", path }] };
     }
 
     const ctx: ValidationContext = (context as ValidationContext) ?? createValidationContext();
 
-    if (isDepthExceeded(ctx)) {
-      return {
-        ok: false,
-        issues: [
-          {
-            code: "max_depth_exceeded",
-            expected: `nesting depth <= ${ctx.maxDepth}`,
-            path,
-          },
-        ],
-      };
-    }
-
-    if (isObjectCycleDetected(input, ctx)) {
-      return {
-        ok: false,
-        issues: [
-          {
-            code: "cyclic_reference",
-            expected: "acyclic object structure",
-            path,
-          },
-        ],
-      };
-    }
+    const secViolation = checkStructureSecurity(input, path, ctx, "object");
+    if (secViolation) return secViolation;
 
     const inputRecord = input as Record<string, unknown>;
     const propNames = Object.getOwnPropertyNames(inputRecord);
@@ -84,8 +57,6 @@ export class ObjectSchema<TShape extends Record<string, Schema<any, any>>> exten
     }
 
     const issues: SchemaIssue[] = [];
-
-    // Check for prototype pollution attempt
     for (const key of propNames) {
       if (FORBIDDEN_KEYS.has(key)) {
         issues.push({
@@ -97,8 +68,6 @@ export class ObjectSchema<TShape extends Record<string, Schema<any, any>>> exten
     }
 
     const childCtx = enterChildContext(ctx);
-
-    // Validate declared fields in shape
     for (const [key, schema] of Object.entries(this.shape)) {
       let fieldValue: unknown;
       try {
@@ -118,11 +87,7 @@ export class ObjectSchema<TShape extends Record<string, Schema<any, any>>> exten
       }
     }
 
-    if (issues.length > 0) {
-      return { ok: false, issues };
-    }
-
-    // Zero-copy guarantee for validation-only success path
+    if (issues.length > 0) return { ok: false, issues };
     return { ok: true, value: input as { [K in keyof TShape]: InferOutput<TShape[K]> } };
   }
 }
@@ -143,39 +108,13 @@ export class ArraySchema<TItemSchema extends Schema<any, any>> extends BaseSchem
     context?: unknown,
   ): ValidationResult<Array<InferOutput<TItemSchema>>> {
     if (!Array.isArray(input)) {
-      return {
-        ok: false,
-        issues: [{ code: "invalid_type", expected: "array", path }],
-      };
+      return { ok: false, issues: [{ code: "invalid_type", expected: "array", path }] };
     }
 
     const ctx: ValidationContext = (context as ValidationContext) ?? createValidationContext();
 
-    if (isDepthExceeded(ctx)) {
-      return {
-        ok: false,
-        issues: [
-          {
-            code: "max_depth_exceeded",
-            expected: `nesting depth <= ${ctx.maxDepth}`,
-            path,
-          },
-        ],
-      };
-    }
-
-    if (isObjectCycleDetected(input, ctx)) {
-      return {
-        ok: false,
-        issues: [
-          {
-            code: "cyclic_reference",
-            expected: "acyclic array structure",
-            path,
-          },
-        ],
-      };
-    }
+    const secViolation = checkStructureSecurity(input, path, ctx, "array");
+    if (secViolation) return secViolation;
 
     const childCtx = enterChildContext(ctx);
     const issues: SchemaIssue[] = [];
@@ -199,11 +138,7 @@ export class ArraySchema<TItemSchema extends Schema<any, any>> extends BaseSchem
       }
     }
 
-    if (issues.length > 0) {
-      return { ok: false, issues };
-    }
-
-    // Zero-copy guarantee for validation-only success path
+    if (issues.length > 0) return { ok: false, issues };
     return { ok: true, value: input as Array<InferOutput<TItemSchema>> };
   }
 }

@@ -1,4 +1,4 @@
-import { BaseSchema, type Schema, type ValidationResult } from "./types.js";
+import { BaseSchema, type InferOutput, type Schema, type ValidationResult } from "./types.js";
 
 export interface Codec<TEncoded, TDecoded> extends Schema<TEncoded, TDecoded> {
   readonly kind: "codec";
@@ -145,8 +145,8 @@ export function setFromArray<T>(elementSchema: Schema<any, T>): Codec<Array<T>, 
 
 export function urlSearchParamsCodec<TShape extends Record<string, Schema<any, any>>>(
   shape: TShape,
-): Codec<string, { [K in keyof TShape]: any }> {
-  return new CustomCodec<string, { [K in keyof TShape]: any }>(
+): Codec<string, { [K in keyof TShape]: InferOutput<TShape[K]> }> {
+  return new CustomCodec<string, { [K in keyof TShape]: InferOutput<TShape[K]> }>(
     (input, path) => {
       let params: URLSearchParams;
       if (typeof input === "string") {

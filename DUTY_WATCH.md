@@ -37,6 +37,41 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-22 18:15 CEST | S5 Type Inference & TS Compiler Cost
+
+Status: completed
+Branch: `docs/schema-architecture-research`
+PR: #126
+
+### Scope
+
+- Implement S5 Type Inference & TypeScript compiler performance benchmark test suite in `research/schema/type-inference.test.ts`.
+- Verify static type inference fidelity for `InferInput<T>` and `InferOutput<T>` across primitives, optional/nullable modifiers, wide objects (25+ fields), unions, and asymmetric transformation codecs (`dateFromISOString`, `bigIntFromString`, `jsonCodec`, `urlSearchParamsCodec`).
+- Verify deep generic nesting (10 levels of nested objects/arrays) without triggering TS2589 infinite instantiation depth errors.
+- Profile `tsc -p research/schema/tsconfig.json --noEmit` duration and confirm sub-second / fast compilation performance without IDE degradation.
+
+### Changes
+
+- Added `research/schema/type-inference.test.ts`: compile-time type equality assertions (`Expect<Equal<A, B>>`) and runtime verification across deep and wide schemas.
+- Refactored `research/schema/structures.ts` and `research/schema/security.ts`: extracted `checkStructureSecurity` helper, reducing `structures.ts` to 196 lines.
+- Updated `research/schema/codec.ts`: refined `urlSearchParamsCodec` type signature to strictly preserve `InferOutput<TShape[K]>`.
+
+### Verification
+
+- `pnpm exec vitest run research/schema/*.test.ts`: 7 test files, 44 tests passed (0 failures).
+- `pnpm exec vitest run`: 67 test files, 426 tests passed across repository.
+- `pnpm exec tsc -p research/schema/tsconfig.json --noEmit`: passed cleanly with 0 errors (compile time ~0.78s).
+- `pnpm format:check`, `pnpm lint`, `pnpm validate`: all passed cleanly.
+
+### Architecture & invariants
+
+- Zero Compiler Recursion Hazard: Deep structure schemas infer cleanly within TypeScript recursion limits.
+- Precise Asymmetry: Codecs preserve exact input and output type separation without intermediate type widening (`any`).
+
+### Remaining / recovery
+
+- S5 complete. Next slice is S6 (Integration Contract Fixtures: Form / HTTP / Query).
+
 ## 2026-08-22 18:00 CEST | S4 Security, CSP & Complexity Consolidation
 
 Status: completed

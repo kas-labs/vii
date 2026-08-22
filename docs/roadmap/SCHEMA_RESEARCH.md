@@ -175,16 +175,44 @@ All planned research slices have been completed and verified under `research/sch
 
 ---
 
-## 9. Performance Benchmark Summary
+## 9. Empirical Comparative Benchmark Summary
 
-| Benchmark Category | Target Constraint | Measured Throughput | Result |
-| --- | --- | --- | --- |
-| **Primitive Check (`v.string()`)** | > 100,000 ops/sec | **> 1,200,000 ops/sec** | PASS (Exceeds target) |
-| **Object Check (4 fields)** | > 50,000 ops/sec | **> 350,000 ops/sec** | PASS (Exceeds target) |
-| **Deep Nested Object (10 levels)** | < 0.05 ms / check | **~0.015 ms / check** | PASS (Exceeds target) |
-| **Codec Round-Trip (Date/JSON/URL)**| > 10,000 ops/sec | **> 45,000 ops/sec** | PASS (Exceeds target) |
-| **Early-Exit Rejection** | > 50,000 ops/sec | **> 400,000 ops/sec** | PASS (Exceeds target) |
-| **TypeScript `tsc --noEmit`** | < 2.0 s | **~0.78 s** | PASS (Clean compiler cost) |
+### Pinned Competitors & Environment
+- **Node.js**: `v22.17.0` | **V8**: `12.4` | **Architecture**: `darwin-arm64` (Apple Silicon)
+- **Handwritten Baseline**: Plain conditional JavaScript validator (`check()`)
+- **Zod 4**: `zod@4.4.3` (Pinned)
+- **Valibot**: `valibot@1.4.2` (Pinned)
+- **ArkType**: `arktype@2.2.3` (Pinned)
+- **TypeBox**: `@sinclair/typebox@0.34.52` (`TypeCompiler.Compile` JIT)
+- **Vii Research Prototype**: Zero-copy prototype (`research/schema/`)
+
+### Measured Empirical Throughput & Latency (50,000 runs)
+
+| Competitor | Valid Path Ops/Sec | Valid Latency | Invalid Path Ops/Sec | Invalid Latency | Factory Ops/Sec | CSP Model |
+| --- | --- | --- | --- | --- | --- | --- |
+| **Handwritten Baseline** | **36,932,204** | 0.03 µs | **27,981,138** | 0.04 µs | N/A | Strict |
+| **ArkType (2.2.3)** | **22,273,362** | 0.04 µs | **137,947** | 7.25 µs | Moderate | JIT / Regex |
+| **TypeBox (0.34.52 JIT)**| **12,828,736** | 0.08 µs | **52,826,202** | 0.02 µs | High (Compile) | Requires unsafe-eval |
+| **Valibot (1.4.2)** | **3,286,483** | 0.30 µs | **1,877,159** | 0.53 µs | 164,985 | Strict |
+| **Zod 4 (4.4.3)** | **3,255,968** | 0.31 µs | **41,425** | 24.14 µs | 8,885 | Strict |
+| **Vii Prototype** | **2,225,577** | 0.45 µs | **2,087,879** | 0.48 µs | **3,099,968** | Strict |
+
+### Comparative Multi-Dimensional Evaluation
+
+1. **Runtime Performance**:
+   - For simple type checking, compiled JIT engines (`TypeBox`, `ArkType`) and pure handwritten code achieve peak throughput.
+   - On error materialization and issue formatting, `Valibot` and `Vii Prototype` maintain consistent sub-microsecond throughput (~1.9M–2.1M ops/sec), whereas `Zod 4` drops to ~41K ops/sec due to heavy `ZodError` instantiation.
+2. **Bundle & Tree-Shaking Impact**:
+   - `Valibot`: ~0.6–1.2 kB min+gzip for minimal schema usage due to modular function-first architecture.
+   - `Zod 4`: ~4–8 kB min+gzip.
+   - `ArkType`: ~8–12 kB min+gzip (due to parser/AST engine).
+   - `TypeBox`: ~3–5 kB min+gzip.
+3. **Security & CSP Compliance**:
+   - `TypeBox` achieves peak performance via dynamic code generation (`new Function()`), which is blocked under strict Content Security Policy (`script-src 'self'`).
+   - `Valibot`, `Zod 4`, and `Vii Prototype` are 100% strict CSP compliant (zero `eval`, zero `new Function`).
+4. **Developer Experience & Standard Schema Interoperability**:
+   - `Zod 4`, `Valibot 1.4`, and `ArkType 2.2` all natively implement the official **Standard Schema v1** specification (`~standard.validate`).
+   - Proven by real integration test `research/schema/standard-schema-interop.test.ts`: Zod, Valibot, and ArkType schemas validate seamlessly through the generic Vii Standard Schema boundary.
 
 ---
 
@@ -201,3 +229,4 @@ All planned research slices have been completed and verified under `research/sch
    - `@vii-labs/core` remains 100% zero-dependency, platform-neutral, and completely decoupled from Schema.
 4. **Minimal First-Party Codec Utilities (`Reduce`)**:
    - Keep bidirectional serialization codecs (`urlSearchParamsCodec`, `jsonCodec`, `dateFromISOString`) as lightweight utility packages or built-ins in the respective consumer packages (Vii HTTP, Vii Form, Vii Query) rather than requiring a heavyweight schema runtime.
+   - No `@vii-labs/schema` or `@vii-labs/codec` package is authorized for publication at this time.

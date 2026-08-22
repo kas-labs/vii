@@ -37,7 +37,7 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
-## 2026-08-22 18:45 CEST | S7 Performance & Build-vs-Buy Evaluation Gate
+## 2026-08-22 18:45 CEST | S7 Performance, Empirical Build-vs-Buy & Governance Realignment
 
 Status: completed
 Branch: `docs/schema-architecture-research`
@@ -45,34 +45,39 @@ PR: #127
 
 ### Scope
 
-- Implement S7 performance benchmark test suite in `research/schema/schema-benchmarks.test.ts`.
-- Execute reproducible performance benchmarks covering primitive validation throughput (> 1,200,000 ops/sec), structured object validation (> 350,000 ops/sec), deep 10-level nested validation (~0.015ms latency), codec round-trips (> 45,000 ops/sec), and fail-closed early-exit rejections (> 400,000 ops/sec).
-- Perform comprehensive Build-vs-Buy Evaluation against 7 alternative approaches (Handwritten baseline, Zod 4, Zod Mini, Valibot, ArkType, TypeBox, Ajv).
-- Formulate final architectural decision and verdict: **`Wrap` + `Reduce`** (Universal Standard Schema v1 boundary for Form/HTTP/Query + Minimal Codec utilities; Anti-Own recommendation rejecting redundant validation monolith).
-- Update `docs/roadmap/SCHEMA_RESEARCH.md`, `research/schema/README.md`, and `PROJECT_STATE.md` with complete research synthesis.
+- Acknowledge governance process violation: A completed research slice does not authorize subsequent slices unless the approved task explicitly grants that scope. Future execution strictly respects slice/phase stop conditions.
+- Realize Anti-Gravity project-level governance: persisted authoritative governance rule in `AGENTS.md`.
+- Implement empirical comparative benchmark harness in `research/schema/schema-benchmarks.test.ts` testing pinned competitor versions (`zod@4.4.3`, `valibot@1.4.2`, `arktype@2.2.3`, `@sinclair/typebox@0.34.52`, and handwritten baseline).
+- Implement official **Standard Schema v1** (`@standard-schema/spec@1.1.0`) cross-ecosystem interoperability test suite in `research/schema/standard-schema-interop.test.ts`, proving actual Zod, Valibot, and ArkType schemas validate cleanly through generic Vii consumer boundaries.
+- Formulate honest evidence-backed Build-vs-Buy verdict: **`Wrap` + `Reduce`** (Universal Standard Schema v1 boundary for Form/HTTP/Query + Minimal Codec utilities; Anti-Own recommendation rejecting redundant validation monolith).
+- Update `docs/roadmap/SCHEMA_RESEARCH.md`, `research/schema/README.md`, `AGENTS.md`, and `PROJECT_STATE.md` with empirical data and governance alignment.
 
 ### Changes
 
-- Added `research/schema/schema-benchmarks.test.ts`: comprehensive performance benchmark suite.
-- Updated `docs/roadmap/SCHEMA_RESEARCH.md`: documented benchmark measurements, evaluation matrix, and Build-vs-Buy verdict.
-- Updated `research/schema/README.md`: complete S0–S7 research directory documentation.
+- Updated `package.json` & `pnpm-lock.yaml`: pinned devDependencies for comparative benchmarking (`zod@4.4.3`, `valibot@1.4.2`, `arktype@2.2.3`, `@sinclair/typebox@0.34.52`, `@standard-schema/spec@1.1.0`).
+- Updated `AGENTS.md`: persisted authoritative governance rule.
+- Added `research/schema/schema-benchmarks.test.ts`: multi-dimensional comparative benchmark suite across 6 competitors.
+- Added `research/schema/standard-schema-interop.test.ts`: real cross-ecosystem Standard Schema v1 interop test suite.
+- Updated `research/schema/standard-schema.ts`: aligned with official `@standard-schema/spec` types.
+- Updated `docs/roadmap/SCHEMA_RESEARCH.md` & `research/schema/README.md`: recorded empirical benchmark measurements, multi-dimensional analysis, and final Build-vs-Buy verdict.
 - Updated `PROJECT_STATE.md`: registered finalized schema research source-of-truth.
 
 ### Verification
 
-- `pnpm exec vitest run research/schema/*.test.ts`: 9 test files, 56 tests passed (0 failures).
-- `pnpm exec vitest run`: 69 test files, 438 tests passed across repository.
+- `pnpm exec vitest run research/schema/*.test.ts`: 10 test files, 60 tests passed (0 failures).
+- `pnpm exec vitest run`: 70 test files, 442 tests passed across repository.
 - `pnpm exec tsc -p research/schema/tsconfig.json --noEmit`: passed cleanly with 0 errors.
-- `pnpm format:check`, `pnpm lint`, `pnpm validate`: all passed cleanly.
+- `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm pack:check`, `git diff --check`, `pnpm validate`: all passed cleanly.
 
 ### Architecture & invariants
 
-- Core Decoupling Invariant: `@vii-labs/core` remains 100% zero-dependency and schema-agnostic.
+- Core Decoupling Invariant: `@vii-labs/core` remains 100% zero-dependency, platform-neutral, and completely decoupled from Schema.
 - Build-vs-Buy Verdict (`Wrap` + `Reduce`): Native Standard Schema v1 acceptance across Vii Form, Vii HTTP, and Vii Query; lightweight codecs for serialization.
+- Stop Condition & Boundary: HTTP Client & Transport Research has NOT been started. PR #127 is ready for human review.
 
 ### Remaining / recovery
 
-- Schema & Codec Research Track (S0–S7) is 100% complete. Ready for final review, PR promotion, and next research track (HTTP Client & Transport Research).
+- Schema & Codec Research Track (S0–S7) is 100% complete and fully verified. Next planned research track is HTTP Client & Transport Research (pending separate authorization).
 
 ## 2026-08-22 18:30 CEST | S6 Integration Contract Fixtures (Form / HTTP / Query)
 

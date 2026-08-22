@@ -1,5 +1,5 @@
 /**
- * Vii HTTP Client & Transport Research (H1-H4 Baseline)
+ * Vii HTTP Client & Transport Research (H1-H5 Baseline)
  *
  * Research Prototype: Not a production package.
  */
@@ -24,6 +24,12 @@ export { bindScopeSignal, composeSignals, createTimeoutSignal } from "./cancella
 export { createHttpClient } from "./client.js";
 export { mergeHeaders } from "./headers.js";
 export { composeMiddleware } from "./pipeline.js";
+export {
+  calculateBackoff,
+  executeWithRetry,
+  normalizeRetryPolicy,
+  parseRetryAfter,
+} from "./retry.js";
 export { validatePayload } from "./schema.js";
 export { isAbsoluteUrl, resolveUrl, serializeQueryParams } from "./url.js";
 export type {
@@ -45,5 +51,6 @@ export type {
   HttpValidationErrorOptions,
   NetworkErrorOptions,
 } from "./errors.js";
+export type { RetryPolicy } from "./retry.js";
 export type { ScopeLike, SignalBinding } from "./cancellation.js";
 export type { StandardSchemaV1 } from "./schema.js";

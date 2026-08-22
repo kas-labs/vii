@@ -1,7 +1,7 @@
-# Vii HTTP Client & Transport Research — H1-H4 Prototype
+# Vii HTTP Client & Transport Research — H1-H5 Prototype
 
 > **Status**: Active Research Prototype (Throwaway)
-> **Current Slice**: H4 (Error Taxonomy + Validation Boundary)
+> **Current Slice**: H5 (Retry + Idempotency Engine)
 > **Governing Roadmap**: [`docs/roadmap/HTTP_CLIENT_RESEARCH.md`](../../docs/roadmap/HTTP_CLIENT_RESEARCH.md)
 > **Package Authorization**: **None** (Research only, no public package)
 
@@ -9,13 +9,13 @@
 
 ## 1. Overview
 
-This directory contains the throwaway research prototype for **H1 (Fetch-first Baseline)**, **H2 (Middleware Pipeline)**, **H3 (Cancellation + Timeout + Scope)**, and **H4 (Error Taxonomy + Validation Boundary)**.
+This directory contains the throwaway research prototype for **H1 (Fetch-first Baseline)**, **H2 (Middleware Pipeline)**, **H3 (Cancellation + Timeout + Scope)**, **H4 (Error Taxonomy + Validation Boundary)**, and **H5 (Retry + Idempotency Engine)**.
 
-The purpose of H4 is to research a structured error taxonomy (`HttpStatusError`, `NetworkError`, `HttpParseError`, `HttpValidationError`, `TimeoutError`, `AbortError`), HTTP status code mapping, typed JSON decoding helpers, and the Standard Schema v1 (`@standard-schema/spec`) response payload validation boundary.
+The purpose of H5 is to research explicit opt-in retry policies (strictly disabled by default), exponential backoff with full jitter, standard `Retry-After` header parsing (both delta-seconds and HTTP-date), HTTP method idempotency enforcement (`GET`, `HEAD`, `PUT`, `DELETE`, `OPTIONS`), and immediate abort interruption during backoff delays.
 
 ---
 
-## 2. Implemented Capabilities (H1 + H2 + H3 + H4)
+## 2. Implemented Capabilities (H1 + H2 + H3 + H4 + H5)
 
 1. **`createHttpClient(config)`**: Factory for creating immutable, isolated HTTP client instances.
 2. **Deterministic URL Resolution**:
@@ -39,21 +39,22 @@ The purpose of H4 is to research a structured error taxonomy (`HttpStatusError`,
    - Vii `Scope` lifecycle binding with automatic inflight request abortion upon scope disposal.
    - Invariant: `cancellation != failure`.
 7. **Structured Error Taxonomy & Standard Schema Validation (H4)**:
-   - Base `HttpError` class.
-   - `HttpStatusError`: Non-2xx response errors with status code, response object, and parsed error body data.
-   - `NetworkError`: Transport connection / DNS / offline failures.
-   - `HttpParseError`: Response body deserialization failures (e.g. malformed JSON syntax) with raw text preservation.
-   - `HttpValidationError`: Thrown on Standard Schema v1 validation failure with detailed `issues` array and decoded `data`.
+   - Base `HttpError` class with `HttpStatusError`, `NetworkError`, `HttpParseError`, and `HttpValidationError`.
    - Standard Schema v1 response validation boundary (`validatePayload`) compatible with any Standard Schema v1 provider (Zod 4, Valibot, ArkType, Vii Prototype) with zero core schema dependencies.
    - Error predicates: `isHttpStatusError`, `isNetworkError`, `isHttpParseError`, `isHttpValidationError`, `isHttpError`.
+8. **Retry & Idempotency Engine (H5)**:
+   - **Disabled by default**: Retries are strictly opt-in via `config.retry` or `options.retry`.
+   - **Exponential Backoff with Full Jitter**: `Math.random() * Math.min(backoffMaxMs, backoffBaseMs * 2^(attempt - 1))`.
+   - **`Retry-After` Header Parsing**: Parses both delta-seconds (`Retry-After: 120`) and HTTP-date (`Retry-After: Wed, 21 Oct 2026 07:28:00 GMT`).
+   - **Method Idempotency Guard**: Non-idempotent methods (`POST`, `PATCH`) are protected from automatic retry unless explicitly configured.
+   - **Abort-Aware Backoff**: AbortSignal triggers immediately terminate retry sleep delays without waiting for timer expiration.
 
 ---
 
-## 3. Explicit Non-Goals for H4
+## 3. Explicit Non-Goals for H5
 
-The following capabilities are deliberately excluded from H4 and assigned to future research slices:
+The following capabilities are deliberately excluded from H5 and assigned to future research slices:
 
-- **Retry & Idempotency Engine**: Deferred to **H5** (Disabled by default).
 - **Web Streams & SSE Abstractions**: Deferred to **H6**.
 - **SSR Security & SSRF Defenses**: Deferred to **H7**.
 

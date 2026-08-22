@@ -41,7 +41,7 @@ PR: <number or not opened>
 
 Status: completed
 Branch: `docs/schema-architecture-research`
-PR: not opened
+PR: #126
 
 ### Scope
 

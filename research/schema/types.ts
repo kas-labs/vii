@@ -21,7 +21,11 @@ export class SchemaError extends Error {
 
 export interface Schema<TInput, TOutput> {
   readonly kind: string;
-  check(input: unknown, path?: readonly (string | number)[]): ValidationResult<TOutput>;
+  check(
+    input: unknown,
+    path?: readonly (string | number)[],
+    context?: unknown,
+  ): ValidationResult<TOutput>;
   parse(input: unknown): TOutput;
   optional(): Schema<TInput | undefined, TOutput | undefined>;
   nullable(): Schema<TInput | null, TOutput | null>;
@@ -37,7 +41,11 @@ export type InferOutput<T> = T extends Schema<any, infer TOut> ? TOut : never;
 export abstract class BaseSchema<TInput, TOutput> implements Schema<TInput, TOutput> {
   abstract readonly kind: string;
 
-  abstract check(input: unknown, path?: readonly (string | number)[]): ValidationResult<TOutput>;
+  abstract check(
+    input: unknown,
+    path?: readonly (string | number)[],
+    context?: unknown,
+  ): ValidationResult<TOutput>;
 
   parse(input: unknown): TOutput {
     const result = this.check(input);
@@ -66,33 +74,38 @@ export abstract class BaseSchema<TInput, TOutput> implements Schema<TInput, TOut
 class OptionalSchema<TIn, TOut> extends BaseSchema<TIn | undefined, TOut | undefined> {
   readonly kind = "optional";
 
-  constructor(private readonly inner: Schema<TIn, TOut>) {
+  constructor(readonly inner: Schema<TIn, TOut>) {
     super();
   }
 
   check(
     input: unknown,
     path: readonly (string | number)[] = [],
+    context?: unknown,
   ): ValidationResult<TOut | undefined> {
     if (input === undefined) {
       return { ok: true, value: undefined };
     }
-    return this.inner.check(input, path);
+    return this.inner.check(input, path, context);
   }
 }
 
 class NullableSchema<TIn, TOut> extends BaseSchema<TIn | null, TOut | null> {
   readonly kind = "nullable";
 
-  constructor(private readonly inner: Schema<TIn, TOut>) {
+  constructor(readonly inner: Schema<TIn, TOut>) {
     super();
   }
 
-  check(input: unknown, path: readonly (string | number)[] = []): ValidationResult<TOut | null> {
+  check(
+    input: unknown,
+    path: readonly (string | number)[] = [],
+    context?: unknown,
+  ): ValidationResult<TOut | null> {
     if (input === null) {
       return { ok: true, value: null };
     }
-    return this.inner.check(input, path);
+    return this.inner.check(input, path, context);
   }
 }
 
@@ -100,15 +113,19 @@ class RefinedSchema<TIn, TOut> extends BaseSchema<TIn, TOut> {
   readonly kind = "refined";
 
   constructor(
-    private readonly inner: Schema<TIn, TOut>,
+    readonly inner: Schema<TIn, TOut>,
     private readonly predicate: (value: TOut) => boolean,
     private readonly options?: { readonly code?: string; readonly message?: string },
   ) {
     super();
   }
 
-  check(input: unknown, path: readonly (string | number)[] = []): ValidationResult<TOut> {
-    const innerResult = this.inner.check(input, path);
+  check(
+    input: unknown,
+    path: readonly (string | number)[] = [],
+    context?: unknown,
+  ): ValidationResult<TOut> {
+    const innerResult = this.inner.check(input, path, context);
     if (!innerResult.ok) {
       return innerResult;
     }

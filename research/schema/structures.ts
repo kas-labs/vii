@@ -1,4 +1,12 @@
 import {
+  createValidationContext,
+  DEFAULT_MAX_PROPERTIES,
+  enterChildContext,
+  isDepthExceeded,
+  isObjectCycleDetected,
+  type ValidationContext,
+} from "./security.js";
+import {
   BaseSchema,
   type InferInput,
   type InferOutput,
@@ -22,6 +30,7 @@ export class ObjectSchema<TShape extends Record<string, Schema<any, any>>> exten
   check(
     input: unknown,
     path: readonly (string | number)[] = [],
+    context?: unknown,
   ): ValidationResult<{ [K in keyof TShape]: InferOutput<TShape[K]> }> {
     if (typeof input !== "object" || input === null || Array.isArray(input)) {
       return {
@@ -30,11 +39,54 @@ export class ObjectSchema<TShape extends Record<string, Schema<any, any>>> exten
       };
     }
 
+    const ctx: ValidationContext = (context as ValidationContext) ?? createValidationContext();
+
+    if (isDepthExceeded(ctx)) {
+      return {
+        ok: false,
+        issues: [
+          {
+            code: "max_depth_exceeded",
+            expected: `nesting depth <= ${ctx.maxDepth}`,
+            path,
+          },
+        ],
+      };
+    }
+
+    if (isObjectCycleDetected(input, ctx)) {
+      return {
+        ok: false,
+        issues: [
+          {
+            code: "cyclic_reference",
+            expected: "acyclic object structure",
+            path,
+          },
+        ],
+      };
+    }
+
     const inputRecord = input as Record<string, unknown>;
+    const propNames = Object.getOwnPropertyNames(inputRecord);
+
+    if (propNames.length > DEFAULT_MAX_PROPERTIES) {
+      return {
+        ok: false,
+        issues: [
+          {
+            code: "too_many_properties",
+            expected: `<= ${DEFAULT_MAX_PROPERTIES} properties`,
+            path,
+          },
+        ],
+      };
+    }
+
     const issues: SchemaIssue[] = [];
 
     // Check for prototype pollution attempt
-    for (const key of Object.getOwnPropertyNames(inputRecord)) {
+    for (const key of propNames) {
       if (FORBIDDEN_KEYS.has(key)) {
         issues.push({
           code: "forbidden_property",
@@ -44,13 +96,14 @@ export class ObjectSchema<TShape extends Record<string, Schema<any, any>>> exten
       }
     }
 
+    const childCtx = enterChildContext(ctx);
+
     // Validate declared fields in shape
     for (const [key, schema] of Object.entries(this.shape)) {
       let fieldValue: unknown;
       try {
         fieldValue = inputRecord[key];
       } catch {
-        // Getter throw or proxy trap
         issues.push({
           code: "unreadable_property",
           expected: "readable property",
@@ -59,7 +112,7 @@ export class ObjectSchema<TShape extends Record<string, Schema<any, any>>> exten
         continue;
       }
 
-      const fieldResult = schema.check(fieldValue, [...path, key]);
+      const fieldResult = schema.check(fieldValue, [...path, key], childCtx);
       if (!fieldResult.ok) {
         issues.push(...fieldResult.issues);
       }
@@ -87,6 +140,7 @@ export class ArraySchema<TItemSchema extends Schema<any, any>> extends BaseSchem
   check(
     input: unknown,
     path: readonly (string | number)[] = [],
+    context?: unknown,
   ): ValidationResult<Array<InferOutput<TItemSchema>>> {
     if (!Array.isArray(input)) {
       return {
@@ -95,6 +149,35 @@ export class ArraySchema<TItemSchema extends Schema<any, any>> extends BaseSchem
       };
     }
 
+    const ctx: ValidationContext = (context as ValidationContext) ?? createValidationContext();
+
+    if (isDepthExceeded(ctx)) {
+      return {
+        ok: false,
+        issues: [
+          {
+            code: "max_depth_exceeded",
+            expected: `nesting depth <= ${ctx.maxDepth}`,
+            path,
+          },
+        ],
+      };
+    }
+
+    if (isObjectCycleDetected(input, ctx)) {
+      return {
+        ok: false,
+        issues: [
+          {
+            code: "cyclic_reference",
+            expected: "acyclic array structure",
+            path,
+          },
+        ],
+      };
+    }
+
+    const childCtx = enterChildContext(ctx);
     const issues: SchemaIssue[] = [];
 
     for (let i = 0; i < input.length; i++) {
@@ -110,7 +193,7 @@ export class ArraySchema<TItemSchema extends Schema<any, any>> extends BaseSchem
         continue;
       }
 
-      const itemResult = this.elementSchema.check(itemValue, [...path, i]);
+      const itemResult = this.elementSchema.check(itemValue, [...path, i], childCtx);
       if (!itemResult.ok) {
         issues.push(...itemResult.issues);
       }
@@ -137,15 +220,13 @@ export class UnionSchema<
   check(
     input: unknown,
     path: readonly (string | number)[] = [],
+    context?: unknown,
   ): ValidationResult<InferOutput<TOptions[number]>> {
-    const allBranchIssues: SchemaIssue[] = [];
-
     for (const option of this.options) {
-      const result = option.check(input, path);
+      const result = option.check(input, path, context);
       if (result.ok) {
         return result as ValidationResult<InferOutput<TOptions[number]>>;
       }
-      allBranchIssues.push(...result.issues);
     }
 
     return {

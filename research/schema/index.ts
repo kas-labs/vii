@@ -12,6 +12,7 @@ import { array, object, union } from "./structures.js";
 export * from "./codec.js";
 export * from "./issues.js";
 export * from "./primitives.js";
+export * from "./security.js";
 export * from "./structures.js";
 export * from "./types.js";
 

@@ -1,3 +1,4 @@
+import { safeRegexTest } from "./security.js";
 import { BaseSchema, type Schema, type ValidationResult } from "./types.js";
 
 export class StringSchema extends BaseSchema<string, string> {
@@ -36,14 +37,14 @@ export class StringSchema extends BaseSchema<string, string> {
       };
     }
 
-    if (this.constraints.regex !== undefined && !this.constraints.regex.test(input)) {
+    if (this.constraints.regex !== undefined && !safeRegexTest(this.constraints.regex, input)) {
       return {
         ok: false,
         issues: [{ code: "invalid_format", expected: "matching regex pattern", path }],
       };
     }
 
-    if (this.constraints.isEmail && !EMAIL_REGEX.test(input)) {
+    if (this.constraints.isEmail && !safeRegexTest(EMAIL_REGEX, input)) {
       return {
         ok: false,
         issues: [{ code: "invalid_email", expected: "valid email format", path }],

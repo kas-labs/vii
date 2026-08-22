@@ -37,6 +37,45 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-22 18:00 CEST | S4 Security, CSP & Complexity Consolidation
+
+Status: completed
+Branch: `docs/schema-architecture-research`
+PR: #126
+
+### Scope
+
+- Implement S4 Security, CSP, and complexity consolidation in `research/schema/security.ts` and `research/schema/structures.ts`.
+- Integrate nesting depth limiter (`DEFAULT_MAX_DEPTH = 32`) preventing call stack exhaustion on deeply nested adversarial inputs.
+- Integrate cyclic reference detection (`WeakSet<object>`) preventing infinite recursion on cyclic objects and arrays.
+- Enforce property count bounds (`DEFAULT_MAX_PROPERTIES = 1000`) and ReDoS input length bounds (`MAX_REGEX_INPUT_LENGTH = 1000`) for regex checks.
+- Audit strict CSP compliance across all schema research files (`auditCSPCompliance`), confirming zero `eval`, `new Function`, or string timer evaluations.
+- Verify comprehensive security defenses against prototype pollution variants, proxy traps, and throwing property getters.
+
+### Changes
+
+- Added `research/schema/security.ts`: `ValidationContext`, `createValidationContext`, `enterChildContext`, `isObjectCycleDetected`, `isDepthExceeded`, `safeRegexTest`, and `auditCSPCompliance`.
+- Updated `research/schema/structures.ts`: integrated context propagation, depth limits, cycle checks, and property count bounds.
+- Updated `research/schema/primitives.ts`: integrated `safeRegexTest` in `StringSchema`.
+- Updated `research/schema/index.ts`: exported security utilities.
+- Added `research/schema/security-consolidation.test.ts`: test suite for ReDoS prevention, cyclic objects/arrays, depth/property limits, and strict CSP compliance.
+
+### Verification
+
+- `pnpm exec vitest run research/schema/*.test.ts`: 6 test files, 39 tests passed (0 failures).
+- `pnpm exec vitest run`: 66 test files, 421 tests passed across repository.
+- `pnpm exec tsc -p research/schema/tsconfig.json --noEmit`: passed cleanly with 0 errors.
+- `pnpm format:check`, `pnpm lint`, `pnpm validate`: all passed cleanly.
+
+### Architecture & invariants
+
+- CSP Compliance: Zero dynamic code generation (`eval`, `new Function`) across entire schema engine.
+- Complexity Bounding: Fail-closed rejection of cyclic graphs, depth overflows (> 32), and DoS property counts (> 1000).
+
+### Remaining / recovery
+
+- S4 complete. Next slice is S5 (Type Inference & TS Compiler Cost).
+
 ## 2026-08-22 17:45 CEST | S3 Codec / Serialization Semantics Research
 
 Status: completed

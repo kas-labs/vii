@@ -1,10 +1,11 @@
 /**
- * Vii HTTP Client & Transport Research — Types (H1-H3 Baseline)
+ * Vii HTTP Client & Transport Research — Types (H1-H4 Baseline)
  *
  * Research Prototype: Not a production package.
  */
 
 import type { ScopeLike } from "./cancellation.js";
+import type { StandardSchemaV1 } from "./schema.js";
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "HEAD" | "OPTIONS";
 
@@ -29,7 +30,7 @@ export type HttpMiddleware = (
   context: HttpRequestContext,
 ) => Promise<Response>;
 
-export interface HttpRequestOptions extends Omit<
+export interface HttpRequestOptions<T = unknown> extends Omit<
   RequestInit,
   "headers" | "method" | "body" | "signal"
 > {
@@ -43,12 +44,16 @@ export interface HttpRequestOptions extends Omit<
   readonly fetch?: typeof globalThis.fetch | undefined;
   readonly context?: HttpRequestContext | undefined;
   readonly middleware?: readonly HttpMiddleware[] | undefined;
+  readonly schema?: StandardSchemaV1<unknown, T> | undefined;
+  readonly throwOnError?: boolean | undefined;
+  readonly responseType?: "json" | "text" | "blob" | "arrayBuffer" | undefined;
 }
 
 export interface HttpClientConfig {
   readonly baseURL?: string | URL | undefined;
   readonly headers?: ExtendedHeadersInit | undefined;
   readonly timeout?: number | undefined;
+  readonly throwOnError?: boolean | undefined;
   readonly fetch?: typeof globalThis.fetch | undefined;
   readonly middleware?: readonly HttpMiddleware[] | undefined;
 }
@@ -64,6 +69,28 @@ export interface HttpClient {
   delete(url: string | URL, options?: Omit<HttpRequestOptions, "method">): Promise<Response>;
   head(url: string | URL, options?: Omit<HttpRequestOptions, "method">): Promise<Response>;
   options(url: string | URL, options?: Omit<HttpRequestOptions, "method">): Promise<Response>;
+
+  requestJson<T = unknown>(url: string | URL, options?: HttpRequestOptions<T>): Promise<T>;
+  getJson<T = unknown>(
+    url: string | URL,
+    options?: Omit<HttpRequestOptions<T>, "method">,
+  ): Promise<T>;
+  postJson<T = unknown>(
+    url: string | URL,
+    options?: Omit<HttpRequestOptions<T>, "method">,
+  ): Promise<T>;
+  putJson<T = unknown>(
+    url: string | URL,
+    options?: Omit<HttpRequestOptions<T>, "method">,
+  ): Promise<T>;
+  patchJson<T = unknown>(
+    url: string | URL,
+    options?: Omit<HttpRequestOptions<T>, "method">,
+  ): Promise<T>;
+  deleteJson<T = unknown>(
+    url: string | URL,
+    options?: Omit<HttpRequestOptions<T>, "method">,
+  ): Promise<T>;
 
   extend(childConfig: HttpClientConfig): HttpClient;
 }

@@ -37,6 +37,55 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-23 00:55 CEST | H3 HTTP Cancellation, Timeout & Scope Lifecycle
+
+Status: completed
+Branch: `feat/http-cancellation-timeout-scope`
+PR: #131
+
+### Scope
+
+- Implement H3 (Cancellation + Timeout + Scope) throwaway research prototype in `research/http/`.
+- Implement signal composition (`composeSignals`) merging multiple `AbortSignal` sources (user abort, deadline timeout, Vii Scope disposal) with automatic listener cleanup on settlement.
+- Implement deadline enforcement (`createTimeoutSignal`) supporting client-level `config.timeout` and request-level `options.timeout`.
+- Implement Vii `Scope` lifecycle binding (`bindScopeSignal`), aborting inflight requests on `scope.dispose()`.
+- Implement error classification predicates (`isTimeoutError`, `isAbortError`) enforcing the core invariant `cancellation != failure`.
+- Integrate signal management and cleanup inside `HttpClient.request` and `.extend()`.
+- Add test suite in `research/http/cancellation.test.ts` and update `research/http/README.md`.
+- Update `DUTY_WATCH.md`.
+
+### Changes
+
+- Added `research/http/cancellation.ts`: `TimeoutError`, `AbortError`, error predicates, `createTimeoutSignal`, `bindScopeSignal`, and `composeSignals`.
+- Updated `research/http/types.ts`: added `timeout`, `scope`, and `ScopeLike` types.
+- Updated `research/http/client.ts`: integrated composed signal propagation, timeout handling, Scope binding, and `finally` cleanup.
+- Updated `research/http/index.ts`: exported cancellation primitives and error types.
+- Added `research/http/cancellation.test.ts`: 9 test cases covering error classification, timeout signals, signal composition, Scope binding, user abort, timeout expiration, Scope disposal, and post-request listener cleanup.
+- Updated `research/http/README.md`: documented H3 capabilities and non-goals.
+
+### Validation
+
+- `pnpm exec vitest run research/http/*.test.ts`: 6 test files, 49 tests passed (0 failures).
+- `pnpm exec tsc -p research/http/tsconfig.json --noEmit`: passed cleanly with 0 errors.
+- `pnpm format:check`: passed cleanly.
+- `pnpm lint`: passed cleanly.
+- `pnpm typecheck`: passed cleanly.
+- `pnpm test`: all packages and fixtures passed cleanly.
+- `pnpm validate`: passed cleanly (all builds, tests, and packed-artifact checks passed).
+- `git diff --check`: passed cleanly with zero whitespace/formatting errors.
+
+### Architecture / compatibility
+
+- Zero package creation or public API changes: H3 is strictly an isolated research prototype under `research/http/`.
+- No `@vii-labs/core` dependency or bundle impact.
+- Retains zero-dependency, Fetch-first platform alignment.
+- Confirmed stop condition: H4 (Error Taxonomy + Validation Boundary) has NOT been started.
+
+### Remaining / recovery
+
+- Await maintainer review of H3 cancellation/timeout prototype and evidence.
+- Future work: H4 (Error Taxonomy + Validation Boundary) only when authorized.
+
 ## 2026-08-23 00:45 CEST | H2 HTTP Middleware Pipeline & Context Propagation
 
 Status: completed

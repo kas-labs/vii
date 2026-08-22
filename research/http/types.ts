@@ -1,8 +1,10 @@
 /**
- * Vii HTTP Client & Transport Research — Types (H1-H2 Baseline)
+ * Vii HTTP Client & Transport Research — Types (H1-H3 Baseline)
  *
  * Research Prototype: Not a production package.
  */
+
+import type { ScopeLike } from "./cancellation.js";
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "HEAD" | "OPTIONS";
 
@@ -36,6 +38,8 @@ export interface HttpRequestOptions extends Omit<
   readonly query?: QueryParams | undefined;
   readonly body?: BodyInit | null | undefined;
   readonly signal?: AbortSignal | null | undefined;
+  readonly timeout?: number | undefined;
+  readonly scope?: ScopeLike | undefined;
   readonly fetch?: typeof globalThis.fetch | undefined;
   readonly context?: HttpRequestContext | undefined;
   readonly middleware?: readonly HttpMiddleware[] | undefined;
@@ -44,6 +48,7 @@ export interface HttpRequestOptions extends Omit<
 export interface HttpClientConfig {
   readonly baseURL?: string | URL | undefined;
   readonly headers?: ExtendedHeadersInit | undefined;
+  readonly timeout?: number | undefined;
   readonly fetch?: typeof globalThis.fetch | undefined;
   readonly middleware?: readonly HttpMiddleware[] | undefined;
 }

@@ -41,7 +41,7 @@ PR: <number or not opened>
 
 Status: completed
 Branch: `feat/http-graduation-decision`
-PR: not opened
+PR: #139
 
 ### Scope
 

@@ -1,6 +1,6 @@
 # Vii Form Architecture
 
-Status: Research
+Status: Research (F0 Architecture Baseline)
 
 ## Purpose
 
@@ -11,6 +11,10 @@ The goal is not to recreate Angular Forms, TanStack Form, React Hook Form, or
 VeeValidate. The goal is to combine the strongest validated ideas into a smaller
 Vii-native semantic model that remains usable from Vanilla TypeScript, React,
 Angular, Vue, and a possible future Vii component runtime.
+
+The governing research roadmap is established in [`docs/roadmap/FORM_RESEARCH.md`](../roadmap/FORM_RESEARCH.md).
+Completion of the F0 slice establishes architecture and domain invariants only.
+It does NOT authorize F1 or any production implementation.
 
 No public Form API is accepted by this document. Examples are illustrative and
 must go through RFC review before implementation support is claimed.

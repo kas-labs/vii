@@ -395,7 +395,7 @@ Use the following ownership model rather than duplicating rules:
 - product boundaries: `docs/strategy/PRODUCT_BOUNDARIES.md`;
 - ecosystem capability ownership and reuse rule: `docs/strategy/ECOSYSTEM_CAPABILITY_STRATEGY.md`;
 - Schema research roadmap and architecture: `docs/roadmap/SCHEMA_RESEARCH.md`, `docs/architecture/SCHEMA_ARCHITECTURE.md`, `docs/quality/SCHEMA_BENCHMARK_PLAN.md`, `research/schema/README.md`;
-- Form research: `docs/architecture/FORM_ARCHITECTURE.md`;
+- Form research: `docs/roadmap/FORM_RESEARCH.md`, `docs/architecture/FORM_ARCHITECTURE.md`;
 - HTTP transport research and graduation decision: `docs/roadmap/HTTP_CLIENT_RESEARCH.md`, `docs/architecture/HTTP_CLIENT.md`, `docs/architecture/ADR_HTTP_GRADUATION_DECISION.md`, `docs/quality/HTTP_RUNTIME_COMPATIBILITY.md`, `docs/quality/HTTP_BUILD_VS_BUY_EVIDENCE.md`, `research/http/README.md`;
 - native template control-flow research: `docs/architecture/TEMPLATE_CONTROL_FLOW.md`;
 - rendering strategy research: `docs/architecture/RENDERING_STRATEGY.md`;

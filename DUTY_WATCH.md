@@ -37,6 +37,45 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-23 22:50 CEST | Form Research F0 — Architecture, Domain Model & Build-vs-Buy Questions
+
+Status: completed
+Branch: `docs/form-research-architecture`
+PR: draft opened
+
+### Scope
+
+- Execute the initial Form research slice F0 (Architecture, Domain Model & Build-vs-Buy Questions).
+- Define canonical research roadmap `docs/roadmap/FORM_RESEARCH.md` covering slices F0 through F10.
+- Clarify ownership boundaries across State, Form, Query, HTTP, Schema, Scope, Diagnostics, and UI.
+- Establish candidate domain model, classification taxonomy, model ownership trade-offs, value pipeline (raw -> parse -> value -> validate -> transform -> output), validation triggers, async cancellation mechanics, structured issue taxonomy, submission state machine, Scope ownership, and Build-vs-Buy comparative matrix.
+- Clarify `docs/architecture/FORM_ARCHITECTURE.md` and update `PROJECT_STATE.md`.
+- Explicitly enforce hard stop: F0 completion does NOT authorize F1 or any production implementation.
+
+### Changes
+
+- Added `docs/roadmap/FORM_RESEARCH.md`: canonical F0–F10 research roadmap, research thesis, core invariants, domain model, value pipeline, validation scheduling, submission state machine, Scope hierarchy, accessibility/security contracts, and Build-vs-Buy evaluation plan.
+- Updated `docs/architecture/FORM_ARCHITECTURE.md`: clarified F0 status, governance reference, and strict stop conditions.
+- Updated `PROJECT_STATE.md`: recorded `docs/roadmap/FORM_RESEARCH.md` in source-of-truth document registry.
+
+### Validation
+
+- `pnpm format:check`: passed.
+- `pnpm lint`: passed.
+- `git diff --check`: passed.
+- `pnpm validate`: passed.
+
+### Architecture / compatibility
+
+- Zero package additions or public API changes; `@vii-labs/form` is NOT created or published.
+- Zero dependencies added; zero runtime code modified.
+- Strict ownership boundaries preserved: Form does not own general state, server cache, transport, or schema definitions.
+
+### Remaining / recovery
+
+- F0 is complete. Next step is maintainer review and authorization of Slice F1 (Minimal Field/Form State Prototype).
+- F1 has NOT been started.
+
 ## 2026-08-23 02:45 CEST | HTTP Client Research Evidence Completion (H8R & H9R)
 
 Status: completed

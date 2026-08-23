@@ -41,7 +41,7 @@ PR: <number or not opened>
 
 Status: completed
 Branch: `feat/http-observability-tracing`
-PR: not opened
+PR: #138
 
 ### Scope
 

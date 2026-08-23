@@ -1,9 +1,10 @@
 # Vii HTTP Client & Transport Research — H1-H8 Prototype
 
-> **Status**: Active Research Prototype (Throwaway)
-> **Current Slice**: H8 (Observability + Tracing + Metrics)
+> **Status**: Completed Research Track (Verdict: `Wrap + Reduce`)
+> **Final Slice**: H9 (Graduation Gate + Build-vs-Buy Decision)
+> **Graduation ADR**: [`docs/architecture/ADR_HTTP_GRADUATION_DECISION.md`](../../docs/architecture/ADR_HTTP_GRADUATION_DECISION.md)
 > **Governing Roadmap**: [`docs/roadmap/HTTP_CLIENT_RESEARCH.md`](../../docs/roadmap/HTTP_CLIENT_RESEARCH.md)
-> **Package Authorization**: **None** (Research only, no public package)
+> **Package Authorization**: None (Future package placement managed via ADR)
 
 ---
 

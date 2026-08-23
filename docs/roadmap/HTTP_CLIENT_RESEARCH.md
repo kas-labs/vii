@@ -1,7 +1,8 @@
 # Vii HTTP Client & Transport Research Roadmap
 
-> **Status**: Active Research Roadmap  
-> **Current Slice**: H0 (Architecture + Semantic Boundaries)  
+> **Status**: Completed Research Track (Verdict: `Wrap + Reduce`)
+> **Final Slice**: H9 (Graduation Gate + Build-vs-Buy Decision)
+> **Graduation ADR**: [`docs/architecture/ADR_HTTP_GRADUATION_DECISION.md`](../architecture/ADR_HTTP_GRADUATION_DECISION.md)
 > **Governing Strategy**: Evidence-driven Build-vs-Buy  
 > **Prerequisites**: Phase 1 (Core State), Phase 2 (Adapters/CLI), Phase 5 (Query), Schema Research (`Wrap + Reduce`)
 

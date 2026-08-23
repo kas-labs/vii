@@ -131,7 +131,15 @@ export function parseTraceparent(
     return null;
   }
 
-  if (version !== "00" || traceId.length !== 32 || spanId.length !== 16 || flags.length !== 2) {
+  // W3C Trace Context validation: version 00, 32-hex traceId (not all 0s), 16-hex spanId (not all 0s), 2-hex flags
+  if (
+    version !== "00" ||
+    !/^[0-9a-f]{32}$/.test(traceId) ||
+    traceId === "00000000000000000000000000000000" ||
+    !/^[0-9a-f]{16}$/.test(spanId) ||
+    spanId === "0000000000000000" ||
+    !/^[0-9a-f]{2}$/.test(flags)
+  ) {
     return null;
   }
 
@@ -139,7 +147,7 @@ export function parseTraceparent(
     version,
     traceId,
     spanId,
-    sampled: flags === "01",
+    sampled: (parseInt(flags, 16) & 1) === 1,
   };
 }
 

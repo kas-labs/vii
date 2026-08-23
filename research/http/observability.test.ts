@@ -46,6 +46,11 @@ describe("W3C Trace Context & OpenTelemetry Propagation (H8)", () => {
     expect(parseTraceparent("invalid-header")).toBeNull();
     expect(parseTraceparent("01-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01")).toBeNull(); // non-00 version
     expect(parseTraceparent("00-short-span-01")).toBeNull();
+    // All-zero IDs are invalid according to W3C Trace Context spec
+    expect(parseTraceparent("00-00000000000000000000000000000000-00f067aa0ba902b7-01")).toBeNull();
+    expect(parseTraceparent("00-4bf92f3577b34da6a3ce929d0e0e4736-0000000000000000-01")).toBeNull();
+    // Non-hex characters
+    expect(parseTraceparent("00-4bf92f3577b34da6a3ce929d0e0e473g-00f067aa0ba902b7-01")).toBeNull();
   });
 });
 

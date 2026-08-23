@@ -37,6 +37,60 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-23 02:45 CEST | HTTP Client Research Evidence Completion (H8R & H9R)
+
+Status: completed
+Branch: `test/http-final-evidence`
+PR: draft opened
+
+### Scope
+
+- Remediate and close missing empirical evidence gates H8R (Runtime Compatibility Evidence) and H9R (Reproducible Build-vs-Buy Evidence) for the Vii HTTP Client & Transport research track.
+- Implement automated runtime compatibility matrix script `scripts/benchmarks/http-runtime-matrix.mjs` evaluating 11 portable transport capabilities on Chromium 133 (via CDP), Node.js v22.17.0, and Bun v1.2.18.
+- Explicitly downgrade unverified runtimes (Firefox, WebKit, Deno, Cloudflare Workers) with transparent documentation of host environment tooling constraints.
+- Implement reproducible comparative benchmark harness `scripts/benchmarks/http-build-vs-buy.mjs` against pinned versions: `axios@1.18.0`, `ky@1.7.5`, `ofetch@1.4.1`, handwritten helper baseline, and native fetch baseline.
+- Accurately measure bundle sizes (minified, gzip, brotli), microbenchmarks (client creation, dispatch + JSON decode, error handling), and empirically verify competitor retry defaults (`ky@1.7.5` = 2 retries, `ofetch@1.4.1` = 1 retry, `axios@1.18.0` = 0 retries, Vii HTTP prototype = 0 retries).
+- Formally scope SSRF preflight policy (`validateUrlSecurity`), redirect credential handling, and W3C Trace Context Level 1 conformance.
+- Create dedicated evidence records `docs/quality/HTTP_RUNTIME_COMPATIBILITY.md` and `docs/quality/HTTP_BUILD_VS_BUY_EVIDENCE.md`.
+- Update `docs/architecture/ADR_HTTP_GRADUATION_DECISION.md`, `docs/roadmap/HTTP_CLIENT_RESEARCH.md`, and `PROJECT_STATE.md`.
+
+### Changes
+
+- Added `scripts/benchmarks/http-runtime-matrix.mjs`: automated H8R runtime compatibility runner across Node.js, Bun, and Chromium via CDP.
+- Added `scripts/benchmarks/http-build-vs-buy.mjs`: reproducible H9R comparative benchmark harness across 6 candidates.
+- Added `research/http/runtime-compatibility.test.ts`: Vitest test suite validating 11 portable contract invariants.
+- Updated `research/http/observability.ts` & `research/http/observability.test.ts`: hardened W3C Trace Context parsing to reject all-zero trace/span IDs and non-hex inputs.
+- Added `docs/quality/HTTP_RUNTIME_COMPATIBILITY.md`: durable documentation of runtime matrix, test contracts, and explicit downgrades.
+- Added `docs/quality/HTTP_BUILD_VS_BUY_EVIDENCE.md`: durable documentation of pinned versions, bundle footprint, microbenchmarks, retry defaults, and security boundaries.
+- Updated `docs/architecture/ADR_HTTP_GRADUATION_DECISION.md`: updated empirical tables and confirmed `Wrap + Reduce` graduation verdict.
+- Updated `docs/roadmap/HTTP_CLIENT_RESEARCH.md`: updated slices table with H8R/H9R evidence entries.
+- Updated `package.json`, `pnpm-lock.yaml`, and `.gitignore`: pinned `axios@1.18.0`, `ky@1.7.5`, `ofetch@1.4.1`, and ignored `.tmp/`.
+- Updated `PROJECT_STATE.md` and `DUTY_WATCH.md`.
+
+### Validation
+
+- `node scripts/benchmarks/http-runtime-matrix.mjs`: 11/11 capabilities pass on Node.js v22.17.0, Bun v1.2.18, and Chromium 133 via CDP.
+- `node scripts/benchmarks/http-build-vs-buy.mjs`: benchmark executed cleanly; bundle sizes and retry defaults empirically verified.
+- `pnpm exec vitest run research/http/*.test.ts`: 12 test files, 102 passed (100% passing).
+- `pnpm exec tsc -p research/http/tsconfig.json --noEmit`: passed cleanly with 0 errors.
+- `pnpm format:check`: passed cleanly with 0 formatting warnings.
+- `pnpm lint`: passed cleanly with 0 lint errors across all packages and scripts.
+- `pnpm typecheck`: passed cleanly across all packages and fixtures.
+- `pnpm test`: all packages and fixtures passed cleanly.
+- `pnpm validate`: passed cleanly (all builds, tests, and packed artifact checks passed).
+- `git diff --check`: passed cleanly.
+
+### Architecture / compatibility
+
+- Core Decoupling Invariant: `@vii-labs/core` remains 100% zero-dependency, platform-neutral, and completely decoupled from HTTP transport.
+- Verdict: `Wrap + Reduce` (Zero-Dependency Micro-Transport Primitive) reconfirmed with honest empirical evidence.
+- Production package implementation remains deferred to a future authorized package delivery track.
+
+### Remaining / recovery
+
+- Draft PR opened for maintainer review.
+- No next research or implementation track has been started.
+
 ## 2026-08-23 02:15 CEST | H9 HTTP Client Graduation Gate & Build-vs-Buy Decision
 
 Status: completed

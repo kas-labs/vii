@@ -733,17 +733,121 @@ describe("Form Research F1 & F2 — Complete Prototype and Regression Evidence",
       form.dispose();
     });
 
-    it("setValues shrink then regrow to initial values: dirty === false", () => {
-      const array = createFieldArray<string>({
-        initialValues: ["a", "b", "c"],
+    it("unkeyed: remove(0) then setValues of equal length does NOT throw, ids all unique", () => {
+      const arr = createFieldArray<string>({ initialValues: ["a", "b", "c"] });
+      arr.remove(0); // live ids: [vii_item_2, vii_item_3]
+      expect(() => {
+        arr.setValues(["x", "y", "z"]);
+      }).not.toThrow();
+
+      const ids = arr.items.get().map((i) => i.id);
+      expect(new Set(ids).size).toBe(ids.length);
+      expect(ids.length).toBe(3);
+    });
+
+    it("unkeyed: remove then setValues then reset() -> dirty === false, values === initial", () => {
+      const arr = createFieldArray<string>({ initialValues: ["a", "b", "c"] });
+      arr.remove(1);
+      arr.setValues(["x", "y"]);
+      expect(arr.dirty.get()).toBe(true);
+
+      arr.reset();
+      expect(arr.dirty.get()).toBe(false);
+      expect(arr.values.get()).toEqual(["a", "b", "c"]);
+      expect(arr.touched.get()).toBe(false);
+    });
+
+    it("unkeyed: exhaustive id-uniqueness assertion after a mixed sequence", () => {
+      const arr = createFieldArray<string>({ initialValues: ["a", "b", "c"] });
+      const assertUnique = () => {
+        const ids = arr.items.get().map((i) => i.id);
+        expect(new Set(ids).size).toBe(ids.length);
+      };
+
+      assertUnique();
+      arr.push("d");
+      assertUnique();
+      arr.insert(1, "e");
+      assertUnique();
+      arr.remove(2);
+      assertUnique();
+      arr.setValues(["w", "x"]);
+      assertUnique();
+      arr.setValues(["w", "x", "y", "z", "omega"]);
+      assertUnique();
+      arr.swap(0, 3);
+      assertUnique();
+      arr.move(1, 4);
+      assertUnique();
+    });
+
+    it("keyed: in-place edit of the key field, then setValues -> every item.id equals keyExtractor of its own value", () => {
+      const form = createForm<{ rows: Array<{ id: string; v: number }> }>({
+        initialValues: { rows: [{ id: "r1", v: 1 }] },
+        keyExtractor: (i) => i.id,
       });
-      expect(array.dirty.get()).toBe(false);
+      const arr = form.fields.rows as FieldArray<{ id: string; v: number }>;
 
-      array.setValues(["a"]);
-      expect(array.dirty.get()).toBe(true);
+      const row0Group = arr.items.get()[0]!.node as FieldGroup<{ id: string; v: number }>;
+      (row0Group.fields.id as FieldState<string>).setValue("r9");
 
-      array.setValues(["a", "b", "c"]);
-      expect(array.dirty.get()).toBe(false);
+      // In-place edit changed the value of the key field
+      expect(row0Group.values.get().id).toBe("r9");
+
+      // Synchronize with setValues
+      arr.setValues([{ id: "r9", v: 1 }]);
+
+      const currentItem = arr.items.get()[0]!;
+      expect(currentItem.id).toBe("r9");
+      expect(currentItem.id).toBe(row0Group.values.get().id);
+
+      form.dispose();
+    });
+
+    it("keyed: setValues where an item's key changed -> old scope disposed, new item created, no stale id survives", () => {
+      const arr = createFieldArray<{ id: string; v: number }>({
+        initialValues: [{ id: "r1", v: 1 }],
+        keyExtractor: (i) => i.id,
+      });
+
+      const oldItem = arr.items.get()[0]!;
+      const oldScope = oldItem.scope;
+
+      const subDirty = vi.fn();
+      (
+        (oldItem.node as FieldGroup<{ id: string; v: number }>).fields.v as FieldState<number>
+      ).dirty.subscribe(subDirty);
+
+      // setValues with completely new key
+      arr.setValues([{ id: "r2", v: 2 }]);
+
+      const newItem = arr.items.get()[0]!;
+      expect(newItem.id).toBe("r2");
+      expect(newItem.scope).not.toBe(oldScope); // New item created!
+
+      // Old scope disposed: mutating old node value does not notify its scoped dirtyComputed
+      (
+        (oldItem.node as FieldGroup<{ id: string; v: number }>).fields.v as FieldState<number>
+      ).setValue(999);
+      expect(subDirty).toHaveBeenCalledTimes(0);
+    });
+
+    it("dirty semantics agreement across mutation paths (Option a: identity-strict)", () => {
+      // Path 1: remove(1) + push("b")
+      const arr1 = createFieldArray<string>({ initialValues: ["a", "b"] });
+      arr1.remove(1);
+      arr1.push("b");
+      // Values equal initial ["a","b"], but pushed item is a new identity -> dirty === true
+      expect(arr1.values.get()).toEqual(["a", "b"]);
+      expect(arr1.dirty.get()).toBe(true);
+
+      // Path 2: setValues shrink + regrow
+      const arr2 = createFieldArray<string>({ initialValues: ["a", "b"] });
+      arr2.setValues(["a"]);
+      arr2.setValues(["a", "b"]);
+      // Values equal initial ["a","b"], but regrown item at index 1 is a new identity -> dirty === true
+      expect(arr2.values.get()).toEqual(["a", "b"]);
+      expect(arr2.dirty.get()).toBe(true);
     });
 
     it("keyed setValues reorder: item.id matches keyExtractor(item value) for every item", () => {

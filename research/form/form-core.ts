@@ -428,20 +428,11 @@ export function createFieldArray<T>(options: CreateFieldArrayOptions<T>): FieldA
       // Length change = dirty
       if (current.length !== initials.length) return true;
 
-      // Order / Identity change check:
-      if (keyExtractor) {
-        // For keyed arrays, check if keys match baseline keys in order
-        for (let i = 0; i < current.length; i++) {
-          if (current[i]?.id !== initKeys[i]) {
-            return true;
-          }
-        }
-      } else {
-        // For unkeyed arrays, check if current item IDs match initial keys in order
-        for (let i = 0; i < current.length; i++) {
-          if (current[i]?.id !== initKeys[i]) {
-            return true;
-          }
+      // Identity-strict order/identity check:
+      // Any item created after construction/reset has a new identity, and any reorder changes key order
+      for (let i = 0; i < current.length; i++) {
+        if (current[i]?.id !== initKeys[i]) {
+          return true;
         }
       }
 
@@ -553,6 +544,7 @@ export function createFieldArray<T>(options: CreateFieldArrayOptions<T>): FieldA
 
       if (keyExtractor) {
         // Keyed reconciliation: re-derive keys from incoming values
+        // Index existing items by their CURRENT value-derived key and also by their item.id
         const currentByDerivedKey = new Map<string | number, ArrayItem<T>>();
         for (const item of current) {
           const currentDerivedKey = keyExtractor(
@@ -579,7 +571,12 @@ export function createFieldArray<T>(options: CreateFieldArrayOptions<T>): FieldA
             } else {
               n.setValues(nextVal);
             }
-            newItems.push(existingItem);
+            // Re-stamp item with derivedKey in case item.id was distinct
+            newItems.push({
+              id: derivedKey,
+              node: existingItem.node,
+              scope: existingItem.scope,
+            });
           } else {
             newItems.push(createItem(nextVal as T, derivedKey));
           }
@@ -598,8 +595,7 @@ export function createFieldArray<T>(options: CreateFieldArrayOptions<T>): FieldA
 
         itemsState.set(newItems);
       } else {
-        // Unkeyed reconciliation: positional reuse with baseline key restoration
-        const initKeys = initialKeysState.get();
+        // Unkeyed reconciliation: positional reuse for existing indices, fresh IDs for newly added items
         for (let i = next.length; i < current.length; i++) {
           const item = current[i];
           if (item) {
@@ -623,9 +619,8 @@ export function createFieldArray<T>(options: CreateFieldArrayOptions<T>): FieldA
               newItems.push(item);
             }
           } else {
-            // If we are regrowing back to within initial range, reuse initial key baseline
-            const assignedKey = i < initKeys.length ? initKeys[i] : undefined;
-            newItems.push(createItem(nextVal as T, assignedKey));
+            // New position -> fresh item with fresh internal ID
+            newItems.push(createItem(nextVal as T));
           }
         }
         validateUniqueKeys(newItems);

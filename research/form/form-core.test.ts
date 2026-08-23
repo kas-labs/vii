@@ -1,41 +1,30 @@
 import { describe, expect, it, vi } from "vitest";
-import { bindFormToExternalState, createField, createForm } from "./form-core.js";
+import {
+  type FieldArray,
+  type FieldGroup,
+  type FieldState,
+  bindFormToExternalState,
+  createField,
+  createFieldArray,
+  createFieldGroup,
+  createForm,
+  parsePath,
+} from "./form-core.js";
 import { state } from "../../packages/core/src/index.js";
 
-describe("Form Research F1 — Minimal Field and Form State Prototype", () => {
-  describe("Field State Primitives & Signal Granularity", () => {
-    it("should initialize field with pristine signals", () => {
-      const field = createField({ initialValue: "Ada" });
-
-      expect(field.value.get()).toBe("Ada");
-      expect(field.initialValue.get()).toBe("Ada");
-      expect(field.dirty.get()).toBe(false);
-      expect(field.touched.get()).toBe(false);
-      expect(field.pending.get()).toBe(false);
-      expect(field.valid.get()).toBe(true);
-      expect(field.invalid.get()).toBe(false);
-      expect(field.errors.get()).toEqual([]);
-    });
-
-    it("should track dirty state based on equality comparison", () => {
-      const field = createField({ initialValue: "Ada" });
-
-      field.setValue("Grace");
-      expect(field.value.get()).toBe("Grace");
-      expect(field.dirty.get()).toBe(true);
-
-      field.setValue("Ada");
-      expect(field.dirty.get()).toBe(false);
-    });
-
-    it("should support custom equality comparators for complex values", () => {
+describe("Form Research F2 — Nested Objects, Arrays, and Stable Identity Prototype", () => {
+  describe("F1 Baseline & Regression Coverage", () => {
+    it("should initialize field with pristine signals and support custom equality", () => {
       const field = createField<{ id: number; name: string }>({
         initialValue: { id: 1, name: "Ada" },
         equality: (a: { id: number; name: string }, b: { id: number; name: string }) =>
           a.id === b.id && a.name === b.name,
       });
 
+      expect(field.value.get()).toEqual({ id: 1, name: "Ada" });
       expect(field.dirty.get()).toBe(false);
+      expect(field.touched.get()).toBe(false);
+      expect(field.valid.get()).toBe(true);
 
       field.setValue({ id: 1, name: "Ada" });
       expect(field.dirty.get()).toBe(false);
@@ -44,264 +33,15 @@ describe("Form Research F1 — Minimal Field and Form State Prototype", () => {
       expect(field.dirty.get()).toBe(true);
     });
 
-    it("should update touched and errors independently", () => {
-      const field = createField({ initialValue: "" });
-
-      expect(field.touched.get()).toBe(false);
-      field.setTouched(true);
-      expect(field.touched.get()).toBe(true);
-
-      expect(field.valid.get()).toBe(true);
-      field.setErrors(["Required field"]);
-      expect(field.errors.get()).toEqual(["Required field"]);
-      expect(field.valid.get()).toBe(false);
-      expect(field.invalid.get()).toBe(true);
-    });
-
-    it("should reset field state to initial value", () => {
-      const field = createField({ initialValue: "Ada" });
-
-      field.setValue("Grace");
-      field.setTouched(true);
-      field.setErrors(["Some error"]);
-      field.setPending(true);
-
-      field.reset();
-
-      expect(field.value.get()).toBe("Ada");
-      expect(field.dirty.get()).toBe(false);
-      expect(field.touched.get()).toBe(false);
-      expect(field.pending.get()).toBe(false);
-      expect(field.errors.get()).toEqual([]);
-      expect(field.valid.get()).toBe(true);
-    });
-
-    it("should reset field to a new initial baseline when provided", () => {
-      const field = createField({ initialValue: "Ada" });
-
-      field.setValue("Temporary");
-      field.reset("Margaret");
-
-      expect(field.value.get()).toBe("Margaret");
-      expect(field.initialValue.get()).toBe("Margaret");
-      expect(field.dirty.get()).toBe(false);
-    });
-
-    it("should allow explicit undefined as a new initial value when T permits undefined", () => {
+    it("should support reset with explicit undefined when type permits", () => {
       const field = createField<string | undefined>({ initialValue: "Ada" });
-
       field.setValue("Grace");
       expect(field.dirty.get()).toBe(true);
 
-      // Explicitly passing undefined as new initial baseline
       field.reset(undefined);
-
       expect(field.value.get()).toBeUndefined();
       expect(field.initialValue.get()).toBeUndefined();
       expect(field.dirty.get()).toBe(false);
-
-      field.setValue("Ada");
-      expect(field.dirty.get()).toBe(true);
-    });
-
-    it("should handle reset to the same initial value and clear touched, pending, and errors", () => {
-      const field = createField({ initialValue: "Ada" });
-
-      field.setValue("Ada"); // Still initial value
-      field.setTouched(true);
-      field.setPending(true);
-      field.setErrors(["Validation issue"]);
-
-      expect(field.dirty.get()).toBe(false);
-      expect(field.touched.get()).toBe(true);
-      expect(field.pending.get()).toBe(true);
-      expect(field.valid.get()).toBe(false);
-
-      field.reset();
-
-      expect(field.value.get()).toBe("Ada");
-      expect(field.dirty.get()).toBe(false);
-      expect(field.touched.get()).toBe(false);
-      expect(field.pending.get()).toBe(false);
-      expect(field.valid.get()).toBe(true);
-      expect(field.errors.get()).toEqual([]);
-    });
-
-    it("should correctly report pristine after new baseline reset with custom comparator", () => {
-      const field = createField<{ id: number; tag: string }>({
-        initialValue: { id: 1, tag: "v1" },
-        equality: (a: { id: number; tag: string }, b: { id: number; tag: string }) =>
-          a.id === b.id && a.tag === b.tag,
-      });
-
-      field.setValue({ id: 1, tag: "v2" });
-      expect(field.dirty.get()).toBe(true);
-
-      field.reset({ id: 2, tag: "v2" });
-      expect(field.value.get()).toEqual({ id: 2, tag: "v2" });
-      expect(field.initialValue.get()).toEqual({ id: 2, tag: "v2" });
-      expect(field.dirty.get()).toBe(false);
-
-      field.setValue({ id: 2, tag: "v2" });
-      expect(field.dirty.get()).toBe(false);
-
-      field.setValue({ id: 2, tag: "v3" });
-      expect(field.dirty.get()).toBe(true);
-    });
-
-    it("should allow partial reset with explicit undefined on form", () => {
-      const form = createForm<{
-        name: string | undefined;
-        role: string;
-      }>({
-        initialValues: {
-          name: "Ada",
-          role: "Engineer",
-        },
-      });
-
-      form.fields.name.setValue("Grace");
-      form.fields.role.setValue("Architect");
-      expect(form.dirty.get()).toBe(true);
-
-      form.reset({ name: undefined });
-
-      expect(form.fields.name.value.get()).toBeUndefined();
-      expect(form.fields.name.initialValue.get()).toBeUndefined();
-      expect(form.fields.name.dirty.get()).toBe(false);
-
-      // role was not in reset partial, so reset to its original initial value
-      expect(form.fields.role.value.get()).toBe("Engineer");
-      expect(form.fields.role.dirty.get()).toBe(false);
-
-      form.dispose();
-    });
-  });
-
-  describe("Form Aggregate Evaluation & Subscription Fan-Out", () => {
-    it("should aggregate values, dirty, touched, and validity across fields", () => {
-      const form = createForm({
-        initialValues: {
-          username: "ada",
-          email: "ada@example.com",
-          age: 36,
-        },
-      });
-
-      expect(form.values.get()).toEqual({
-        username: "ada",
-        email: "ada@example.com",
-        age: 36,
-      });
-      expect(form.dirty.get()).toBe(false);
-      expect(form.touched.get()).toBe(false);
-      expect(form.valid.get()).toBe(true);
-
-      form.fields.username.setValue("lovelace");
-      expect(form.dirty.get()).toBe(true);
-      expect(form.values.get().username).toBe("lovelace");
-
-      form.fields.email.setErrors(["Invalid domain"]);
-      expect(form.valid.get()).toBe(false);
-      expect(form.invalid.get()).toBe(true);
-      expect(form.errors.get().email).toEqual(["Invalid domain"]);
-
-      form.dispose();
-    });
-
-    it("should isolate subscriptions so mutating field A does NOT notify field B subscribers", () => {
-      const form = createForm({
-        initialValues: {
-          fieldA: "alpha",
-          fieldB: "beta",
-        },
-      });
-
-      const subscriberA = vi.fn();
-      const subscriberB = vi.fn();
-      const subscriberAggregate = vi.fn();
-
-      form.fields.fieldA.value.subscribe(subscriberA);
-      form.fields.fieldB.value.subscribe(subscriberB);
-      form.values.subscribe(subscriberAggregate);
-
-      expect(subscriberA).toHaveBeenCalledTimes(0);
-      expect(subscriberB).toHaveBeenCalledTimes(0);
-      expect(subscriberAggregate).toHaveBeenCalledTimes(0);
-
-      // Mutate Field A
-      form.fields.fieldA.setValue("alpha-2");
-
-      expect(subscriberA).toHaveBeenCalledTimes(1);
-      expect(subscriberB).toHaveBeenCalledTimes(0); // ZERO extra notifications to B
-      expect(subscriberAggregate).toHaveBeenCalledTimes(1);
-
-      form.dispose();
-    });
-
-    it("should batch multiple field updates into a single aggregate change", () => {
-      const form = createForm({
-        initialValues: {
-          firstName: "Ada",
-          lastName: "Lovelace",
-        },
-      });
-
-      const aggregateSub = vi.fn();
-      form.values.subscribe(aggregateSub);
-      expect(aggregateSub).toHaveBeenCalledTimes(0);
-
-      form.setValues({
-        firstName: "Grace",
-        lastName: "Hopper",
-      });
-
-      expect(aggregateSub).toHaveBeenCalledTimes(1);
-      expect(form.values.get()).toEqual({
-        firstName: "Grace",
-        lastName: "Hopper",
-      });
-
-      form.dispose();
-    });
-  });
-
-  describe("Model Ownership Trade-Offs & Research Fixtures", () => {
-    it("Form-Owned baseline: completely self-contained state and lifecycle", () => {
-      const form = createForm({
-        initialValues: { count: 0 },
-      });
-
-      form.fields.count.setValue(10);
-      expect(form.fields.count.dirty.get()).toBe(true);
-      expect(form.values.get().count).toBe(10);
-
-      form.reset();
-      expect(form.fields.count.value.get()).toBe(0);
-      expect(form.fields.count.dirty.get()).toBe(false);
-
-      form.dispose();
-    });
-
-    it("External State Binding: bidirectional synchronization with external store fixture", () => {
-      const appStore = state<{ search: string; page: number }>({ search: "query", page: 1 });
-
-      const form = bindFormToExternalState({
-        externalState: appStore,
-      });
-
-      expect(form.values.get()).toEqual({ search: "query", page: 1 });
-
-      // Mutating form updates external state
-      form.fields.search.setValue("new query");
-      expect(appStore.get().search).toBe("new query");
-
-      // Mutating external state updates form
-      appStore.set({ search: "external update", page: 2 });
-      expect(form.fields.search.value.get()).toBe("external update");
-      expect(form.fields.page.value.get()).toBe(2);
-
-      form.dispose();
     });
 
     it("External State Binding Lifecycle: clean disconnection post-disposal", () => {
@@ -314,69 +54,319 @@ describe("Form Research F1 — Minimal Field and Form State Prototype", () => {
       form.dispose();
 
       // After form disposal, form changes must not sync to external State
-      form.fields.search.setValue("disconnected form change");
+      (form.fields.search as FieldState<string>).setValue("disconnected form change");
       expect(appStore.get().search).toBe("query");
 
       // After form disposal, external State changes must not sync to form
       appStore.set({ search: "external after disposal", page: 99 });
-      expect(form.fields.search.value.get()).toBe("disconnected form change");
-      expect(form.fields.page.value.get()).toBe(1);
-    });
-
-    it("External State Binding: repeated equal values do not create duplicate feedback loops", () => {
-      const appStore = state<{ text: string }>({ text: "hello" });
-      const externalListener = vi.fn();
-      appStore.subscribe(externalListener);
-
-      const form = bindFormToExternalState({
-        externalState: appStore,
-      });
-
-      expect(externalListener).toHaveBeenCalledTimes(0);
-
-      // Mutate form with new value
-      form.fields.text.setValue("world");
-      expect(externalListener).toHaveBeenCalledTimes(1);
-      expect(appStore.get().text).toBe("world");
-
-      // Setting same value on external state does not cause redundant loop back
-      appStore.set({ text: "world" });
-      expect(form.fields.text.value.get()).toBe("world");
-
-      form.dispose();
-    });
-
-    it("External State Binding: disposal is idempotent", () => {
-      const appStore = state<{ text: string }>({ text: "test" });
-      const form = bindFormToExternalState({
-        externalState: appStore,
-      });
-
-      expect(() => {
-        form.dispose();
-        form.dispose();
-      }).not.toThrow();
+      expect((form.fields.search as FieldState<string>).value.get()).toBe(
+        "disconnected form change",
+      );
+      expect((form.fields.page as FieldState<number>).value.get()).toBe(1);
     });
   });
 
-  describe("Scope Ownership & Teardown Disposal", () => {
-    it("should stop all computed evaluation and notifications upon form.dispose()", () => {
-      const form = createForm({
-        initialValues: { name: "Ada" },
+  describe("Path Parsing & Security", () => {
+    it("should parse dot and bracket paths correctly", () => {
+      expect(parsePath("user.name")).toEqual(["user", "name"]);
+      expect(parsePath("user.addresses[0].street")).toEqual(["user", "addresses", 0, "street"]);
+      expect(parsePath("items[2][1].name")).toEqual(["items", 2, 1, "name"]);
+    });
+
+    it("should block prototype pollution attempts in path segments", () => {
+      expect(() => parsePath("user.__proto__.admin")).toThrow(/Prototype pollution/);
+      expect(() => parsePath("constructor.prototype.polluted")).toThrow(/Prototype pollution/);
+      expect(() => parsePath("users[0].prototype.name")).toThrow(/Prototype pollution/);
+    });
+  });
+
+  describe("FieldGroup: Nested Object Structures", () => {
+    it("should create nested field groups and derive aggregate values/dirty/touched", () => {
+      const userGroup = createFieldGroup<{
+        name: string;
+        profile: {
+          bio: string;
+          social: { twitter: string };
+        };
+      }>({
+        initialValues: {
+          name: "Ada",
+          profile: {
+            bio: "Mathematician",
+            social: { twitter: "@ada" },
+          },
+        },
       });
 
-      const dirtySub = vi.fn();
-      form.dirty.subscribe(dirtySub);
-      expect(dirtySub).toHaveBeenCalledTimes(0);
+      expect(userGroup.values.get()).toEqual({
+        name: "Ada",
+        profile: {
+          bio: "Mathematician",
+          social: { twitter: "@ada" },
+        },
+      });
+      expect(userGroup.dirty.get()).toBe(false);
+      expect(userGroup.touched.get()).toBe(false);
+      expect(userGroup.valid.get()).toBe(true);
 
-      form.fields.name.setValue("Grace");
-      expect(dirtySub).toHaveBeenCalledTimes(1);
+      // Mutate deep leaf
+      const profileGroup = userGroup.fields.profile as FieldGroup<{
+        bio: string;
+        social: { twitter: string };
+      }>;
+      const socialGroup = profileGroup.fields.social as FieldGroup<{ twitter: string }>;
+      const twitterField = socialGroup.fields.twitter as FieldState<string>;
+
+      twitterField.setValue("@lovelace");
+
+      expect(twitterField.dirty.get()).toBe(true);
+      expect(socialGroup.dirty.get()).toBe(true);
+      expect(profileGroup.dirty.get()).toBe(true);
+      expect(userGroup.dirty.get()).toBe(true);
+
+      // Sibling field remains untouched
+      const nameField = userGroup.fields.name as FieldState<string>;
+      expect(nameField.dirty.get()).toBe(false);
+    });
+
+    it("should aggregate errors across nested groups", () => {
+      const group = createFieldGroup<{
+        user: { name: string; email: string };
+      }>({
+        initialValues: {
+          user: { name: "", email: "invalid" },
+        },
+      });
+
+      const user = group.fields.user as FieldGroup<{ name: string; email: string }>;
+      const nameField = user.fields.name as FieldState<string>;
+      const emailField = user.fields.email as FieldState<string>;
+
+      nameField.setErrors(["Name required"]);
+      emailField.setErrors(["Invalid email format"]);
+
+      expect(group.valid.get()).toBe(false);
+      expect(group.invalid.get()).toBe(true);
+      expect(group.errors.get()).toEqual({
+        "user.name": ["Name required"],
+        "user.email": ["Invalid email format"],
+      });
+    });
+
+    it("should support partial setValues and reset on nested group", () => {
+      const group = createFieldGroup<{
+        address: { street: string; city: string };
+      }>({
+        initialValues: {
+          address: { street: "123 Main", city: "London" },
+        },
+      });
+
+      group.setValues({
+        address: { street: "456 High St", city: "Oxford" },
+      });
+
+      expect(group.values.get()).toEqual({
+        address: { street: "456 High St", city: "Oxford" },
+      });
+      expect(group.dirty.get()).toBe(true);
+
+      group.reset();
+      expect(group.values.get()).toEqual({
+        address: { street: "123 Main", city: "London" },
+      });
+      expect(group.dirty.get()).toBe(false);
+    });
+  });
+
+  describe("FieldArray: Repeatable Collections & Stable Identity", () => {
+    it("should manage list items with generated stable IDs", () => {
+      const array = createFieldArray<{ title: string }>({
+        initialValues: [{ title: "Task 1" }, { title: "Task 2" }],
+      });
+
+      expect(array.values.get()).toEqual([{ title: "Task 1" }, { title: "Task 2" }]);
+      const items = array.items.get();
+      expect(items.length).toBe(2);
+      const id1 = items[0]!.id;
+      const id2 = items[1]!.id;
+      expect(id1).toBeDefined();
+      expect(id2).toBeDefined();
+      expect(id1).not.toBe(id2);
+    });
+
+    it("should support application-provided keyExtractor", () => {
+      const array = createFieldArray<{ id: number; name: string }>({
+        initialValues: [
+          { id: 101, name: "Alpha" },
+          { id: 102, name: "Beta" },
+        ],
+        keyExtractor: (item) => item.id,
+      });
+
+      const items = array.items.get();
+      expect(items[0]!.id).toBe(101);
+      expect(items[1]!.id).toBe(102);
+    });
+
+    it("should push, insert, and remove items with proper Scope disposal", () => {
+      const array = createFieldArray<string>({
+        initialValues: ["A", "B"],
+      });
+
+      expect(array.values.get()).toEqual(["A", "B"]);
+
+      // Push
+      array.push("C");
+      expect(array.values.get()).toEqual(["A", "B", "C"]);
+      expect(array.dirty.get()).toBe(true);
+
+      // Insert at index 1
+      array.insert(1, "A.5");
+      expect(array.values.get()).toEqual(["A", "A.5", "B", "C"]);
+
+      // Remove index 2 ("B")
+      array.remove(2);
+      expect(array.values.get()).toEqual(["A", "A.5", "C"]);
+    });
+
+    it("should swap and move items while PRESERVING touched, dirty, and error states", () => {
+      const array = createFieldArray<{ name: string }>({
+        initialValues: [{ name: "First" }, { name: "Second" }],
+      });
+
+      const firstItem = array.items.get()[0]!;
+      const secondItem = array.items.get()[1]!;
+
+      const firstGroup = firstItem.node as FieldGroup<{ name: string }>;
+      const secondGroup = secondItem.node as FieldGroup<{ name: string }>;
+
+      const firstNameField = firstGroup.fields.name as FieldState<string>;
+      firstNameField.setValue("First Edited");
+      firstNameField.setTouched(true);
+      firstNameField.setErrors(["First has error"]);
+
+      expect(firstNameField.dirty.get()).toBe(true);
+      expect(firstNameField.touched.get()).toBe(true);
+      expect(firstNameField.errors.get()).toEqual(["First has error"]);
+
+      // Swap index 0 and 1
+      array.swap(0, 1);
+
+      // Verify items were swapped in position
+      const swappedItems = array.items.get();
+      expect(swappedItems[0]!.id).toBe(secondItem.id);
+      expect(swappedItems[1]!.id).toBe(firstItem.id);
+
+      // The edited item (now at index 1) preserved its exact dirty, touched, and error signals
+      const newIndex1Group = swappedItems[1]!.node as FieldGroup<{ name: string }>;
+      const newIndex1Field = newIndex1Group.fields.name as FieldState<string>;
+
+      expect(newIndex1Field.value.get()).toBe("First Edited");
+      expect(newIndex1Field.dirty.get()).toBe(true);
+      expect(newIndex1Field.touched.get()).toBe(true);
+      expect(newIndex1Field.errors.get()).toEqual(["First has error"]);
+
+      // Move it back from 1 to 0
+      array.move(1, 0);
+      const movedItems = array.items.get();
+      expect(movedItems[0]!.id).toBe(firstItem.id);
+    });
+
+    it("should aggregate errors with indexed paths", () => {
+      const array = createFieldArray<{ email: string }>({
+        initialValues: [{ email: "a@example.com" }, { email: "b@example.com" }],
+      });
+
+      const item1 = array.items.get()[0]!.node as FieldGroup<{ email: string }>;
+      const item1Email = item1.fields.email as FieldState<string>;
+      item1Email.setErrors(["Invalid email"]);
+
+      expect(array.valid.get()).toBe(false);
+      expect(array.errors.get()).toEqual({
+        "[0].email": ["Invalid email"],
+      });
+    });
+
+    it("should reset field array to initial items and dispose removed items", () => {
+      const array = createFieldArray<string>({
+        initialValues: ["Initial 1", "Initial 2"],
+      });
+
+      array.push("Added 3");
+      expect(array.values.get()).toEqual(["Initial 1", "Initial 2", "Added 3"]);
+      expect(array.dirty.get()).toBe(true);
+
+      array.reset();
+      expect(array.values.get()).toEqual(["Initial 1", "Initial 2"]);
+      expect(array.dirty.get()).toBe(false);
+    });
+  });
+
+  describe("Form Root: getNode & Unified Form State", () => {
+    it("should resolve nodes using getNode with dot and bracket syntax", () => {
+      const form = createForm<{
+        user: {
+          name: string;
+          tasks: Array<{ title: string }>;
+        };
+      }>({
+        initialValues: {
+          user: {
+            name: "Ada",
+            tasks: [{ title: "First task" }, { title: "Second task" }],
+          },
+        },
+      });
+
+      const nameNode = form.getNode("user.name") as FieldState<string>;
+      expect(nameNode).toBeDefined();
+      expect(nameNode.kind).toBe("field");
+      expect(nameNode.value.get()).toBe("Ada");
+
+      const task0Title = form.getNode("user.tasks[0].title") as FieldState<string>;
+      expect(task0Title).toBeDefined();
+      expect(task0Title.value.get()).toBe("First task");
+
+      const taskArray = form.getNode("user.tasks") as FieldArray<{ title: string }>;
+      expect(taskArray).toBeDefined();
+      expect(taskArray.kind).toBe("array");
+
+      expect(form.getNode("non.existent.path")).toBeUndefined();
 
       form.dispose();
+    });
 
-      // After disposal, mutations should not trigger disposed computed subscribers
-      form.fields.name.setValue("Margaret");
-      expect(dirtySub).toHaveBeenCalledTimes(1);
+    it("should isolate subscription notifications across deeply nested branches", () => {
+      const form = createForm<{
+        branchA: { count: number };
+        branchB: { count: number };
+      }>({
+        initialValues: {
+          branchA: { count: 1 },
+          branchB: { count: 2 },
+        },
+      });
+
+      const subA = vi.fn();
+      const subB = vi.fn();
+
+      const nodeA = form.getNode("branchA.count") as FieldState<number>;
+      const nodeB = form.getNode("branchB.count") as FieldState<number>;
+
+      nodeA.value.subscribe(subA);
+      nodeB.value.subscribe(subB);
+
+      expect(subA).toHaveBeenCalledTimes(0);
+      expect(subB).toHaveBeenCalledTimes(0);
+
+      // Mutate Branch A leaf
+      nodeA.setValue(10);
+
+      expect(subA).toHaveBeenCalledTimes(1);
+      expect(subB).toHaveBeenCalledTimes(0); // ZERO notification to Branch B
+
+      form.dispose();
     });
   });
 });

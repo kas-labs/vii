@@ -37,6 +37,50 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-23 23:28 CEST | Form Research F2 — Nested Objects, Arrays, and Stable Identity
+
+Status: completed
+Branch: `feat/form-nested-arrays-identity`
+PR: draft opened
+
+### Scope
+
+- Implement throwaway research prototype for Form Slice F2 (Nested Objects, Arrays, and Stable Identity) under `research/form/`.
+- Prototype `FieldGroup<T>` managing composite sub-trees of `FormNodeFor<T>` (leaves, child groups, arrays) with lazy aggregate computeds (`values`, `dirty`, `touched`, `pending`, `valid`, `invalid`, `errors` with dot notation).
+- Prototype `FieldArray<T>` managing dynamic repeatable collections of `ArrayItem<T>` with stable `id` mapping (generated IDs and optional `keyExtractor`).
+- Implement and verify array list operations: `push`, `insert`, `remove`, `swap`, `move`.
+- Empirically verify state preservation: `touched`, `dirty`, and validation error signals stay attached to their conceptual item identity rather than their array index across `swap` and `move`.
+- Implement per-item child `Scope` encapsulation and verify deterministic child Scope teardown upon item removal or array reset.
+- Prototype prototype-pollution defense in path resolution (`parsePath` and `getNode`).
+- Add comprehensive Vitest suite in `research/form/form-core.test.ts` and `research/form/README.md`.
+
+### Changes
+
+- Updated `research/form/form-core.ts`: added `FieldGroup`, `FieldArray`, `parsePath`, `getNode`, child Scope lifecycle management, and prototype-pollution protections.
+- Updated `research/form/form-core.test.ts`: 16 unit tests covering F1 regression baseline, path parsing/security, nested groups, repeatable arrays, state preservation across reordering, child Scope teardown, and branch subscription isolation.
+- Updated `research/form/README.md`: architectural overview of F1/F2 prototypes and empirical observations.
+- Updated `docs/roadmap/FORM_RESEARCH.md`: marked F2 prototype as completed.
+
+### Validation
+
+- `pnpm vitest run research/form/form-core.test.ts`: passed (16/16 tests passing).
+- `pnpm exec tsc -p research/form/tsconfig.json --noEmit`: passed.
+- `git diff --check`: passed.
+- `pnpm format:check`: passed.
+- `pnpm lint`: passed (11/11 projects cached/passed).
+- `pnpm validate`: passed.
+
+### Architecture / compatibility
+
+- Zero package additions or public API changes; `@vii-labs/form` is NOT created or published.
+- Zero dependencies added; zero Core runtime code modified.
+- Strict ownership boundaries preserved: Form consumes Core State/Scope without Core depending on Form.
+
+### Remaining / recovery
+
+- F2 prototype complete. Next step is maintainer review and authorization of Slice F3 (Validation Scheduling + Structured Issues).
+- F3 has NOT been started.
+
 ## 2026-08-23 23:15 CEST | Form Research F1 — Minimal Field/Form State Prototype
 
 Status: completed

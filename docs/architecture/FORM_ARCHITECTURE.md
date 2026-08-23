@@ -296,10 +296,9 @@ Adapters and future Vii UI controls should make it straightforward to associate:
 - error messages;
 - required state;
 - invalid state;
-- focus on failed submission.
+- identification and focus management for the first invalid field on failed submission.
 
-Automated checks are necessary but do not replace keyboard and screen-reader
-acceptance testing.
+Headless Form Core exposes necessary structural information while DOM focus behavior stays at the UI/adapter edge. Automated checks are necessary but do not replace keyboard and screen-reader acceptance testing.
 
 ## Illustrative authoring model
 

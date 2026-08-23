@@ -37,6 +37,49 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-23 23:10 CEST | Form Research F0 — Evidence Boundaries & Hypotheses Clarification
+
+Status: completed
+Branch: `docs/form-f0-evidence-boundaries`
+PR: draft opened
+
+### Scope
+
+- Perform bounded documentation correction pass on Form Research Slice F0 deliverables.
+- Distinguish accepted architectural invariants from candidate research directions, provisional defaults, and numeric hypotheses.
+- Explicitly reframe model ownership (Form-owned vs external State binding vs hybrid) as F1 research baseline without selecting `syncTo`/`readFrom`.
+- Reframe field tree structure (hierarchical vs flat vs hybrid vs lazy) as F2 candidate comparison with targeted constant-time lookup rather than an achieved guarantee.
+- Reframe array stable identity as an F2 research requirement across internal ID, application key, and hybrid strategies without selecting `_vii_id`.
+- Remove `300ms` as accepted debounce default; assign evidence-backed scheduling and zero-accidental-network defaults to F4.
+- Remove arbitrary numeric security limits (16 depth, 10k array); assign empirical security bounds to F8.
+- Replace `<100 kB` heap budget with structural zero-retained-resources invariant; assign empirical Form heap budget derivation to F9.
+- Clarify accessibility boundary: headless Form Core exposes structural validation state, while DOM focus management and ARIA generation reside at the adapter/UI edge.
+- Scope Standard Schema compatibility to verified providers (Zod 4, Valibot, ArkType), removing unverified TypeBox claims.
+- Reframe dirty semantics, pending/validity axis decoupling, submission duplicate policy (drop vs reject), server error lifecycle, and Scope ownership topology (root vs per-field vs lazy) as explicit research questions for slices F1–F6.
+- Ensure strict stop condition: F0 remains complete, F1 is NOT started.
+
+### Changes
+
+- Updated `docs/roadmap/FORM_RESEARCH.md`: clarified candidate status vs accepted invariants across sections 1, 2, 3, 4, and 5.
+- Updated `docs/architecture/FORM_ARCHITECTURE.md`: aligned accessibility section with adapter/UI edge boundaries.
+
+### Validation
+
+- `git diff --check`: passed.
+- `pnpm format:check`: passed.
+- `pnpm lint`: passed.
+- `pnpm validate`: passed.
+
+### Architecture / compatibility
+
+- Zero runtime or package additions; zero dependencies added.
+- Invariants preserved: headless, provider-neutral validation, transport decoupling, value-free diagnostics, `cancellation !== validation failure`, Build-vs-Buy remains open.
+
+### Remaining / recovery
+
+- F0 documentation corrections complete. Next step is maintainer review and authorization of Slice F1.
+- F1 has NOT been started.
+
 ## 2026-08-23 22:50 CEST | Form Research F0 — Architecture, Domain Model & Build-vs-Buy Questions
 
 Status: completed

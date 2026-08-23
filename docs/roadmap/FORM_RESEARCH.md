@@ -62,7 +62,7 @@ Vii Form is a research track investigating whether a small, typed, framework-agn
 
 3. **Provider-Neutral Validation Boundary**:
    - Vii Form does **not** depend on a Vii-owned schema monolith.
-   - Validation accepts any **Standard Schema v1** (`@standard-schema/spec`) compliant validator (Zod 4, Valibot, ArkType, TypeBox, etc.) or lightweight native rule functions `({ value }) => Issue | null`.
+   - Validation accepts any **Standard Schema v1** (`@standard-schema/spec`) compliant validator (e.g. Zod 4, Valibot, ArkType) or lightweight native rule functions `({ value }) => Issue | null`. (Runtime provider compatibility is evaluated on an evidence basis per slice; type shapes alone do not imply verified support).
 
 4. **Transport and Remote State Independence**:
    - `form.submit()` does **not** require Vii HTTP or Vii Query. It delegates submission to an application-provided async action `({ value, signal }) => Promise<void>`.
@@ -83,15 +83,15 @@ Vii Form is a research track investigating whether a small, typed, framework-agn
 | Slice | Title | Scope & Objectives |
 | --- | --- | --- |
 | **F0** | **Architecture + Domain Model + Build-vs-Buy Questions** | Define semantic boundaries, candidate domain model, value pipeline, validation/cancellation invariants, accessibility/security contracts, build-vs-buy criteria, and F0–F10 research roadmap. *(Current Slice)* |
-| **F1** | **Minimal Field/Form State Prototype** | Prototype minimal signal-first Field and Form core with granular subscriptions, `value`, `initialValue`, `dirty`, `touched`, `pending`, `valid`, `invalid`, and disposal. Measure notification fan-out. |
-| **F2** | **Nested Objects + Arrays + Identity** | Research object field nodes and array field nodes (`FieldArray`). Prototype stable item identity vs index identity across insert, remove, swap, move, and reorder. |
+| **F1** | **Minimal Field/Form State Prototype** | Prototype minimal signal-first Field and Form core with granular subscriptions, `value`, `initialValue`, `dirty`, `touched`, `pending`, `valid`, `invalid`, and disposal. Measure notification fan-out. Compare Form-owned vs external State binding vs controlled hybrid projection. |
+| **F2** | **Nested Objects + Arrays + Identity** | Research object field nodes and array field nodes (`FieldArray`). Compare hierarchical tree vs flat path registry vs hybrid lookup vs lazy field nodes. Research stable item identity vs index identity across insert, remove, swap, move, and reorder. |
 | **F3** | **Validation Scheduling + Structured Issues** | Prototype synchronous validation engine, trigger modes (`change`, `blur`, `submit`), rule precedence, group validation, and structured issue taxonomy (`FieldIssue`, `FormIssue`). |
-| **F4** | **Async Validation + Cancellation + Revisions** | Research asynchronous validation, debounce scheduling, `AbortSignal` propagation, generation/revision protection to eliminate stale race conditions, and Scope lifecycle integration. |
-| **F5** | **Parsing / Input-Output Types / Standard Schema Boundary** | Prototype raw input $\rightarrow$ parse $\rightarrow$ field value $\rightarrow$ validate $\rightarrow$ transform $\rightarrow$ output pipeline. Integrate Standard Schema v1 provider boundary and test against Zod 4, Valibot, and ArkType. |
-| **F6** | **Submission Lifecycle + Server Errors + Reset/Reinitialize** | Prototype submission state machine (`idle`, `validating`, `submitting`, `succeeded`, `failed`, `cancelled`), duplicate prevention, server error attachment/clearing, reset to initial vs new baseline, and external model reinitialization. |
+| **F4** | **Async Validation + Cancellation + Revisions** | Research asynchronous validation, debounce scheduling (evidence-backed defaults), `AbortSignal` propagation, generation/revision protection to eliminate stale race conditions, and Scope lifecycle integration. |
+| **F5** | **Parsing / Input-Output Types / Standard Schema Boundary** | Prototype raw input $\rightarrow$ parse $\rightarrow$ field value $\rightarrow$ validate $\rightarrow$ transform $\rightarrow$ output pipeline. Integrate Standard Schema v1 provider boundary and test against verified providers (Zod 4, Valibot, ArkType). |
+| **F6** | **Submission Lifecycle + Server Errors + Reset/Reinitialize** | Prototype submission state machine (`idle`, `validating`, `submitting`, `succeeded`, `failed`, `cancelled`), duplicate prevention (drop vs reject policy), server error attachment/clearing strategies, reset to initial vs new baseline, and external model reinitialization. |
 | **F7** | **Framework Adapter Compliance (Vanilla, React, Angular, Vue)** | Prototype thin adapters for Vanilla DOM, React (`useViiForm` / `useViiField`), Angular (`viiFormSignal`), and Vue (`useViiFormRef`). Verify zero whole-form rerenders and framework-native ergonomics. |
-| **F8** | **Accessibility + Security + Privacy Hardening** | Prototype accessible HTML helpers (`aria-invalid`, `aria-describedby`, error autofocus), prototype-pollution defense in field paths, depth limits, and value-free diagnostics redaction. |
-| **F9** | **Runtime / Memory / TypeScript / Bundle Evidence** | Measure bundle footprint (minified, gzip, brotli), field update latency, memory retention across 1,000 mount/dispose cycles, and TypeScript compilation wall time. |
+| **F8** | **Accessibility + Security + Privacy Hardening** | Prototype accessible HTML helpers (`aria-invalid`, `aria-describedby`, error focus identification at adapter edge), prototype-pollution defense in field paths, empirical depth/width bounds, and value-free diagnostics redaction. |
+| **F9** | **Runtime / Memory / TypeScript / Bundle Evidence** | Measure bundle footprint (minified, gzip, brotli), field update latency, memory retention across 1,000 mount/dispose cycles (zero retained resources; empirical heap budget), and TypeScript compilation wall time. |
 | **F10** | **Real Consumer Validation + Build-vs-Buy Graduation Gate** | Validate Form prototype on expanded multi-step Vanilla onboarding fixture and React task board. Execute formal Build-vs-Buy comparative benchmarks against TanStack Form, React Hook Form, and Angular Signal Forms. Render graduation decision. |
 
 ---
@@ -140,40 +140,42 @@ The candidate domain model classifies every form concept into one of five catego
 | **Parsed Value** | Required Primitive | The result of parsing raw input into the domain type before validation. |
 | **Validated Value** | Derived State | The verified domain value conforming to schema/rule constraints. |
 | **Submission Output** | Derived State | Transformed payload ready for network/action dispatch. |
-| **Dirty** | Derived State | `currentValue !== initialValue` (strict equality or configurable comparator). Form dirty = any child dirty. |
+| **Dirty** | Derived State | Hypothesis: comparison between current and initial values. (Evaluation of reference vs configurable comparator vs structured value strategy deferred to F1/F6). |
 | **Touched** | Required Primitive | `true` once the field has lost focus (`blur`). Form touched = any child touched. |
 | **Visited** | Deferred | Focused at least once. (Deferred to avoid redundant metadata states unless consumer proves necessity). |
-| **Pending** | Derived State | `true` while any synchronous or asynchronous validation is in-flight. |
-| **Valid / Invalid** | Derived State | `valid = errors.length === 0 && !pending`; `invalid = !valid`. |
+| **Pending** | Derived State | `true` while any synchronous or asynchronous validation is in-flight. (Relationship to validity axis to be validated in F3/F4). |
+| **Valid / Invalid** | Derived State | Candidate hypothesis: `valid = errors.length === 0 && !pending`; `invalid = !valid`. (Decoupling of validation status vs execution status evaluated in F3). |
 | **Disabled** | Required Primitive | Field ignored during validation and excluded from submission output (matches HTML standard). |
 | **Readonly** | Required Primitive | Field locked from user edit, but validated and included in submission output. |
 | **Hidden** | Adapter / UI Concern | Visual presentation state. If present in model, validated and submitted unless conditionally unregistered. |
 | **Errors / Issues** | Required Primitive | Collection of structured issues (`code`, `message`, `path`, `source: 'client' | 'server'`). |
 | **Validation Revision** | Required Primitive | Monotonic integer sequence guarding against stale async validation completion. |
 | **Submission Lifecycle** | Required Primitive | State machine: `idle` $\rightarrow$ `validating` $\rightarrow$ `submitting` $\rightarrow$ `succeeded` / `failed` / `cancelled`. |
-| **Server Error** | Required Primitive | External issues injected into fields/form post-submission; cleared on next field user edit. |
+| **Server Error** | Required Primitive | External issues injected into fields/form post-submission. (Clearing/staleness lifecycle evaluated in F6). |
 | **Form-Level Error** | Required Primitive | Issues not bound to a specific field path (e.g. general network error, multi-field cross-validation). |
 
 ---
 
 ### 3.3 Model Ownership: Form-Owned vs. External State Binding
 
-| Model Architecture | Mechanics | Advantages | Disadvantages | Verdict / Direction |
+**Core Invariant**: There must be **one unambiguous source of form truth**.
+
+| Model Architecture | Mechanics | Advantages | Disadvantages | Research Status |
 | --- | --- | --- | --- | --- |
-| **Option A: Form-Owned Model** | Form creates and encapsulates its own Vii `state()` nodes internally. | - Encapsulation of interaction metadata.<br>- Clean reset/dirty tracking.<br>- Zero external synchronization bugs. | - Cannot directly share raw state with external stores without syncing. | **Primary Baseline** for F1 prototype. |
-| **Option B: External State Binding** | Form acts as a lens over an external Vii `state<T>()` object. | - Direct two-way binding to domain stores. | - Risk of circular update loops.<br>- Ambiguity on initial value vs current external mutations.<br>- Competing sources of truth. | Rejected as mandatory Core model. |
-| **Option C: Hybrid (Form-Owned with Controlled Projection)** | Form owns internal field state; provides explicit `syncTo(externalState)` or `readFrom(externalState)` hooks. | - Uncompromised internal lifecycle + clean external interoperability. | - Requires explicit sync boundaries. | **Recommended Architecture** for F0/F1. |
+| **Option A: Form-Owned Model** | Form creates and encapsulates its own Vii `state()` nodes internally. | - Encapsulation of interaction metadata.<br>- Clean reset/dirty tracking.<br>- Zero external synchronization bugs. | - Cannot directly share raw state with external stores without syncing. | **F1 Baseline Hypothesis** (to compare in F1). |
+| **Option B: External State Binding** | Form acts as a lens over an external Vii `state<T>()` object. | - Direct two-way binding to domain stores. | - Risk of circular update loops.<br>- Ambiguity on initial value vs current external mutations.<br>- Competing sources of truth. | Candidate to test in F1. |
+| **Option C: Hybrid (Form-Owned with Controlled Projection)** | Form owns internal field state; provides explicit synchronization hooks. | - Uncompromised internal lifecycle + clean external interoperability. | - Requires explicit sync boundaries. | Candidate to test in F1. (No specific API selected yet). |
 
 ---
 
-### 3.4 Field Tree Structure: Hybrid Tree + Indexed Lookup
+### 3.4 Field Tree Structure: Candidate Architectures
 
-To achieve $O(1)$ direct field access by string/tuple path while maintaining hierarchical aggregation for nested objects and arrays, Vii Form adopts a **Hybrid Tree + Indexed Lookup** model:
+F2 will evaluate candidate field tree topologies targeting **constant-time lookup where justified** while maintaining hierarchical aggregation:
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
-│                         Form Root                           │
-│  ├── indexedRegistry: Map<FieldPath, FieldNode>  (O(1) look)│
+│                    Candidate Form Root                      │
+│  ├── indexedRegistry: Map<FieldPath, FieldNode>             │
 │  └── treeRoot: FieldGroupNode { children: { ... } }         │
 └──────────────────────────────┬──────────────────────────────┘
                                │
@@ -181,17 +183,22 @@ To achieve $O(1)$ direct field access by string/tuple path while maintaining hie
             ▼                                     ▼
 ┌───────────────────────┐             ┌───────────────────────┐
 │    FieldGroupNode     │             │    FieldArrayNode     │
-│ (aggregates children) │             │ (manages key identity)│
+│ (aggregates children) │             │ (manages collection)  │
 └───────────┬───────────┘             └───────────┬───────────┘
             ▼                                     ▼
 ┌───────────────────────┐             ┌───────────────────────┐
 │       FieldNode       │             │    ArrayItemNode      │
-│ (leaf state / signals)│             │ (stable ID + child grp│
+│ (leaf state / signals)│             │ (identity + child grp)│
 └───────────────────────┘             └───────────────────────┘
 ```
 
-- **Path Stability**: Paths are represented internally as canonical immutable arrays `['user', 'addresses', 0, 'street']` and string keys `'user.addresses[0].street'`.
-- **Granular Updates**: Mutating a leaf `FieldNode` notifies only direct subscribers to that field's value/errors, while ancestor `FieldGroupNode` instances derive aggregate `dirty`/`valid` lazily via Vii `computed()`.
+- **F2 Trade-Off Comparison**:
+  1. Pure hierarchical tree (clean nesting, $O(d)$ path lookup).
+  2. Flat path registry (simple lookups, manual ancestor derivation).
+  3. Hybrid tree + index (fast direct lookup + structured ancestor aggregation).
+  4. Lazy field nodes (instantiate nodes only when accessed or bound).
+- **Path Stability**: Paths represent canonical immutable arrays `['user', 'addresses', 0, 'street']` and normalized string representations.
+- **Granular Updates**: Mutating a leaf `FieldNode` should notify only direct subscribers to that field's state, while ancestor nodes derive aggregate `dirty`/`valid` lazily.
 
 ---
 
@@ -203,12 +210,14 @@ To achieve $O(1)$ direct field access by string/tuple path while maintaining hie
 - Mutating a child field does **not** trigger notifications for sibling fields.
 
 #### Repeatable Arrays (`FieldArray`)
-- **Index vs. Stable Identity**: Array items are assigned a unique, immutable internal symbol/ID (e.g. `_vii_id: 'item_c4a1'`) upon insertion.
-- **Operations**:
-  - `push(value)`: appends item with new stable ID.
-  - `remove(index)`: disposes the item's child Scope and removes its field nodes from registry.
-  - `swap(indexA, indexB)` / `move(from, to)`: reorders item references **preserving** existing `touched`, `dirty`, and client validation errors.
-- **Server Error Mapping**: Server errors arriving with index paths (e.g. `items[2].price`) are mapped to the stable item currently at index 2 at the time of response processing.
+- **Stable Item Identity**: Preserving UI state, focus, touched, dirty, and client errors across reordering (`swap`, `move`, `insert`, `remove`) requires stable identity semantics rather than index-only tracking.
+- **F2 Comparison of Identity Strategies**:
+  1. Internal generated unique symbol/ID.
+  2. Application-provided key extractor `(item) => key`.
+  3. Hybrid identity (application key with fallback to generated token).
+  4. Explicit index-only mode for fixed-position collections.
+- *(Note: No specific internal field name or symbol is finalized in F0)*.
+- **Server Error Mapping**: Server errors arriving with index paths (e.g. `items[2].price`) will be mapped to the item reference active at the response revision.
 
 ---
 
@@ -227,7 +236,7 @@ Raw Input (UI) ──> [ Parse ] ──> Field Value ──> [ Validate ] ──
 4. **Transform Stage**: Optional post-validation domain transformation (e.g. trimming strings, computing hashes).
 5. **Submission Output**: The final immutable output object produced upon successful validation.
 
-**TypeScript Type Invariants**:
+**TypeScript Type Invariants (Candidate Signature)**:
 ```ts
 export interface FieldDefinition<TRaw = string, TValue = unknown, TOutput = TValue> {
   parse?: (raw: TRaw) => TValue | Promise<TValue>;
@@ -252,10 +261,12 @@ export interface FieldDefinition<TRaw = string, TValue = unknown, TOutput = TVal
 - Form supports any **Standard Schema v1** schema (Zod 4, Valibot, ArkType) via a zero-cost adapter that delegates parsing and issue mapping.
 
 #### Validation Triggers
-1. **`change`**: Runs synchronous rules on every state update. Async rules are debounced (default: 300ms).
+1. **`change`**: Runs synchronous rules on state update. Async rules may be debounced.
 2. **`blur`**: Runs sync and async rules when the field loses focus (`touched = true`).
-3. **`submit`**: Forces all fields (touched and untouched) to validate immediately. Bypasses debounces.
+3. **`submit`**: Forces all fields (touched and untouched) to validate immediately.
 4. **`manual`**: Explicit programmatic invocation `form.validate()`.
+
+*(Debounce scheduling policy, configurable delay, and zero-accidental-network defaults will be evaluated with empirical evidence in F4)*.
 
 #### Async Validation & Stale Race Cancellation
 - Each field maintains a monotonic `validationRevision: number`.
@@ -264,6 +275,7 @@ export interface FieldDefinition<TRaw = string, TValue = unknown, TOutput = TVal
   2. `validationRevision` is incremented.
   3. Stale async completion callbacks check `if (responseRevision !== currentRevision) return;` and discard results.
   4. Only the latest validation revision has commit authority.
+- **Invariant**: `cancellation !== validation failure`.
 
 ---
 
@@ -287,7 +299,8 @@ export interface FieldDefinition<TRaw = string, TValue = unknown, TOutput = TVal
 ```
 
 - **Precedence**: Parse issues block validation rules. Synchronous validation issues block async validation network calls.
-- **Server Error Lifecycle**: Setting a field value immediately clears any active `ServerIssue` attached to that field, but retains existing client validation status.
+- **Server Error Lifecycle (F6 Investigation)**:
+  - F6 will compare clearing on edit vs marking stale vs preserving until next validation attempt.
 
 ---
 
@@ -316,30 +329,21 @@ export interface FieldDefinition<TRaw = string, TValue = unknown, TOutput = TVal
 └──────────┘  └──────────┘
 ```
 
-- **Duplicate Prevention**: If `submitting` is active, subsequent `submit()` calls are dropped or rejected.
+- **Duplicate Prevention Policy**: Re-entrant submissions while `submitting` is active must be deterministically handled (drop vs reject error to be evaluated in F6).
 - **Transport Decoupling**: Form passes `{ value: TOutput, signal: AbortSignal }` to the user's async handler.
 
 ---
 
 ### 3.10 Scope Ownership & Resource Lifecycle
 
-```text
-┌─────────────────────────────────────────────────────────────┐
-│               Root Form Scope (createScope)                 │
-│  - Owns all field State nodes, Computeds, and Subscriptions │
-│  - Owns Root AbortController                                │
-└──────────────┬──────────────────────────────┬───────────────┘
-               │                              │
-       ┌───────┴───────┐              ┌───────┴───────┐
-       ▼               ▼              ▼               ▼
-┌──────────────┐┌──────────────┐┌──────────────┐┌──────────────┐
-│ Field Scope  ││ Field Scope  ││ArrayItemScope││ArrayItemScope│
-│ (Field 'name')││(Field 'addr')││ (Item #1)    ││ (Item #2)    │
-└──────────────┘└──────────────┘└──────────────┘└──────────────┘
-```
+**Architectural Invariant**: Deterministic disposal of all subscriptions, State nodes, and active `AbortController` tasks upon form disposal.
 
-- When `form.dispose()` is called, the root Scope disposes all child scopes, aborts all in-flight async validators, aborts active submission, and detaches all event listeners.
-- Dynamic array items allocate a child Scope; removing an array item immediately disposes its child Scope, preventing memory leaks.
+- **Candidate Scope Topologies (F1/F2/F4 Investigation)**:
+  1. Root-only Scope with lightweight resource registration.
+  2. Per-field Scope hierarchy.
+  3. Lazy Scope allocated only for fields owning async validation/cancellation resources.
+  4. Array-item child Scopes for collection lifecycle cleanup.
+- When `form.dispose()` is called, all associated resources, listeners, and async controllers are cleanly disposed/aborted.
 
 ---
 
@@ -347,7 +351,7 @@ export interface FieldDefinition<TRaw = string, TValue = unknown, TOutput = TVal
 
 #### Security Baseline
 1. **Prototype Pollution Protection**: Path resolution utilities must strictly forbid `__proto__`, `prototype`, and `constructor` properties.
-2. **Depth & Width Bounds**: Nesting depth is capped at 16 levels; array mutations are capped at 10,000 elements by default.
+2. **Depth & Width Bounds**: Nesting depth and array mutation limits will be empirically baselined and defended in F8.
 3. **No Unsafe Code Evaluation**: Zero `eval()` or dynamic `Function()` usage (CSP Strict compliance).
 4. **Client Validation is UX Only**: Client validation is never treated as an authorization boundary.
 
@@ -355,12 +359,13 @@ export interface FieldDefinition<TRaw = string, TValue = unknown, TOutput = TVal
 - Form diagnostics emit structural events: `field:changed`, `validation:started`, `validation:superseded`, `issue:added`, `submit:started`.
 - **Strict Privacy Rule**: Diagnostics events must **never** record raw form values, passwords, secret tokens, or full server error payloads.
 
-#### Accessibility Baseline
-- Adapters must provide standard accessibility attribute generators:
+#### Accessibility Baseline (Adapter / UI Boundary)
+- Headless Form Core exposes structural state (validity, errors, touched) to enable accessible UI construction.
+- Framework adapters / DOM helpers provide:
   - `aria-invalid="true"` when errors are present and field is touched.
   - `aria-describedby="[fieldId]-error [fieldId]-desc"`.
   - `aria-required="true"` if field has a required rule.
-  - Auto-focus the first invalid field on failed submission attempt.
+  - Identification and focus management for the first invalid field on failed submission attempt.
 
 ---
 
@@ -375,7 +380,7 @@ To prevent NIH (Not-Invented-Here) bias, Vii Form will be evaluated at Slice F10
 | **Bundle Impact** | Raw, minified, gzip, and brotli bytes of core and framework adapters. | TanStack Form, React Hook Form, Angular Signal Forms, VeeValidate, Handwritten Vii State helper. |
 | **Field Update Latency** | Time to update single field and propagate notifications in a 100-field form. | Vii State signal fan-out vs TanStack Form store vs RHF ref-update. |
 | **Rerender / Notification Count** | Number of components/subscribers notified on single keystroke. | 1 subscriber target (field only); 0 whole-form rerenders. |
-| **Memory & Teardown** | Heap retention and listener count after 1,000 mount/dispose cycles. | Zero retained DOM nodes; post-GC heap growth $< 100\text{ kB}$. |
+| **Memory & Teardown** | Heap retention and listener count after 1,000 mount/dispose cycles. | Zero retained disposed resources; empirical heap budget TBD in F9. |
 | **Type-Check Latency** | `tsc --noEmit` wall time on deeply nested/dynamic forms. | Measure compiler cost of deep path inference. |
 | **Framework Portability** | Same core contract used across Vanilla, React, Angular, Vue. | TanStack Form (multi-adapter) vs Vii Form vs framework-native solutions. |
 | **Async Cancellation** | Deterministic cancellation of stale network validation requests. | Verify AbortSignal and revision protection under rapid typing. |
@@ -384,6 +389,6 @@ To prevent NIH (Not-Invented-Here) bias, Vii Form will be evaluated at Slice F10
 
 ## 5. Next Steps & Operating Constraints
 
-- **Current Status**: **F0 is complete.**
+- **Current Status**: **F0 is complete (Baseline Architecture & Hypotheses Recorded).**
 - **Hard Gate**: **Completion of F0 does NOT authorize F1 or any implementation.**
 - **Next Required Action**: Review F0 deliverables, approve roadmap, and await explicit maintainer authorization before opening Slice F1.

@@ -46,25 +46,27 @@ PR: draft opened
 ### Scope
 
 - Implement throwaway research prototype for Form Slice F2 (Nested Objects, Arrays, and Stable Identity) under `research/form/`.
-- Prototype `FieldGroup<T>` managing composite sub-trees of `FormNodeFor<T>` (leaves, child groups, arrays) with lazy aggregate computeds (`values`, `dirty`, `touched`, `pending`, `valid`, `invalid`, `errors` with dot notation).
-- Prototype `FieldArray<T>` managing dynamic repeatable collections of `ArrayItem<T>` with stable `id` mapping (generated IDs and optional `keyExtractor`).
+- Prototype `FieldGroup<T>` managing composite plain-record sub-trees of `FormNodeFor<T>` (leaves, child groups, arrays) with lazy aggregate computeds (`values`, `dirty`, `touched`, `pending`, `valid`, `invalid`, `errors` with dot notation) and non-plain object leaf preservation.
+- Prototype `FieldArray<T>` managing dynamic repeatable collections of `ArrayItem<T>` with stable `id` mapping (generated IDs and scoped `keyExtractor`), full `undefined` item support, and duplicate key rejection.
 - Implement and verify array list operations: `push`, `insert`, `remove`, `swap`, `move`.
-- Empirically verify state preservation: `touched`, `dirty`, and validation error signals stay attached to their conceptual item identity rather than their array index across `swap` and `move`.
-- Implement per-item child `Scope` encapsulation and verify deterministic child Scope teardown upon item removal or array reset.
-- Prototype prototype-pollution defense in path resolution (`parsePath` and `getNode`).
-- Add comprehensive Vitest suite in `research/form/form-core.test.ts` and `research/form/README.md`.
+- Empirically verify state preservation: `touched`, `dirty`, and validation error signals stay attached to conceptual item identity rather than array index across `swap` and `move`.
+- Document and verify provisional reorder dirty semantics (pristine swap marks dirty; restoring original order restores pristine).
+- Implement hierarchical child `Scope` ownership and verify deterministic child Scope teardown upon `form.dispose()`, item removal, or array reset.
+- Prototype cycle detection and strict path parsing grammar hardening with prototype-pollution defense (`parsePath` and `getNode`).
+- Restore and retain all F1 regression tests alongside additive F2 tests.
+- Add comprehensive Vitest suite in `research/form/form-core.test.ts` (33 tests) and `research/form/README.md`.
 
 ### Changes
 
-- Updated `research/form/form-core.ts`: added `FieldGroup`, `FieldArray`, `parsePath`, `getNode`, child Scope lifecycle management, and prototype-pollution protections.
-- Updated `research/form/form-core.test.ts`: 16 unit tests covering F1 regression baseline, path parsing/security, nested groups, repeatable arrays, state preservation across reordering, child Scope teardown, and branch subscription isolation.
-- Updated `research/form/README.md`: architectural overview of F1/F2 prototypes and empirical observations.
+- Updated `research/form/form-core.ts`: added `FieldGroup`, `FieldArray`, `parsePath`, `getNode`, hierarchical Scope child ownership, cycle detection, plain record filtering, scoped keyExtractor, duplicate key defense, and reorder dirty tracking.
+- Updated `research/form/form-core.test.ts`: 33 unit tests covering complete F1 regression baseline (17 tests) + F2 nested groups, arrays, undefined items, reorder dirty semantics, strict paths, cycle defense, and child Scope teardown (16 tests).
+- Updated `research/form/README.md`: architectural overview of F1/F2 prototypes and exact empirical observations.
 - Updated `docs/roadmap/FORM_RESEARCH.md`: marked F2 prototype as completed.
 
 ### Validation
 
-- `pnpm vitest run research/form/form-core.test.ts`: passed (16/16 tests passing).
-- `pnpm exec tsc -p research/form/tsconfig.json --noEmit`: passed.
+- `pnpm vitest run research/form/form-core.test.ts`: passed (33/33 tests passing).
+- `pnpm exec tsc -p research/form/tsconfig.json --noEmit`: passed (0 strict errors).
 - `git diff --check`: passed.
 - `pnpm format:check`: passed.
 - `pnpm lint`: passed (11/11 projects cached/passed).
@@ -78,7 +80,7 @@ PR: draft opened
 
 ### Remaining / recovery
 
-- F2 prototype complete. Next step is maintainer review and authorization of Slice F3 (Validation Scheduling + Structured Issues).
+- F2 prototype and evidence corrections complete. Next step is maintainer review and authorization of Slice F3 (Validation Scheduling + Structured Issues).
 - F3 has NOT been started.
 
 ## 2026-08-23 23:15 CEST | Form Research F1 — Minimal Field/Form State Prototype

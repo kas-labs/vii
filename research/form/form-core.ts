@@ -107,6 +107,17 @@ export function createField<T>(options: CreateFieldOptions<T>): FieldState<T> {
 }
 
 // ---------------------------------------------------------------------------
+// Plain Record Detection & Cycle Defense
+// ---------------------------------------------------------------------------
+
+export function isPlainRecord(value: unknown): value is Record<string, any> {
+  if (value === null || typeof value !== "object") return false;
+  if (Array.isArray(value)) return false;
+  const proto = Object.getPrototypeOf(value);
+  return proto === Object.prototype || proto === null;
+}
+
+// ---------------------------------------------------------------------------
 // FieldGroup: nested object structure
 // ---------------------------------------------------------------------------
 
@@ -132,20 +143,29 @@ export interface CreateFieldGroupOptions<T extends Record<string, any>> {
   readonly initialValues: T;
   readonly scope?: Scope | undefined;
   readonly keyExtractor?: ((item: any) => string | number) | undefined;
+  readonly seenObjects?: Set<object> | undefined;
 }
 
-// Helper to determine node type
 export type FormNodeFor<T> =
   T extends Array<infer U>
     ? FieldArray<U>
     : T extends Record<string, any>
-      ? FieldGroup<T>
+      ? T extends Date | RegExp | Map<any, any> | Set<any> | Function
+        ? FieldState<T>
+        : FieldGroup<T>
       : FieldState<T>;
 
 export function createFieldGroup<T extends Record<string, any>>(
   options: CreateFieldGroupOptions<T>,
 ): FieldGroup<T> {
-  const { initialValues, scope, keyExtractor } = options;
+  const { initialValues, scope, keyExtractor, seenObjects = new Set<object>() } = options;
+
+  if (seenObjects.has(initialValues)) {
+    throw new Error("Cyclic input detected in form data");
+  }
+  const branchSeen = new Set(seenObjects);
+  branchSeen.add(initialValues);
+
   const fields = {} as { [K in keyof T]: FormNodeFor<T[K]> };
 
   for (const key of Object.keys(initialValues) as Array<keyof T>) {
@@ -155,12 +175,13 @@ export function createFieldGroup<T extends Record<string, any>>(
         initialValues: val,
         scope,
         keyExtractor,
+        seenObjects: branchSeen,
       }) as unknown as FormNodeFor<T[keyof T]>;
-    } else if (val !== null && typeof val === "object") {
+    } else if (isPlainRecord(val)) {
       fields[key] = createFieldGroup({
         initialValues: val,
         scope,
-        keyExtractor,
+        seenObjects: branchSeen,
       }) as unknown as FormNodeFor<T[keyof T]>;
     } else {
       fields[key] = createField({
@@ -270,7 +291,7 @@ export function createFieldGroup<T extends Record<string, any>>(
 }
 
 // ---------------------------------------------------------------------------
-// FieldArray: repeatable collection with stable identity
+// FieldArray: repeatable collection with stable identity & child Scope management
 // ---------------------------------------------------------------------------
 
 let idCounter = 0;
@@ -307,26 +328,47 @@ export interface CreateFieldArrayOptions<T> {
   readonly initialValues: T[];
   readonly scope?: Scope | undefined;
   readonly keyExtractor?: ((item: T) => string | number) | undefined;
+  readonly seenObjects?: Set<object> | undefined;
 }
 
 export function createFieldArray<T>(options: CreateFieldArrayOptions<T>): FieldArray<T> {
-  const { initialValues, scope, keyExtractor } = options;
+  const { initialValues, scope, keyExtractor, seenObjects = new Set<object>() } = options;
 
-  const createItem = (val: T): ArrayItem<T> => {
-    const itemScope = createScope({ name: "vii-array-item" });
-    const id = keyExtractor ? keyExtractor(val) : generateInternalId();
+  if (seenObjects.has(initialValues)) {
+    throw new Error("Cyclic input detected in form data");
+  }
+  const branchSeen = new Set(seenObjects);
+  branchSeen.add(initialValues);
+
+  const activeScopes = new Set<Scope>();
+
+  const createItem = (val: T, assignedKey?: string | number): ArrayItem<T> => {
+    const itemScope = scope
+      ? scope.createChild({ name: "vii-array-item" })
+      : createScope({ name: "vii-array-item" });
+    activeScopes.add(itemScope);
+
+    let id: string | number;
+    if (assignedKey !== undefined) {
+      id = assignedKey;
+    } else if (keyExtractor) {
+      id = keyExtractor(val);
+    } else {
+      id = generateInternalId();
+    }
+
     let node: any;
     if (Array.isArray(val)) {
       node = createFieldArray({
         initialValues: val,
         scope: itemScope,
-        keyExtractor: keyExtractor as any,
+        seenObjects: branchSeen,
       });
-    } else if (val !== null && typeof val === "object") {
+    } else if (isPlainRecord(val)) {
       node = createFieldGroup({
         initialValues: val as Record<string, any>,
         scope: itemScope,
-        keyExtractor: keyExtractor as any,
+        seenObjects: branchSeen,
       });
     } else {
       node = createField({
@@ -337,9 +379,34 @@ export function createFieldArray<T>(options: CreateFieldArrayOptions<T>): FieldA
     return { id, node, scope: itemScope };
   };
 
-  const initialItems = initialValues.map(createItem);
+  const validateUniqueKeys = (items: readonly ArrayItem<T>[]): void => {
+    const seen = new Set<string | number>();
+    for (const item of items) {
+      if (seen.has(item.id)) {
+        throw new Error(`Duplicate key "${item.id}" detected in FieldArray`);
+      }
+      seen.add(item.id);
+    }
+  };
+
+  const initialItems = initialValues.map((v) => createItem(v));
+  validateUniqueKeys(initialItems);
+
+  const initialKeys = initialItems.map((it) => it.id);
+
   const itemsState = state<readonly ArrayItem<T>[]>(initialItems);
   const initialValuesState = state<T[]>(initialValues);
+  const initialKeysState = state<readonly (string | number)[]>(initialKeys);
+
+  // Register array cleanup in parent scope
+  if (scope) {
+    scope.use(() => {
+      for (const s of activeScopes) {
+        s.dispose();
+      }
+      activeScopes.clear();
+    });
+  }
 
   const runInScope = <R>(fn: () => R): R => (scope ? scope.run(fn) : fn());
 
@@ -356,7 +423,19 @@ export function createFieldArray<T>(options: CreateFieldArrayOptions<T>): FieldA
     computed(() => {
       const current = itemsState.get();
       const initials = initialValuesState.get();
+      const initKeys = initialKeysState.get();
+
+      // Length change = dirty
       if (current.length !== initials.length) return true;
+
+      // Order change (checked via stable item IDs) = dirty
+      for (let i = 0; i < current.length; i++) {
+        if (current[i]?.id !== initKeys[i]) {
+          return true;
+        }
+      }
+
+      // Any child field edited = dirty
       return current.some((item) => (item.node as any).dirty.get());
     }),
   );
@@ -403,13 +482,16 @@ export function createFieldArray<T>(options: CreateFieldArrayOptions<T>): FieldA
 
   const push = (value: T): void => {
     const item = createItem(value);
-    itemsState.set([...itemsState.get(), item]);
+    const next = [...itemsState.get(), item];
+    validateUniqueKeys(next);
+    itemsState.set(next);
   };
 
   const insert = (index: number, value: T): void => {
     const current = [...itemsState.get()];
     const item = createItem(value);
     current.splice(index, 0, item);
+    validateUniqueKeys(current);
     itemsState.set(current);
   };
 
@@ -418,6 +500,7 @@ export function createFieldArray<T>(options: CreateFieldArrayOptions<T>): FieldA
     if (index >= 0 && index < current.length) {
       const removed = current.splice(index, 1);
       if (removed[0]) {
+        activeScopes.delete(removed[0].scope);
         removed[0].scope.dispose();
       }
       itemsState.set(current);
@@ -461,27 +544,28 @@ export function createFieldArray<T>(options: CreateFieldArrayOptions<T>): FieldA
       for (let i = next.length; i < current.length; i++) {
         const item = current[i];
         if (item) {
+          activeScopes.delete(item.scope);
           item.scope.dispose();
         }
       }
       const newItems: ArrayItem<T>[] = [];
       for (let i = 0; i < next.length; i++) {
-        const nextVal = next[i];
         if (i < current.length) {
           const item = current[i];
-          if (item && nextVal !== undefined) {
+          if (item) {
             const n = item.node as any;
             if (n.kind === "field") {
-              n.setValue(nextVal);
+              n.setValue(next[i]);
             } else {
-              n.setValues(nextVal);
+              n.setValues(next[i]);
             }
             newItems.push(item);
           }
-        } else if (nextVal !== undefined) {
-          newItems.push(createItem(nextVal));
+        } else {
+          newItems.push(createItem(next[i] as T));
         }
       }
+      validateUniqueKeys(newItems);
       itemsState.set(newItems);
     });
   };
@@ -494,9 +578,18 @@ export function createFieldArray<T>(options: CreateFieldArrayOptions<T>): FieldA
       }
       // dispose all current
       for (const item of itemsState.get()) {
+        activeScopes.delete(item.scope);
         item.scope.dispose();
       }
-      itemsState.set(initials.map(createItem));
+
+      // Re-create items (recreating internal IDs if unkeyed, preserving keys if keyExtractor)
+      const newItems = initials.map((v) => createItem(v));
+      validateUniqueKeys(newItems);
+
+      if (nextInitials !== undefined) {
+        initialKeysState.set(newItems.map((it) => it.id));
+      }
+      itemsState.set(newItems);
     });
   };
 
@@ -521,7 +614,7 @@ export function createFieldArray<T>(options: CreateFieldArrayOptions<T>): FieldA
 }
 
 // ---------------------------------------------------------------------------
-// FormInstance & Flat Index Registry / Path Resolution
+// FormInstance & Strict Path Parsing / Resolution
 // ---------------------------------------------------------------------------
 
 export type FieldValues = Record<string, any>;
@@ -548,24 +641,72 @@ export interface FormInstance<T extends FieldValues> {
 }
 
 export function parsePath(path: string): Array<string | number> {
+  if (typeof path !== "string" || path.trim() === "") {
+    throw new Error(`Invalid path: path cannot be empty`);
+  }
+
   const parts: Array<string | number> = [];
-  const regex = /[^.\[\]]+/g;
-  let match: RegExpExecArray | null;
-  while ((match = regex.exec(path)) !== null) {
-    const segment = match[0];
+  let i = 0;
+  const len = path.length;
+
+  while (i < len) {
+    const char = path[i];
+
+    if (char === ".") {
+      if (i === 0 || i === len - 1 || path[i - 1] === "." || path[i - 1] === "[") {
+        throw new Error(`Invalid path syntax: unexpected dot at index ${i} in "${path}"`);
+      }
+      i++;
+      continue;
+    }
+
+    if (char === "[") {
+      const closeIdx = path.indexOf("]", i);
+      if (closeIdx === -1) {
+        throw new Error(`Invalid path syntax: unclosed bracket in "${path}"`);
+      }
+      const rawIndex = path.slice(i + 1, closeIdx);
+      if (rawIndex.trim() === "" || !/^\d+$/.test(rawIndex)) {
+        throw new Error(
+          `Invalid path syntax: array index must be a non-negative integer, received "${rawIndex}" in "${path}"`,
+        );
+      }
+      if (rawIndex.length > 1 && rawIndex.startsWith("0")) {
+        throw new Error(
+          `Invalid path syntax: leading zeros not allowed in array index "${rawIndex}" in "${path}"`,
+        );
+      }
+      parts.push(parseInt(rawIndex, 10));
+      i = closeIdx + 1;
+      continue;
+    }
+
+    // Property name segment
+    let propEnd = i;
+    while (propEnd < len && path[propEnd] !== "." && path[propEnd] !== "[") {
+      if (path[propEnd] === "]") {
+        throw new Error(
+          `Invalid path syntax: unexpected closing bracket at index ${propEnd} in "${path}"`,
+        );
+      }
+      propEnd++;
+    }
+    const segment = path.slice(i, propEnd);
+    if (segment.trim() === "") {
+      throw new Error(`Invalid path syntax: empty property segment in "${path}"`);
+    }
+
     // Prototype pollution defense
     if (segment === "__proto__" || segment === "prototype" || segment === "constructor") {
       throw new Error(
         `Security error: Prototype pollution attempt blocked on path segment "${segment}"`,
       );
     }
-    const num = Number(segment);
-    if (!isNaN(num) && segment.trim() !== "") {
-      parts.push(num);
-    } else {
-      parts.push(segment);
-    }
+
+    parts.push(segment);
+    i = propEnd;
   }
+
   return parts;
 }
 
@@ -579,7 +720,13 @@ export function createForm<T extends FieldValues>(config: FormConfig<T>): FormIn
   });
 
   const getNode = (path: string): FormNode | undefined => {
-    const segments = parsePath(path);
+    let segments: Array<string | number>;
+    try {
+      segments = parsePath(path);
+    } catch {
+      return undefined;
+    }
+
     let curr: any = root;
     for (const seg of segments) {
       if (!curr) return undefined;
@@ -599,6 +746,8 @@ export function createForm<T extends FieldValues>(config: FormConfig<T>): FormIn
     return curr;
   };
 
+  let isDisposed = false;
+
   return {
     root,
     fields: root.fields,
@@ -612,7 +761,11 @@ export function createForm<T extends FieldValues>(config: FormConfig<T>): FormIn
     getNode,
     setValues: root.setValues,
     reset: root.reset,
-    dispose: () => scope.dispose(),
+    dispose: () => {
+      if (isDisposed) return;
+      isDisposed = true;
+      scope.dispose();
+    },
   };
 }
 

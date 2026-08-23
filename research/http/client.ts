@@ -1,5 +1,5 @@
 /**
- * Vii HTTP Client & Transport Research — Client Factory (H1-H7 Baseline)
+ * Vii HTTP Client & Transport Research — Client Factory (H1-H8 Baseline)
  *
  * Research Prototype: Not a production package.
  */
@@ -13,6 +13,7 @@ import {
 } from "./cancellation.js";
 import { HttpError, HttpParseError, HttpStatusError, NetworkError } from "./errors.js";
 import { mergeHeaders } from "./headers.js";
+import { formatTraceparent, generateSpanId, generateTraceId } from "./observability.js";
 import { composeMiddleware } from "./pipeline.js";
 import { executeWithRetry } from "./retry.js";
 import { validatePayload } from "./schema.js";
@@ -44,6 +45,7 @@ class HttpClientImpl implements HttpClient {
       ...(config.timeout !== undefined ? { timeout: config.timeout } : {}),
       ...(config.retry !== undefined ? { retry: config.retry } : {}),
       ...(config.security !== undefined ? { security: config.security } : {}),
+      ...(config.telemetry !== undefined ? { telemetry: config.telemetry } : {}),
       ...(config.throwOnError !== undefined ? { throwOnError: config.throwOnError } : {}),
       ...(config.fetch !== undefined ? { fetch: config.fetch } : {}),
       ...(config.middleware !== undefined
@@ -60,6 +62,24 @@ class HttpClientImpl implements HttpClient {
 
     const headers = mergeHeaders(this.config.headers, options.headers);
     const fetchFn = options.fetch ?? this.config.fetch ?? globalThis.fetch;
+
+    const effectiveTelemetry = options.telemetry ?? this.config.telemetry;
+    let traceId: string | undefined;
+    let spanId: string | undefined;
+
+    if (effectiveTelemetry?.traceContext) {
+      if (typeof effectiveTelemetry.traceContext === "object") {
+        traceId = effectiveTelemetry.traceContext.traceId ?? generateTraceId();
+        spanId = effectiveTelemetry.traceContext.spanId ?? generateSpanId();
+      } else {
+        traceId = generateTraceId();
+        spanId = generateSpanId();
+      }
+
+      if (!headers.has("traceparent")) {
+        headers.set("traceparent", formatTraceparent(traceId, spanId));
+      }
+    }
 
     const effectiveTimeout = options.timeout ?? this.config.timeout;
     const timeoutBinding =
@@ -118,6 +138,22 @@ class HttpClientImpl implements HttpClient {
     const context: HttpRequestContext = options.context ?? {};
     const effectiveRetry = options.retry ?? this.config.retry;
 
+    const startTime = typeof performance !== "undefined" ? performance.now() : Date.now();
+
+    if (effectiveTelemetry?.onRequest) {
+      try {
+        await effectiveTelemetry.onRequest({
+          request,
+          context,
+          timestamp: Date.now(),
+          traceId,
+          spanId,
+        });
+      } catch {
+        // Telemetry errors ignored
+      }
+    }
+
     const activeMiddleware = [...(this.config.middleware ?? []), ...(options.middleware ?? [])];
 
     const transport: HttpHandler = async (req) => {
@@ -139,10 +175,46 @@ class HttpClientImpl implements HttpClient {
     let response: Response;
     try {
       response = await executeWithRetry(request, handler, context, effectiveRetry);
+    } catch (err) {
+      const endTime = typeof performance !== "undefined" ? performance.now() : Date.now();
+      const durationMs = Math.max(0, endTime - startTime);
+      if (effectiveTelemetry?.onError) {
+        try {
+          await effectiveTelemetry.onError({
+            request,
+            error: err,
+            context,
+            timing: { startTime, durationMs },
+            traceId,
+            spanId,
+          });
+        } catch {
+          // Telemetry errors ignored
+        }
+      }
+      throw err;
     } finally {
       timeoutBinding?.cleanup();
       scopeBinding?.cleanup();
       composedBinding?.cleanup();
+    }
+
+    const endTime = typeof performance !== "undefined" ? performance.now() : Date.now();
+    const durationMs = Math.max(0, endTime - startTime);
+
+    if (effectiveTelemetry?.onResponse) {
+      try {
+        await effectiveTelemetry.onResponse({
+          request,
+          response,
+          context,
+          timing: { startTime, durationMs },
+          traceId,
+          spanId,
+        });
+      } catch {
+        // Telemetry errors ignored
+      }
     }
 
     const shouldThrow = options.throwOnError ?? this.config.throwOnError ?? false;
@@ -348,6 +420,7 @@ class HttpClientImpl implements HttpClient {
     const mergedTimeout = childConfig.timeout ?? this.config.timeout;
     const mergedRetry = childConfig.retry ?? this.config.retry;
     const mergedSecurity = childConfig.security ?? this.config.security;
+    const mergedTelemetry = childConfig.telemetry ?? this.config.telemetry;
     const mergedThrowOnError = childConfig.throwOnError ?? this.config.throwOnError;
     const mergedFetch = childConfig.fetch ?? this.config.fetch;
     const mergedMiddleware = [...(this.config.middleware ?? []), ...(childConfig.middleware ?? [])];
@@ -358,6 +431,7 @@ class HttpClientImpl implements HttpClient {
       ...(mergedTimeout !== undefined ? { timeout: mergedTimeout } : {}),
       ...(mergedRetry !== undefined ? { retry: mergedRetry } : {}),
       ...(mergedSecurity !== undefined ? { security: mergedSecurity } : {}),
+      ...(mergedTelemetry !== undefined ? { telemetry: mergedTelemetry } : {}),
       ...(mergedThrowOnError !== undefined ? { throwOnError: mergedThrowOnError } : {}),
       ...(mergedFetch !== undefined ? { fetch: mergedFetch } : {}),
       ...(mergedMiddleware.length > 0 ? { middleware: mergedMiddleware } : {}),

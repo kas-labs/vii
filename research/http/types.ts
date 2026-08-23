@@ -1,10 +1,17 @@
 /**
- * Vii HTTP Client & Transport Research — Types (H1-H7 Baseline)
+ * Vii HTTP Client & Transport Research — Types (H1-H8 Baseline)
  *
  * Research Prototype: Not a production package.
  */
 
 import type { ScopeLike } from "./cancellation.js";
+import type {
+  HttpRequestStartEvent,
+  HttpRequestTiming,
+  HttpResponseErrorEvent,
+  HttpResponseSuccessEvent,
+  TelemetryConfig,
+} from "./observability.js";
 import type { RetryPolicy } from "./retry.js";
 import type { StandardSchemaV1 } from "./schema.js";
 import type { SecurityPolicy } from "./security.js";
@@ -46,6 +53,7 @@ export interface HttpRequestOptions<T = unknown> extends Omit<
   readonly scope?: ScopeLike | undefined;
   readonly retry?: RetryPolicy | number | boolean | undefined;
   readonly security?: SecurityPolicy | undefined;
+  readonly telemetry?: TelemetryConfig | undefined;
   readonly fetch?: typeof globalThis.fetch | undefined;
   readonly context?: HttpRequestContext | undefined;
   readonly middleware?: readonly HttpMiddleware[] | undefined;
@@ -60,6 +68,7 @@ export interface HttpClientConfig {
   readonly timeout?: number | undefined;
   readonly retry?: RetryPolicy | number | boolean | undefined;
   readonly security?: SecurityPolicy | undefined;
+  readonly telemetry?: TelemetryConfig | undefined;
   readonly throwOnError?: boolean | undefined;
   readonly fetch?: typeof globalThis.fetch | undefined;
   readonly middleware?: readonly HttpMiddleware[] | undefined;
@@ -112,3 +121,11 @@ export interface HttpClient {
 
   extend(childConfig: HttpClientConfig): HttpClient;
 }
+
+export type {
+  HttpRequestStartEvent,
+  HttpRequestTiming,
+  HttpResponseErrorEvent,
+  HttpResponseSuccessEvent,
+  TelemetryConfig,
+};

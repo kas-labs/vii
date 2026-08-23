@@ -1,5 +1,5 @@
 /**
- * Vii HTTP Client & Transport Research (H1-H7 Baseline)
+ * Vii HTTP Client & Transport Research (H1-H8 Baseline)
  *
  * Research Prototype: Not a production package.
  */
@@ -25,6 +25,16 @@ export {
 export { bindScopeSignal, composeSignals, createTimeoutSignal } from "./cancellation.js";
 export { createHttpClient } from "./client.js";
 export { mergeHeaders } from "./headers.js";
+export {
+  DEFAULT_REDACTED_HEADERS,
+  DEFAULT_REDACTED_PARAMS,
+  formatTraceparent,
+  generateSpanId,
+  generateTraceId,
+  parseTraceparent,
+  redactHeaders,
+  redactUrl,
+} from "./observability.js";
 export { composeMiddleware } from "./pipeline.js";
 export {
   calculateBackoff,
@@ -58,8 +68,13 @@ export type {
   HttpMiddleware,
   HttpRequestContext,
   HttpRequestOptions,
+  HttpRequestStartEvent,
+  HttpRequestTiming,
+  HttpResponseErrorEvent,
+  HttpResponseSuccessEvent,
   QueryParams,
   QueryParamValue,
+  TelemetryConfig,
 } from "./types.js";
 export type {
   HttpParseErrorOptions,

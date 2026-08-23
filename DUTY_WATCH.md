@@ -50,22 +50,22 @@ PR: draft opened
 - Prototype `FieldArray<T>` managing dynamic repeatable collections of `ArrayItem<T>` with stable `id` mapping (generated IDs and scoped `keyExtractor`), full `undefined` item support, and duplicate key rejection.
 - Implement and verify array list operations: `push`, `insert`, `remove`, `swap`, `move`.
 - Empirically verify state preservation: `touched`, `dirty`, and validation error signals stay attached to conceptual item identity rather than array index across `swap` and `move`.
-- Document and verify provisional reorder dirty semantics (pristine swap marks dirty; restoring original order restores pristine).
+- Define and document dirty baseline semantics: order participates in dirty; `reset()` re-establishes fresh baseline key sequence for unkeyed arrays; `setValues()` reconciles via `keyExtractor` (reusing scopes and detecting duplicate keys) and restores baseline keys when unkeyed arrays regrow to initial values.
 - Implement hierarchical child `Scope` ownership and verify deterministic child Scope teardown upon `form.dispose()`, item removal, or array reset.
 - Prototype cycle detection and strict path parsing grammar hardening with prototype-pollution defense (`parsePath` and `getNode`).
 - Restore and retain all F1 regression tests alongside additive F2 tests.
-- Add comprehensive Vitest suite in `research/form/form-core.test.ts` (33 tests) and `research/form/README.md`.
+- Add comprehensive Vitest suite in `research/form/form-core.test.ts` (40 tests) and `research/form/README.md`.
 
 ### Changes
 
-- Updated `research/form/form-core.ts`: added `FieldGroup`, `FieldArray`, `parsePath`, `getNode`, hierarchical Scope child ownership, cycle detection, plain record filtering, scoped keyExtractor, duplicate key defense, and reorder dirty tracking.
-- Updated `research/form/form-core.test.ts`: 33 unit tests covering complete F1 regression baseline (17 tests) + F2 nested groups, arrays, undefined items, reorder dirty semantics, strict paths, cycle defense, and child Scope teardown (16 tests).
-- Updated `research/form/README.md`: architectural overview of F1/F2 prototypes and exact empirical observations.
+- Updated `research/form/form-core.ts`: added `FieldGroup`, `FieldArray`, `parsePath`, `getNode`, hierarchical Scope child ownership, cycle detection, plain record filtering, scoped keyExtractor, duplicate key defense, keyed setValues reconciliation, and dirty baseline re-establishment.
+- Updated `research/form/form-core.test.ts`: 40 unit tests covering complete F1 regression baseline (17 tests) + F2 nested groups, arrays, undefined items, reorder dirty semantics, reset dirty restoration, setValues shrink/regrow, keyed setValues identity preservation, strict paths, cycle defense, and child Scope teardown (23 tests).
+- Updated `research/form/README.md`: architectural overview of F1/F2 prototypes, documented dirty baseline semantics, and exact empirical observations.
 - Updated `docs/roadmap/FORM_RESEARCH.md`: marked F2 prototype as completed.
 
 ### Validation
 
-- `pnpm vitest run research/form/form-core.test.ts`: passed (33/33 tests passing).
+- `pnpm vitest run research/form/form-core.test.ts`: passed (40/40 tests passing).
 - `pnpm exec tsc -p research/form/tsconfig.json --noEmit`: passed (0 strict errors).
 - `git diff --check`: passed.
 - `pnpm format:check`: passed.

@@ -426,6 +426,8 @@ describe("Form Research F1 & F2 — Complete Prototype and Regression Evidence",
       expect(() => parsePath("user[-1]")).toThrow(/non-negative integer/);
       expect(() => parsePath("user[1.5]")).toThrow(/non-negative integer/);
       expect(() => parsePath("user[01]")).toThrow(/leading zeros/);
+      expect(() => parsePath("tasks[0]b")).toThrow(/bracket segment must be followed by/);
+      expect(() => parsePath("a.[0]")).toThrow(/dot before bracket/);
     });
 
     it("should block prototype pollution attempts on any segment", () => {
@@ -672,6 +674,150 @@ describe("Form Research F1 & F2 — Complete Prototype and Regression Evidence",
       expect(swappedItems[1]!.id).toBe(firstItem.id);
 
       form.dispose();
+    });
+
+    it("Reset with no args on unkeyed array: ids regenerated AND dirty === false, touched === false, values match initial", () => {
+      const array = createFieldArray<string>({
+        initialValues: ["a", "b"],
+      });
+      const oldId = array.items.get()[0]!.id;
+
+      array.push("c");
+      expect(array.dirty.get()).toBe(true);
+
+      array.reset();
+
+      expect(array.dirty.get()).toBe(false);
+      expect(array.touched.get()).toBe(false);
+      expect(array.values.get()).toEqual(["a", "b"]);
+      expect(array.items.get()[0]!.id).not.toBe(oldId); // ids regenerated
+    });
+
+    it("Reset with no args on keyed array: keys preserved AND dirty === false", () => {
+      const array = createFieldArray<{ id: string; val: number }>({
+        initialValues: [
+          { id: "k1", val: 1 },
+          { id: "k2", val: 2 },
+        ],
+        keyExtractor: (item) => item.id,
+      });
+
+      array.push({ id: "k3", val: 3 });
+      expect(array.dirty.get()).toBe(true);
+
+      array.reset();
+
+      expect(array.dirty.get()).toBe(false);
+      expect(array.touched.get()).toBe(false);
+      expect(array.values.get()).toEqual([
+        { id: "k1", val: 1 },
+        { id: "k2", val: 2 },
+      ]);
+      expect(array.items.get().map((i) => i.id)).toEqual(["k1", "k2"]);
+    });
+
+    it("form.reset() on a form containing a nested array: form.dirty === false", () => {
+      const form = createForm<{ tasks: string[] }>({
+        initialValues: { tasks: ["a", "b"] },
+      });
+      const arr = form.getNode("tasks") as FieldArray<string>;
+
+      expect(arr.dirty.get()).toBe(false);
+      expect(form.dirty.get()).toBe(false);
+
+      form.reset();
+
+      expect(arr.dirty.get()).toBe(false);
+      expect(form.dirty.get()).toBe(false);
+
+      form.dispose();
+    });
+
+    it("setValues shrink then regrow to initial values: dirty === false", () => {
+      const array = createFieldArray<string>({
+        initialValues: ["a", "b", "c"],
+      });
+      expect(array.dirty.get()).toBe(false);
+
+      array.setValues(["a"]);
+      expect(array.dirty.get()).toBe(true);
+
+      array.setValues(["a", "b", "c"]);
+      expect(array.dirty.get()).toBe(false);
+    });
+
+    it("keyed setValues reorder: item.id matches keyExtractor(item value) for every item", () => {
+      const array = createFieldArray<{ id: string; v: number }>({
+        initialValues: [
+          { id: "r1", v: 1 },
+          { id: "r2", v: 2 },
+        ],
+        keyExtractor: (item) => item.id,
+      });
+
+      array.setValues([
+        { id: "r2", v: 2 },
+        { id: "r1", v: 1 },
+      ]);
+
+      const items = array.items.get();
+      expect(items.map((i) => i.id)).toEqual(["r2", "r1"]);
+      expect(items[0]!.id).toBe("r2");
+      expect((items[0]!.node as FieldGroup<{ id: string; v: number }>).values.get()).toEqual({
+        id: "r2",
+        v: 2,
+      });
+      expect(items[1]!.id).toBe("r1");
+      expect((items[1]!.node as FieldGroup<{ id: string; v: number }>).values.get()).toEqual({
+        id: "r1",
+        v: 1,
+      });
+    });
+
+    it("keyed setValues introducing a real duplicate key: throws Duplicate key", () => {
+      const array = createFieldArray<{ id: string; v: number }>({
+        initialValues: [
+          { id: "r1", v: 1 },
+          { id: "r2", v: 2 },
+        ],
+        keyExtractor: (item) => item.id,
+      });
+
+      expect(() => {
+        array.setValues([
+          { id: "r1", v: 10 },
+          { id: "r1", v: 20 },
+        ]);
+      }).toThrow(/Duplicate key "r1"/);
+    });
+
+    it("keyed setValues: an item whose key survived keeps its child scope and child signals", () => {
+      const array = createFieldArray<{ id: string; v: number }>({
+        initialValues: [
+          { id: "r1", v: 1 },
+          { id: "r2", v: 2 },
+        ],
+        keyExtractor: (item) => item.id,
+      });
+
+      const initialR1Item = array.items.get()[0]!;
+      const r1Group = initialR1Item.node as FieldGroup<{ id: string; v: number }>;
+      (r1Group.fields.v as FieldState<number>).setTouched(true);
+      (r1Group.fields.v as FieldState<number>).setErrors(["Err"]);
+
+      // Reorder and update
+      array.setValues([
+        { id: "r2", v: 20 },
+        { id: "r1", v: 1 },
+      ]);
+
+      const newItems = array.items.get();
+      const survivedR1Item = newItems[1]!;
+      expect(survivedR1Item.scope).toBe(initialR1Item.scope); // Scope reused!
+
+      const survivedR1Group = survivedR1Item.node as FieldGroup<{ id: string; v: number }>;
+      expect((survivedR1Group.fields.v as FieldState<number>).touched.get()).toBe(true);
+      expect((survivedR1Group.fields.v as FieldState<number>).errors.get()).toEqual(["Err"]);
     });
 
     it("Reset Identity Semantics: reset re-creates internal IDs, preserves keyExtractor keys, and disposes old scopes", () => {

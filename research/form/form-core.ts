@@ -428,10 +428,20 @@ export function createFieldArray<T>(options: CreateFieldArrayOptions<T>): FieldA
       // Length change = dirty
       if (current.length !== initials.length) return true;
 
-      // Order change (checked via stable item IDs) = dirty
-      for (let i = 0; i < current.length; i++) {
-        if (current[i]?.id !== initKeys[i]) {
-          return true;
+      // Order / Identity change check:
+      if (keyExtractor) {
+        // For keyed arrays, check if keys match baseline keys in order
+        for (let i = 0; i < current.length; i++) {
+          if (current[i]?.id !== initKeys[i]) {
+            return true;
+          }
+        }
+      } else {
+        // For unkeyed arrays, check if current item IDs match initial keys in order
+        for (let i = 0; i < current.length; i++) {
+          if (current[i]?.id !== initKeys[i]) {
+            return true;
+          }
         }
       }
 
@@ -540,33 +550,87 @@ export function createFieldArray<T>(options: CreateFieldArrayOptions<T>): FieldA
   const setValues = (next: T[]): void => {
     batch(() => {
       const current = itemsState.get();
-      // dispose removed items
-      for (let i = next.length; i < current.length; i++) {
-        const item = current[i];
-        if (item) {
-          activeScopes.delete(item.scope);
-          item.scope.dispose();
+
+      if (keyExtractor) {
+        // Keyed reconciliation: re-derive keys from incoming values
+        const currentByDerivedKey = new Map<string | number, ArrayItem<T>>();
+        for (const item of current) {
+          const currentDerivedKey = keyExtractor(
+            (item.node as any).kind === "field"
+              ? (item.node as any).value.get()
+              : (item.node as any).values.get(),
+          );
+          currentByDerivedKey.set(currentDerivedKey, item);
         }
-      }
-      const newItems: ArrayItem<T>[] = [];
-      for (let i = 0; i < next.length; i++) {
-        if (i < current.length) {
+
+        const newItems: ArrayItem<T>[] = [];
+        const usedOldKeys = new Set<string | number>();
+
+        for (let i = 0; i < next.length; i++) {
+          const nextVal = next[i];
+          const derivedKey = keyExtractor(nextVal as T);
+          const existingItem = currentByDerivedKey.get(derivedKey);
+
+          if (existingItem) {
+            usedOldKeys.add(derivedKey);
+            const n = existingItem.node as any;
+            if (n.kind === "field") {
+              n.setValue(nextVal);
+            } else {
+              n.setValues(nextVal);
+            }
+            newItems.push(existingItem);
+          } else {
+            newItems.push(createItem(nextVal as T, derivedKey));
+          }
+        }
+
+        // Validate uniqueness of the newly derived keys
+        validateUniqueKeys(newItems);
+
+        // Dispose old items whose keys disappeared
+        for (const [key, oldItem] of currentByDerivedKey.entries()) {
+          if (!usedOldKeys.has(key)) {
+            activeScopes.delete(oldItem.scope);
+            oldItem.scope.dispose();
+          }
+        }
+
+        itemsState.set(newItems);
+      } else {
+        // Unkeyed reconciliation: positional reuse with baseline key restoration
+        const initKeys = initialKeysState.get();
+        for (let i = next.length; i < current.length; i++) {
           const item = current[i];
           if (item) {
-            const n = item.node as any;
-            if (n.kind === "field") {
-              n.setValue(next[i]);
-            } else {
-              n.setValues(next[i]);
-            }
-            newItems.push(item);
+            activeScopes.delete(item.scope);
+            item.scope.dispose();
           }
-        } else {
-          newItems.push(createItem(next[i] as T));
         }
+
+        const newItems: ArrayItem<T>[] = [];
+        for (let i = 0; i < next.length; i++) {
+          const nextVal = next[i];
+          if (i < current.length) {
+            const item = current[i];
+            if (item) {
+              const n = item.node as any;
+              if (n.kind === "field") {
+                n.setValue(nextVal);
+              } else {
+                n.setValues(nextVal);
+              }
+              newItems.push(item);
+            }
+          } else {
+            // If we are regrowing back to within initial range, reuse initial key baseline
+            const assignedKey = i < initKeys.length ? initKeys[i] : undefined;
+            newItems.push(createItem(nextVal as T, assignedKey));
+          }
+        }
+        validateUniqueKeys(newItems);
+        itemsState.set(newItems);
       }
-      validateUniqueKeys(newItems);
-      itemsState.set(newItems);
     });
   };
 
@@ -582,13 +646,12 @@ export function createFieldArray<T>(options: CreateFieldArrayOptions<T>): FieldA
         item.scope.dispose();
       }
 
-      // Re-create items (recreating internal IDs if unkeyed, preserving keys if keyExtractor)
+      // Re-create items
       const newItems = initials.map((v) => createItem(v));
       validateUniqueKeys(newItems);
 
-      if (nextInitials !== undefined) {
-        initialKeysState.set(newItems.map((it) => it.id));
-      }
+      // Re-establish initialKeysState baseline on EVERY reset
+      initialKeysState.set(newItems.map((it) => it.id));
       itemsState.set(newItems);
     });
   };
@@ -656,6 +719,9 @@ export function parsePath(path: string): Array<string | number> {
       if (i === 0 || i === len - 1 || path[i - 1] === "." || path[i - 1] === "[") {
         throw new Error(`Invalid path syntax: unexpected dot at index ${i} in "${path}"`);
       }
+      if (i + 1 < len && path[i + 1] === "[") {
+        throw new Error(`Invalid path syntax: dot before bracket at index ${i} in "${path}"`);
+      }
       i++;
       continue;
     }
@@ -678,6 +744,11 @@ export function parsePath(path: string): Array<string | number> {
       }
       parts.push(parseInt(rawIndex, 10));
       i = closeIdx + 1;
+      if (i < len && path[i] !== "." && path[i] !== "[") {
+        throw new Error(
+          `Invalid path syntax: bracket segment must be followed by '.', '[', or end of path, found "${path[i]}" at index ${i} in "${path}"`,
+        );
+      }
       continue;
     }
 

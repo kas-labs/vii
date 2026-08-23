@@ -37,6 +37,52 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-23 02:15 CEST | H9 HTTP Client Graduation Gate & Build-vs-Buy Decision
+
+Status: completed
+Branch: `feat/http-graduation-decision`
+PR: #139
+
+### Scope
+
+- Complete final slice H9 (Graduation Gate + Build-vs-Buy Decision) for the Vii HTTP Client & Transport research track.
+- Synthesize all findings and empirical evidence from research slices H0 through H8.
+- Conduct comprehensive comparative trade-off analysis against native `fetch`, `axios`, `ky`, and `ofetch`.
+- Render authoritative architectural verdict: `Wrap + Reduce` (Zero-Dependency Micro-Transport Primitive).
+- Author architectural decision record in `docs/architecture/ADR_HTTP_GRADUATION_DECISION.md`.
+- Update `docs/roadmap/HTTP_CLIENT_RESEARCH.md` and `PROJECT_STATE.md` to record track completion.
+- Update `DUTY_WATCH.md`.
+
+### Changes
+
+- Added `docs/architecture/ADR_HTTP_GRADUATION_DECISION.md`: comprehensive decision record documenting comparative matrix, slice findings H0–H8, rationale for `Wrap + Reduce`, and zero-core-bloat packaging strategy.
+- Updated `docs/roadmap/HTTP_CLIENT_RESEARCH.md`: marked research track as completed with `Wrap + Reduce` verdict and ADR link.
+- Updated `PROJECT_STATE.md`: updated durable research track index to include HTTP graduation ADR.
+- Updated `research/http/README.md`: updated research prototype status to completed with graduation verdict.
+
+### Validation
+
+- `pnpm exec vitest run research/http/*.test.ts`: 11 test files, 91 tests passed (0 failures).
+- `pnpm exec tsc -p research/http/tsconfig.json --noEmit`: passed cleanly with 0 errors.
+- `pnpm format:check`: passed cleanly.
+- `pnpm lint`: passed cleanly.
+- `pnpm typecheck`: passed cleanly.
+- `pnpm test`: all packages and fixtures passed cleanly.
+- `pnpm validate`: passed cleanly (all builds, tests, and packed-artifact checks passed).
+- `git diff --check`: passed cleanly with zero whitespace/formatting errors.
+
+### Architecture / compatibility
+
+- Zero core bundle impact: `@vii-labs/core` remains 100% zero-dependency and transport-free.
+- Pure Web Standards compatibility (`Request`, `Response`, `Headers`, `URL`, `ReadableStream`, `AbortSignal`).
+- Native integration with Vii `Scope` lifecycle and Standard Schema v1 (`@standard-schema/spec`).
+- Whole-track completion: all slices H0 through H9 in `docs/roadmap/HTTP_CLIENT_RESEARCH.md` are completed.
+
+### Remaining / recovery
+
+- Await maintainer review and merge of H9 graduation ADR.
+- HTTP Client & Transport Research Track is fully completed.
+
 ## 2026-08-23 02:05 CEST | H8 HTTP Observability, Tracing & Metrics
 
 Status: completed

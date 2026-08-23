@@ -1,7 +1,7 @@
-# Vii HTTP Client & Transport Research — H1-H7 Prototype
+# Vii HTTP Client & Transport Research — H1-H8 Prototype
 
 > **Status**: Active Research Prototype (Throwaway)
-> **Current Slice**: H7 (SSR Security + Private Network Defenses)
+> **Current Slice**: H8 (Observability + Tracing + Metrics)
 > **Governing Roadmap**: [`docs/roadmap/HTTP_CLIENT_RESEARCH.md`](../../docs/roadmap/HTTP_CLIENT_RESEARCH.md)
 > **Package Authorization**: **None** (Research only, no public package)
 
@@ -9,13 +9,13 @@
 
 ## 1. Overview
 
-This directory contains the throwaway research prototype for **H1 (Fetch-first Baseline)**, **H2 (Middleware Pipeline)**, **H3 (Cancellation + Timeout + Scope)**, **H4 (Error Taxonomy + Validation Boundary)**, **H5 (Retry + Idempotency Engine)**, **H6 (Streaming + SSE + Web Streams)**, and **H7 (SSR Security + Private Network Defenses)**.
+This directory contains the throwaway research prototype for **H1 (Fetch-first Baseline)**, **H2 (Middleware Pipeline)**, **H3 (Cancellation + Timeout + Scope)**, **H4 (Error Taxonomy + Validation Boundary)**, **H5 (Retry + Idempotency Engine)**, **H6 (Streaming + SSE + Web Streams)**, **H7 (SSR Security + Private Network Defenses)**, and **H8 (Observability + Tracing + Metrics)**.
 
-The purpose of H7 is to research SSR execution safety, request-scoped client instances (zero process-wide global mutable state), host allowlisting/denylisting, private IP / SSRF protection (`127.0.0.1`, `10.0.0.0/8`, `169.254.169.254` cloud metadata, `::1`), and sensitive header stripping on cross-origin redirects.
+The purpose of H8 is to research request/response lifecycle hooks (`onRequest`, `onResponse`, `onError`), OpenTelemetry / W3C Trace Context propagation (`traceparent`), structured request timing (`durationMs`), and sensitive query/header parameter redaction in structured logs.
 
 ---
 
-## 2. Implemented Capabilities (H1 + H2 + H3 + H4 + H5 + H6 + H7)
+## 2. Implemented Capabilities (H1 + H2 + H3 + H4 + H5 + H6 + H7 + H8)
 
 1. **`createHttpClient(config)`**: Factory for creating immutable, isolated HTTP client instances.
 2. **Deterministic URL Resolution**:
@@ -59,14 +59,18 @@ The purpose of H7 is to research SSR execution safety, request-scoped client ins
     - **Host Policy Enforcement**: Configurable `allowedHosts` (wildcards and RegExp) and `blockedHosts`.
     - **Cross-Origin Sensitive Header Sanitization**: `stripSensitiveHeaders` removes `Authorization`, `Cookie`, `X-Api-Key`, etc. when traversing cross-origin boundaries.
     - **Pre-flight Enforcement**: Disallowed requests fail immediately with `HttpSecurityError` prior to socket or network initialization.
+11. **Observability, Tracing & Metrics (H8)**:
+    - **W3C Trace Context / OpenTelemetry**: Auto-generation and propagation of `traceparent` (`00-${traceId}-${spanId}-${flags}`).
+    - **Lifecycle Telemetry Hooks**: Non-blocking `onRequest`, `onResponse`, and `onError` lifecycle events.
+    - **Structured Timing**: Accurate execution duration metrics (`durationMs`).
+    - **Sensitive Data Redaction**: Utilities `redactUrl` and `redactHeaders` preventing credential leakage in structured log output.
 
 ---
 
-## 3. Explicit Non-Goals for H7
+## 3. Explicit Non-Goals for H8
 
-The following capabilities are deliberately excluded from H7 and assigned to future research slices:
+The following capabilities are deliberately excluded from H8 and assigned to the final graduation slice:
 
-- **Observability & Diagnostics**: Deferred to **H8**.
 - **Graduation & Build-vs-Buy**: Deferred to **H9**.
 
 ---

@@ -37,6 +37,57 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-23 02:05 CEST | H8 HTTP Observability, Tracing & Metrics
+
+Status: completed
+Branch: `feat/http-observability-tracing`
+PR: #138
+
+### Scope
+
+- Implement H8 (Observability + Tracing + Metrics) throwaway research prototype in `research/http/`.
+- Implement W3C Trace Context / OpenTelemetry distributed tracing:
+  - `generateTraceId` (16 bytes / 32 hex), `generateSpanId` (8 bytes / 16 hex).
+  - `formatTraceparent` (`00-${traceId}-${spanId}-${flags}`) and `parseTraceparent`.
+  - Auto-injection of standard `traceparent` headers when `telemetry.traceContext` is active.
+- Implement structured request timing metrics: `durationMs` via `performance.now()`.
+- Implement lifecycle observability hooks: `onRequest`, `onResponse`, and `onError` with structured event objects.
+- Implement sensitive logging redaction utilities: `redactUrl` and `redactHeaders`.
+- Add test suite in `research/http/observability.test.ts` and update `research/http/README.md`.
+- Update `DUTY_WATCH.md`.
+
+### Changes
+
+- Added `research/http/observability.ts`: `generateTraceId`, `generateSpanId`, `formatTraceparent`, `parseTraceparent`, `redactUrl`, `redactHeaders`, `DEFAULT_REDACTED_HEADERS`, and `DEFAULT_REDACTED_PARAMS`.
+- Updated `research/http/types.ts`: added `TelemetryConfig`, `HttpRequestStartEvent`, `HttpResponseSuccessEvent`, `HttpResponseErrorEvent`, and `HttpRequestTiming`.
+- Updated `research/http/client.ts`: wired W3C traceparent header injection, lifecycle hook execution (`onRequest`, `onResponse`, `onError`), and telemetry inheritance in `.extend()`.
+- Updated `research/http/index.ts`: exported observability types, functions, and constants.
+- Added `research/http/observability.test.ts`: 7 test cases covering trace ID/span ID generation, traceparent formatting and parsing, invalid traceparent rejection, URL query parameter redaction, header dictionary redaction, lifecycle hooks invocation with duration metrics, error event dispatch, traceparent header preservation, and error resilience of telemetry hooks.
+- Updated `research/http/README.md`: documented H8 capabilities and non-goals.
+
+### Validation
+
+- `pnpm exec vitest run research/http/*.test.ts`: 11 test files, 91 tests passed (0 failures).
+- `pnpm exec tsc -p research/http/tsconfig.json --noEmit`: passed cleanly with 0 errors.
+- `pnpm format:check`: passed cleanly.
+- `pnpm lint`: passed cleanly.
+- `pnpm typecheck`: passed cleanly.
+- `pnpm test`: all packages and fixtures passed cleanly.
+- `pnpm validate`: passed cleanly (all builds, tests, and packed-artifact checks passed).
+- `git diff --check`: passed cleanly with zero whitespace/formatting errors.
+
+### Architecture / compatibility
+
+- Zero package creation or public API changes: H8 is strictly an isolated research prototype under `research/http/`.
+- No `@vii-labs/core` dependency or bundle impact.
+- Zero external runtime dependencies.
+- Confirmed stop condition: H9 (Graduation Gate + Build-vs-Buy Decision) has NOT been started.
+
+### Remaining / recovery
+
+- Await maintainer review of H8 observability and tracing prototype.
+- Future work: H9 (Graduation Gate + Build-vs-Buy Decision) only when authorized.
+
 ## 2026-08-23 01:55 CEST | H7 SSR Security & SSRF Protection
 
 Status: completed

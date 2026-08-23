@@ -1,37 +1,37 @@
 import {
   type Computed,
   type Scope,
-  type State,
+  type WritableState,
   batch,
   computed,
   createScope,
   state,
-} from "../../packages/core/src/index";
+} from "../../packages/core/src/index.js";
 
 export type EqualityFn<T> = (a: T, b: T) => boolean;
 
 export const defaultEquality: EqualityFn<unknown> = (a, b) => Object.is(a, b);
 
 export interface FieldState<T> {
-  readonly value: State<T>;
-  readonly initialValue: State<T>;
-  readonly touched: State<boolean>;
+  readonly value: WritableState<T>;
+  readonly initialValue: WritableState<T>;
+  readonly touched: WritableState<boolean>;
   readonly dirty: Computed<boolean>;
-  readonly pending: State<boolean>;
-  readonly errors: State<readonly string[]>;
+  readonly pending: WritableState<boolean>;
+  readonly errors: WritableState<readonly string[]>;
   readonly valid: Computed<boolean>;
   readonly invalid: Computed<boolean>;
   setValue(next: T): void;
   setTouched(touched?: boolean): void;
   setPending(pending: boolean): void;
   setErrors(errors: readonly string[]): void;
-  reset(nextInitial?: T): void;
+  reset(...args: [nextInitial?: T]): void;
 }
 
 export interface CreateFieldOptions<T> {
   readonly initialValue: T;
-  readonly equality?: EqualityFn<T>;
-  readonly scope?: Scope;
+  readonly equality?: EqualityFn<T> | undefined;
+  readonly scope?: Scope | undefined;
 }
 
 export function createField<T>(options: CreateFieldOptions<T>): FieldState<T> {
@@ -71,10 +71,13 @@ export function createField<T>(options: CreateFieldOptions<T>): FieldState<T> {
     errorsState.set(errors);
   };
 
-  const reset = (nextInitial?: T): void => {
+  const reset = (...args: [nextInitial?: T]): void => {
+    const hasNextInitial = args.length > 0;
+    const nextInitial = args[0] as T;
+
     batch(() => {
-      const resetValue = nextInitial !== undefined ? nextInitial : initialValueState.get();
-      if (nextInitial !== undefined) {
+      const resetValue = hasNextInitial ? nextInitial : initialValueState.get();
+      if (hasNextInitial) {
         initialValueState.set(nextInitial);
       }
       valueState.set(resetValue);
@@ -105,7 +108,7 @@ export type FieldValues = Record<string, unknown>;
 
 export interface FormConfig<T extends FieldValues> {
   readonly initialValues: T;
-  readonly equality?: { [K in keyof T]?: EqualityFn<T[K]> };
+  readonly equality?: { [K in keyof T]?: EqualityFn<T[K]> | undefined };
 }
 
 export type FormFields<T extends FieldValues> = {
@@ -136,7 +139,7 @@ export function createForm<T extends FieldValues>(config: FormConfig<T>): FormIn
       initialValue: config.initialValues[key],
       equality: config.equality?.[key] as EqualityFn<T[keyof T]> | undefined,
       scope,
-    }) as FieldState<T[K]>;
+    }) as unknown as FieldState<T[typeof key]>;
   }
 
   const keys = Object.keys(fields) as Array<keyof T>;
@@ -188,7 +191,11 @@ export function createForm<T extends FieldValues>(config: FormConfig<T>): FormIn
   const reset = (nextInitials?: Partial<T>): void => {
     batch(() => {
       for (const k of keys) {
-        fields[k].reset(nextInitials?.[k]);
+        if (nextInitials !== undefined && k in nextInitials) {
+          fields[k].reset(nextInitials[k]);
+        } else {
+          fields[k].reset();
+        }
       }
     });
   };
@@ -209,8 +216,8 @@ export function createForm<T extends FieldValues>(config: FormConfig<T>): FormIn
 }
 
 export interface ExternalBindingOptions<T extends FieldValues> {
-  readonly externalState: State<T>;
-  readonly scope?: Scope;
+  readonly externalState: WritableState<T>;
+  readonly scope?: Scope | undefined;
 }
 
 export function bindFormToExternalState<T extends FieldValues>(
@@ -227,7 +234,7 @@ export function bindFormToExternalState<T extends FieldValues>(
   let isSyncingFromExternal = false;
 
   scope.run(() => {
-    form.values.subscribe((nextValues) => {
+    form.values.subscribe((nextValues: T) => {
       if (isSyncingFromExternal) return;
       isSyncingToExternal = true;
       try {
@@ -239,7 +246,7 @@ export function bindFormToExternalState<T extends FieldValues>(
   });
 
   scope.run(() => {
-    externalState.subscribe((nextExternal) => {
+    externalState.subscribe((nextExternal: T) => {
       if (isSyncingToExternal) return;
       isSyncingFromExternal = true;
       try {
@@ -250,9 +257,13 @@ export function bindFormToExternalState<T extends FieldValues>(
     });
   });
 
+  let isDisposed = false;
+
   return {
     ...form,
     dispose: () => {
+      if (isDisposed) return;
+      isDisposed = true;
       form.dispose();
       scope.dispose();
     },

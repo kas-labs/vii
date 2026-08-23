@@ -37,6 +37,50 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-23 23:15 CEST | Form Research F1 — Minimal Field/Form State Prototype
+
+Status: completed
+Branch: `feat/form-field-state-prototype`
+PR: draft opened
+
+### Scope
+
+- Implement throwaway research prototype for Form Slice F1 (Minimal Field and Form State Prototype) under `research/form/`.
+- Prototype signal-first `FieldState` primitive backed by Vii Core (`state()`, `computed()`, `batch()`) with `value`, `initialValue`, `dirty`, `touched`, `pending`, `errors`, `valid`, `invalid`, and `reset(...args: [nextInitial?: T])` supporting explicit `undefined`.
+- Prototype `FormInstance` managing typed dictionaries of fields and lazy aggregate computeds (`values`, `dirty`, `touched`, `pending`, `valid`, `invalid`, `errors`) with atomic `setValues` and `reset`.
+- Prototype and compare model ownership options: Form-Owned isolation vs bidirectional External State Binding research comparison fixture (`bindFormToExternalState`).
+- Empirically verify isolated subscription fan-out in tested fixtures (mutating Field A produces 0 notifications to Field B subscribers and 1 notification to aggregate `form.values` subscribers).
+- Verify Scope integration and deterministic teardown disposal (`form.dispose()`).
+- Add comprehensive Vitest suite in `research/form/form-core.test.ts` and `research/form/README.md`.
+
+### Changes
+
+- Added `research/form/tsconfig.json`: dedicated research TypeScript configuration extending base.
+- Added `research/form/form-core.ts`: F1 prototype containing `createField`, `createForm`, `bindFormToExternalState`, explicit `undefined` reset handling, and custom equality support.
+- Added `research/form/form-core.test.ts`: 19 unit tests verifying field signals, custom comparators, explicit undefined reset edge cases, subscription isolation, atomic batching, external binding lifecycle/idempotency, and Scope disposal.
+- Added `research/form/README.md`: architectural overview, implemented capabilities, and exact empirical observations.
+- Updated `docs/roadmap/FORM_RESEARCH.md`: marked F1 prototype as completed.
+
+### Validation
+
+- `pnpm vitest run research/form/form-core.test.ts`: passed (19/19 tests passing).
+- `pnpm exec tsc -p research/form/tsconfig.json --noEmit`: passed.
+- `git diff --check`: passed.
+- `pnpm format:check`: passed.
+- `pnpm lint`: passed (11/11 projects cached/passed).
+- `pnpm validate`: passed.
+
+### Architecture / compatibility
+
+- Zero package additions or public API changes; `@vii-labs/form` is NOT created or published.
+- Zero dependencies added; zero Core runtime code modified.
+- Strict ownership boundaries preserved: Form consumes Core State/Scope without Core depending on Form.
+
+### Remaining / recovery
+
+- F1 prototype and evidence corrections complete. Next step is maintainer review and authorization of Slice F2 (Nested Objects + Arrays + Identity).
+- F2 has NOT been started.
+
 ## 2026-08-23 23:10 CEST | Form Research F0 — Evidence Boundaries & Hypotheses Clarification
 
 Status: completed

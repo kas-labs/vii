@@ -176,3 +176,10 @@ test("disposing a scope whose resources detach themselves during teardown does n
   expect(() => scope.dispose()).not.toThrow();
   expect(events).toEqual(["third", "second", "first"]);
 });
+
+test("scope.run rejects asynchronous callbacks and throws clear error", () => {
+  const scope = createScope();
+  expect(() => scope.run(async () => {})).toThrow(
+    /Scope\.run does not support asynchronous execution/,
+  );
+});

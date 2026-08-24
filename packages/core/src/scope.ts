@@ -11,6 +11,10 @@ export interface ScopeOptions {
 
 export interface Scope extends ScopeContext, ViiResource {
   readonly name: string | undefined;
+  /**
+   * Runs the provided work function synchronously within this scope.
+   * Asynchronous functions returning thenables or Promises are rejected.
+   */
   run<T>(work: () => T): T;
   use(resource: ViiResource | (() => void)): () => void;
   createChild(options?: ScopeOptions): Scope;

@@ -407,3 +407,10 @@ test("off diagnostics do not record security events", () => {
   expect(diagnostics.getEvents()).toEqual([]);
   expect(diagnostics.droppedEvents).toBe(0);
 });
+
+test("diagnostics.run rejects asynchronous callbacks and throws clear error", () => {
+  const diagnostics = createDiagnostics();
+  expect(() => diagnostics.run(async () => {})).toThrow(
+    /Diagnostics\.run does not support asynchronous execution/,
+  );
+});

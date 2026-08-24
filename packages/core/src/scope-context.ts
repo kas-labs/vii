@@ -15,7 +15,17 @@ export function withScope<T>(scope: ScopeContext, work: () => T): T {
   activeScope = scope;
 
   try {
-    return work();
+    const result = work();
+    if (
+      result !== null &&
+      (typeof result === "object" || typeof result === "function") &&
+      typeof (result as { then?: unknown }).then === "function"
+    ) {
+      throw new TypeError(
+        "Scope.run does not support asynchronous execution. Scope context cannot be preserved across await.",
+      );
+    }
+    return result;
   } finally {
     activeScope = previousScope;
   }

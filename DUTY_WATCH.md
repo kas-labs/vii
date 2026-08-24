@@ -41,7 +41,8 @@ PR: <number or not opened>
 
 Status: completed
 Branch: `security/registry-integrity-containment`
-PR: not opened
+PR: #150
+
 
 ### Scope
 

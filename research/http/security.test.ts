@@ -230,7 +230,8 @@ describe("Private Network & SSRF Defenses (H7)", () => {
 
   it("redirects: blocks redirect chain when allowlisted host redirects to private IP on second hop", async () => {
     const mockFetch = vi.fn().mockImplementation((url: string) => {
-      if (url.includes("api.trusted.com")) {
+      const parsed = new URL(url);
+      if (parsed.hostname === "api.trusted.com") {
         return Promise.resolve(
           new Response(null, {
             status: 302,
@@ -257,7 +258,8 @@ describe("Private Network & SSRF Defenses (H7)", () => {
     const receivedHeaders: Headers[] = [];
     const mockFetch = vi.fn().mockImplementation((url: string, req: Request) => {
       receivedHeaders.push(new Headers(req.headers));
-      if (url.includes("auth.example.com/step1")) {
+      const parsed = new URL(url);
+      if (parsed.hostname === "auth.example.com" && parsed.pathname === "/step1") {
         return Promise.resolve(
           new Response(null, {
             status: 302,
@@ -265,7 +267,7 @@ describe("Private Network & SSRF Defenses (H7)", () => {
           }),
         );
       }
-      if (url.includes("auth.example.com/step2")) {
+      if (parsed.hostname === "auth.example.com" && parsed.pathname === "/step2") {
         return Promise.resolve(
           new Response(null, {
             status: 302,
@@ -315,14 +317,15 @@ describe("Private Network & SSRF Defenses (H7)", () => {
     const mockFetch = vi.fn().mockImplementation(async (url: string, req: Request) => {
       const body = req.body ? await req.text() : null;
       recordedRequests.push({ method: req.method, body });
+      const parsed = new URL(url);
 
-      if (url.includes("/see-other")) {
+      if (parsed.pathname === "/see-other") {
         return new Response(null, {
           status: 303,
           headers: { Location: "https://api.example.com/result" },
         });
       }
-      if (url.includes("/temp-redirect")) {
+      if (parsed.pathname === "/temp-redirect") {
         return new Response(null, {
           status: 307,
           headers: { Location: "https://api.example.com/destination" },

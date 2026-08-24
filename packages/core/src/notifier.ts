@@ -8,8 +8,12 @@ interface Subscription<T> {
   listener: (value: T) => void;
 }
 
+export interface SubscribeOptions {
+  owned?: boolean;
+}
+
 export interface Notifier<T> {
-  subscribe(listener: (value: T) => void): () => void;
+  subscribe(listener: (value: T) => void, options?: SubscribeOptions): () => void;
   notify(value: T): void;
   hasSubscribers(): boolean;
   size(): number;
@@ -89,7 +93,10 @@ export function createNotifier<T>(options: NotifierOptions = {}): Notifier<T> {
     }
   };
 
-  const subscribe = (listener: (value: T) => void): (() => void) => {
+  const subscribe = (
+    listener: (value: T) => void,
+    options: SubscribeOptions = {},
+  ): (() => void) => {
     const subscription: Subscription<T> = {
       active: true,
       id: diagnostics?.mode === "off" ? "" : (diagnostics?.allocateId("subscription") ?? ""),
@@ -111,7 +118,9 @@ export function createNotifier<T>(options: NotifierOptions = {}): Notifier<T> {
       record("subscription.disposed", { subscriptionId: subscription.id });
     };
 
-    registerResource({ dispose: unsubscribe });
+    if (options.owned !== false) {
+      registerResource({ dispose: unsubscribe });
+    }
     return unsubscribe;
   };
 

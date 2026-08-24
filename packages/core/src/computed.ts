@@ -39,7 +39,7 @@ export function computed<T>(read: () => T): Computed<T> {
   };
 
   const computedDependency: Dependency = {
-    subscribe: (listener) => notifier.subscribe(() => listener()),
+    subscribe: (listener) => notifier.subscribe(() => listener(), { owned: false }),
   };
 
   const evaluate = (): T => {

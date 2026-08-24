@@ -1,5 +1,5 @@
 import { expect, test, vi } from "vitest";
-import { computed, state, type Computed } from "../src/index.js";
+import { computed, createScope, state, type Computed } from "../src/index.js";
 
 test("computed evaluates lazily and caches its value", () => {
   const count = state(2);
@@ -109,4 +109,34 @@ test("computed releases dependencies no longer read", () => {
   right.set(11);
   expect(selected.get()).toBe(11);
   expect(read).toHaveBeenCalledTimes(3);
+});
+
+test("computed reactivity is not stolen by ambient scope active during first evaluation", () => {
+  const s = state(1);
+  const c = computed(() => s.get() * 2);
+  const child = createScope({ name: "unrelated" });
+
+  child.run(() => c.get());
+  child.dispose();
+  s.set(10);
+
+  expect(c.get()).toBe(20);
+});
+
+test("computed evaluated in scope keeps recomputing after scope disposal while user subscription in scope is disposed", () => {
+  const s = state(1);
+  const c = computed(() => s.get() * 2);
+  const child = createScope({ name: "unrelated" });
+  const observed: number[] = [];
+
+  child.run(() => {
+    expect(c.get()).toBe(2);
+    s.subscribe((value) => observed.push(value));
+  });
+
+  child.dispose();
+
+  s.set(10);
+  expect(observed).toEqual([]);
+  expect(c.get()).toBe(20);
 });

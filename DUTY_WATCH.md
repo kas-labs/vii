@@ -37,7 +37,50 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-25 01:45 CEST | Registry Integrity & Installer Safety (Audit Findings 9, 21, 22, 23)
+
+Status: completed
+Branch: `security/registry-integrity-containment`
+PR: #150
+
+
+### Scope
+
+- Remediate Audit Findings 9, 21, 22, and 23 in `research/registry` and `research/source-distribution`.
+- Finding 9: Manifest integrity hash does not cover file hashes due to replacer array in `JSON.stringify`. Implement canonical recursive JSON serialization sorting keys at all levels.
+- Finding 21: `checkFileModifications` ignores deleted files. Track `deletedFiles` in a separate bucket and ensure `isModified` is true when files are deleted.
+- Finding 22: Replace false assurance of extension-only blocklist with destination denylist (root dotfiles, node_modules, root toolchain configs) and optional `allowedRoots` enforcement.
+- Finding 23: Track created files and roll back (unlink) on partial install failures; reject corrupt lockfiles with a hard error rather than silently resetting.
+
+### Changes
+
+- In `research/registry/integrity.ts`: Implemented `canonicalJsonStringify` with recursive key sorting at all levels, and updated `computeManifestIntegrity` to use it.
+- In `research/registry/lockfile.ts`: Updated `checkFileModifications` to report `deletedFiles` separately and set `isModified` when either `modifiedFiles` or `deletedFiles` is non-empty.
+- In `research/registry/manifest-validator.ts`: Added destination denylist rejecting root dotpaths (`FORBIDDEN_ROOT_DOTPATH`), `node_modules` (`FORBIDDEN_NODE_MODULES`), and root toolchain/config files (`FORBIDDEN_CONFIG_FILE`), plus `allowedRoots` support (`DISALLOWED_ROOT`).
+- In `research/registry/README.md`: Documented the execution model, destination denylist, and `allowedRoots` policy.
+- In `research/source-distribution/types.ts`: Added `allowedRoots` optional configuration to `UIAddOptions`.
+- In `research/source-distribution/source-installer.ts`: Passed `allowedRoots` to manifest validation, added rollback unlinking of created files on apply failure, and rethrown errors on unparseable/corrupt lockfiles.
+- Added comprehensive regression tests across `research/registry/integrity-verification.test.ts`, `research/registry/lockfile-detachment.test.ts`, `research/registry/security-path-containment.test.ts`, and `research/source-distribution/source-installer.test.ts`.
+
+### Validation
+
+- `pnpm validate`: PASS (clean format, lint, typecheck, package tests, builds, and pack checks)
+- `npx vitest run research/registry research/source-distribution`: PASS (5 test files, 54/54 tests passed)
+- `npx vitest run research/form/form-core.test.ts research/http research/query research/schema`: PASS (32 test files + isolated query benchmarks passed)
+- `npx tsc --noEmit -p research/registry/tsconfig.json && npx tsc --noEmit -p research/source-distribution/tsconfig.json`: PASS (0 errors)
+- `git diff --check`: PASS (clean)
+
+### Architecture / compatibility
+
+- Changes are scoped strictly to research prototypes in `research/registry/` and `research/source-distribution/`.
+- No packages (`packages/`) or other research areas (`research/http`, `research/form`) modified.
+
+### Remaining / recovery
+
+- None. Batch 4 fixes are verified and ready.
+
 ## 2026-08-24 15:30 CEST | Form Research F2 — Re-entrancy Depth Counter Correction (BUG 8 & BUG 9 Remediation)
+
 
 Status: completed
 Branch: `feat/form-nested-arrays-identity`

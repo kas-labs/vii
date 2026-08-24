@@ -61,4 +61,97 @@ describe("Registry Path Containment Security", () => {
       /Duplicate target destination/,
     );
   });
+
+  describe("destination denylist enforcement", () => {
+    it("rejects root dotfiles and dot-directories with FORBIDDEN_ROOT_DOTPATH", () => {
+      const dotPaths = [
+        ".git/hooks/pre-commit",
+        ".husky/pre-commit",
+        ".github/workflows/ci.yml",
+        ".vscode/settings.json",
+        ".env",
+        ".env.local",
+        ".npmrc",
+      ];
+
+      for (const dotPath of dotPaths) {
+        expect(() => sanitizePath(dotPath, "target")).toThrow(
+          expect.objectContaining({
+            code: "FORBIDDEN_ROOT_DOTPATH",
+          }),
+        );
+      }
+    });
+
+    it("rejects paths containing node_modules with FORBIDDEN_NODE_MODULES", () => {
+      const nodeModulesPaths = [
+        "node_modules/malicious/index.js",
+        "src/node_modules/malicious.js",
+        "nested/deep/node_modules/foo.ts",
+      ];
+
+      for (const nmPath of nodeModulesPaths) {
+        expect(() => sanitizePath(nmPath, "target")).toThrow(
+          expect.objectContaining({
+            code: "FORBIDDEN_NODE_MODULES",
+          }),
+        );
+      }
+    });
+
+    it("rejects root toolchain manifests and configuration files with FORBIDDEN_CONFIG_FILE", () => {
+      const configPaths = [
+        "package.json",
+        "package-lock.json",
+        "pnpm-lock.yaml",
+        "tsconfig.json",
+        "tsconfig.base.json",
+        "tsconfig.app.json",
+        "vite.config.ts",
+        "next.config.js",
+        "postcss.config.js",
+        "tailwind.config.mjs",
+      ];
+
+      for (const configPath of configPaths) {
+        expect(() => sanitizePath(configPath, "target")).toThrow(
+          expect.objectContaining({
+            code: "FORBIDDEN_CONFIG_FILE",
+          }),
+        );
+      }
+    });
+
+    it("still accepts normal component destination paths", () => {
+      expect(sanitizePath("components/ui/button.tsx", "target")).toBe("components/ui/button.tsx");
+      expect(sanitizePath("src/components/dialog.tsx", "target")).toBe("src/components/dialog.tsx");
+      expect(sanitizePath("styles/globals.css", "target")).toBe("styles/globals.css");
+      expect(sanitizePath("lib/utils.ts", "target")).toBe("lib/utils.ts");
+    });
+  });
+
+  describe("allowedRoots enforcement", () => {
+    it("accepts paths inside allowedRoots and rejects paths outside with DISALLOWED_ROOT", () => {
+      const options = { allowedRoots: ["components", "src/components", "styles"] };
+
+      expect(sanitizePath("components/ui/button.tsx", "target", options)).toBe(
+        "components/ui/button.tsx",
+      );
+      expect(sanitizePath("src/components/button.tsx", "target", options)).toBe(
+        "src/components/button.tsx",
+      );
+      expect(sanitizePath("styles/tokens.css", "target", options)).toBe("styles/tokens.css");
+
+      expect(() => sanitizePath("utils/helper.ts", "target", options)).toThrow(
+        expect.objectContaining({
+          code: "DISALLOWED_ROOT",
+        }),
+      );
+      expect(() => sanitizePath("src/utils/helper.ts", "target", options)).toThrow(
+        expect.objectContaining({
+          code: "DISALLOWED_ROOT",
+        }),
+      );
+    });
+  });
 });

@@ -60,4 +60,5 @@ export interface UIAddResult {
 export interface UIAddOptions {
   dryRun?: boolean | undefined;
   projectRoot?: string | undefined;
+  allowedRoots?: readonly string[] | string[] | undefined;
 }

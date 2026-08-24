@@ -1,5 +1,5 @@
 import { constants } from "node:fs";
-import { mkdir, open, readFile, writeFile } from "node:fs/promises";
+import { mkdir, open, readFile, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { verifyContentIntegrity } from "../registry/integrity.js";
 import {
@@ -41,7 +41,9 @@ export async function installSourceItem(
   filePayloads: Record<string, string>,
   options: UIAddOptions = {},
 ): Promise<UIAddResult> {
-  const manifest = validateRegistryManifest(rawManifest);
+  const manifest = validateRegistryManifest(rawManifest, {
+    allowedRoots: options.allowedRoots,
+  });
   const conflicts: string[] = [];
 
   validateFilePayloadIntegrities(manifest, filePayloads, conflicts);
@@ -64,9 +66,21 @@ export async function installSourceItem(
   let lockState: LockState | undefined;
 
   if (!isBlocked && !isDryRun && plannedFiles.some((f) => f.action === "create")) {
-    await applyFilePlan(projectRoot, plannedFiles);
-    lockState = await updateProjectLockfile(projectRoot, manifest, plannedFiles);
-    applied = true;
+    const createdPaths: string[] = [];
+    try {
+      await applyFilePlan(projectRoot, plannedFiles, createdPaths);
+      lockState = await updateProjectLockfile(projectRoot, manifest, plannedFiles);
+      applied = true;
+    } catch (err) {
+      for (const createdPath of createdPaths) {
+        try {
+          await unlink(createdPath);
+        } catch {
+          // ignore rollback cleanup errors
+        }
+      }
+      throw err;
+    }
   }
 
   const validation = validatePlanResult(plan, isBlocked, isDryRun, applied);
@@ -173,12 +187,28 @@ async function analyzeAndPlanFiles(
   }
 }
 
-async function applyFilePlan(projectRoot: string, files: UIAddPlannedFile[]): Promise<void> {
-  for (const file of files) {
-    if (file.action !== "create") continue;
-    const absTarget = path.resolve(projectRoot, file.target);
-    await mkdir(path.dirname(absTarget), { recursive: true });
-    await writeFile(absTarget, file.content, { encoding: "utf8", flag: "wx" });
+async function applyFilePlan(
+  projectRoot: string,
+  files: UIAddPlannedFile[],
+  createdPaths: string[] = [],
+): Promise<void> {
+  try {
+    for (const file of files) {
+      if (file.action !== "create") continue;
+      const absTarget = path.resolve(projectRoot, file.target);
+      await mkdir(path.dirname(absTarget), { recursive: true });
+      await writeFile(absTarget, file.content, { encoding: "utf8", flag: "wx" });
+      createdPaths.push(absTarget);
+    }
+  } catch (err) {
+    for (const createdPath of createdPaths) {
+      try {
+        await unlink(createdPath);
+      } catch {
+        // ignore rollback cleanup errors
+      }
+    }
+    throw err;
   }
 }
 
@@ -192,8 +222,12 @@ async function updateProjectLockfile(
   try {
     const rawLock = await readFile(lockPath, "utf8");
     currentLock = parseLockfile(rawLock);
-  } catch {
-    currentLock = createInitialLockState();
+  } catch (err: any) {
+    if (err?.code === "ENOENT") {
+      currentLock = createInitialLockState();
+    } else {
+      throw err;
+    }
   }
 
   const installedFiles: Record<string, { target: string; integrity: string }> = {};

@@ -1,4 +1,4 @@
-import { useMemo, useSyncExternalStore } from "react";
+import { useMemo, useRef, useSyncExternalStore } from "react";
 import type { ReadableState } from "@vii-labs/core";
 
 export type ViiSelector<TState, TSelected> = (state: TState) => TSelected;
@@ -19,47 +19,75 @@ export function useVii<TState, TSelected>(
     selector ?? (identity as unknown as ViiSelector<TState, TSelected>);
   const resolvedEquality = equality ?? Object.is;
 
-  const bridge = useMemo(
-    () => createSnapshotBridge(store, resolvedSelector, resolvedEquality),
-    [store, resolvedSelector, resolvedEquality],
-  );
+  const selectorRef = useRef(resolvedSelector);
+  const equalityRef = useRef(resolvedEquality);
+  selectorRef.current = resolvedSelector;
+  equalityRef.current = resolvedEquality;
 
-  return useSyncExternalStore(bridge.subscribe, bridge.getSnapshot, bridge.getServerSnapshot);
-}
+  const bridge = useMemo(() => {
+    let hasMemo = false;
+    let memoizedStoreSnapshot: TState;
+    let memoizedSelector: ViiSelector<TState, TSelected> = resolvedSelector;
+    let memoizedSelection: TSelected;
 
-interface SnapshotBridge<TSelected> {
-  getSnapshot(): TSelected;
-  getServerSnapshot(): TSelected;
-  subscribe(listener: () => void): () => void;
-}
+    const getSelection = (): TSelected => {
+      const currentStoreSnapshot = store.get();
+      const currentSelector = selectorRef.current;
+      const currentEquality = equalityRef.current;
 
-function createSnapshotBridge<TState, TSelected>(
-  store: ReadableState<TState>,
-  selector: ViiSelector<TState, TSelected>,
-  equality: ViiEquality<TSelected>,
-): SnapshotBridge<TSelected> {
-  let snapshot = selector(store.get());
+      if (!hasMemo) {
+        hasMemo = true;
+        memoizedStoreSnapshot = currentStoreSnapshot;
+        memoizedSelector = currentSelector;
+        memoizedSelection = currentSelector(currentStoreSnapshot);
+        return memoizedSelection;
+      }
 
-  const readSnapshot = (): TSelected => {
-    const next = selector(store.get());
-    if (!equality(snapshot, next)) {
-      snapshot = next;
-    }
-    return snapshot;
-  };
+      if (
+        Object.is(memoizedStoreSnapshot, currentStoreSnapshot) &&
+        memoizedSelector === currentSelector
+      ) {
+        return memoizedSelection;
+      }
 
-  return {
-    getSnapshot: readSnapshot,
-    getServerSnapshot: readSnapshot,
-    subscribe: (listener) =>
-      store.subscribe(() => {
-        const next = selector(store.get());
-        if (!equality(snapshot, next)) {
-          snapshot = next;
+      const nextSelection = currentSelector(currentStoreSnapshot);
+      if (currentEquality(memoizedSelection, nextSelection)) {
+        memoizedStoreSnapshot = currentStoreSnapshot;
+        memoizedSelector = currentSelector;
+        return memoizedSelection;
+      }
+
+      memoizedStoreSnapshot = currentStoreSnapshot;
+      memoizedSelector = currentSelector;
+      memoizedSelection = nextSelection;
+      return nextSelection;
+    };
+
+    const subscribeToStore = (listener: () => void): (() => void) => {
+      return store.subscribe(() => {
+        const currentStoreSnapshot = store.get();
+        const currentSelector = selectorRef.current;
+        const currentEquality = equalityRef.current;
+        const nextSelection = currentSelector(currentStoreSnapshot);
+
+        if (!hasMemo || !currentEquality(memoizedSelection, nextSelection)) {
+          memoizedStoreSnapshot = currentStoreSnapshot;
+          memoizedSelector = currentSelector;
+          memoizedSelection = nextSelection;
+          hasMemo = true;
           listener();
         }
-      }),
-  };
+      });
+    };
+
+    return {
+      getSnapshot: getSelection,
+      getServerSnapshot: getSelection,
+      subscribe: subscribeToStore,
+    };
+  }, [store]);
+
+  return useSyncExternalStore(bridge.subscribe, bridge.getSnapshot, bridge.getServerSnapshot);
 }
 
 function identity<T>(value: T): T {

@@ -23,8 +23,12 @@ CSR
   -> optional prerender / SSG
   -> optional SSR + hydration
   -> optional streaming / hybrid rendering
+  -> optional partial hydration / islands research
+  -> optional resumability research
   -> optional typed server functions only when evidence justifies them
 ```
+
+The ordering is intentional. Partial hydration, islands, and resumability must not become prerequisites for correct basic SSR/hydration.
 
 A project may remain at CSR permanently and still use the Vii State, Form, Query, HTTP, Router, UI, diagnostics, and framework-adapter ecosystem.
 
@@ -176,6 +180,8 @@ Any server-function design must preserve visible semantics for serialization, au
 
 Diagnostics should be able to show the client-to-server boundary explicitly.
 
+A route guard or client/navigation authorization check is not sufficient authorization for an independently callable server function. Authorization must be enforced at the remote boundary that reads or mutates protected data.
+
 ## Hydration cost rule
 
 Hydration is not free.
@@ -184,7 +190,76 @@ An SSR feature must justify additional complexity in dual server/client executio
 
 Vii should prefer the smallest hydration boundary that preserves required interactivity.
 
-Partial hydration, islands, or resumability remain later research and must not precede correct basic SSR/hydration semantics.
+## Partial hydration and islands research
+
+Partial hydration or islands may be researched only after basic SSR/hydration behavior is correct, deterministic, secure, and measurable.
+
+The research question is not whether islands are fashionable. It is whether reducing hydrated client work produces a meaningful user benefit for Vii applications without fragmenting ownership, State, Scope, Query, routing, or diagnostics semantics.
+
+Required comparisons must include:
+
+- shipped client JavaScript;
+- hydration CPU time;
+- interaction readiness;
+- memory retained before and after interaction;
+- boundary serialization cost;
+- number of runtime roots/scopes;
+- complexity of cross-boundary state and events;
+- development and TypeScript compiler cost.
+
+Decision: Research only.
+
+## Resumability research
+
+Qwik demonstrates that a framework can serialize enough execution metadata and application state to resume in the browser without replaying ordinary hydration.
+
+Vii should treat this as an advanced research direction, not a current rendering assumption.
+
+Resumability changes or constrains:
+
+- Component IR;
+- closure capture and serializability;
+- event dispatch;
+- build chunking;
+- State representation;
+- server/client transfer format;
+- compiler analysis;
+- developer authoring rules.
+
+Therefore resumability may advance only when:
+
+1. basic SSR and hydration are already correct and measured;
+2. the native Component IR exists and can express execution boundaries;
+3. serialization contracts are versioned and secure;
+4. measured startup or memory gains are materially better than simpler partial-hydration approaches;
+5. CSR-only applications pay no runtime or bundle cost for the capability;
+6. the programming model remains understandable enough to satisfy Vii's observability goals.
+
+The key transferable lesson from Qwik is adopted earlier than resumability itself:
+
+> Heap identity is not a portable server-to-client contract.
+
+Any value that crosses a server/client continuation boundary requires an explicit representation.
+
+## Execution-aware code splitting
+
+Future Component IR may expose enough structure for the build system to split code by behavior rather than only by source module.
+
+Conceptual research shape:
+
+```text
+Component IR
+  |- render dependencies
+  |- event behaviors
+  |- effects/tasks
+  |- async boundaries
+  `- environment requirements
+         |
+         v
+execution-aware chunk graph
+```
+
+This is a compiler/build optimization, not a Core semantic. It should advance only after comparison with ordinary module-level code splitting demonstrates measurable bundle or interaction improvements.
 
 ## Progressive complexity rule
 
@@ -196,10 +271,12 @@ Level 1  CSR
 Level 2  Static generation / prerender
 Level 3  SSR + hydration
 Level 4  Streaming / hybrid rendering
-Level 5  Advanced server functions and full-stack conveniences
+Level 5  Partial hydration / islands research
+Level 6  Resumability research
+Level 7  Advanced server functions and full-stack conveniences
 ```
 
-Using Level 1 must not require learning Level 3 through Level 5 concepts.
+Using Level 1 must not require learning Level 3 through Level 7 concepts.
 
 ## Default and opt-in rules
 
@@ -208,10 +285,13 @@ Using Level 1 must not require learning Level 3 through Level 5 concepts.
 - SSR is opt-in.
 - hydration exists only where SSR output becomes interactive.
 - streaming is opt-in and requires measured value.
+- partial hydration/islands remain research until basic hydration evidence exists.
+- resumability is not a default or prerequisite for Vii SSR.
 - edge runtime support is not assumed.
 - server functions are not required to use Vii applications.
 - no rendering mode may silently enable hidden data caching.
 - no server-rendering mode may silently absorb backend domain ownership.
+- no advanced rendering mode may add runtime/bundle cost to CSR-only applications merely by existing in the ecosystem.
 
 ## Evidence requirements
 
@@ -226,6 +306,8 @@ A rendering capability advances only when reference applications demonstrate:
 - clear diagnostics for environment-boundary errors;
 - understandable developer experience compared with the simpler rendering level below it.
 
+Advanced rendering research must additionally measure serialization size, parse cost, lazy-chunk count, interaction-triggered network work, retained closures/state, and the amount of application JavaScript avoided or deferred.
+
 ## Stop rule
 
 Vii should not add or advance a rendering mode when:
@@ -234,7 +316,10 @@ Vii should not add or advance a rendering mode when:
 - CSR or static output solves the validated need;
 - hydration or environment-boundary behavior remains confusing;
 - security and request isolation cannot meet Vii requirements;
-- the feature turns Vii into an unnecessary replacement for an application's backend architecture.
+- the feature turns Vii into an unnecessary replacement for an application's backend architecture;
+- an advanced model requires broad Component IR or authoring constraints for marginal startup gains;
+- serialization overhead cancels the JavaScript/runtime work saved;
+- the capability increases common-case bundle, memory, or TypeScript cost for applications that do not use it.
 
 ## Relationship to the application framework
 
@@ -245,4 +330,5 @@ See:
 - `docs/architecture/APPLICATION_FRAMEWORK.md`
 - `docs/architecture/BUILD_SYSTEM.md`
 - `docs/architecture/SERVER_FOUNDATION.md`
+- `docs/architecture/CROSS_FRAMEWORK_DEEP_RESEARCH.md`
 - `docs/quality/TEST_STRATEGY.md`

@@ -6,11 +6,13 @@ Primary architecture: `docs/architecture/QUERY_ARCHITECTURE.md`
 
 Governance proposal: `rfcs/0024-query-architecture.md`
 
+Cross-framework input: `docs/architecture/CROSS_FRAMEWORK_DEEP_RESEARCH.md`
+
 ## Goal
 
 Design and validate a small framework-neutral server-state layer before committing to a supported Query package.
 
-Query must remain separate from State, Flow, and HTTP while reusing Vii lifecycle and Diagnostics principles where evidence supports it.
+Query must remain separate from State, Flow, Router, and HTTP while reusing Vii lifecycle and Diagnostics principles where evidence supports it.
 
 ## P5.0 — Research brief and architecture RFC
 
@@ -27,6 +29,10 @@ Deliverables:
 - mutation and optimistic transaction semantics;
 - SSR Request Scope isolation;
 - hydration/dehydration contract;
+- hydration conflict-resolution policy for existing client data;
+- duplicate-fetch prevention after successful hydration;
+- optional data reconciliation / structural-sharing research boundary;
+- Router/Query ownership boundary for loaders and preloads;
 - Diagnostics privacy boundary;
 - anti-goals, stop rules, and graduation gates.
 
@@ -34,12 +40,14 @@ No public Query package implementation.
 
 Exit criteria:
 
-- State / Flow / Query / HTTP boundaries are explicit;
+- State / Flow / Query / HTTP / Router boundaries are explicit;
 - request ownership is explicit;
 - cancellation is distinct from failure;
 - key identity rules are deterministic enough to prototype;
 - mutation concurrency risks are documented;
 - SSR request isolation is a hard architecture requirement;
+- hydration cannot overwrite newer accepted client data with older transferred data;
+- Router cannot become a second shared remote-state cache;
 - unresolved questions are visible rather than hidden in API syntax.
 
 ## P5.1 — QueryKey and QueryCache prototype
@@ -91,14 +99,17 @@ Mandatory fixtures:
 - observer joining an active request;
 - one observer disposing while others remain;
 - late old request resolving after a newer request;
-- separate QueryClients never deduplicating with each other.
+- separate QueryClients never deduplicating with each other;
+- compatible route preload followed by accepted navigation does not duplicate Query execution;
+- route disposal does not remove Query data still owned by a longer-lived QueryClient.
 
 Exit criteria:
 
 - no hidden global cache;
 - deterministic request deduplication;
 - late executions cannot overwrite current data;
-- observer lifecycle does not leak.
+- observer lifecycle does not leak;
+- Router coordination does not create a parallel remote-state cache.
 
 ## P5.3 — Cancellation, freshness, and GC
 
@@ -121,9 +132,10 @@ Mandatory evidence:
 - active Queries are not garbage collected;
 - inactive Queries can be collected;
 - Scope disposal releases owned observers/resources;
-- rapid key switching cannot admit stale completions.
+- rapid key switching cannot admit stale completions;
+- abandoned speculative preload ownership cannot keep Query observers or timers alive indefinitely.
 
-Measure timer count, retained memory, post-GC behavior, and repeated subscribe/unsubscribe cost.
+Measure timer count, retained memory, post-GC behavior, repeated subscribe/unsubscribe cost, and speculative preload churn.
 
 ## P5.4 — Mutations and optimistic transactions
 
@@ -166,9 +178,10 @@ Prototype:
 - dehydration;
 - versioned hydration envelope;
 - client hydration;
+- deterministic merge with pre-existing client cache;
 - request teardown.
 
-Mandatory security fixtures:
+Mandatory security and correctness fixtures:
 
 - Request A data is never visible to Request B;
 - malformed hydration;
@@ -176,7 +189,11 @@ Mandatory security fixtures:
 - oversized payload;
 - invalid timestamp;
 - invalid QueryKey;
-- unsupported hydration version.
+- unsupported hydration version;
+- older hydrated data cannot overwrite newer accepted client data;
+- equal-timestamp conflict behavior is deterministic;
+- original `dataUpdatedAt` survives hydration;
+- successfully hydrated fresh data does not trigger an unnecessary duplicate initial client request.
 
 Exit criteria:
 
@@ -184,7 +201,8 @@ Exit criteria:
 - original `dataUpdatedAt` survives hydration;
 - Request Scope disposal releases resources;
 - invalid hydration fails deterministically;
-- arbitrary JavaScript values are not silently serialized.
+- arbitrary JavaScript values are not silently serialized;
+- hydration merge behavior is monotonic with respect to accepted freshness timestamps.
 
 ## P5.6 — Diagnostics and privacy
 
@@ -197,11 +215,12 @@ Research value-safe structural events for:
 - invalidation;
 - observer lifecycle;
 - GC;
-- hydration/dehydration;
+- hydration/dehydration and hydration merge decisions;
 - mutation lifecycle;
-- optimistic rollback.
+- optimistic rollback;
+- optional reconciliation/structural-sharing decisions using bounded metadata only.
 
-Default Diagnostics must exclude Query values, response/request bodies, mutation variables, credentials, cookies, Authorization headers, raw user content, and hydration payloads.
+Default Diagnostics must exclude Query values, response/request bodies, mutation variables, credentials, cookies, Authorization headers, raw user content, hydration payloads, and raw Router URLs/search values.
 
 Exit criteria:
 
@@ -215,7 +234,7 @@ Only after Query Core semantics are stable enough to compare adapters.
 
 Research React, Angular, and Vue lifecycle integrations against one shared Query compliance suite.
 
-Adapters must not implement their own cache, freshness rules, GC, deduplication, or mutation engine.
+Adapters must not implement their own cache, freshness rules, GC, deduplication, mutation engine, hydration merge policy, or structural-sharing semantics.
 
 Exit criteria:
 
@@ -241,8 +260,13 @@ Measure:
 - invalidation;
 - cancellation;
 - GC and retained memory;
-- hydration/dehydration and payload size;
+- hydration/dehydration, merge, and payload size;
+- duplicate-fetch behavior after hydration;
+- replace-all data acceptance versus structural sharing versus application-provided reconciliation;
+- allocations and downstream notifications for mostly unchanged large payloads;
 - TypeScript compiler/inference cost.
+
+The benchmark must allow the conclusion that structural sharing is not worthwhile for some payload classes. Vii must not make deep reconciliation mandatory merely because another library does it by default.
 
 Decision outcomes:
 
@@ -268,6 +292,10 @@ Phase 5 is complete only when:
 - optimistic mutation races are proven;
 - SSR request isolation is proven;
 - hydration security fixtures pass;
+- older transferred cache state cannot overwrite newer accepted client state;
+- fresh hydrated data avoids unnecessary duplicate initial work;
+- optional reconciliation/structural sharing has measured CPU, allocation, memory, and notification evidence;
+- Router/Query ownership is proven without duplicate shared cache semantics;
 - Diagnostics remain value-safe;
 - clean consumer validation passes if a package exists;
 - build-vs-buy evidence justifies the final ownership decision.
@@ -277,9 +305,9 @@ Phase 5 is complete only when:
 A validated Query boundary unlocks clearer follow-up work for:
 
 - HTTP transport research;
-- Router loader integration;
+- Router loader and speculative-preload integration;
 - SSR data hydration;
 - native Vii application data loading;
 - Query Devtools inspection.
 
-HTTP must remain transport. Flow must remain temporal orchestration. State Core must remain independent of Query.
+HTTP must remain transport. Router must remain navigation and loader coordination. Flow must remain temporal orchestration. State Core must remain independent of Query.

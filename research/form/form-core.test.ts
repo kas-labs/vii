@@ -10,7 +10,12 @@ import {
   createForm,
   parsePath,
 } from "./form-core.js";
-import { type WritableState, state } from "../../packages/core/src/index.js";
+import {
+  type WritableState,
+  createDiagnostics,
+  createScope,
+  state,
+} from "../../packages/core/src/index.js";
 
 describe("Form Research F1 & F2 — Complete Prototype and Regression Evidence", () => {
   // -------------------------------------------------------------------------
@@ -1214,6 +1219,236 @@ describe("Form Research F1 & F2 — Complete Prototype and Regression Evidence",
       expect(subB).toHaveBeenCalledTimes(0); // ZERO notification to Branch B
 
       form.dispose();
+    });
+  });
+
+  describe("Batch 5: Findings 10-17 Regression Tests", () => {
+    it("Finding 10: __proto__, constructor, and prototype as own keys do not corrupt group or drop fields", () => {
+      const parsed = JSON.parse(
+        '{"a": 1, "__proto__": {"polluted": true}, "constructor": "custom", "prototype": "test"}',
+      );
+      const form = createForm({
+        initialValues: parsed,
+      });
+
+      expect(({} as any).polluted).toBeUndefined();
+      expect(Object.getPrototypeOf(form.fields)).toBeNull();
+      expect(Object.hasOwn(form.fields, "__proto__")).toBe(true);
+      expect(Object.hasOwn(form.fields, "constructor")).toBe(true);
+      expect(Object.hasOwn(form.fields, "prototype")).toBe(true);
+      expect(Object.hasOwn(form.fields, "a")).toBe(true);
+
+      const val = form.values.get();
+      expect(Object.getPrototypeOf(val)).toBeNull();
+      expect(val.a).toBe(1);
+      expect(Object.hasOwn(val, "__proto__")).toBe(true);
+      expect(Object.hasOwn(val, "constructor")).toBe(true);
+      expect(Object.hasOwn(val, "prototype")).toBe(true);
+      expect(({} as any).polluted).toBeUndefined();
+    });
+
+    it("Finding 11: getNode returns undefined for prototype members, and setValues with prototype keys does not crash", () => {
+      const form = createForm({
+        initialValues: { a: 1 },
+      });
+
+      expect(form.getNode("toString")).toBeUndefined();
+      expect(form.getNode("valueOf")).toBeUndefined();
+      expect(form.getNode("hasOwnProperty")).toBeUndefined();
+      expect(form.getNode("constructor")).toBeUndefined();
+      expect(form.getNode("nonExistent")).toBeUndefined();
+      expect(form.getNode("a")).toBeDefined();
+
+      expect(() => {
+        form.setValues({ toString: "invalid" } as any);
+      }).not.toThrow();
+
+      expect(form.values.get()).toEqual({ a: 1 });
+    });
+
+    it("Finding 12: Non-array into an array field throws TypeError, keeps previous values, and leaks no scopes", () => {
+      const form = createForm({
+        initialValues: { list: ["alpha", "beta"] },
+      });
+
+      const invalidValues = [null, undefined, { 0: "x" }, "string", 123];
+      for (const invalid of invalidValues) {
+        expect(() => {
+          form.setValues({ list: invalid } as any);
+        }).toThrow(TypeError);
+      }
+
+      expect(form.values.get()).toEqual({ list: ["alpha", "beta"] });
+      const arrayNode = form.getNode("list") as FieldArray<string>;
+      expect(arrayNode.items.get()).toHaveLength(2);
+    });
+
+    it("Finding 13: keyExtractor propagates into nested groups and nested array items", () => {
+      const form = createForm<{
+        top: Array<{ id: string; name: string }>;
+        nested: {
+          inner: Array<{ id: string; name: string }>;
+        };
+        tree: Array<{
+          id: string;
+          children: Array<{ id: string; title: string }>;
+        }>;
+      }>({
+        initialValues: {
+          top: [{ id: "t1", name: "Top 1" }],
+          nested: {
+            inner: [{ id: "n1", name: "Inner 1" }],
+          },
+          tree: [
+            {
+              id: "p1",
+              children: [{ id: "s1", title: "Child 1" }],
+            },
+          ],
+        },
+        keyExtractor: (item: any) => item?.id,
+      });
+
+      const topArray = form.fields.top as FieldArray<{ id: string; name: string }>;
+      expect(topArray.items.get()[0]!.id).toBe("t1");
+
+      const nestedGroup = form.fields.nested as FieldGroup<{
+        inner: Array<{ id: string; name: string }>;
+      }>;
+      const innerArray = nestedGroup.fields.inner as FieldArray<{ id: string; name: string }>;
+      expect(innerArray.items.get()[0]!.id).toBe("n1");
+
+      const treeArray = form.fields.tree as FieldArray<{
+        id: string;
+        children: Array<{ id: string; title: string }>;
+      }>;
+      expect(treeArray.items.get()[0]!.id).toBe("p1");
+      const p1Group = treeArray.items.get()[0]!.node as FieldGroup<{
+        id: string;
+        children: Array<{ id: string; title: string }>;
+      }>;
+      const childrenArray = p1Group.fields.children as FieldArray<{ id: string; title: string }>;
+      expect(childrenArray.items.get()[0]!.id).toBe("s1");
+    });
+
+    it("Finding 14: Duplicate-key setValues, push, and insert are atomic and leave array unchanged", () => {
+      const array = createFieldArray<{ id: string; v: number }>({
+        initialValues: [{ id: "a", v: 1 }],
+        keyExtractor: (item) => item.id,
+      });
+
+      const initialItem0 = array.items.get()[0]!;
+
+      // 1. setValues with duplicate key in incoming list
+      expect(() => {
+        array.setValues([
+          { id: "a", v: 99 },
+          { id: "b", v: 5 },
+          { id: "b", v: 6 },
+        ]);
+      }).toThrow(/Duplicate key "b"/);
+
+      // Verify array was NOT modified: v is still 1, item is still initialItem0, length is 1
+      expect(array.values.get()).toEqual([{ id: "a", v: 1 }]);
+      expect(array.items.get()).toHaveLength(1);
+      expect(array.items.get()[0]).toBe(initialItem0);
+
+      // 2. push with duplicate key
+      expect(() => {
+        array.push({ id: "a", v: 2 });
+      }).toThrow(/Duplicate key "a"/);
+      expect(array.values.get()).toEqual([{ id: "a", v: 1 }]);
+      expect(array.items.get()).toHaveLength(1);
+
+      // 3. insert with duplicate key
+      expect(() => {
+        array.insert(0, { id: "a", v: 3 });
+      }).toThrow(/Duplicate key "a"/);
+      expect(array.values.get()).toEqual([{ id: "a", v: 1 }]);
+      expect(array.items.get()).toHaveLength(1);
+    });
+
+    it("Finding 14: reset with a throwing keyExtractor leaves array usable and unchanged", () => {
+      let shouldThrow = false;
+      const array = createFieldArray<{ id: string; v: number }>({
+        initialValues: [{ id: "a", v: 1 }],
+        keyExtractor: (item) => {
+          if (shouldThrow) throw new Error("KeyExtractor exploded");
+          return item.id;
+        },
+      });
+
+      const itemBefore = array.items.get()[0]!;
+
+      shouldThrow = true;
+      expect(() => {
+        array.reset([{ id: "b", v: 2 }]);
+      }).toThrow("KeyExtractor exploded");
+
+      // Verify array was NOT disposed/corrupted
+      shouldThrow = false;
+      expect(array.values.get()).toEqual([{ id: "a", v: 1 }]);
+      expect(array.items.get()[0]).toBe(itemBefore);
+      expect(array.dirty.get()).toBe(false);
+    });
+
+    it("Finding 15: Every FormInstance method throws clear error after dispose", () => {
+      const form = createForm({
+        initialValues: { a: 1, list: ["x"] },
+      });
+
+      form.dispose();
+
+      expect(() => form.getNode("a")).toThrow(/disposed/i);
+      expect(() => form.setValues({ a: 2 })).toThrow(/disposed/i);
+      expect(() => form.reset()).toThrow(/disposed/i);
+      expect(() => form.values.get()).toThrow(/disposed/i);
+    });
+
+    it("Finding 16: insert validates its index bounds strictly with RangeError", () => {
+      const array = createFieldArray<string>({
+        initialValues: ["a", "b"],
+      });
+
+      expect(() => array.insert(-1, "neg")).toThrow(RangeError);
+      expect(() => array.insert(3, "overflow")).toThrow(RangeError);
+      expect(() => array.insert(99, "far")).toThrow(RangeError);
+      expect(() => array.insert(1.5, "fraction")).toThrow(RangeError);
+
+      // Valid boundary insertions
+      array.insert(0, "first");
+      expect(array.values.get()).toEqual(["first", "a", "b"]);
+
+      array.insert(3, "last");
+      expect(array.values.get()).toEqual(["first", "a", "b", "last"]);
+    });
+
+    it("Finding 17: Push and remove cycles do not accumulate dead item scopes in parent scope", () => {
+      const diagnostics = createDiagnostics({ maxEvents: 50000 });
+      diagnostics.run(() => {
+        const rootScope = createScope({ name: "test-root" });
+        const array = createFieldArray<number>({
+          initialValues: [1],
+          scope: rootScope,
+        });
+
+        // Run 50 push/remove cycles
+        for (let i = 0; i < 50; i++) {
+          array.push(i + 10);
+          array.remove(1);
+        }
+
+        expect(array.items.get()).toHaveLength(1);
+
+        const beforeDisposeEvents = diagnostics.getEvents().slice();
+        rootScope.dispose();
+        const afterDisposeEvents = diagnostics.getEvents().slice(beforeDisposeEvents.length);
+
+        const disposingEvent = afterDisposeEvents.find((e) => e.type === "scope.disposing");
+        // The parent scope retains strictly the array's own resources (9 total: array computeds + cleanup + 1 active item),
+        // proving that the 50 push/remove cycles detached all 50 dead item scopes without leaking into the parent.
+        expect(disposingEvent?.payload["resourceCount"]).toBeLessThanOrEqual(10);
+      });
     });
   });
 });

@@ -166,7 +166,7 @@ export function createFieldGroup<T extends Record<string, any>>(
   const branchSeen = new Set(seenObjects);
   branchSeen.add(initialValues);
 
-  const fields = {} as { [K in keyof T]: FormNodeFor<T[K]> };
+  const fields = Object.create(null) as { [K in keyof T]: FormNodeFor<T[K]> };
 
   for (const key of Object.keys(initialValues) as Array<keyof T>) {
     const val = initialValues[key];
@@ -181,6 +181,7 @@ export function createFieldGroup<T extends Record<string, any>>(
       fields[key] = createFieldGroup({
         initialValues: val,
         scope,
+        keyExtractor,
         seenObjects: branchSeen,
       }) as unknown as FormNodeFor<T[keyof T]>;
     } else {
@@ -197,7 +198,7 @@ export function createFieldGroup<T extends Record<string, any>>(
 
   const valuesComputed = runInScope(() =>
     computed(() => {
-      const res = {} as T;
+      const res = Object.create(null) as T;
       for (const k of keys) {
         const node = fields[k] as any;
         res[k] = node.kind === "field" ? node.value.get() : node.values.get();
@@ -226,7 +227,7 @@ export function createFieldGroup<T extends Record<string, any>>(
 
   const errorsComputed = runInScope(() =>
     computed(() => {
-      const res: Record<string, readonly string[]> = {};
+      const res: Record<string, readonly string[]> = Object.create(null);
       for (const k of keys) {
         const node = fields[k] as any;
         if (node.kind === "field") {
@@ -248,9 +249,16 @@ export function createFieldGroup<T extends Record<string, any>>(
   );
 
   const setValues = (partial: Partial<T>): void => {
+    if (partial === null || typeof partial !== "object" || Array.isArray(partial)) {
+      throw new TypeError(
+        `FieldGroup.setValues expected an object, received ${
+          partial === null ? "null" : Array.isArray(partial) ? "array" : typeof partial
+        }`,
+      );
+    }
     batch(() => {
       for (const [k, v] of Object.entries(partial) as Array<[keyof T, any]>) {
-        if (fields[k]) {
+        if (Object.prototype.hasOwnProperty.call(fields, k)) {
           const node = fields[k] as any;
           if (node.kind === "field") {
             node.setValue(v);
@@ -263,11 +271,25 @@ export function createFieldGroup<T extends Record<string, any>>(
   };
 
   const reset = (nextInitials?: Partial<T>): void => {
+    if (
+      nextInitials !== undefined &&
+      (typeof nextInitials !== "object" || nextInitials === null || Array.isArray(nextInitials))
+    ) {
+      throw new TypeError(
+        `FieldGroup.reset expected an object, received ${
+          nextInitials === null
+            ? "null"
+            : Array.isArray(nextInitials)
+              ? "array"
+              : typeof nextInitials
+        }`,
+      );
+    }
     batch(() => {
       for (const k of keys) {
         const node = fields[k] as any;
-        if (nextInitials !== undefined && k in nextInitials) {
-          node.reset(nextInitials[k]);
+        if (nextInitials !== undefined && Object.prototype.hasOwnProperty.call(nextInitials, k)) {
+          node.reset((nextInitials as any)[k]);
         } else {
           node.reset();
         }
@@ -303,6 +325,7 @@ export interface ArrayItem<T> {
   readonly id: string | number;
   readonly node: FormNodeFor<T>;
   readonly scope: Scope;
+  readonly detach?: (() => void) | undefined;
 }
 
 export interface FieldArray<T> {
@@ -342,17 +365,27 @@ export function createFieldArray<T>(options: CreateFieldArrayOptions<T>): FieldA
 
   const activeScopes = new Set<Scope>();
 
+  const disposeItem = (item: ArrayItem<T>): void => {
+    activeScopes.delete(item.scope);
+    item.detach?.();
+    item.scope.dispose();
+  };
+
   const createItem = (val: T, assignedKey?: string | number): ArrayItem<T> => {
-    const itemScope = scope
-      ? scope.createChild({ name: "vii-array-item" })
-      : createScope({ name: "vii-array-item" });
+    const itemScope = createScope({ name: "vii-array-item" });
+    const detach = scope ? scope.use(itemScope) : undefined;
     activeScopes.add(itemScope);
 
     let id: string | number;
     if (assignedKey !== undefined) {
       id = assignedKey;
     } else if (keyExtractor) {
-      id = keyExtractor(val);
+      const extracted = keyExtractor(val);
+      if (extracted !== undefined && extracted !== null) {
+        id = extracted;
+      } else {
+        id = generateInternalId();
+      }
     } else {
       id = generateInternalId();
     }
@@ -362,12 +395,14 @@ export function createFieldArray<T>(options: CreateFieldArrayOptions<T>): FieldA
       node = createFieldArray({
         initialValues: val,
         scope: itemScope,
+        keyExtractor,
         seenObjects: branchSeen,
       });
     } else if (isPlainRecord(val)) {
       node = createFieldGroup({
         initialValues: val as Record<string, any>,
         scope: itemScope,
+        keyExtractor,
         seenObjects: branchSeen,
       });
     } else {
@@ -376,7 +411,7 @@ export function createFieldArray<T>(options: CreateFieldArrayOptions<T>): FieldA
         scope: itemScope,
       });
     }
-    return { id, node, scope: itemScope };
+    return { id, node, scope: itemScope, detach };
   };
 
   const validateUniqueKeys = (items: readonly ArrayItem<T>[]): void => {
@@ -482,18 +517,51 @@ export function createFieldArray<T>(options: CreateFieldArrayOptions<T>): FieldA
   );
 
   const push = (value: T): void => {
+    const current = itemsState.get();
+    if (keyExtractor) {
+      const key = keyExtractor(value);
+      if (key !== undefined && key !== null && current.some((it) => it.id === key)) {
+        throw new Error(`Duplicate key "${key}" detected in FieldArray`);
+      }
+    }
     const item = createItem(value);
-    const next = [...itemsState.get(), item];
-    validateUniqueKeys(next);
-    itemsState.set(next);
+    try {
+      const next = [...current, item];
+      validateUniqueKeys(next);
+      itemsState.set(next);
+    } catch (err) {
+      disposeItem(item);
+      throw err;
+    }
   };
 
   const insert = (index: number, value: T): void => {
     const current = [...itemsState.get()];
+    if (
+      typeof index !== "number" ||
+      !Number.isInteger(index) ||
+      index < 0 ||
+      index > current.length
+    ) {
+      throw new RangeError(
+        `Index ${index} is out of bounds for FieldArray of length ${current.length}`,
+      );
+    }
+    if (keyExtractor) {
+      const key = keyExtractor(value);
+      if (key !== undefined && key !== null && current.some((it) => it.id === key)) {
+        throw new Error(`Duplicate key "${key}" detected in FieldArray`);
+      }
+    }
     const item = createItem(value);
-    current.splice(index, 0, item);
-    validateUniqueKeys(current);
-    itemsState.set(current);
+    try {
+      current.splice(index, 0, item);
+      validateUniqueKeys(current);
+      itemsState.set(current);
+    } catch (err) {
+      disposeItem(item);
+      throw err;
+    }
   };
 
   const remove = (index: number): void => {
@@ -501,8 +569,7 @@ export function createFieldArray<T>(options: CreateFieldArrayOptions<T>): FieldA
     if (index >= 0 && index < current.length) {
       const removed = current.splice(index, 1);
       if (removed[0]) {
-        activeScopes.delete(removed[0].scope);
-        removed[0].scope.dispose();
+        disposeItem(removed[0]);
       }
       itemsState.set(current);
     }
@@ -539,12 +606,25 @@ export function createFieldArray<T>(options: CreateFieldArrayOptions<T>): FieldA
   };
 
   const setValues = (next: T[]): void => {
+    if (!Array.isArray(next)) {
+      throw new TypeError(
+        `FieldArray.setValues expected an array, received ${next === null ? "null" : typeof next}`,
+      );
+    }
     batch(() => {
       const current = itemsState.get();
 
       if (keyExtractor) {
-        // Keyed reconciliation: re-derive keys from incoming values
-        // Index existing items by their CURRENT value-derived key and also by their item.id
+        // Validate uniqueness up-front before creating any nodes or mutating anything
+        const derivedKeys = next.map((v) => keyExtractor(v));
+        const seenKeys = new Set<string | number>();
+        for (const key of derivedKeys) {
+          if (seenKeys.has(key)) {
+            throw new Error(`Duplicate key "${key}" detected in FieldArray`);
+          }
+          seenKeys.add(key);
+        }
+
         const currentByDerivedKey = new Map<string | number, ArrayItem<T>>();
         for (const item of current) {
           const currentDerivedKey = keyExtractor(
@@ -556,44 +636,59 @@ export function createFieldArray<T>(options: CreateFieldArrayOptions<T>): FieldA
         }
 
         const newItems: ArrayItem<T>[] = [];
+        const createdThisRun: ArrayItem<T>[] = [];
         const usedOldKeys = new Set<string | number>();
 
+        try {
+          for (let i = 0; i < next.length; i++) {
+            const nextVal = next[i];
+            const derivedKey = derivedKeys[i]!;
+            const existingItem = currentByDerivedKey.get(derivedKey);
+
+            if (existingItem) {
+              usedOldKeys.add(derivedKey);
+              if (existingItem.id === derivedKey) {
+                newItems.push(existingItem);
+              } else {
+                newItems.push({
+                  id: derivedKey,
+                  node: existingItem.node,
+                  scope: existingItem.scope,
+                  detach: existingItem.detach,
+                });
+              }
+            } else {
+              const item = createItem(nextVal as T, derivedKey);
+              createdThisRun.push(item);
+              newItems.push(item);
+            }
+          }
+        } catch (err) {
+          for (const item of createdThisRun) {
+            disposeItem(item);
+          }
+          throw err;
+        }
+
+        // Apply mutations on reused existing items
         for (let i = 0; i < next.length; i++) {
           const nextVal = next[i];
-          const derivedKey = keyExtractor(nextVal as T);
+          const derivedKey = derivedKeys[i]!;
           const existingItem = currentByDerivedKey.get(derivedKey);
-
           if (existingItem) {
-            usedOldKeys.add(derivedKey);
             const n = existingItem.node as any;
             if (n.kind === "field") {
               n.setValue(nextVal);
             } else {
               n.setValues(nextVal);
             }
-            if (existingItem.id === derivedKey) {
-              newItems.push(existingItem);
-            } else {
-              // Re-stamp item with derivedKey in case item.id was distinct
-              newItems.push({
-                id: derivedKey,
-                node: existingItem.node,
-                scope: existingItem.scope,
-              });
-            }
-          } else {
-            newItems.push(createItem(nextVal as T, derivedKey));
           }
         }
-
-        // Validate uniqueness of the newly derived keys
-        validateUniqueKeys(newItems);
 
         // Dispose old items whose keys disappeared
         for (const [key, oldItem] of currentByDerivedKey.entries()) {
           if (!usedOldKeys.has(key)) {
-            activeScopes.delete(oldItem.scope);
-            oldItem.scope.dispose();
+            disposeItem(oldItem);
           }
         }
 
@@ -611,38 +706,49 @@ export function createFieldArray<T>(options: CreateFieldArrayOptions<T>): FieldA
           itemsState.set(newItems);
         }
       } else {
-        // Unkeyed reconciliation: positional reuse for existing indices, fresh IDs for newly added items
+        // Unkeyed reconciliation
+        const createdThisRun: ArrayItem<T>[] = [];
+        const newItems: ArrayItem<T>[] = [];
+
+        try {
+          for (let i = 0; i < next.length; i++) {
+            const nextVal = next[i];
+            if (i < current.length) {
+              newItems.push(current[i]!);
+            } else {
+              const item = createItem(nextVal as T);
+              createdThisRun.push(item);
+              newItems.push(item);
+            }
+          }
+        } catch (err) {
+          for (const item of createdThisRun) {
+            disposeItem(item);
+          }
+          throw err;
+        }
+
+        // Apply mutations on existing items
+        for (let i = 0; i < Math.min(current.length, next.length); i++) {
+          const nextVal = next[i];
+          const item = current[i]!;
+          const n = item.node as any;
+          if (n.kind === "field") {
+            n.setValue(nextVal);
+          } else {
+            n.setValues(nextVal);
+          }
+        }
+
+        // Dispose trailing items
         for (let i = next.length; i < current.length; i++) {
           const item = current[i];
           if (item) {
-            activeScopes.delete(item.scope);
-            item.scope.dispose();
+            disposeItem(item);
           }
         }
 
         let hasStructuralChange = current.length !== next.length;
-        const newItems: ArrayItem<T>[] = [];
-        for (let i = 0; i < next.length; i++) {
-          const nextVal = next[i];
-          if (i < current.length) {
-            const item = current[i];
-            if (item) {
-              const n = item.node as any;
-              if (n.kind === "field") {
-                n.setValue(nextVal);
-              } else {
-                n.setValues(nextVal);
-              }
-              newItems.push(item);
-            }
-          } else {
-            // New position -> fresh item with fresh internal ID
-            hasStructuralChange = true;
-            newItems.push(createItem(nextVal as T));
-          }
-        }
-        validateUniqueKeys(newItems);
-
         if (hasStructuralChange) {
           itemsState.set(newItems);
         }
@@ -651,24 +757,43 @@ export function createFieldArray<T>(options: CreateFieldArrayOptions<T>): FieldA
   };
 
   const reset = (nextInitials?: T[]): void => {
+    if (nextInitials !== undefined && !Array.isArray(nextInitials)) {
+      throw new TypeError(
+        `FieldArray.reset expected an array, received ${
+          nextInitials === null ? "null" : typeof nextInitials
+        }`,
+      );
+    }
     batch(() => {
       const initials = nextInitials !== undefined ? nextInitials : initialValuesState.get();
+      const currentItems = itemsState.get();
+
+      // Build and validate new items FIRST before disposing old items
+      const createdItems: ArrayItem<T>[] = [];
+      try {
+        for (const v of initials) {
+          createdItems.push(createItem(v));
+        }
+        validateUniqueKeys(createdItems);
+      } catch (err) {
+        for (const item of createdItems) {
+          disposeItem(item);
+        }
+        throw err;
+      }
+
       if (nextInitials !== undefined) {
         initialValuesState.set(nextInitials);
       }
-      // dispose all current
-      for (const item of itemsState.get()) {
-        activeScopes.delete(item.scope);
-        item.scope.dispose();
+
+      // Dispose all previous items
+      for (const item of currentItems) {
+        disposeItem(item);
       }
 
-      // Re-create items
-      const newItems = initials.map((v) => createItem(v));
-      validateUniqueKeys(newItems);
-
       // Re-establish initialKeysState baseline on EVERY reset
-      initialKeysState.set(newItems.map((it) => it.id));
-      itemsState.set(newItems);
+      initialKeysState.set(createdItems.map((it) => it.id));
+      itemsState.set(createdItems);
     });
   };
 
@@ -806,7 +931,15 @@ export function createForm<T extends FieldValues>(config: FormConfig<T>): FormIn
     keyExtractor: config.keyExtractor,
   });
 
+  let isDisposed = false;
+  const assertActive = (): void => {
+    if (isDisposed) {
+      throw new Error("Form is disposed");
+    }
+  };
+
   const getNode = (path: string): FormNode | undefined => {
+    assertActive();
     let segments: Array<string | number>;
     try {
       segments = parsePath(path);
@@ -818,6 +951,7 @@ export function createForm<T extends FieldValues>(config: FormConfig<T>): FormIn
     for (const seg of segments) {
       if (!curr) return undefined;
       if (curr.kind === "group") {
+        if (!Object.prototype.hasOwnProperty.call(curr.fields, seg)) return undefined;
         curr = curr.fields[seg];
       } else if (curr.kind === "array") {
         if (typeof seg === "number") {
@@ -833,8 +967,6 @@ export function createForm<T extends FieldValues>(config: FormConfig<T>): FormIn
     return curr;
   };
 
-  let isDisposed = false;
-
   return {
     root,
     fields: root.fields,
@@ -846,8 +978,14 @@ export function createForm<T extends FieldValues>(config: FormConfig<T>): FormIn
     invalid: root.invalid,
     errors: root.errors,
     getNode,
-    setValues: root.setValues,
-    reset: root.reset,
+    setValues: (partial: Partial<T>): void => {
+      assertActive();
+      root.setValues(partial);
+    },
+    reset: (nextInitials?: Partial<T>): void => {
+      assertActive();
+      root.reset(nextInitials);
+    },
     dispose: () => {
       if (isDisposed) return;
       isDisposed = true;

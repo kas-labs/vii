@@ -16,21 +16,35 @@ This directory contains the throwaway research prototypes for **F1 (Minimal Fiel
      - _Rationale_: Eliminates fragile heuristics (e.g. synthetic baseline key restoration) that caused collision regressions on unkeyed arrays. Guarantees that any structural manipulation or recreation of an item marks the array dirty until explicit `reset()`.
      - _Tradeoff_: Restoring identical scalar values via structural `push` or `setValues` remains `dirty = true` unless re-established via `reset()`.
 2. **Re-establishing Baseline on `reset()`**:
-   - Calling `reset()` (with or without arguments) disposes existing item scopes and recreates items.
-   - For **unkeyed arrays**, fresh internal IDs are generated and `initialKeysState` is **immediately re-established** to match the fresh IDs. Thus, after `reset()`, `dirty === false`, `touched === false`, and `values` deep-equal the baseline.
-   - For **keyed arrays**, keys are preserved, child signals are reset to pristine, and `dirty === false`.
+    - Calling `reset()` (with or without arguments) disposes existing item scopes and recreates items.
+    - For **unkeyed arrays**, fresh internal IDs are generated and `initialKeysState` is **immediately re-established** to match the fresh IDs. Thus, after `reset()`, `dirty === false`, `touched === false`, and `values` deep-equal the baseline.
+    - For **keyed arrays**, keys are preserved, child signals are reset to pristine, and `dirty === false`.
 3. **Key Derivation Timing & Reconciliation in `setValues()`**:
-   - **`item.id` Timing**: In keyed arrays, `item.id` is derived at item creation and synchronized during `setValues()`. If a caller modifies a child field that contains the key in-place (e.g. `row.fields.id.setValue("newKey")`), `item.id` is _stale-until-next-setValues_. When `setValues()` is invoked, `item.id` is re-stamped to match `keyExtractor(value)` for every item.
-   - **Keyed Reconciliation**: `setValues(next)` re-derives keys from incoming data. Items whose keys match existing items are reused (preserving child Scope, touched, and error states), newly introduced keys create fresh items, and disappeared keys have their child scopes synchronously disposed. `validateUniqueKeys` runs on the re-derived keys to prevent duplicate keys.
-   - **Unkeyed Reconciliation**: Positional reuse is performed for existing indices (`setValue`/`setValues`), removed trailing items are disposed, and regrown indices create fresh items with fresh unique internal IDs. Never throws duplicate key errors on internal IDs.
-4. **Path Grammar Hardening**:
-   - Paths must strictly separate property and bracket groups. Bracket groups must be followed by `.`, `[`, or end-of-string (rejecting `tasks[0]b`). A `.` must never be immediately followed by `[` (rejecting `a.[0]`). Malformed paths throw deterministic syntax errors.
+    - **`item.id` Timing**: In keyed arrays, `item.id` is derived at item creation and synchronized during `setValues()`. If a caller modifies a child field that contains the key in-place (e.g. `row.fields.id.setValue("newKey")`), `item.id` is _stale-until-next-setValues_. When `setValues()` is invoked, `item.id` is re-stamped to match `keyExtractor(value)` for every item.
+    - **Keyed Reconciliation**: `setValues(next)` re-derives keys from incoming data. Items whose keys match existing items are reused (preserving child Scope, touched, and error states), newly introduced keys create fresh items, and disappeared keys have their child scopes synchronously disposed. `validateUniqueKeys` runs on the re-derived keys to prevent duplicate keys.
+    - **Unkeyed Reconciliation**: Positional reuse is performed for existing indices (`setValue`/`setValues`), removed trailing items are disposed, and regrown indices create fresh items with fresh unique internal IDs. Never throws duplicate key errors on internal IDs.
+    - **Key Extractor Scope**: `keyExtractor` is propagated recursively across all construction paths (nested groups, array items, child arrays). If `keyExtractor(item)` returns `undefined` (e.g. for scalar array items), item creation safely falls back to unique internal IDs (`vii_item_*`).
+4. **Path Grammar & Object Security Hardening**:
+    - Paths must strictly separate property and bracket groups. Bracket groups must be followed by `.`, `[`, or end-of-string (rejecting `tasks[0]b`). A `.` must never be immediately followed by `[` (rejecting `a.[0]`). Malformed paths throw deterministic syntax errors.
+    - `fields`, `valuesComputed`, and `errorsComputed` are created with `Object.create(null)` and own-property checks are enforced at all lookup and iteration points. Own properties named `__proto__`, `constructor`, or `prototype` do not pollute the prototype chain or drop fields.
+5. **Atomic Mutations & Input Validation**:
+    - `FieldArray.push`, `insert`, `setValues`, and `reset` validate keys and inputs first before mutating state or disposing existing items.
+    - Non-array inputs to `FieldArray.setValues`/`reset` and non-object inputs to `FieldGroup.setValues`/`reset` throw explicit `TypeError`s with 0 side effects.
+    - `insert(index, value)` enforces strict bounds (`0 <= index <= length`), throwing `RangeError` on invalid indices.
+6. **Parent Scope Resource Detach (O(1) Lifetime Management)**:
+    - Array item scopes attach to the parent Scope with a detach handle (`scope.use(itemScope)`).
+    - Upon item disposal (`remove`, `reset`, `setValues`), the child scope is detached immediately from the parent Scope's resource list in O(1) time, ensuring push/remove cycles never accumulate dead item scopes in long-lived parent scopes.
+7. **Post-Dispose Contract**:
+    - After `form.dispose()` is called, the `FormInstance` transitions to disposed.
+    - Calling `getNode`, `setValues`, or `reset` throws `Error("Form is disposed")`.
+    - Reading `form.values.get()` throws `Error("Computed is disposed")`.
+    - `dispose()` is idempotent.
 
 ---
 
 ## 2. Test Coverage & Empirical Observations
 
-The test suite in [`research/form/form-core.test.ts`](./form-core.test.ts) covers **56 total assertions**:
+The test suite in [`research/form/form-core.test.ts`](./form-core.test.ts) covers **65 total assertions**:
 
 - **F1 Baseline & Regression Coverage (28 tests)**:
   - Pristine signals, custom equality comparators, independent touched/error signals, same-value and explicit `undefined` resets.
@@ -69,6 +83,16 @@ The test suite in [`research/form/form-core.test.ts`](./form-core.test.ts) cover
   - Identity-strict dirty consistency between `remove+push` and `setValues shrink+regrow`.
   - Keyed `setValues` reordering matching `keyExtractor` and preserving child Scope / signal state.
   - Deep branch subscription isolation.
+- **Batch 5 Data Correctness & Lifetime Coverage (9 tests)**:
+  - Finding 10: `__proto__`, `constructor`, `prototype` as own keys on null-prototype objects without dropping fields or polluting prototype.
+  - Finding 11: `getNode` returning `undefined` for prototype members (`toString`, `valueOf`, `hasOwnProperty`, `constructor`).
+  - Finding 12: Rejection of non-array values in `FieldArray.setValues` / `reset` and non-object values in `FieldGroup.setValues` / `reset`.
+  - Finding 13: Propagation of `keyExtractor` across nested groups and nested array items.
+  - Finding 14: Atomicity of duplicate-key `setValues`, `push`, and `insert` with rollback of newly created scopes and non-mutation of existing nodes.
+  - Finding 14: Atomicity of `reset` with a throwing `keyExtractor` leaving array nodes and signals alive.
+  - Finding 15: Consistent post-dispose contract throwing `Error("Form is disposed")` on all `FormInstance` methods.
+  - Finding 16: Strict index validation in `FieldArray.insert` throwing `RangeError` on invalid indices.
+  - Finding 17: Diagnostics-verified parent scope resource count proving 0 accumulation of dead item scopes across push/remove cycles.
 
 ---
 

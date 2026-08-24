@@ -571,12 +571,16 @@ export function createFieldArray<T>(options: CreateFieldArrayOptions<T>): FieldA
             } else {
               n.setValues(nextVal);
             }
-            // Re-stamp item with derivedKey in case item.id was distinct
-            newItems.push({
-              id: derivedKey,
-              node: existingItem.node,
-              scope: existingItem.scope,
-            });
+            if (existingItem.id === derivedKey) {
+              newItems.push(existingItem);
+            } else {
+              // Re-stamp item with derivedKey in case item.id was distinct
+              newItems.push({
+                id: derivedKey,
+                node: existingItem.node,
+                scope: existingItem.scope,
+              });
+            }
           } else {
             newItems.push(createItem(nextVal as T, derivedKey));
           }
@@ -593,7 +597,19 @@ export function createFieldArray<T>(options: CreateFieldArrayOptions<T>): FieldA
           }
         }
 
-        itemsState.set(newItems);
+        let hasStructuralChange = current.length !== newItems.length;
+        if (!hasStructuralChange) {
+          for (let i = 0; i < current.length; i++) {
+            if (current[i] !== newItems[i]) {
+              hasStructuralChange = true;
+              break;
+            }
+          }
+        }
+
+        if (hasStructuralChange) {
+          itemsState.set(newItems);
+        }
       } else {
         // Unkeyed reconciliation: positional reuse for existing indices, fresh IDs for newly added items
         for (let i = next.length; i < current.length; i++) {
@@ -604,6 +620,7 @@ export function createFieldArray<T>(options: CreateFieldArrayOptions<T>): FieldA
           }
         }
 
+        let hasStructuralChange = current.length !== next.length;
         const newItems: ArrayItem<T>[] = [];
         for (let i = 0; i < next.length; i++) {
           const nextVal = next[i];
@@ -620,11 +637,15 @@ export function createFieldArray<T>(options: CreateFieldArrayOptions<T>): FieldA
             }
           } else {
             // New position -> fresh item with fresh internal ID
+            hasStructuralChange = true;
             newItems.push(createItem(nextVal as T));
           }
         }
         validateUniqueKeys(newItems);
-        itemsState.set(newItems);
+
+        if (hasStructuralChange) {
+          itemsState.set(newItems);
+        }
       }
     });
   };
@@ -838,29 +859,53 @@ export function createForm<T extends FieldValues>(config: FormConfig<T>): FormIn
 export interface ExternalBindingOptions<T extends FieldValues> {
   readonly externalState: WritableState<T>;
   readonly scope?: Scope | undefined;
+  readonly keyExtractor?: ((item: any) => string | number) | undefined;
 }
+
+const MAX_EXTERNAL_SYNC_DEPTH = 50;
 
 export function bindFormToExternalState<T extends FieldValues>(
   options: ExternalBindingOptions<T>,
 ): FormInstance<T> {
-  const { externalState, scope = createScope({ name: "vii-external-form" }) } = options;
+  const {
+    externalState,
+    scope = createScope({ name: "vii-external-form" }),
+    keyExtractor,
+  } = options;
   const initial = externalState.get();
 
   const form = createForm<T>({
     initialValues: initial,
+    keyExtractor,
   });
 
   let isSyncingToExternal = false;
   let isSyncingFromExternal = false;
+  let syncDepth = 0;
+
+  const enterSyncDepth = (): void => {
+    if (++syncDepth > MAX_EXTERNAL_SYNC_DEPTH) {
+      syncDepth = 0;
+      throw new Error("Cyclic synchronisation detected in bindFormToExternalState");
+    }
+  };
+
+  const exitSyncDepth = (): void => {
+    if (syncDepth > 0) {
+      syncDepth--;
+    }
+  };
 
   scope.run(() => {
     form.values.subscribe((nextValues: T) => {
       if (isSyncingFromExternal) return;
+      enterSyncDepth();
       isSyncingToExternal = true;
       try {
         externalState.set(nextValues);
       } finally {
         isSyncingToExternal = false;
+        exitSyncDepth();
       }
     });
   });
@@ -868,11 +913,13 @@ export function bindFormToExternalState<T extends FieldValues>(
   scope.run(() => {
     externalState.subscribe((nextExternal: T) => {
       if (isSyncingToExternal) return;
+      enterSyncDepth();
       isSyncingFromExternal = true;
       try {
         form.setValues(nextExternal);
       } finally {
         isSyncingFromExternal = false;
+        exitSyncDepth();
       }
     });
   });

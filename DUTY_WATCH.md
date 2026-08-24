@@ -37,7 +37,7 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
-## 2026-08-23 23:28 CEST | Form Research F2 — Nested Objects, Arrays, and Stable Identity
+## 2026-08-24 15:30 CEST | Form Research F2 — Re-entrancy Depth Counter Correction (BUG 8 & BUG 9 Remediation)
 
 Status: completed
 Branch: `feat/form-nested-arrays-identity`
@@ -45,27 +45,44 @@ PR: draft opened
 
 ### Scope
 
-- Implement throwaway research prototype for Form Slice F2 (Nested Objects, Arrays, and Stable Identity) under `research/form/`.
-- Prototype `FieldGroup<T>` managing composite plain-record sub-trees of `FormNodeFor<T>` (leaves, child groups, arrays) with lazy aggregate computeds (`values`, `dirty`, `touched`, `pending`, `valid`, `invalid`, `errors` with dot notation) and non-plain object leaf preservation.
-- Prototype `FieldArray<T>` managing dynamic repeatable collections of `ArrayItem<T>` with stable `id` mapping (generated IDs and scoped `keyExtractor`), full `undefined` item support, and duplicate key rejection.
-- Implement and verify array list operations: `push`, `insert`, `remove`, `swap`, `move`.
-- Empirically verify state preservation: `touched`, `dirty`, and validation error signals stay attached to conceptual item identity rather than array index across `swap` and `move`.
-- Define and document Option (a) identity-strict dirty semantics: array dirty checks length, child dirty, and item ID sequence matching initial baseline; `reset()` re-establishes fresh baseline key sequence for unkeyed arrays; `setValues()` reconciles via `keyExtractor` (re-stamping `item.id === keyExtractor(value)`, disposing missing keys, and throwing on duplicates) and generates fresh IDs for regrown unkeyed items.
-- Implement hierarchical child `Scope` ownership and verify deterministic child Scope teardown upon `form.dispose()`, item removal, or array reset.
-- Prototype cycle detection and strict path parsing grammar hardening with prototype-pollution defense (`parsePath` and `getNode`).
-- Restore and retain all F1 regression tests alongside additive F2 tests.
-- Add comprehensive Vitest suite in `research/form/form-core.test.ts` (45 tests) and `research/form/README.md`.
+- Remediate Round 4 rejection defects BUG 8 and BUG 9 on branch `feat/form-nested-arrays-identity`.
+- Fix BUG 8: Replace lifetime accumulating counter in `bindFormToExternalState` with a true depth counter (`enterSyncDepth` and `exitSyncDepth`) that decrements in `finally` on both `form.values` and `externalState` synchronization paths. Reset counter to 0 before throwing upon exceeding `MAX_EXTERNAL_SYNC_DEPTH = 50` so that the bound form remains usable post-throw.
+- Add comprehensive acceptance tests for 200 sequential scalar external sets, 200 sequential scalar form sets, 200 alternating array shape sets, and cyclic throw with 100 normal syncs recovery.
+- Fix BUG 9: Commit the complete changes on the branch and run full validation gates on the committed tree.
 
 ### Changes
 
-- Updated `research/form/form-core.ts`: added `FieldGroup`, `FieldArray`, `parsePath`, `getNode`, hierarchical Scope child ownership, cycle detection, plain record filtering, scoped keyExtractor, duplicate key defense, keyed setValues reconciliation with key re-stamping, and Option (a) identity-strict dirty tracking.
-- Updated `research/form/form-core.test.ts`: 45 unit tests covering complete F1 regression baseline (17 tests) + F2 nested groups, arrays, undefined items, reorder dirty semantics, reset dirty restoration, unkeyed collision-free setValues, exhaustive ID uniqueness, keyed setValues identity preservation, strict paths, cycle defense, and child Scope teardown (28 tests).
-- Updated `research/form/README.md`: architectural overview of F1/F2 prototypes, documented Option (a) dirty semantics and keyExtractor timing, and exact empirical observations.
+- In `research/form/form-core.ts`: Updated `bindFormToExternalState` re-entrancy depth counter to decrement synchronously in `finally` blocks on both subscription paths, ensuring depth peaks at 1 or 2 during normal syncs and resets cleanly.
+- In `research/form/form-core.test.ts`: Added acceptance tests for 200 sequential store sets, 200 sequential form sets, 200 alternating array sets, and cyclic throw recovery followed by 100 normal syncs (56 total tests passing in 18ms).
+- In `research/form/README.md`: Documented the depth counter fix and updated test assertions inventory.
+
+### Validation
+
+- `vitest run research/form/form-core.test.ts`: PASS (56/56 tests passing in 18ms)
+- `tsc -p research/form/tsconfig.json --noEmit`: PASS (0 errors)
+- `git diff --check`: PASS (clean)
+- `pnpm format:check`: PASS (clean)
+
+### Architecture / compatibility
+
+- Throwaway research prototype in `research/form/` only. Core package `@vii-labs/core` is unmodified.
+- No public API changes, no new packages created.
+
+### Remaining / recovery
+
+- None for Slice F2. Ready for human review.
+- Invariant: F3 has NOT been started.
+
+### Changes
+
+- Updated `research/form/form-core.ts`: added `FieldGroup`, `FieldArray`, `parsePath`, `getNode`, hierarchical Scope child ownership, cycle detection, plain record filtering, scoped keyExtractor, duplicate key defense, keyed setValues reconciliation with key re-stamping, Option (a) identity-strict dirty tracking, structural no-op check in `FieldArray.setValues` (`hasStructuralChange`), and re-entrancy depth guard in `bindFormToExternalState`.
+- Updated `research/form/form-core.test.ts`: 53 unit tests covering complete F1 regression baseline + external binding array combinations (25 tests) and F2 nested groups, arrays, undefined items, reorder dirty semantics, reset dirty restoration, unkeyed collision-free setValues, exhaustive ID uniqueness, keyed setValues identity preservation, strict paths, cycle defense, and child Scope teardown (28 tests).
+- Updated `research/form/README.md`: architectural overview of F1/F2 prototypes, documented Option (a) dirty semantics, keyExtractor timing, BUG 7 diagnosis, and audited F1+F2 seam findings.
 - Updated `docs/roadmap/FORM_RESEARCH.md`: marked F2 prototype as completed.
 
 ### Validation
 
-- `pnpm vitest run research/form/form-core.test.ts`: passed (45/45 tests passing).
+- `pnpm vitest run research/form/form-core.test.ts`: passed (53/53 tests passing in ~20ms).
 - `pnpm exec tsc -p research/form/tsconfig.json --noEmit`: passed (0 strict errors).
 - `git diff --check`: passed.
 - `pnpm format:check`: passed.

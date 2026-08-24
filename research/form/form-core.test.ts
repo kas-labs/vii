@@ -10,7 +10,7 @@ import {
   createForm,
   parsePath,
 } from "./form-core.js";
-import { state } from "../../packages/core/src/index.js";
+import { type WritableState, state } from "../../packages/core/src/index.js";
 
 describe("Form Research F1 & F2 — Complete Prototype and Regression Evidence", () => {
   // -------------------------------------------------------------------------
@@ -360,6 +360,247 @@ describe("Form Research F1 & F2 — Complete Prototype and Regression Evidence",
         form.dispose();
         form.dispose();
       }).not.toThrow();
+    });
+
+    it("external binding + unkeyed array, external set of equal length: completes, values sync", () => {
+      const store = state<{ t: string[] }>({ t: ["a", "b"] });
+      const form = bindFormToExternalState<{ t: string[] }>({ externalState: store });
+
+      store.set({ t: ["c", "d"] });
+      expect(form.values.get()).toEqual({ t: ["c", "d"] });
+      expect(store.get()).toEqual({ t: ["c", "d"] });
+
+      form.dispose();
+    });
+
+    it("external binding + unkeyed array, external set that grows: completes, values sync", () => {
+      const store = state<{ t: string[] }>({ t: ["a", "b"] });
+      const form = bindFormToExternalState<{ t: string[] }>({ externalState: store });
+
+      store.set({ t: ["a", "b", "c", "d"] });
+      expect(form.values.get()).toEqual({ t: ["a", "b", "c", "d"] });
+      expect(store.get()).toEqual({ t: ["a", "b", "c", "d"] });
+
+      form.dispose();
+    });
+
+    it("external binding + unkeyed array, external set that shrinks to []: completes", () => {
+      const store = state<{ t: string[] }>({ t: ["a", "b"] });
+      const form = bindFormToExternalState<{ t: string[] }>({ externalState: store });
+
+      store.set({ t: [] });
+      expect(form.values.get()).toEqual({ t: [] });
+      expect(store.get()).toEqual({ t: [] });
+
+      form.dispose();
+    });
+
+    it("external binding + keyed array, external reorder: completes, item.id matches keyExtractor for every item", () => {
+      const store = state<{ rows: Array<{ id: string; v: number }> }>({
+        rows: [
+          { id: "r1", v: 1 },
+          { id: "r2", v: 2 },
+        ],
+      });
+      const form = bindFormToExternalState<{ rows: Array<{ id: string; v: number }> }>({
+        externalState: store,
+        keyExtractor: (i) => i.id,
+      });
+
+      store.set({
+        rows: [
+          { id: "r2", v: 2 },
+          { id: "r1", v: 1 },
+        ],
+      });
+
+      const arr = form.fields.rows as FieldArray<{ id: string; v: number }>;
+      const items = arr.items.get();
+      expect(items.map((i) => i.id)).toEqual(["r2", "r1"]);
+      expect(items[0]!.id).toBe("r2");
+      expect(items[1]!.id).toBe("r1");
+      expect(form.values.get().rows).toEqual([
+        { id: "r2", v: 2 },
+        { id: "r1", v: 1 },
+      ]);
+
+      form.dispose();
+    });
+
+    it("external binding + array nested inside a group: completes", () => {
+      const store = state<{ user: { profile: { skills: string[] } } }>({
+        user: { profile: { skills: ["ts", "rust"] } },
+      });
+      const form = bindFormToExternalState<{ user: { profile: { skills: string[] } } }>({
+        externalState: store,
+      });
+
+      store.set({
+        user: { profile: { skills: ["ts", "rust", "vitest"] } },
+      });
+
+      expect(form.values.get()).toEqual({
+        user: { profile: { skills: ["ts", "rust", "vitest"] } },
+      });
+
+      form.dispose();
+    });
+
+    it("form-side mutation (arr.push) propagates to the external store exactly once", () => {
+      const store = state<{ items: string[] }>({ items: ["a", "b"] });
+      const externalListener = vi.fn();
+      store.subscribe(externalListener);
+
+      const form = bindFormToExternalState<{ items: string[] }>({
+        externalState: store,
+      });
+
+      expect(externalListener).toHaveBeenCalledTimes(0);
+
+      const arr = form.fields.items as FieldArray<string>;
+      arr.push("c");
+
+      // Assert notification count is exactly 1 and values are synchronized
+      expect(externalListener).toHaveBeenCalledTimes(1);
+      expect(store.get()).toEqual({ items: ["a", "b", "c"] });
+
+      form.dispose();
+    });
+
+    it("scalar bound form: 200 sequential external store.set calls all succeed", () => {
+      const store = state<{ a: number }>({ a: 0 });
+      const form = bindFormToExternalState<{ a: number }>({ externalState: store });
+
+      for (let i = 1; i <= 200; i++) {
+        store.set({ a: i });
+      }
+
+      expect(store.get()).toEqual({ a: 200 });
+      expect(form.values.get()).toEqual({ a: 200 });
+      expect((form.fields.a as FieldState<number>).value.get()).toBe(200);
+
+      form.dispose();
+    });
+
+    it("scalar bound form: 200 sequential form-side setValue calls all succeed", () => {
+      const store = state<{ a: number }>({ a: 0 });
+      const form = bindFormToExternalState<{ a: number }>({ externalState: store });
+
+      for (let i = 1; i <= 200; i++) {
+        (form.fields.a as FieldState<number>).setValue(i);
+      }
+
+      expect(store.get()).toEqual({ a: 200 });
+      expect(form.values.get()).toEqual({ a: 200 });
+      expect((form.fields.a as FieldState<number>).value.get()).toBe(200);
+
+      form.dispose();
+    });
+
+    it("array bound form: 200 sequential external sets alternating between two shapes all succeed", () => {
+      const store = state<{ items: string[] }>({ items: ["a", "b"] });
+      const form = bindFormToExternalState<{ items: string[] }>({ externalState: store });
+
+      for (let i = 1; i <= 200; i++) {
+        if (i % 2 === 0) {
+          store.set({ items: ["x", "y", "z"] });
+        } else {
+          store.set({ items: ["a", "b"] });
+        }
+      }
+
+      expect(store.get()).toEqual({ items: ["x", "y", "z"] });
+      expect(form.values.get()).toEqual({ items: ["x", "y", "z"] });
+
+      form.dispose();
+    });
+
+    it("the guard still throws on a genuinely cyclic setup and binding remains usable for normal syncs afterward", () => {
+      let depth = 0;
+      let cyclicActive = true;
+      let triggerExternalSync: ((v: { counter: number }) => void) | undefined;
+      let internalValue = { counter: 0 };
+
+      // Custom store that captures the sync callback registered by bindFormToExternalState
+      const store: WritableState<{ counter: number }> = {
+        get: () => internalValue,
+        set: (v: { counter: number }) => {
+          internalValue = v;
+        },
+        update: (updater: (prev: { counter: number }) => { counter: number }) => {
+          internalValue = updater(internalValue);
+        },
+        subscribe: (listener: (val: { counter: number }) => void) => {
+          triggerExternalSync = (val) => {
+            internalValue = val;
+            listener(val);
+          };
+          return () => {
+            triggerExternalSync = undefined;
+          };
+        },
+      };
+
+      const form = bindFormToExternalState<{ counter: number }>({ externalState: store });
+
+      // Hook field.setValue to synchronously trigger external sync inside the sync stack
+      const counterField = form.fields.counter as FieldState<number>;
+      const originalSetValue = counterField.setValue;
+      counterField.setValue = (v) => {
+        originalSetValue(v);
+        if (cyclicActive && triggerExternalSync && ++depth < 100) {
+          triggerExternalSync({ counter: v + 1 });
+        }
+      };
+
+      let caughtError: unknown;
+      try {
+        triggerExternalSync && triggerExternalSync({ counter: 1 });
+      } catch (err) {
+        caughtError = err;
+      }
+
+      expect(caughtError).toBeDefined();
+      expect(caughtError).toBeInstanceOf(Error);
+      expect((caughtError as Error).message).toContain(
+        "Cyclic synchronisation detected in bindFormToExternalState",
+      );
+
+      // Disable cyclic behavior and restore normal operation
+      cyclicActive = false;
+      counterField.setValue = originalSetValue;
+
+      // Prove binding on the same form instance is left in a completely usable state (syncDepth reset to 0)
+      for (let i = 100; i <= 200; i++) {
+        triggerExternalSync && triggerExternalSync({ counter: i });
+      }
+
+      expect(store.get()).toEqual({ counter: 200 });
+      expect(form.values.get()).toEqual({ counter: 200 });
+      expect((form.fields.counter as FieldState<number>).value.get()).toBe(200);
+
+      // Also prove form-side updates succeed post-throw
+      (form.fields.counter as FieldState<number>).setValue(999);
+      expect(store.get()).toEqual({ counter: 999 });
+      expect(form.values.get()).toEqual({ counter: 999 });
+
+      form.dispose();
+    });
+
+    it("form.dispose() during binding stops all further propagation in both directions", () => {
+      const store = state<{ search: string }>({ search: "x" });
+      const form = bindFormToExternalState<{ search: string }>({ externalState: store });
+
+      form.dispose();
+
+      // Form mutation after disposal does not propagate to store
+      const searchField = form.fields.search as FieldState<string>;
+      searchField.setValue("y");
+      expect(store.get()).toEqual({ search: "x" });
+
+      // Store mutation after disposal does not propagate to form
+      store.set({ search: "z" });
+      expect((form.fields.search as FieldState<string>).value.get()).toBe("y");
     });
   });
 

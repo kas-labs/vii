@@ -30,13 +30,23 @@ This directory contains the throwaway research prototypes for **F1 (Minimal Fiel
 
 ## 2. Test Coverage & Empirical Observations
 
-The test suite in [`research/form/form-core.test.ts`](./form-core.test.ts) covers **45 total assertions**:
+The test suite in [`research/form/form-core.test.ts`](./form-core.test.ts) covers **56 total assertions**:
 
-- **F1 Baseline & Regression Coverage (17 tests)**:
+- **F1 Baseline & Regression Coverage (28 tests)**:
   - Pristine signals, custom equality comparators, independent touched/error signals, same-value and explicit `undefined` resets.
   - Granular subscription isolation (Field A mutation produces 0 notifications on Field B).
   - Batching multi-field `setValues` into a single aggregate change.
-  - Model ownership comparison fixtures (`bindFormToExternalState` bidirectional sync, post-disposal disconnection, feedback loop prevention, idempotent disposal).
+  - Model ownership comparison fixtures:
+    - `bindFormToExternalState` bidirectional sync, post-disposal disconnection, feedback loop prevention, idempotent disposal.
+    - External binding + unkeyed array: equal length set, growing set, shrinking to `[]`.
+    - External binding + keyed array: external reorder with `item.id` matching `keyExtractor`.
+    - External binding + nested array inside group.
+    - Form-side mutation (`arr.push`) propagating to external store exactly once.
+    - 200 sequential external `store.set` updates on scalar bound form.
+    - 200 sequential form-side `setValue` updates on scalar bound form.
+    - 200 sequential external updates alternating array shapes.
+    - Synchronous re-entrancy depth guard throwing deterministic error on cyclic setup and remaining usable for 100 normal syncs afterward.
+    - `form.dispose()` during external binding cleanly stopping bidirectional propagation.
 - **F2 Nested, Array, Identity & Security Coverage (28 tests)**:
   - Hierarchical Scope teardown proving child computed notifications halt after `form.dispose()`.
   - Strict path syntax parsing (rejecting empty paths, leading/trailing/repeated dots, unclosed brackets, negative indices, non-integer indices, leading-zero indices, missing separators like `tasks[0]b`, and dot-before-bracket like `a.[0]`).
@@ -59,3 +69,25 @@ The test suite in [`research/form/form-core.test.ts`](./form-core.test.ts) cover
   - Identity-strict dirty consistency between `remove+push` and `setValues shrink+regrow`.
   - Keyed `setValues` reordering matching `keyExtractor` and preserving child Scope / signal state.
   - Deep branch subscription isolation.
+
+---
+
+## 3. F1 + F2 Seam Audit & Re-entrancy Protection
+
+1. **Root Cause of BUG 7 (Blocker Cycle)**:
+   - `FieldArray.setValues(next)` was allocating a fresh `const newItems = [...]` and calling `itemsState.set(newItems)` unconditionally on every reconciliation, even when all items were positionally identical and unchanged in length.
+   - Because `itemsState` received a new array reference, `valuesComputed` marked itself dirty and evaluated, firing `form.values.subscribe` in `bindFormToExternalState`.
+   - This notified `externalState.set`, triggering `externalState.subscribe`, which called `form.setValues` back into `FieldArray.setValues`, creating a synchronous infinite ping-pong loop that never yielded to the event loop.
+   - **Fix**: In both keyed and unkeyed branches of `FieldArray.setValues`, `itemsState.set(newItems)` is called strictly when `hasStructuralChange === true` (length change or changed item reference).
+2. **Deterministic Re-entrancy Depth Counter (Fix for BUG 8)**:
+   - `bindFormToExternalState` implements a true depth counter (`enterSyncDepth` and `exitSyncDepth`).
+   - Every entry increments `syncDepth`. On completion of the sync operation, `finally` calls `exitSyncDepth()` (decrementing `syncDepth`).
+   - If nested synchronous re-entrancy exceeds `MAX_EXTERNAL_SYNC_DEPTH = 50`, `syncDepth` is reset to 0 and throws `new Error("Cyclic synchronisation detected in bindFormToExternalState")`.
+   - Post-throw, `syncDepth` returns to 0 and the bound form remains fully operational for normal synchronisations.
+3. **Audited Seam Combinations (All Verified)**:
+   - External binding + unkeyed array (equal length, grow, shrink to empty `[]`).
+   - External binding + keyed array with `keyExtractor` reordering.
+   - External binding + arrays nested in field groups.
+   - Form-side array mutations (`push`) propagating exactly once to external store.
+   - 200 sequential updates on scalar and alternating array forms.
+   - `form.dispose()` during external binding halting bidirectional propagation.

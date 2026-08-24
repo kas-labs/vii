@@ -85,6 +85,10 @@ export interface DiagnosticsOptions {
 export interface Diagnostics {
   readonly mode: DiagnosticsMode;
   readonly droppedEvents: number;
+  /**
+   * Runs the provided work function synchronously within this diagnostics context.
+   * Asynchronous functions returning thenables or Promises are rejected.
+   */
   run<T>(work: () => T): T;
   recordSecurity(input: SecurityDiagnosticInput): void;
   getEvents(): readonly DiagnosticEvent[];
@@ -103,12 +107,37 @@ export function getActiveDiagnostics(): DiagnosticsRuntime | undefined {
   return activeDiagnostics;
 }
 
+function suppressUnhandledRejection(value: unknown): void {
+  try {
+    if (
+      value !== null &&
+      (typeof value === "object" || typeof value === "function") &&
+      typeof (value as { then?: unknown }).then === "function"
+    ) {
+      Promise.resolve(value).catch(() => {});
+    }
+  } catch {
+    // Ignore defensive suppression failures on hostile thenables
+  }
+}
+
 export function withDiagnostics<T>(diagnostics: DiagnosticsRuntime, work: () => T): T {
   const previousDiagnostics = activeDiagnostics;
   activeDiagnostics = diagnostics;
 
   try {
-    return work();
+    const result = work();
+    if (
+      result !== null &&
+      (typeof result === "object" || typeof result === "function") &&
+      typeof (result as { then?: unknown }).then === "function"
+    ) {
+      suppressUnhandledRejection(result);
+      throw new TypeError(
+        "Diagnostics.run does not support asynchronous execution. Diagnostics context cannot be preserved across await.",
+      );
+    }
+    return result;
   } finally {
     activeDiagnostics = previousDiagnostics;
   }

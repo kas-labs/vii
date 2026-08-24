@@ -24,7 +24,7 @@ export function state<T>(initialValue: T): WritableState<T> {
 
   recordStateEvent(diagnostics, "state.created", stateId, {});
   const dependency: Dependency = {
-    subscribe: (listener) => notifier.subscribe(() => listener()),
+    subscribe: (listener) => notifier.subscribe(() => listener(), { owned: false }),
   };
 
   const setValue = (nextValue: T): void => {

@@ -39,7 +39,19 @@ const ALLOWED_MODES: ReadonlySet<DistributionMode> = new Set(["source", "package
 const FORBIDDEN_KEYS = new Set(["__proto__", "constructor", "prototype"]);
 const DISALLOWED_EXTENSIONS = new Set([".sh", ".bash", ".exe", ".bat", ".cmd", ".ps1", ".vbs"]);
 
-export function sanitizePath(rawPath: string, fieldName: string): string {
+export interface SanitizePathOptions {
+  allowedRoots?: readonly string[] | string[] | undefined;
+}
+
+export interface ManifestValidationOptions {
+  allowedRoots?: readonly string[] | string[] | undefined;
+}
+
+export function sanitizePath(
+  rawPath: string,
+  fieldName: string,
+  options?: SanitizePathOptions,
+): string {
   if (typeof rawPath !== "string" || rawPath.trim().length === 0) {
     throw new ManifestValidationError("Path must be a non-empty string", "EMPTY_PATH", fieldName);
   }
@@ -80,6 +92,55 @@ export function sanitizePath(rawPath: string, fieldName: string): string {
     );
   }
 
+  const cleanSegments = cleaned.split("/");
+
+  if (cleanSegments[0]!.startsWith(".")) {
+    throw new ManifestValidationError(
+      `Root dotfile or hidden directory paths ("${cleanSegments[0]}") are strictly forbidden`,
+      "FORBIDDEN_ROOT_DOTPATH",
+      fieldName,
+    );
+  }
+
+  if (cleanSegments.some((seg) => seg === "node_modules")) {
+    throw new ManifestValidationError(
+      'Paths containing "node_modules" are strictly forbidden',
+      "FORBIDDEN_NODE_MODULES",
+      fieldName,
+    );
+  }
+
+  if (cleanSegments.length === 1) {
+    const fileName = cleanSegments[0]!;
+    if (
+      fileName === "package.json" ||
+      fileName === "package-lock.json" ||
+      fileName === "pnpm-lock.yaml" ||
+      (fileName.startsWith("tsconfig") && fileName.endsWith(".json")) ||
+      fileName.includes(".config.")
+    ) {
+      throw new ManifestValidationError(
+        `Modifying root toolchain configuration file "${fileName}" is strictly forbidden`,
+        "FORBIDDEN_CONFIG_FILE",
+        fieldName,
+      );
+    }
+  }
+
+  if (options?.allowedRoots && options.allowedRoots.length > 0) {
+    const isAllowed = options.allowedRoots.some((root) => {
+      const normRoot = root.replace(/\\/g, "/").replace(/^\/+|\/+$/g, "");
+      return cleaned === normRoot || cleaned.startsWith(`${normRoot}/`);
+    });
+    if (!isAllowed) {
+      throw new ManifestValidationError(
+        `Destination path "${cleaned}" is outside of allowed roots [${options.allowedRoots.join(", ")}]`,
+        "DISALLOWED_ROOT",
+        fieldName,
+      );
+    }
+  }
+
   for (const ext of DISALLOWED_EXTENSIONS) {
     if (cleaned.toLowerCase().endsWith(ext)) {
       throw new ManifestValidationError(
@@ -118,6 +179,7 @@ function validateFileEntry(
   file: unknown,
   index: number,
   seenTargets: Set<string>,
+  options?: ManifestValidationOptions,
 ): RegistryFileEntry {
   if (typeof file !== "object" || file === null) {
     throw new ManifestValidationError(
@@ -137,7 +199,7 @@ function validateFileEntry(
   }
 
   const source = sanitizePath(entry.source ?? "", `files[${index}].source`);
-  const target = sanitizePath(entry.target ?? "", `files[${index}].target`);
+  const target = sanitizePath(entry.target ?? "", `files[${index}].target`, options);
 
   if (seenTargets.has(target)) {
     throw new ManifestValidationError(
@@ -163,7 +225,10 @@ function validateFileEntry(
   };
 }
 
-export function validateRegistryManifest(raw: unknown): RegistryItemManifest {
+export function validateRegistryManifest(
+  raw: unknown,
+  options?: ManifestValidationOptions,
+): RegistryItemManifest {
   checkPrototypePollution(raw);
 
   if (typeof raw !== "object" || raw === null) {
@@ -223,7 +288,7 @@ export function validateRegistryManifest(raw: unknown): RegistryItemManifest {
 
   const seenTargets = new Set<string>();
   const validatedFiles = manifest.files.map((file, idx) =>
-    validateFileEntry(file, idx, seenTargets),
+    validateFileEntry(file, idx, seenTargets, options),
   );
 
   return {

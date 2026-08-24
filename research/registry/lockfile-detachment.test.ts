@@ -65,6 +65,40 @@ describe("Lockfile Management & Source Detachment", () => {
     expect(check2.modifiedFiles).toContain("components/ui/button.tsx");
   });
 
+  it("detects deleted files separately from modified files and marks isModified as true", () => {
+    const lock = recordInstalledItem(createInitialLockState(), manifest, {
+      "button.tsx": { target: "components/ui/button.tsx", integrity: "sha256-btn-hash" },
+      "dialog.tsx": { target: "components/ui/dialog.tsx", integrity: "sha256-dlg-hash" },
+      "icon.tsx": { target: "components/ui/icon.tsx", integrity: "sha256-ico-hash" },
+    });
+
+    // button.tsx is untouched, dialog.tsx is modified, icon.tsx is deleted (missing from disk map)
+    const diskState = {
+      "components/ui/button.tsx": "sha256-btn-hash",
+      "components/ui/dialog.tsx": "sha256-dlg-custom-hash",
+    };
+
+    const check = checkFileModifications(lock.items["button"]!, diskState);
+    expect(check.isModified).toBe(true);
+    expect(check.modifiedFiles).toEqual(["components/ui/dialog.tsx"]);
+    expect((check as any).deletedFiles).toEqual(["components/ui/icon.tsx"]);
+    expect(check.modifiedFiles).not.toContain("components/ui/button.tsx");
+    expect((check as any).deletedFiles).not.toContain("components/ui/button.tsx");
+  });
+
+  it("reports isModified true when only deleted files exist", () => {
+    const lock = recordInstalledItem(createInitialLockState(), manifest, {
+      "button.tsx": { target: "components/ui/button.tsx", integrity: "sha256-original" },
+    });
+
+    // Empty disk - button.tsx was deleted
+    const emptyDisk = {};
+    const check = checkFileModifications(lock.items["button"]!, emptyDisk);
+    expect(check.isModified).toBe(true);
+    expect(check.modifiedFiles).toHaveLength(0);
+    expect((check as any).deletedFiles).toEqual(["components/ui/button.tsx"]);
+  });
+
   it("detaches an item cleanly from the lockfile without deleting local source files", () => {
     let lock = recordInstalledItem(createInitialLockState(), manifest, {
       "button.tsx": { target: "components/ui/button.tsx", integrity: "sha256-hash" },

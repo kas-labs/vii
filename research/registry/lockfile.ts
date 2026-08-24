@@ -117,18 +117,22 @@ export function parseLockfile(raw: string): LockState {
 export function checkFileModifications(
   lockRecord: LockfileItemRecord,
   currentFileHashes: Record<string, string>,
-): { isModified: boolean; modifiedFiles: string[] } {
+): { isModified: boolean; modifiedFiles: string[]; deletedFiles: string[] } {
   const modifiedFiles: string[] = [];
+  const deletedFiles: string[] = [];
 
-  for (const [sourceKey, fileRecord] of Object.entries(lockRecord.files)) {
+  for (const [, fileRecord] of Object.entries(lockRecord.files)) {
     const currentHash = currentFileHashes[fileRecord.target];
-    if (currentHash !== undefined && currentHash !== fileRecord.originalIntegrity) {
+    if (currentHash === undefined) {
+      deletedFiles.push(fileRecord.target);
+    } else if (currentHash !== fileRecord.originalIntegrity) {
       modifiedFiles.push(fileRecord.target);
     }
   }
 
   return {
-    isModified: modifiedFiles.length > 0,
+    isModified: modifiedFiles.length > 0 || deletedFiles.length > 0,
     modifiedFiles,
+    deletedFiles,
   };
 }

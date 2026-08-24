@@ -18,24 +18,34 @@ export function verifyContentIntegrity(
   };
 }
 
-export function computeManifestIntegrity(manifest: RegistryItemManifest): string {
-  const normalized = {
-    schemaVersion: manifest.schemaVersion,
-    name: manifest.name,
-    type: manifest.type,
-    version: manifest.version,
-    target: manifest.target,
-    mode: manifest.mode,
-    files: manifest.files.map((f: RegistryFileEntry) => ({
-      source: f.source,
-      target: f.target,
-      integrity: f.integrity,
-    })),
-    dependencies: manifest.dependencies,
-    tokens: manifest.tokens,
-    capabilities: manifest.capabilities,
-  };
+export function canonicalJsonStringify(value: unknown): string {
+  if (value === undefined) {
+    return "null";
+  }
+  if (
+    value === null ||
+    typeof value === "boolean" ||
+    typeof value === "number" ||
+    typeof value === "string"
+  ) {
+    return JSON.stringify(value);
+  }
+  if (Array.isArray(value)) {
+    const items = value.map((item) => canonicalJsonStringify(item));
+    return `[${items.join(",")}]`;
+  }
+  if (typeof value === "object") {
+    const obj = value as Record<string, unknown>;
+    const keys = Object.keys(obj)
+      .filter((k) => obj[k] !== undefined)
+      .sort();
+    const pairs = keys.map((k) => `${JSON.stringify(k)}:${canonicalJsonStringify(obj[k])}`);
+    return `{${pairs.join(",")}}`;
+  }
+  return JSON.stringify(value);
+}
 
-  const canonicalString = JSON.stringify(normalized, Object.keys(normalized).sort());
+export function computeManifestIntegrity(manifest: RegistryItemManifest): string {
+  const canonicalString = canonicalJsonStringify(manifest);
   return computeSha256(canonicalString);
 }

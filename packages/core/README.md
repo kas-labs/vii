@@ -107,11 +107,13 @@ scope.dispose();
 Subscriptions and Computed values created during `scope.run` are owned by that Scope. `scope.run`
 is strictly synchronous; callbacks returning a thenable or Promise are rejected with a `TypeError`
 because ambient context cannot be preserved across `await`. Resources can also be attached
-explicitly with `scope.use(resource)`; unsubscribe functions are accepted as resources. Child scopes
-are created with `scope.createChild()` and are disposed by their parent. Disposal is synchronous,
-idempotent, and deterministic: resources are cleaned up in reverse registration order. A disposed
-Scope rejects `run`, `use`, and `createChild`. If multiple cleanups fail, `ScopeDisposalError`
-reports all errors after every cleanup has been attempted.
+explicitly with `scope.use(resource)`; unsubscribe functions are accepted as resources. `scope.use`
+returns an idempotent detach handle (`() => void`) that immediately releases the resource from the
+scope so it is not retained in memory or disposed on scope teardown. Child scopes are created with
+`scope.createChild()` and are disposed by their parent. Disposal is synchronous, idempotent, and
+deterministic: resources are cleaned up in reverse registration order. A disposed Scope rejects
+`run`, `use`, and `createChild`. If multiple cleanups fail, `ScopeDisposalError` reports all
+errors after every cleanup has been attempted.
 
 Async disposal, resource transfer, and asynchronous context propagation remain later work. Query,
 UI, adapters, and CLI work also belong to later implementation tasks.

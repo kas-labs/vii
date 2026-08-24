@@ -140,3 +140,18 @@ test("computed evaluated in scope keeps recomputing after scope disposal while u
   expect(observed).toEqual([]);
   expect(c.get()).toBe(20);
 });
+
+test("computed tracks state holding a promise value without throwing", () => {
+  const initialPromise = Promise.resolve(42);
+  const s = state(initialPromise);
+  const c = computed(() => s.get());
+
+  expect(c.get()).toBe(initialPromise);
+});
+
+test("computed tracks plain object with a then method without throwing", () => {
+  const thenableData = { then: () => undefined, name: "user record" };
+  const c = computed(() => thenableData);
+
+  expect(c.get()).toBe(thenableData);
+});

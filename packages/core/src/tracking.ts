@@ -17,17 +17,7 @@ export function withTracker<T>(tracker: DependencyTracker, read: () => T): T {
   activeTracker = tracker;
 
   try {
-    const result = read();
-    if (
-      result !== null &&
-      (typeof result === "object" || typeof result === "function") &&
-      typeof (result as { then?: unknown }).then === "function"
-    ) {
-      throw new TypeError(
-        "Dependency tracking does not support asynchronous execution. Read functions must be synchronous.",
-      );
-    }
-    return result;
+    return read();
   } finally {
     activeTracker = previousTracker;
   }

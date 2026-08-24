@@ -1,6 +1,10 @@
 import { getActiveDiagnostics, withDiagnostics, type DiagnosticsRuntime } from "./diagnostics.js";
 import { withScope, type ScopeContext } from "./scope-context.js";
 
+/**
+ * Disposable resource interface managed by a Scope.
+ * Implementations must ensure `dispose()` is idempotent.
+ */
 export interface ViiResource {
   dispose(): void;
 }
@@ -16,6 +20,10 @@ export interface Scope extends ScopeContext, ViiResource {
    * Asynchronous functions returning thenables or Promises are rejected.
    */
   run<T>(work: () => T): T;
+  /**
+   * Attaches a disposable resource or cleanup function to this scope.
+   * Returns a detach handle that immediately removes the resource from the scope.
+   */
   use(resource: ViiResource | (() => void)): () => void;
   createChild(options?: ScopeOptions): Scope;
 }

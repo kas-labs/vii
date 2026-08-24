@@ -1,5 +1,5 @@
 import { expect, test, vi } from "vitest";
-import { computed, createScope, state, type ViiResource } from "../src/index.js";
+import { computed, createDiagnostics, createScope, state, type ViiResource } from "../src/index.js";
 
 test("scope releases subscriptions created during run", () => {
   const count = state(0);
@@ -100,4 +100,79 @@ test("disposed scope rejects new work and resources", () => {
   expect(() => scope.run(() => undefined)).toThrow("Scope is disposed");
   expect(() => scope.use(() => undefined)).toThrow("Scope is disposed");
   expect(() => scope.createChild()).toThrow("Scope is disposed");
+});
+
+test("self-unsubscribed subscriptions are detached and do not produce resource.disposed events at scope disposal", () => {
+  const diagnostics = createDiagnostics();
+  const s = state(0);
+
+  diagnostics.run(() => {
+    const scope = createScope();
+    scope.run(() => {
+      for (let i = 0; i < 50; i++) {
+        const unsubscribe = s.subscribe(() => {});
+        unsubscribe();
+      }
+    });
+
+    const beforeDisposeEvents = diagnostics.getEvents().slice();
+    scope.dispose();
+    const afterDisposeEvents = diagnostics.getEvents().slice(beforeDisposeEvents.length);
+
+    const disposedResourceEvents = afterDisposeEvents.filter((e) => e.type === "resource.disposed");
+    expect(disposedResourceEvents).toHaveLength(0);
+  });
+});
+
+test("preserves LIFO disposal order when detaches are interleaved with attaches", () => {
+  const events: string[] = [];
+  const scope = createScope();
+
+  scope.use({ dispose: () => events.push("first") });
+  const d2 = scope.use({ dispose: () => events.push("second") });
+  scope.use({ dispose: () => events.push("third") });
+  const d4 = scope.use({ dispose: () => events.push("fourth") });
+
+  d2();
+  d4();
+
+  scope.use({ dispose: () => events.push("fifth") });
+
+  d2();
+
+  scope.dispose();
+
+  expect(events).toEqual(["fifth", "third", "first"]);
+});
+
+test("disposing a scope whose resources detach themselves during teardown does not skip or double-dispose", () => {
+  const events: string[] = [];
+  const scope = createScope();
+
+  let detachFirst = (): void => undefined;
+  let detachSecond = (): void => undefined;
+
+  detachFirst = scope.use({
+    dispose: () => {
+      events.push("first");
+      detachFirst();
+    },
+  });
+
+  detachSecond = scope.use({
+    dispose: () => {
+      events.push("second");
+      detachSecond();
+      detachFirst();
+    },
+  });
+
+  scope.use({
+    dispose: () => {
+      events.push("third");
+    },
+  });
+
+  expect(() => scope.dispose()).not.toThrow();
+  expect(events).toEqual(["third", "second", "first"]);
 });

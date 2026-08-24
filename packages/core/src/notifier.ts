@@ -105,6 +105,8 @@ export function createNotifier<T>(options: NotifierOptions = {}): Notifier<T> {
     subscriptions.push(subscription);
     record("subscription.created", { subscriptionId: subscription.id });
 
+    let detach: (() => void) | undefined;
+
     const unsubscribe = (): void => {
       if (!subscription.active) {
         return;
@@ -116,10 +118,12 @@ export function createNotifier<T>(options: NotifierOptions = {}): Notifier<T> {
         subscriptions.splice(index, 1);
       }
       record("subscription.disposed", { subscriptionId: subscription.id });
+      detach?.();
+      detach = undefined;
     };
 
     if (options.owned !== false) {
-      registerResource({ dispose: unsubscribe });
+      detach = registerResource({ dispose: unsubscribe });
     }
     return unsubscribe;
   };

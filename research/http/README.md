@@ -56,9 +56,12 @@ The purpose of H8 is to research request/response lifecycle hooks (`onRequest`, 
    - `parseJsonEventStream`: Typed JSON event deserialization with `HttpParseError` on invalid payloads.
    - Client helpers: `client.stream()`, `client.streamLines()`, `client.streamEvents()`, `client.streamJsonEvents()`.
 10. **SSR Security & SSRF Defenses (H7)**:
-    - **Private IP / SSRF Filtering**: Accurate detection and restriction of RFC 1918, RFC 3927 (Link-Local / AWS & GCP metadata `169.254.169.254`), Loopback (`127.0.0.0/8`, `::1`, `localhost`), and IPv6 Unique-Local (`fc00::/7`).
-    - **Host Policy Enforcement**: Configurable `allowedHosts` (wildcards and RegExp) and `blockedHosts`.
-    - **Cross-Origin Sensitive Header Sanitization**: `stripSensitiveHeaders` removes `Authorization`, `Cookie`, `X-Api-Key`, etc. when traversing cross-origin boundaries.
+    - **Private IP / SSRF Filtering**: Accurate detection and restriction of RFC 1918, RFC 3927 (Link-Local / AWS & GCP metadata `169.254.169.254`), Loopback (`127.0.0.0/8`, `::1`, `localhost`), IPv6 Unique-Local (`fc00::/7`), Link-Local (`fe80::/10`), Multicast (`ff00::/8`, `224.0.0.0/4`), Reserved (`240.0.0.0/4`, `255.255.255.255`), NAT64 (`64:ff9b::/96`), IPv4-mapped (`::ffff:0:0/96`), and IPv4-compatible (`::/96`) ranges.
+    - **Fail-Closed Default**: Supplying any `SecurityPolicy` object defaults `allowPrivateNetworks` to `false` (fail-closed SSRF protection) unless explicitly set to `true`. If no security policy object is configured, no security checks run.
+    - **Protocol Allowlist**: Enforces `allowedProtocols` (defaulting to `["http:", "https:"]`). Disallowed schemes (e.g. `file:`, `data:`, `gopher:`, `ws:`) are rejected pre-flight with `HttpSecurityError`.
+    - **Client-Side Redirect Security**: When a `security` policy is configured, the client takes over redirect traversal (`redirect: "manual"`), validating `validateUrlSecurity` on every hop, capping redirect hops (default 20, policy-configurable via `maxRedirects`), and enforcing WHATWG method/body transitions.
+    - **Cross-Origin Sensitive Header Sanitization**: `stripSensitiveHeaders` automatically removes `Authorization`, `Cookie`, `Proxy-Authorization`, `X-Api-Key`, `X-Auth-Token`, etc. when traversing cross-origin redirect hops.
+    - **DNS Limitation Notice**: URL security checks are performed on the URL string/hostname before transport socket resolution. They do not perform DNS lookups or prevent DNS rebinding attacks at the transport/socket level.
     - **Pre-flight Enforcement**: Disallowed requests fail immediately with `HttpSecurityError` prior to socket or network initialization.
 11. **Observability, Tracing & Metrics (H8)**:
     - **W3C Trace Context / OpenTelemetry**: Auto-generation and propagation of `traceparent` (`00-${traceId}-${spanId}-${flags}`).

@@ -211,4 +211,117 @@ describe("Retry & Idempotency Engine (H5)", () => {
     await expect(requestPromise).rejects.toSatisfy(isAbortError);
     expect(mockFetch).toHaveBeenCalledTimes(1);
   });
+
+  it("delivers the exact same body across multiple retry attempts on PUT requests", async () => {
+    const receivedBodies: string[] = [];
+    const mockFetch = vi.fn().mockImplementation(async (_url: string, req: Request) => {
+      const body = await req.text();
+      receivedBodies.push(body);
+      if (receivedBodies.length < 3) {
+        return new Response("Service Unavailable", { status: 503 });
+      }
+      return new Response("Updated", { status: 200 });
+    });
+
+    const client = createHttpClient({
+      fetch: mockFetch,
+      retry: {
+        maxRetries: 2,
+        backoffBaseMs: 10,
+        jitter: false,
+      },
+    });
+
+    const response = await client.put("https://api.example.com/items/1", {
+      body: "payload-to-retry",
+    });
+
+    expect(response.status).toBe(200);
+    expect(mockFetch).toHaveBeenCalledTimes(3);
+    expect(receivedBodies).toEqual(["payload-to-retry", "payload-to-retry", "payload-to-retry"]);
+  });
+
+  it("fails fast with typed error when retrying a non-replayable stream body", async () => {
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode("stream data"));
+        controller.close();
+      },
+    });
+
+    const mockFetch = vi
+      .fn()
+      .mockResolvedValue(new Response("Service Unavailable", { status: 503 }));
+
+    const client = createHttpClient({
+      fetch: mockFetch,
+      retry: {
+        maxRetries: 2,
+        backoffBaseMs: 10,
+      },
+    });
+
+    await expect(
+      client.put("https://api.example.com/upload", {
+        body: stream,
+        headers: { "Content-Type": "application/octet-stream" },
+      }),
+    ).rejects.toThrow(/non-replayable stream body/);
+  });
+
+  it("clamps large or hostile Retry-After delays to backoffMaxMs", async () => {
+    let callCount = 0;
+    const mockFetch = vi.fn().mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) {
+        return Promise.resolve(
+          new Response("Too Many Requests", {
+            status: 429,
+            headers: { "Retry-After": "999999999" }, // ~31 years
+          }),
+        );
+      }
+      return Promise.resolve(new Response("ok", { status: 200 }));
+    });
+
+    const client = createHttpClient({
+      fetch: mockFetch,
+      retry: {
+        maxRetries: 1,
+        backoffBaseMs: 10,
+        backoffMaxMs: 50,
+        jitter: false,
+      },
+    });
+
+    const start = Date.now();
+    const response = await client.get("https://api.example.com/hostile-retry-after");
+    const elapsed = Date.now() - start;
+
+    expect(response.status).toBe(200);
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    expect(elapsed).toBeLessThan(1000);
+  });
+
+  it("does not allow retryCondition to override non-idempotent methods like POST", async () => {
+    const mockFetch = vi.fn().mockResolvedValue(new Response("Internal Error", { status: 500 }));
+
+    const customCondition = vi.fn().mockReturnValue(true);
+
+    const client = createHttpClient({
+      fetch: mockFetch,
+      throwOnError: true,
+      retry: {
+        maxRetries: 2,
+        backoffBaseMs: 10,
+        retryCondition: customCondition,
+      },
+    });
+
+    await expect(
+      client.post("https://api.example.com/orders", { body: "order-1" }),
+    ).rejects.toThrow(HttpStatusError);
+
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
 });

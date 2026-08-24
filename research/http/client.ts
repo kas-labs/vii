@@ -11,13 +11,19 @@ import {
   isAbortError,
   isTimeoutError,
 } from "./cancellation.js";
-import { HttpError, HttpParseError, HttpStatusError, NetworkError } from "./errors.js";
+import {
+  HttpError,
+  HttpParseError,
+  HttpSecurityError,
+  HttpStatusError,
+  NetworkError,
+} from "./errors.js";
 import { mergeHeaders } from "./headers.js";
 import { formatTraceparent, generateSpanId, generateTraceId } from "./observability.js";
 import { composeMiddleware } from "./pipeline.js";
 import { executeWithRetry } from "./retry.js";
 import { validatePayload } from "./schema.js";
-import { validateUrlSecurity } from "./security.js";
+import { stripSensitiveHeaders, validateUrlSecurity } from "./security.js";
 import {
   iterateLines,
   iterateStream,
@@ -30,6 +36,7 @@ import type {
   HttpClient,
   HttpClientConfig,
   HttpHandler,
+  HttpMethod,
   HttpRequestContext,
   HttpRequestOptions,
 } from "./types.js";
@@ -105,6 +112,13 @@ class HttpClientImpl implements HttpClient {
 
     if (options.body !== undefined && options.body !== null) {
       init.body = options.body;
+      if (
+        typeof options.body === "object" &&
+        options.body !== null &&
+        typeof (options.body as ReadableStream).getReader === "function"
+      ) {
+        (init as unknown as { duplex?: string }).duplex = "half";
+      }
     }
     if (activeSignal !== undefined) {
       init.signal = activeSignal;
@@ -174,7 +188,114 @@ class HttpClientImpl implements HttpClient {
 
     let response: Response;
     try {
-      response = await executeWithRetry(request, handler, context, effectiveRetry);
+      if (effectiveSecurity !== undefined) {
+        let currentUrl = new URL(resolvedUrl);
+        let currentHeaders = new Headers(headers);
+        let currentMethod = method.toUpperCase() as HttpMethod;
+        let currentBody = options.body;
+        let redirectCount = 0;
+        const maxRedirects = effectiveSecurity.maxRedirects ?? 20;
+
+        while (true) {
+          validateUrlSecurity(currentUrl, effectiveSecurity);
+
+          const hopInit: RequestInit = {
+            method: currentMethod,
+            headers: currentHeaders,
+            redirect: "manual",
+          };
+
+          if (currentBody !== undefined && currentBody !== null) {
+            hopInit.body = currentBody;
+            if (
+              typeof currentBody === "object" &&
+              currentBody !== null &&
+              typeof (currentBody as ReadableStream).getReader === "function"
+            ) {
+              (hopInit as unknown as { duplex?: string }).duplex = "half";
+            }
+          }
+          if (activeSignal !== undefined) {
+            hopInit.signal = activeSignal;
+          }
+          if (options.cache !== undefined) hopInit.cache = options.cache;
+          if (options.credentials !== undefined) hopInit.credentials = options.credentials;
+          if (options.integrity !== undefined) hopInit.integrity = options.integrity;
+          if (options.keepalive !== undefined) hopInit.keepalive = options.keepalive;
+          if (options.mode !== undefined) hopInit.mode = options.mode;
+          if (options.referrer !== undefined) hopInit.referrer = options.referrer;
+          if (options.referrerPolicy !== undefined) hopInit.referrerPolicy = options.referrerPolicy;
+
+          const hopRequest = new Request(currentUrl, hopInit);
+          response = await executeWithRetry(
+            hopRequest,
+            handler,
+            context,
+            effectiveRetry,
+            currentBody,
+          );
+
+          const isRedirect = [301, 302, 303, 307, 308].includes(response.status);
+          const location = response.headers.get("location");
+
+          if (isRedirect && location) {
+            redirectCount++;
+            if (redirectCount > maxRedirects) {
+              throw new HttpSecurityError("Maximum redirect limit exceeded", {
+                url: currentUrl.href,
+                reason: "max_redirects",
+              });
+            }
+
+            const nextUrl = new URL(location, currentUrl);
+            validateUrlSecurity(nextUrl, effectiveSecurity);
+
+            currentHeaders = stripSensitiveHeaders(
+              currentHeaders,
+              currentUrl,
+              nextUrl,
+              effectiveSecurity.stripHeadersOnRedirect,
+            );
+
+            if (response.status === 303) {
+              currentMethod = "GET";
+              currentBody = undefined;
+              currentHeaders.delete("content-type");
+              currentHeaders.delete("content-length");
+            } else if (
+              (response.status === 301 || response.status === 302) &&
+              currentMethod === "POST"
+            ) {
+              currentMethod = "GET";
+              currentBody = undefined;
+              currentHeaders.delete("content-type");
+              currentHeaders.delete("content-length");
+            } else {
+              if (
+                currentBody !== undefined &&
+                currentBody !== null &&
+                typeof currentBody === "object" &&
+                typeof (currentBody as ReadableStream).getReader === "function"
+              ) {
+                throw new HttpSecurityError(
+                  "Cannot follow redirect preserving non-replayable stream body",
+                  {
+                    url: nextUrl.href,
+                    reason: "non_replayable_stream",
+                  },
+                );
+              }
+            }
+
+            currentUrl = nextUrl;
+            continue;
+          }
+
+          break;
+        }
+      } else {
+        response = await executeWithRetry(request, handler, context, effectiveRetry, options.body);
+      }
     } catch (err) {
       const endTime = typeof performance !== "undefined" ? performance.now() : Date.now();
       const durationMs = Math.max(0, endTime - startTime);

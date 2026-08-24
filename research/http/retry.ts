@@ -5,7 +5,7 @@
  */
 
 import { isAbortError, isTimeoutError } from "./cancellation.js";
-import { isHttpStatusError, isNetworkError } from "./errors.js";
+import { HttpError, isHttpStatusError, isNetworkError } from "./errors.js";
 import type { HttpHandler, HttpMethod, HttpRequestContext } from "./types.js";
 
 export interface RetryPolicy {
@@ -50,11 +50,14 @@ export function parseRetryAfter(
   const trimmed = headerValue.trim();
   if (/^\d+$/.test(trimmed)) {
     const seconds = parseInt(trimmed, 10);
-    return Math.max(0, seconds * 1000);
+    if (!Number.isFinite(seconds) || seconds < 0) {
+      return undefined;
+    }
+    return seconds * 1000;
   }
 
   const parsedDate = Date.parse(trimmed);
-  if (!Number.isNaN(parsedDate)) {
+  if (!Number.isNaN(parsedDate) && Number.isFinite(parsedDate)) {
     return Math.max(0, parsedDate - now);
   }
 
@@ -127,6 +130,7 @@ export async function executeWithRetry(
   handler: HttpHandler,
   context: HttpRequestContext,
   configPolicy?: RetryPolicy | number | boolean,
+  bodySource?: unknown,
 ): Promise<Response> {
   const policy = normalizeRetryPolicy(configPolicy);
   if (!policy) {
@@ -137,6 +141,7 @@ export async function executeWithRetry(
   const retryStatuses = policy.retryOnStatus ?? DEFAULT_RETRY_STATUSES;
   const retryMethods = policy.retryOnMethods ?? DEFAULT_IDEMPOTENT_METHODS;
   const retryOnNetwork = policy.retryOnNetworkError ?? true;
+  const maxBackoff = policy.backoffMaxMs ?? DEFAULT_BACKOFF_MAX_MS;
 
   let attempt = 0;
 
@@ -144,8 +149,30 @@ export async function executeWithRetry(
     attempt++;
     context["retryAttempt"] = attempt;
 
+    let attemptRequest: Request;
+    if (request.body === null) {
+      attemptRequest = request.clone();
+    } else {
+      if (request.bodyUsed) {
+        throw new HttpError("Cannot retry request with already consumed body", {
+          cause: undefined,
+        });
+      }
+      if (
+        bodySource !== undefined &&
+        bodySource !== null &&
+        typeof bodySource === "object" &&
+        typeof (bodySource as ReadableStream).getReader === "function"
+      ) {
+        throw new HttpError("Cannot retry request with non-replayable stream body", {
+          cause: undefined,
+        });
+      }
+      attemptRequest = request.clone();
+    }
+
     try {
-      const response = await handler(request);
+      const response = await handler(attemptRequest);
 
       if (!response.ok && attempt <= maxRetries) {
         const method = request.method.toUpperCase() as HttpMethod;
@@ -153,14 +180,17 @@ export async function executeWithRetry(
 
         let isEligible = isMethodAllowed && retryStatuses.includes(response.status);
 
-        if (policy.retryCondition) {
+        if (isEligible && policy.retryCondition) {
           isEligible = await policy.retryCondition(response, attempt, request);
         }
 
         if (isEligible) {
           const retryAfterHeader = response.headers.get("retry-after");
           const serverDelay = parseRetryAfter(retryAfterHeader);
-          const delay = serverDelay ?? calculateBackoff(attempt, policy);
+          const delay =
+            serverDelay !== undefined
+              ? Math.min(maxBackoff, Math.max(0, serverDelay))
+              : calculateBackoff(attempt, policy);
 
           await sleepWithSignal(delay, request.signal);
           continue;
@@ -182,7 +212,7 @@ export async function executeWithRetry(
           isEligible = isMethodAllowed && retryStatuses.includes(err.status);
         }
 
-        if (policy.retryCondition) {
+        if (isEligible && policy.retryCondition) {
           isEligible = await policy.retryCondition(err, attempt, request);
         }
 

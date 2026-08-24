@@ -4,11 +4,11 @@ Status: Research direction
 
 ## Purpose
 
-Vii should learn from strong ideas across Angular, React, Vue, TanStack, Zod, Valibot, ArkType, TypeBox, Ajv, Analog, Vite, Vitest, and other modern ecosystems without becoming a collection of rewritten infrastructure projects.
+Vii should learn from strong ideas across Angular, React, Vue, TanStack, Zod, Valibot, ArkType, TypeBox, Ajv, Analog, Vite, Vitest, MCP, modern AI SDKs, and other ecosystems without becoming a collection of rewritten infrastructure projects.
 
 The guiding rule is:
 
-> Own Vii semantics. Reuse mature engines behind replaceable boundaries.
+> Own Vii semantics. Reuse mature engines and protocols behind replaceable boundaries.
 
 Vii should create a new capability only when it adds distinct product value, uses the shared Vii State, Scope, lifecycle, diagnostics, compatibility, and security model where appropriate, and has a real consumer or roadmap trigger.
 
@@ -41,7 +41,9 @@ Default examples:
 - do not create a replacement for Vitest solely to have a Vii test runner;
 - do not create a browser automation engine instead of using Playwright or equivalent mature tooling;
 - do not create a deployment runtime before application-framework semantics require one;
-- do not fork framework semantics into React, Angular, and Vue specific copies.
+- do not fork framework semantics into React, Angular, and Vue specific copies;
+- do not create a proprietary MCP replacement when the standard protocol satisfies interoperability needs;
+- do not create an LLM, model host, or mandatory agent runtime merely to add an AI product surface.
 
 A future Vii CLI may provide one user-facing command while delegating to mature engines. Engine choice must remain an implementation boundary rather than a Vii runtime semantic.
 
@@ -63,7 +65,9 @@ Examples:
 - Ky informs a small modern Fetch-based client surface;
 - Angular template control-flow blocks inform compiler-level conditional, loop, empty, and switch semantics;
 - Analog informs the value of a cohesive framework experience built by orchestrating mature lower-level tools;
-- Vitest informs a Vite-aware test experience that reuses rather than duplicates build transforms.
+- Vitest informs a Vite-aware test experience that reuses rather than duplicates build transforms;
+- MCP informs standardized tool/resource/application interoperability, protocol versioning, extension boundaries, stateless HTTP deployment, and schema-driven tool contracts;
+- modern AI SDKs inform provider adapters, streaming, structured output, tool invocation, agent loops, budgets, and eval requirements without requiring Vii to adopt one provider or agent runtime.
 
 Vii should copy neither names nor syntax automatically. A Vii API or language feature must be justified by Vii's own ergonomics, performance, compatibility, security, accessibility, and maintenance requirements.
 
@@ -75,6 +79,7 @@ Vii Core
         |
         +--> application contracts
         |      Schema (research)
+        |      Codec / Contracts (research)
         |
         +--> application modules
         |      Query
@@ -86,12 +91,19 @@ Vii Core
         |      React
         |      Angular
         |      Vue
+        |      future mobile/server/platform adapters
         |
         +--> native framework research
         |      Component IR
         |      template control flow
         |      renderer
         |      SSR / hydration
+        |
+        +--> optional AI integrations
+        |      model-provider adapters
+        |      structured output
+        |      MCP adapters / tools
+        |      agent/workflow research
         |
         +--> tooling
                Vii CLI
@@ -100,7 +112,7 @@ Vii Core
                optional Bun / Rspack adapters
 ```
 
-The arrows point outward. Tooling, frameworks, application modules, schema providers, and host runtimes must not become hidden dependencies of Core.
+The arrows point outward. Tooling, frameworks, application modules, schema providers, host runtimes, model providers, MCP SDKs, and agent runtimes must not become hidden dependencies of Core.
 
 ## Toolchain strategy
 
@@ -121,7 +133,9 @@ A future `@vii-labs/testing` tool package may add Vii-specific helpers such as:
 - adapter compliance utilities;
 - Schema boundary and malicious-input fixtures if Schema graduates;
 - Form and Query contract fixtures;
-- SSR isolation fixtures.
+- SSR isolation fixtures;
+- AI structured-output and tool-contract fixtures if AI integrations graduate;
+- agent cancellation, budget, approval, and side-effect policy fixtures if agent research graduates.
 
 It should use or integrate with mature test runners rather than duplicate their runner, worker, mocking, snapshot, coverage, and watch-mode infrastructure.
 
@@ -147,6 +161,48 @@ vii check
 ```
 
 while internally delegating build, test, and browser execution to the selected engines. Users should not need to understand the engine boundary for ordinary work, but advanced users must be able to inspect and configure it.
+
+## AI and MCP direction
+
+AI is an optional ecosystem direction, not a Core concern.
+
+The preferred layering is:
+
+```text
+Vii deterministic foundations
+        |
+provider-neutral AI contracts
+        |
+model/provider adapters
+        |
+MCP / tools / retrieval / structured output
+        |
+agents / workflows / Assistant
+```
+
+Research should reuse existing semantics where they fit:
+
+- Scope for ownership and disposal of model/tool/agent executions;
+- AbortSignal-compatible cancellation;
+- Task for one owned asynchronous execution;
+- Flow for temporal streaming/event sequences where semantics match;
+- Schema/Codec for structured model output and portable tool contracts;
+- Contracts for client/server/tool operation boundaries;
+- Diagnostics for causal structure without raw sensitive payloads by default.
+
+MCP should be treated as an external interoperability protocol behind an adapter. Vii should prefer the official SDK/specification over reimplementing transport, authorization, version negotiation, or extension semantics.
+
+AI-specific stop rules:
+
+- no model SDK dependency in Core;
+- no provider-specific types in framework-neutral contracts unless isolated behind an adapter;
+- no model output trusted without explicit validation at security/data boundaries;
+- no hidden autonomous side effects;
+- no unbounded agent loops, tool concurrency, context retention, or token consumption;
+- no Diagnostics capture of prompts, secrets, personal data, or full tool payloads by default;
+- no AI feature may make deterministic Vii runtime behavior unavailable offline unless the application explicitly opts into that remote dependency.
+
+See `ECOSYSTEM_EVOLUTION_VISION.md` for the non-committed long-term platform and AI map.
 
 ## Schema direction
 
@@ -232,13 +288,13 @@ Before a new module moves from Research to Planned, it must answer:
 1. What repeated developer problem does this solve?
 2. Why does integration with Vii State, Scope, diagnostics, application boundaries, or adapters create a meaningful advantage?
 3. Is there a real application or package consumer?
-4. Can an existing mature library solve the need without losing important Vii semantics?
+4. Can an existing mature library, engine, SDK, or protocol solve the need without losing important Vii semantics?
 5. What is the smallest public contract?
-6. What is the bundle, memory, execution, and type-check budget?
+6. What is the bundle, memory, execution, network, and type-check budget?
 7. What lifecycle and cancellation behavior is required?
 8. What compatibility matrix is promised?
-9. What security, privacy, and accessibility boundaries apply?
-10. What test and benchmark evidence is required?
+9. What security, privacy, accessibility, authorization, and approval boundaries apply?
+10. What test, benchmark, and where relevant AI-evaluation evidence is required?
 11. What maintenance burden does Vii accept?
 12. Can the capability remain optional and tree-shakable?
 
@@ -248,13 +304,13 @@ If the answers are weak, keep the work in Research or use an integration instead
 
 Stop or defer a capability when:
 
-- it duplicates a mature engine or library without distinct Vii value;
+- it duplicates a mature engine, protocol, SDK, or library without distinct Vii value;
 - implementation would delay committed Core and adapter milestones;
 - there is no real consumer;
 - the public API cannot remain small and explainable;
-- security, accessibility, performance, compatibility, or type-system evidence is insufficient;
+- security, privacy, accessibility, performance, compatibility, type-system, or AI-evaluation evidence is insufficient;
 - the maintenance surface is larger than the validated user benefit;
-- the capability forces Vii Core to depend on framework, build, package-manager, network, schema-provider, or UI-specific code.
+- the capability forces Vii Core to depend on framework, build, package-manager, network, schema-provider, UI-specific, model-provider, MCP, or agent-runtime code.
 
 ## Primary references
 
@@ -278,5 +334,6 @@ The research direction should be revalidated against current primary documentati
 - Analog: https://analogjs.org/
 - Vite: https://vite.dev/
 - Vitest: https://vitest.dev/
+- Model Context Protocol: https://modelcontextprotocol.io/
 
 These references are research inputs, not Vii dependencies or compatibility promises.

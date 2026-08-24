@@ -44,7 +44,7 @@ export function isPrivateIpv4(ip: string): boolean {
     return false;
   }
 
-  const [p0, p1] = parts as [number, number, number, number];
+  const [p0, p1, p2] = parts as [number, number, number, number];
 
   // 0.0.0.0/8 (Current network RFC 1122)
   if (p0 === 0) return true;
@@ -65,7 +65,10 @@ export function isPrivateIpv4(ip: string): boolean {
   if (p0 === 172 && p1 >= 16 && p1 <= 31) return true;
 
   // 192.0.0.0/24 (IETF Protocol Assignments RFC 6890)
-  if (p0 === 192 && p1 === 0) return true;
+  if (p0 === 192 && p1 === 0 && p2 === 0) return true;
+
+  // 192.0.2.0/24 (TEST-NET-1 RFC 5737)
+  if (p0 === 192 && p1 === 0 && p2 === 2) return true;
 
   // 192.168.0.0/16 (Private-Use RFC 1918)
   if (p0 === 192 && p1 === 168) return true;
@@ -74,10 +77,10 @@ export function isPrivateIpv4(ip: string): boolean {
   if (p0 === 198 && (p1 === 18 || p1 === 19)) return true;
 
   // 198.51.100.0/24 (TEST-NET-2 RFC 5737)
-  if (p0 === 198 && p1 === 51) return true;
+  if (p0 === 198 && p1 === 51 && p2 === 100) return true;
 
   // 203.0.113.0/24 (TEST-NET-3 RFC 5737)
-  if (p0 === 203 && p1 === 0) return true;
+  if (p0 === 203 && p1 === 0 && p2 === 113) return true;
 
   // 224.0.0.0/4 (Multicast RFC 5771: 224.0.0.0 - 239.255.255.255)
   if (p0 >= 224 && p0 <= 239) return true;

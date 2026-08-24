@@ -30,12 +30,23 @@ describe("Private Network & SSRF Defenses (H7)", () => {
     expect(isPrivateIpv4("0.0.0.0")).toBe(true);
     expect(isPrivateIpv4("100.64.0.1")).toBe(true);
 
+    // Reserved / Special-Purpose RFC ranges
+    expect(isPrivateIpv4("192.0.0.1")).toBe(true);
+    expect(isPrivateIpv4("192.0.2.1")).toBe(true);
+    expect(isPrivateIpv4("198.51.100.1")).toBe(true);
+    expect(isPrivateIpv4("203.0.113.1")).toBe(true);
+    expect(isPrivateIpv4("224.0.0.1")).toBe(true);
+    expect(isPrivateIpv4("240.0.0.1")).toBe(true);
+
     // Public IPv4 addresses
     expect(isPrivateIpv4("8.8.8.8")).toBe(false);
     expect(isPrivateIpv4("1.1.1.1")).toBe(false);
     expect(isPrivateIpv4("172.15.255.255")).toBe(false);
     expect(isPrivateIpv4("172.32.0.1")).toBe(false);
     expect(isPrivateIpv4("93.184.216.34")).toBe(false);
+    expect(isPrivateIpv4("192.0.32.1")).toBe(false);
+    expect(isPrivateIpv4("198.51.99.1")).toBe(false);
+    expect(isPrivateIpv4("203.0.55.1")).toBe(false);
   });
 
   it("classifies private and restricted IPv6 addresses accurately", () => {
@@ -364,5 +375,24 @@ describe("Private Network & SSRF Defenses (H7)", () => {
       /Maximum redirect limit exceeded/,
     );
     expect(mockFetch).toHaveBeenCalledTimes(4); // initial + 3 redirects
+  });
+
+  it("accurately narrows /24 reserved ranges without blocking valid public IPs in the same /16", () => {
+    const policy = { allowPrivateNetworks: false };
+
+    // 192.0.0.0/24 (RFC 6890) vs 192.0.32.0/19 (Allocated)
+    expect(() => validateUrlSecurity("https://192.0.0.1/", policy)).toThrow(HttpSecurityError);
+    expect(() => validateUrlSecurity("https://192.0.32.1/", policy)).not.toThrow();
+
+    // 192.0.2.0/24 (RFC 5737 TEST-NET-1)
+    expect(() => validateUrlSecurity("https://192.0.2.1/", policy)).toThrow(HttpSecurityError);
+
+    // 198.51.100.0/24 (RFC 5737 TEST-NET-2) vs 198.51.99.1 (Allocated)
+    expect(() => validateUrlSecurity("https://198.51.100.1/", policy)).toThrow(HttpSecurityError);
+    expect(() => validateUrlSecurity("https://198.51.99.1/", policy)).not.toThrow();
+
+    // 203.0.113.0/24 (RFC 5737 TEST-NET-3) vs 203.0.55.1 (APNIC Allocated)
+    expect(() => validateUrlSecurity("https://203.0.113.1/", policy)).toThrow(HttpSecurityError);
+    expect(() => validateUrlSecurity("https://203.0.55.1/", policy)).not.toThrow();
   });
 });

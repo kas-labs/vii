@@ -414,3 +414,34 @@ test("diagnostics.run rejects asynchronous callbacks and throws clear error", ()
     /Diagnostics\.run does not support asynchronous execution/,
   );
 });
+
+test("diagnostics.run suppresses unhandled rejections from abandoned rejected promises", async () => {
+  const diagnostics = createDiagnostics();
+  const unhandled: unknown[] = [];
+  const onUnhandled = (reason: unknown): void => {
+    unhandled.push(reason);
+  };
+  const processHost = (
+    globalThis as unknown as {
+      process?: {
+        on(event: string, listener: (reason: unknown) => void): void;
+        removeListener(event: string, listener: (reason: unknown) => void): void;
+      };
+    }
+  ).process;
+
+  processHost?.on("unhandledRejection", onUnhandled);
+
+  try {
+    expect(() => {
+      diagnostics.run(async () => {
+        throw new Error("async diagnostics work failed");
+      });
+    }).toThrow(/Diagnostics\.run does not support asynchronous execution/);
+
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(unhandled).toEqual([]);
+  } finally {
+    processHost?.removeListener("unhandledRejection", onUnhandled);
+  }
+});

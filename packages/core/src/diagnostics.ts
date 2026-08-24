@@ -107,6 +107,20 @@ export function getActiveDiagnostics(): DiagnosticsRuntime | undefined {
   return activeDiagnostics;
 }
 
+function suppressUnhandledRejection(value: unknown): void {
+  try {
+    if (
+      value !== null &&
+      (typeof value === "object" || typeof value === "function") &&
+      typeof (value as { then?: unknown }).then === "function"
+    ) {
+      Promise.resolve(value).catch(() => {});
+    }
+  } catch {
+    // Ignore defensive suppression failures on hostile thenables
+  }
+}
+
 export function withDiagnostics<T>(diagnostics: DiagnosticsRuntime, work: () => T): T {
   const previousDiagnostics = activeDiagnostics;
   activeDiagnostics = diagnostics;
@@ -118,6 +132,7 @@ export function withDiagnostics<T>(diagnostics: DiagnosticsRuntime, work: () => 
       (typeof result === "object" || typeof result === "function") &&
       typeof (result as { then?: unknown }).then === "function"
     ) {
+      suppressUnhandledRejection(result);
       throw new TypeError(
         "Diagnostics.run does not support asynchronous execution. Diagnostics context cannot be preserved across await.",
       );

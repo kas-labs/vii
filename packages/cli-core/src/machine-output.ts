@@ -1,3 +1,4 @@
+import path from "node:path";
 import type {
   AddStateResult,
   DoctorResult,
@@ -13,6 +14,13 @@ export const CLI_MACHINE_OUTPUT_VERSION = 1 as const;
 
 export type MachineCommand = "init" | "add state" | "doctor";
 export type MachineMutationStatus = InitReportStatus | AddStateReportStatus;
+
+export interface MachineOutputOptions {
+  /**
+   * If true, redacts absolute filesystem paths to relative roots (".").
+   */
+  readonly redactPaths?: boolean;
+}
 
 interface MachineOutputBase {
   readonly command: MachineCommand;
@@ -41,18 +49,30 @@ export interface MachineDoctorOutput extends MachineOutputBase {
 
 export type MachineOutput = MachineMutationOutput | MachineDoctorOutput;
 
-export function createMachineOutput(command: "init", result: InitResult): MachineMutationOutput;
+export function createMachineOutput(
+  command: "init",
+  result: InitResult,
+  options?: MachineOutputOptions,
+): MachineMutationOutput;
 export function createMachineOutput(
   command: "add state",
   result: AddStateResult,
+  options?: MachineOutputOptions,
 ): MachineMutationOutput;
-export function createMachineOutput(command: "doctor", result: DoctorResult): MachineDoctorOutput;
+export function createMachineOutput(
+  command: "doctor",
+  result: DoctorResult,
+  options?: MachineOutputOptions,
+): MachineDoctorOutput;
 export function createMachineOutput(
   command: MachineCommand,
   result: InitResult | AddStateResult | DoctorResult,
+  options: MachineOutputOptions = {},
 ): MachineOutput {
+  const detection = options.redactPaths ? redactDetectionPaths(result.detection) : result.detection;
+
   const base = {
-    detection: result.detection,
+    detection,
     phases: result.phases,
     protocol: CLI_MACHINE_OUTPUT_PROTOCOL,
     version: CLI_MACHINE_OUTPUT_VERSION,
@@ -81,6 +101,28 @@ export function createMachineOutput(
   };
 }
 
-export function stringifyMachineOutput(output: MachineOutput): string {
+export function stringifyMachineOutput(
+  output: MachineOutput,
+  options: MachineOutputOptions = {},
+): string {
+  if (options.redactPaths) {
+    const redactedOutput = {
+      ...output,
+      detection: redactDetectionPaths(output.detection),
+    };
+    return JSON.stringify(redactedOutput);
+  }
   return JSON.stringify(output);
+}
+
+function redactDetectionPaths(detection: DetectedProject): DetectedProject {
+  const root = ".";
+  return {
+    ...detection,
+    root,
+    projects: (detection.projects ?? []).map((proj) => ({
+      ...proj,
+      root: path.relative(detection.root, proj.root) || ".",
+    })),
+  };
 }

@@ -1,4 +1,4 @@
-import { lstat, writeFile } from "node:fs/promises";
+import { lstat, realpath, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { detectProject } from "./detect-project.js";
 import { inspectExistingFile, type ExistingFileInspection } from "./project-files.js";
@@ -36,6 +36,16 @@ export async function addState(
   let applied = false;
 
   if (!blocked && !options.dryRun && files.length > 0) {
+    const srcDir = path.dirname(target);
+    const [realRoot, realSrc] = await Promise.all([realpath(detection.root), realpath(srcDir)]);
+    const relative = path.relative(realRoot, realSrc);
+    if (relative !== "src") {
+      throw new Error("Security violation: source directory escapes project root");
+    }
+    const srcStat = await lstat(srcDir);
+    if (srcStat.isSymbolicLink() || !srcStat.isDirectory()) {
+      throw new Error("Security violation: source directory is not a safe directory");
+    }
     await writeFile(target, expectedContent, { encoding: "utf8", flag: "wx" });
     applied = true;
   }

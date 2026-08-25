@@ -145,6 +145,26 @@ test("machine output preserves a blocked add state result", async () => {
   }
 });
 
+test("machine output redacts absolute filesystem paths when redactPaths is enabled", async () => {
+  const root = await createFixture({
+    "package.json": JSON.stringify({ dependencies: { "@vii-labs/core": "0.0.0" } }),
+    "package-lock.json": "lockfile\n",
+    "src/main.ts": "export {};\n",
+    "tsconfig.json": "{}\n",
+  });
+
+  try {
+    const result = await doctorProject(root);
+    const output = createMachineOutput("doctor", result, { redactPaths: true });
+
+    expect(output.detection.root).toBe(".");
+    const serialized = stringifyMachineOutput(output, { redactPaths: true });
+    expect(serialized).not.toContain(root);
+  } finally {
+    await removeFixture(root);
+  }
+});
+
 async function createFixture(files: Record<string, string>): Promise<string> {
   const root = await mkdtemp(path.join(os.tmpdir(), "vii-machine-output-"));
   for (const [name, contents] of Object.entries(files)) {

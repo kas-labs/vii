@@ -73,3 +73,32 @@ describe("Security Hardening & Distribution Mode Consolidation (P6.6)", () => {
     });
   });
 });
+
+describe("CSS escape-sequence bypass hardening (audit regressions)", () => {
+  it("detects javascript: URIs hidden behind CSS hex escapes", () => {
+    expect(evaluateCspSafety("background:url(java\\000073cript:alert(1))").isSafe).toBe(false);
+    expect(evaluateCspSafety('background:url("java\\73 cript:alert(1)")').isSafe).toBe(false);
+    expect(evaluateCspSafety("background:url(java\\script:alert(1))").isSafe).toBe(false);
+  });
+
+  it("detects javascript: URIs hidden behind tabs and newlines", () => {
+    expect(evaluateCspSafety("background:url(java\tscript:alert(1))").isSafe).toBe(false);
+  });
+
+  it("createSafeStylesheet rejects @import and expression()", () => {
+    expect(() => createSafeStylesheet("@import url(//evil.example/x.css);")).toThrow(
+      /Unsafe CSS payload/,
+    );
+    expect(() => createSafeStylesheet("width: expression(alert(1));")).toThrow(
+      /Unsafe CSS payload/,
+    );
+    expect(() => createSafeStylesheet("\\40import url(//evil.example/x.css);")).toThrow(
+      /Unsafe CSS payload/,
+    );
+  });
+
+  it("still accepts benign stylesheets", () => {
+    const sheet = createSafeStylesheet(".btn { color: #fff; background: url(/img/bg.png); }");
+    expect(sheet.type).toBe("stylesheet");
+  });
+});

@@ -15,7 +15,10 @@ export function formatPath(path: readonly (string | number)[]): string {
 }
 
 export function groupIssuesByPath(issues: readonly SchemaIssue[]): Record<string, SchemaIssue[]> {
-  const grouped: Record<string, SchemaIssue[]> = {};
+  // Null prototype: issue paths are attacker-influenced (e.g. a forbidden_property
+  // issue for a "__proto__" key), and a plain {} would resolve such keys against
+  // Object.prototype and crash on the push below.
+  const grouped: Record<string, SchemaIssue[]> = Object.create(null);
   for (const issue of issues) {
     const key = formatPath(issue.path);
     if (!grouped[key]) {
@@ -30,7 +33,9 @@ export function createFormErrors(
   issues: readonly SchemaIssue[],
   formatter?: (issue: SchemaIssue) => string,
 ): Record<string, string[]> {
-  const formErrors: Record<string, string[]> = {};
+  // Null prototype for the same reason as groupIssuesByPath: keys derive from
+  // attacker-influenced issue paths such as "__proto__" or "constructor".
+  const formErrors: Record<string, string[]> = Object.create(null);
   const resolveMessage = formatter ?? defaultIssueMessage;
 
   for (const issue of issues) {

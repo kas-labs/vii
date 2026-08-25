@@ -88,7 +88,11 @@ batch(() => {
 
 Writes commit immediately, but notifications wait until the outermost batch completes. Nested
 batches share that boundary, repeated writes to one State notify only its final value, and Computed
-dependencies are recomputed at most once per batch. Errors are reported after committed writes and
+dependencies are recomputed at most once per batch.
+
+**Note:** `batch()` is not transactional and provides no state rollback on failure. If the batch
+callback throws, state updates committed prior to the throw remain in effect, and queued notifications
+for those committed writes will still be delivered. Errors are reported after committed writes and
 the remaining queued notifications have been processed.
 
 Scopes make synchronous resource ownership explicit:

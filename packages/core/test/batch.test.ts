@@ -108,3 +108,61 @@ test("batch continues queued notifications after a listener error", () => {
 
   expect(laterListener).toHaveBeenCalledWith(2);
 });
+
+test("scheduler throws cycle error on runaway self-scheduling jobs exceeding MAX_FLUSH_ITERATIONS", () => {
+  const s = state(0);
+  let runs = 0;
+
+  s.subscribe((v) => {
+    runs++;
+    s.set(v + 1);
+  });
+
+  expect(() => {
+    s.set(1);
+  }).toThrow(/Runaway notification cycle detected/);
+
+  expect(runs).toBeGreaterThanOrEqual(10_000);
+});
+
+test("scheduler completes deep but finite cascades below MAX_FLUSH_ITERATIONS", () => {
+  const s = state(0);
+  const observed: number[] = [];
+
+  s.subscribe((v) => {
+    observed.push(v);
+    if (v < 500) {
+      s.set(v + 1);
+    }
+  });
+
+  s.set(1);
+  expect(observed.length).toBe(500);
+  expect(s.get()).toBe(500);
+});
+
+test("nested batch throw leaves outer committed writes in effect and delivered (non-transactional)", () => {
+  const outer = state(0);
+  const inner = state(0);
+  const outerObserved: number[] = [];
+  const innerObserved: number[] = [];
+
+  outer.subscribe((v) => outerObserved.push(v));
+  inner.subscribe((v) => innerObserved.push(v));
+
+  expect(() => {
+    batch(() => {
+      outer.set(10);
+      batch(() => {
+        inner.set(20);
+        throw new Error("nested boom");
+      });
+    });
+  }).toThrow("nested boom");
+
+  // Both committed states remain committed and notified
+  expect(outer.get()).toBe(10);
+  expect(inner.get()).toBe(20);
+  expect(outerObserved).toEqual([10]);
+  expect(innerObserved).toEqual([20]);
+});

@@ -44,6 +44,8 @@ export interface TraceResourceNode {
   readonly succeeded?: boolean;
 }
 
+export const MAX_TRACE_EVENTS = 500_000;
+
 export function inspectTrace(trace: TraceInspectionInput): TraceInspection {
   if (trace.protocol !== "vii.trace") {
     throw new TypeError("Unsupported diagnostics trace protocol");
@@ -51,8 +53,14 @@ export function inspectTrace(trace: TraceInspectionInput): TraceInspection {
   if (trace.version !== "0.1") {
     throw new TypeError("Unsupported diagnostics trace version");
   }
-  if (!Number.isInteger(trace.droppedEvents) || trace.droppedEvents < 0) {
+  if (!Number.isSafeInteger(trace.droppedEvents) || trace.droppedEvents < 0) {
     throw new TypeError("Invalid diagnostics dropped-event count");
+  }
+  if (!Array.isArray(trace.events)) {
+    throw new TypeError("Invalid diagnostics trace events: events must be an array");
+  }
+  if (trace.events.length > MAX_TRACE_EVENTS) {
+    throw new TypeError(`Diagnostics trace exceeds maximum supported events (${MAX_TRACE_EVENTS})`);
   }
 
   const eventTypeCounts = new Map<string, number>();

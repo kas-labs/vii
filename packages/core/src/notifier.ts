@@ -1,4 +1,4 @@
-import { isBatching, schedule } from "./scheduler.js";
+import { isBatching, MAX_FLUSH_ITERATIONS, schedule } from "./scheduler.js";
 import type { DiagnosticsRuntime } from "./diagnostics.js";
 import { registerResource } from "./scope-context.js";
 
@@ -27,7 +27,7 @@ export interface NotifierOptions {
 }
 
 export function createNotifier<T>(options: NotifierOptions = {}): Notifier<T> {
-  const subscriptions: Array<Subscription<T>> = [];
+  const subscriptions = new Set<Subscription<T>>();
   const pendingValues: T[] = [];
   let flushScheduled = false;
   const diagnostics = options.diagnostics;
@@ -47,7 +47,7 @@ export function createNotifier<T>(options: NotifierOptions = {}): Notifier<T> {
   const notifyListeners = (value: T): unknown[] => {
     const errors: unknown[] = [];
 
-    for (const subscription of [...subscriptions]) {
+    for (const subscription of Array.from(subscriptions)) {
       if (!subscription.active) {
         continue;
       }
@@ -67,8 +67,18 @@ export function createNotifier<T>(options: NotifierOptions = {}): Notifier<T> {
   const flush = (): void => {
     flushScheduled = false;
     const errors: unknown[] = [];
+    let iterations = 0;
 
     while (pendingValues.length > 0) {
+      if (++iterations > MAX_FLUSH_ITERATIONS) {
+        pendingValues.length = 0;
+        errors.push(
+          new Error(
+            `Runaway notification cycle detected: exceeded ${MAX_FLUSH_ITERATIONS} notifications in a single flush`,
+          ),
+        );
+        break;
+      }
       errors.push(...notifyListeners(pendingValues.shift()!));
     }
 
@@ -102,7 +112,7 @@ export function createNotifier<T>(options: NotifierOptions = {}): Notifier<T> {
       id: diagnostics?.mode === "off" ? "" : (diagnostics?.allocateId("subscription") ?? ""),
       listener,
     };
-    subscriptions.push(subscription);
+    subscriptions.add(subscription);
     record("subscription.created", { subscriptionId: subscription.id });
 
     let detach: (() => void) | undefined;
@@ -113,10 +123,7 @@ export function createNotifier<T>(options: NotifierOptions = {}): Notifier<T> {
       }
 
       subscription.active = false;
-      const index = subscriptions.indexOf(subscription);
-      if (index >= 0) {
-        subscriptions.splice(index, 1);
-      }
+      subscriptions.delete(subscription);
       record("subscription.disposed", { subscriptionId: subscription.id });
       detach?.();
       detach = undefined;
@@ -131,17 +138,14 @@ export function createNotifier<T>(options: NotifierOptions = {}): Notifier<T> {
   return {
     subscribe,
     notify,
-    hasSubscribers: () => subscriptions.length > 0,
-    size: () => subscriptions.length,
+    hasSubscribers: () => subscriptions.size > 0,
+    size: () => subscriptions.size,
     clear: () => {
-      for (const subscription of [...subscriptions]) {
+      for (const subscription of subscriptions) {
         subscription.active = false;
-        const index = subscriptions.indexOf(subscription);
-        if (index >= 0) {
-          subscriptions.splice(index, 1);
-        }
         record("subscription.disposed", { subscriptionId: subscription.id });
       }
+      subscriptions.clear();
     },
   };
 }

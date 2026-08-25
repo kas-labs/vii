@@ -445,3 +445,43 @@ test("diagnostics.run suppresses unhandled rejections from abandoned rejected pr
     processHost?.removeListener("unhandledRejection", onUnhandled);
   }
 });
+
+test("diagnostics.run safely handles a return value with a throwing then getter", () => {
+  const diagnostics = createDiagnostics();
+  const hostile = {
+    get then() {
+      throw new Error("diagnostics getter boom");
+    },
+    ok: true,
+  };
+
+  const result = diagnostics.run(() => hostile);
+  expect(result).toBe(hostile);
+  expect(result.ok).toBe(true);
+});
+
+test("diagnostics safely normalizes timestamps from hostile clocks (NaN, Infinity, throwing)", () => {
+  const nanDiag = createDiagnostics({ clock: () => NaN });
+  nanDiag.run(() => {
+    state(1);
+  });
+  expect(nanDiag.getEvents()[0]?.timestamp).toBe(0);
+  expect(nanDiag.exportTrace().createdAt).toBe(new Date(0).toISOString());
+
+  const infDiag = createDiagnostics({ clock: () => Infinity });
+  infDiag.run(() => {
+    state(1);
+  });
+  expect(infDiag.getEvents()[0]?.timestamp).toBe(0);
+
+  const throwingDiag = createDiagnostics({
+    clock: () => {
+      throw new Error("clock failed");
+    },
+  });
+  throwingDiag.run(() => {
+    state(1);
+  });
+  expect(throwingDiag.getEvents()[0]?.timestamp).toBe(0);
+  expect(throwingDiag.exportTrace().createdAt).toBe(new Date(0).toISOString());
+});

@@ -101,24 +101,11 @@ export interface DiagnosticsRuntime extends Diagnostics {
   record(type: string, payload: Readonly<Record<string, unknown>>, causeId?: string): void;
 }
 
+import { isThenable, suppressUnhandledRejection } from "./async-guard.js";
 let activeDiagnostics: DiagnosticsRuntime | undefined;
 
 export function getActiveDiagnostics(): DiagnosticsRuntime | undefined {
   return activeDiagnostics;
-}
-
-function suppressUnhandledRejection(value: unknown): void {
-  try {
-    if (
-      value !== null &&
-      (typeof value === "object" || typeof value === "function") &&
-      typeof (value as { then?: unknown }).then === "function"
-    ) {
-      Promise.resolve(value).catch(() => {});
-    }
-  } catch {
-    // Ignore defensive suppression failures on hostile thenables
-  }
 }
 
 export function withDiagnostics<T>(diagnostics: DiagnosticsRuntime, work: () => T): T {
@@ -127,11 +114,7 @@ export function withDiagnostics<T>(diagnostics: DiagnosticsRuntime, work: () => 
 
   try {
     const result = work();
-    if (
-      result !== null &&
-      (typeof result === "object" || typeof result === "function") &&
-      typeof (result as { then?: unknown }).then === "function"
-    ) {
+    if (isThenable(result)) {
       suppressUnhandledRejection(result);
       throw new TypeError(
         "Diagnostics.run does not support asynchronous execution. Diagnostics context cannot be preserved across await.",
@@ -196,7 +179,8 @@ export function createDiagnostics(options: DiagnosticsOptions = {}): Diagnostics
     exportTrace: () => {
       let timestamp = 0;
       try {
-        timestamp = clock();
+        const raw = clock();
+        timestamp = typeof raw === "number" && Number.isFinite(raw) ? raw : 0;
       } catch {
         // Trace timestamps are observers and must not affect runtime behavior.
       }
@@ -228,7 +212,8 @@ export function createDiagnostics(options: DiagnosticsOptions = {}): Diagnostics
 
       let timestamp = 0;
       try {
-        timestamp = clock();
+        const raw = clock();
+        timestamp = typeof raw === "number" && Number.isFinite(raw) ? raw : 0;
       } catch {
         // Diagnostic clocks are observers and must not affect runtime behavior.
       }

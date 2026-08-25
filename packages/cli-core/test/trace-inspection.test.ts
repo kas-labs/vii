@@ -171,3 +171,37 @@ test("inspectTrace rejects malformed ownership metadata", () => {
     }),
   ).toThrow("Invalid diagnostics resource event payload");
 });
+
+test("inspectTrace rejects non-array events with house error message", () => {
+  expect(() =>
+    inspectTrace({
+      protocol: "vii.trace",
+      version: "0.1",
+      createdAt: "2026-08-13T00:00:00.000Z",
+      events: 5 as unknown as [],
+      droppedEvents: 0,
+    }),
+  ).toThrow("Invalid diagnostics trace events: events must be an array");
+
+  expect(() =>
+    inspectTrace({
+      protocol: "vii.trace",
+      version: "0.1",
+      createdAt: "2026-08-13T00:00:00.000Z",
+      events: null as unknown as [],
+      droppedEvents: 0,
+    }),
+  ).toThrow("Invalid diagnostics trace events: events must be an array");
+});
+
+test("inspectTrace rejects unsafe integer dropped-event count (e.g. 1e21)", () => {
+  expect(() =>
+    inspectTrace({
+      protocol: "vii.trace",
+      version: "0.1",
+      createdAt: "2026-08-13T00:00:00.000Z",
+      events: [],
+      droppedEvents: 1e21,
+    }),
+  ).toThrow("Invalid diagnostics dropped-event count");
+});

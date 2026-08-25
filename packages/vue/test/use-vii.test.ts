@@ -1,6 +1,6 @@
 import { batch, state } from "@vii-labs/core";
 import { effect, effectScope, isReactive, isReadonly } from "vue";
-import { expect, expectTypeOf, test } from "vitest";
+import { expect, expectTypeOf, test, vi } from "vitest";
 import { createViiRef, useVii } from "../src/index.js";
 
 test("useVii exposes the initial Core value and updates in a Vue scope", () => {
@@ -139,4 +139,18 @@ test("useVii preserves public type inference", () => {
 
   expectTypeOf(snapshot.value).toEqualTypeOf<{ count: number }>();
   expectTypeOf(selected.value).toEqualTypeOf<number>();
+});
+
+test("useVii warns when called outside an active effect scope in development", () => {
+  const source = state(0);
+  const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+  try {
+    useVii(source);
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("[@vii-labs/vue] useVii was called outside an active effect scope"),
+    );
+  } finally {
+    warnSpy.mockRestore();
+  }
 });

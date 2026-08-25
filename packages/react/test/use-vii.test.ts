@@ -332,6 +332,46 @@ function ParityView({ source, onRender }: ParityViewProps): ReactElement {
   return createElement("span", { "data-value": value }, value);
 }
 
+test("useVii with inline object selector re-renders on any store change under default Object.is, but respects custom equality", () => {
+  const source = state({ a: 1, b: 2 });
+  let renderCountA = 0;
+  let renderCountB = 0;
+
+  function ComponentA() {
+    renderCountA += 1;
+    // Object selector with default Object.is equality
+    const selected = useVii(source, (s) => ({ a: s.a }));
+    return createElement("span", null, selected.a);
+  }
+
+  function ComponentB() {
+    renderCountB += 1;
+    // Object selector with custom shallow equality
+    const selected = useVii(
+      source,
+      (s) => ({ b: s.b }),
+      (prev, next) => prev.b === next.b,
+    );
+    return createElement("span", null, selected.b);
+  }
+
+  function Root() {
+    return createElement("div", null, createElement(ComponentA), createElement(ComponentB));
+  }
+
+  const renderer = render(createElement(Root));
+  expect(renderCountA).toBe(1);
+  expect(renderCountB).toBe(1);
+
+  // Mutate `a` only: ComponentA re-renders because `Object.is` sees a new object reference;
+  // ComponentB does NOT re-render because custom equality saw `prev.b === next.b`.
+  act(() => source.set({ a: 2, b: 2 }));
+  expect(renderCountA).toBe(2);
+  expect(renderCountB).toBe(1);
+
+  renderer.unmount();
+});
+
 function render(element: ReactElement): ReactTestRenderer {
   let renderer!: ReactTestRenderer;
   act(() => {

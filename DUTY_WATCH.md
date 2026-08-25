@@ -37,7 +37,55 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-25 02:27 CEST | Package-Level Tail Hardening (Audit Findings 24-31, R1-R5)
+
+Status: completed
+Branch: `chore/package-tail-hardening`
+PR: #153
+
+
+### Scope
+
+- Remediate package-level audit findings 24, 25, 26, 27, 28, 29, 30, and 31.
+- Remediate review defects R1 (notifier churn), R2 (suppressUnhandledRejection deduplication), R3 (defensive thenable check), R4 (React concurrency commentary), R5 (React object selector documentation).
+
+### Changes
+
+- **Core (`packages/core`)**:
+  - `notifier.ts`: Replaced O(n) array splicing with `Set<Subscription<T>>` for O(1) amortized unsubscribe.
+  - `async-guard.ts`: Extracted deduplicated `suppressUnhandledRejection` and defensive `isThenable` try-catch.
+  - `scope-context.ts`, `diagnostics.ts`: Replaced local `isThenable` with shared module.
+  - `diagnostics.ts`: Hardened `getTimestamp` against non-finite or throwing clocks.
+  - `scheduler.ts`, `notifier.ts`: Added runaway iteration protection capped at `MAX_FLUSH_ITERATIONS = 10_000`.
+  - `batch.ts`, `README.md`: Documented non-transactional batching semantics with dedicated tests.
+- **CLI Core (`packages/cli-core`)**:
+  - `add-state.ts`: Added `realpath` and `lstat` pre-write validation to prevent TOCTOU symlink traversal.
+  - `trace-inspection.ts`: Validated `trace.events` is an array (throwing house TypeError), verified safe integer `droppedEvents`, and capped at `MAX_TRACE_EVENTS = 500_000`.
+  - `machine-output.ts`: Added `redactPaths` support in `MachineOutputOptions`.
+- **Adapters (`packages/react`, `packages/vue`)**:
+  - `packages/vue/src/index.ts`: Added runtime development warning when `useVii` is called outside an active Vue effect scope, advising `createViiRef`.
+  - `packages/react/src/index.ts`: Documented concurrent rendering safety rationale for ref synchronization and stable subscription identity.
+  - `packages/react/README.md`: Documented `Object.is` default equality re-render implications for object selectors and recommended custom equality comparators.
+- **CI (`.github/workflows`)**:
+  - Pinned all third-party GitHub Actions to full commit SHAs with version comments across `validate.yml`, `publish-core.yml`, `governance.yml`, `dependency-review.yml`, and `codeql.yml`.
+
+### Validation
+
+- `pnpm validate`: Passed (formatting, linting, typechecking, 11 nx project test suites, 10 nx builds, package and cli-core pack checks).
+- `npx vitest run research/form/form-core.test.ts research/registry research/source-distribution research/http research/query research/schema`: Passed (38 test files, 386 passed).
+
+### Architecture / compatibility
+
+- Preserves Clean Architecture dependency direction toward `@vii-labs/core`.
+- Retains O(1) unsubscribe performance for high-frequency subscriber churn without changing public types.
+- Maintains zero runtime overhead in production for Vue scope warning and React selector memoization.
+
+### Remaining / recovery
+
+- None.
+
 ## 2026-08-25 02:15 CEST | External Binding Cycle Protection & Scope-Graph Fidelity (Audit Finding 18 & Batch 5 Scope Regression)
+
 
 Status: completed
 Branch: `fix/form-external-binding-sync`

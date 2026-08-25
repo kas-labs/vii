@@ -2,6 +2,8 @@ import { getActiveDiagnostics } from "./diagnostics.js";
 
 type Job = () => void;
 
+export const MAX_FLUSH_ITERATIONS = 10_000;
+
 let batchDepth = 0;
 let isFlushing = false;
 const pendingJobs: Job[] = [];
@@ -27,9 +29,20 @@ function flushJobs(): unknown[] {
 
   isFlushing = true;
   const errors: unknown[] = [];
+  let iterations = 0;
 
   try {
     while (pendingJobs.length > 0) {
+      if (++iterations > MAX_FLUSH_ITERATIONS) {
+        pendingJobs.length = 0;
+        errors.push(
+          new Error(
+            `Runaway scheduler cycle detected: exceeded ${MAX_FLUSH_ITERATIONS} jobs in a single flush`,
+          ),
+        );
+        break;
+      }
+
       try {
         pendingJobs.shift()!();
       } catch (error) {
@@ -52,6 +65,16 @@ export function schedule(job: Job): void {
   }
 }
 
+/**
+ * Runs a callback within a batch boundary.
+ *
+ * State notifications scheduled during the batch are coalesced and deferred until
+ * the outermost batch completes.
+ *
+ * NOTE: `batch()` is NOT transactional. If the callback or any nested work throws,
+ * state changes already committed prior to the throw remain in effect and are NOT rolled back;
+ * queued notifications for committed state are still delivered.
+ */
 export function runBatch<T>(work: () => T): T {
   const diagnostics = getActiveDiagnostics();
   const batchId = diagnostics?.mode === "off" ? undefined : diagnostics?.allocateId("batch");

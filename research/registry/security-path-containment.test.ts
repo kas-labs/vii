@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import buttonManifest from "./fixtures/button.manifest.json" with { type: "json" };
 import {
   ManifestValidationError,
+  sanitizeContainmentPath,
   sanitizePath,
   validateRegistryManifest,
 } from "./manifest-validator.js";
@@ -127,6 +128,59 @@ describe("Registry Path Containment Security", () => {
       expect(sanitizePath("src/components/dialog.tsx", "target")).toBe("src/components/dialog.tsx");
       expect(sanitizePath("styles/globals.css", "target")).toBe("styles/globals.css");
       expect(sanitizePath("lib/utils.ts", "target")).toBe("lib/utils.ts");
+    });
+
+    it("rejects dotfiles and toolchain configs nested below the root segment (R7)", () => {
+      expect(() => sanitizePath("src/.env", "target")).toThrow(
+        expect.objectContaining({ code: "FORBIDDEN_ROOT_DOTPATH" }),
+      );
+      expect(() => sanitizePath("deep/vite.config.ts", "target")).toThrow(
+        expect.objectContaining({ code: "FORBIDDEN_CONFIG_FILE" }),
+      );
+    });
+
+    it("still accepts legitimate nested destinations after R7 (regression guard)", () => {
+      expect(sanitizePath("components/ui/button.tsx", "target")).toBe("components/ui/button.tsx");
+      expect(sanitizePath("src/lib/util.ts", "target")).toBe("src/lib/util.ts");
+    });
+  });
+
+  describe("source vs target denylist scope (R8)", () => {
+    it("applies containment checks to source", () => {
+      expect(() => sanitizeContainmentPath("../etc/passwd", "source")).toThrow(
+        /Directory traversal/,
+      );
+      expect(() => sanitizeContainmentPath("/etc/passwd", "source")).toThrow(/Absolute paths/);
+      expect(() => sanitizeContainmentPath("button.tsx\0.jpg", "source")).toThrow(/null byte/);
+    });
+
+    it("does not apply the destination denylist to source", () => {
+      expect(sanitizeContainmentPath("tailwind.config.ts", "source")).toBe("tailwind.config.ts");
+      expect(sanitizeContainmentPath(".env.example", "source")).toBe(".env.example");
+    });
+
+    it("accepts a source named tailwind.config.ts while rejecting the same name as a target", () => {
+      expect(sanitizeContainmentPath("tailwind.config.ts", "source")).toBe("tailwind.config.ts");
+      expect(() => sanitizePath("tailwind.config.ts", "target")).toThrow(
+        expect.objectContaining({ code: "FORBIDDEN_CONFIG_FILE" }),
+      );
+    });
+
+    it("validates a manifest whose source is a config-named file but target is not", () => {
+      const manifest = {
+        ...buttonManifest,
+        files: [
+          {
+            source: "tailwind.config.ts",
+            target: "components/ui/tailwind-preset.ts",
+            integrity: "sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=",
+          },
+        ],
+      };
+
+      const result = validateRegistryManifest(manifest);
+      expect(result.files[0]!.source).toBe("tailwind.config.ts");
+      expect(result.files[0]!.target).toBe("components/ui/tailwind-preset.ts");
     });
   });
 

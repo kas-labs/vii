@@ -47,11 +47,12 @@ export interface ManifestValidationOptions {
   allowedRoots?: readonly string[] | string[] | undefined;
 }
 
-export function sanitizePath(
-  rawPath: string,
-  fieldName: string,
-  options?: SanitizePathOptions,
-): string {
+// Containment only: rejects paths that could escape the destination tree (null
+// bytes, absolute paths, ".." traversal). Safe for any path string regardless
+// of whether it names a destination on disk, including a registry item's own
+// `source` field, which names a file inside the item rather than a write
+// target.
+export function sanitizeContainmentPath(rawPath: string, fieldName: string): string {
   if (typeof rawPath !== "string" || rawPath.trim().length === 0) {
     throw new ManifestValidationError("Path must be a non-empty string", "EMPTY_PATH", fieldName);
   }
@@ -92,14 +93,27 @@ export function sanitizePath(
     );
   }
 
+  return cleaned;
+}
+
+// Containment plus destination-on-disk rules. Use for any path that will
+// actually be written to the user's filesystem (a file entry's `target`).
+export function sanitizePath(
+  rawPath: string,
+  fieldName: string,
+  options?: SanitizePathOptions,
+): string {
+  const cleaned = sanitizeContainmentPath(rawPath, fieldName);
   const cleanSegments = cleaned.split("/");
 
-  if (cleanSegments[0]!.startsWith(".")) {
-    throw new ManifestValidationError(
-      `Root dotfile or hidden directory paths ("${cleanSegments[0]}") are strictly forbidden`,
-      "FORBIDDEN_ROOT_DOTPATH",
-      fieldName,
-    );
+  for (const seg of cleanSegments) {
+    if (seg.startsWith(".")) {
+      throw new ManifestValidationError(
+        `Dotfile or hidden directory segment ("${seg}") is strictly forbidden`,
+        "FORBIDDEN_ROOT_DOTPATH",
+        fieldName,
+      );
+    }
   }
 
   if (cleanSegments.some((seg) => seg === "node_modules")) {
@@ -110,21 +124,19 @@ export function sanitizePath(
     );
   }
 
-  if (cleanSegments.length === 1) {
-    const fileName = cleanSegments[0]!;
-    if (
-      fileName === "package.json" ||
-      fileName === "package-lock.json" ||
-      fileName === "pnpm-lock.yaml" ||
-      (fileName.startsWith("tsconfig") && fileName.endsWith(".json")) ||
-      fileName.includes(".config.")
-    ) {
-      throw new ManifestValidationError(
-        `Modifying root toolchain configuration file "${fileName}" is strictly forbidden`,
-        "FORBIDDEN_CONFIG_FILE",
-        fieldName,
-      );
-    }
+  const fileName = cleanSegments[cleanSegments.length - 1]!;
+  if (
+    fileName === "package.json" ||
+    fileName === "package-lock.json" ||
+    fileName === "pnpm-lock.yaml" ||
+    (fileName.startsWith("tsconfig") && fileName.endsWith(".json")) ||
+    fileName.includes(".config.")
+  ) {
+    throw new ManifestValidationError(
+      `Modifying toolchain configuration file "${fileName}" is strictly forbidden`,
+      "FORBIDDEN_CONFIG_FILE",
+      fieldName,
+    );
   }
 
   if (options?.allowedRoots && options.allowedRoots.length > 0) {
@@ -198,7 +210,7 @@ function validateFileEntry(
     );
   }
 
-  const source = sanitizePath(entry.source ?? "", `files[${index}].source`);
+  const source = sanitizeContainmentPath(entry.source ?? "", `files[${index}].source`);
   const target = sanitizePath(entry.target ?? "", `files[${index}].target`, options);
 
   if (seenTargets.has(target)) {

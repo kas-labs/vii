@@ -166,3 +166,34 @@ test("nested batch throw leaves outer committed writes in effect and delivered (
   expect(outerObserved).toEqual([10]);
   expect(innerObserved).toEqual([20]);
 });
+
+test("states keep delivering notifications after a runaway scheduler cutoff discards queued flush jobs", () => {
+  const first = state(0);
+  const second = state(0);
+  let stopped = false;
+
+  first.subscribe((value) => {
+    if (!stopped) {
+      second.set(value + 1);
+    }
+  });
+  second.subscribe((value) => {
+    if (!stopped) {
+      first.set(value + 1);
+    }
+  });
+
+  expect(() => first.set(1)).toThrow(/Runaway/);
+  stopped = true;
+
+  const firstObserved: number[] = [];
+  const secondObserved: number[] = [];
+  first.subscribe((value) => firstObserved.push(value));
+  second.subscribe((value) => secondObserved.push(value));
+
+  first.set(100);
+  second.set(200);
+
+  expect(firstObserved).toEqual([100]);
+  expect(secondObserved).toEqual([200]);
+});

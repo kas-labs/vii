@@ -2,11 +2,16 @@ import { getActiveDiagnostics } from "./diagnostics.js";
 
 type Job = () => void;
 
+interface QueuedJob {
+  run: Job;
+  onDiscard?: Job | undefined;
+}
+
 export const MAX_FLUSH_ITERATIONS = 10_000;
 
 let batchDepth = 0;
 let isFlushing = false;
-const pendingJobs: Job[] = [];
+const pendingJobs: QueuedJob[] = [];
 
 export function isBatching(): boolean {
   return batchDepth > 0;
@@ -34,17 +39,27 @@ function flushJobs(): unknown[] {
   try {
     while (pendingJobs.length > 0) {
       if (++iterations > MAX_FLUSH_ITERATIONS) {
-        pendingJobs.length = 0;
+        // Discarded jobs never run, so give their owners a chance to reset the
+        // "already scheduled" bookkeeping that would otherwise block every
+        // future notification from that owner.
+        const discarded = pendingJobs.splice(0, pendingJobs.length);
         errors.push(
           new Error(
             `Runaway scheduler cycle detected: exceeded ${MAX_FLUSH_ITERATIONS} jobs in a single flush`,
           ),
         );
+        for (const job of discarded) {
+          try {
+            job.onDiscard?.();
+          } catch (error) {
+            errors.push(error);
+          }
+        }
         break;
       }
 
       try {
-        pendingJobs.shift()!();
+        pendingJobs.shift()!.run();
       } catch (error) {
         errors.push(error);
       }
@@ -56,8 +71,8 @@ function flushJobs(): unknown[] {
   return errors;
 }
 
-export function schedule(job: Job): void {
-  pendingJobs.push(job);
+export function schedule(job: Job, onDiscard?: Job): void {
+  pendingJobs.push({ run: job, onDiscard });
 
   if (batchDepth === 0 && !isFlushing) {
     const errors = flushJobs();

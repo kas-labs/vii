@@ -24,6 +24,12 @@ export function computed<T>(read: () => T): Computed<T> {
   });
   const dependencySubscriptions = new Map<Dependency, () => void>();
   let currentValue!: T;
+  // The value subscribers last observed: updated on notify, on evaluations that
+  // happen while nobody is subscribed, and when the first subscriber attaches.
+  // The scheduled recompute compares against this baseline instead of the value
+  // captured at job time, so a get() that recomputes between invalidation and
+  // the job cannot swallow the pending notification.
+  let lastNotifiedValue!: T;
   let hasValue = false;
   let dirty = true;
   let evaluating = false;
@@ -80,6 +86,9 @@ export function computed<T>(read: () => T): Computed<T> {
     currentValue = nextValue;
     hasValue = true;
     dirty = false;
+    if (!notifier.hasSubscribers()) {
+      lastNotifiedValue = nextValue;
+    }
     recordComputedEvent(diagnostics, "computed.recomputed", selectorId, {
       dependencyCount: nextDependencies.size,
     });
@@ -87,27 +96,35 @@ export function computed<T>(read: () => T): Computed<T> {
   };
 
   const invalidate = (): void => {
-    if (disposed || dirty) {
+    if (disposed) {
       return;
     }
 
+    // No early return when already dirty: a recompute that threw leaves the
+    // computed dirty with no job scheduled, and the next dependency change must
+    // be able to schedule a fresh recompute instead of starving subscribers.
     dirty = true;
 
     if (notifier.hasSubscribers() && !recomputeScheduled) {
       recomputeScheduled = true;
-      schedule(() => {
-        recomputeScheduled = false;
-        if (disposed || !dirty || !notifier.hasSubscribers()) {
-          return;
-        }
+      schedule(
+        () => {
+          recomputeScheduled = false;
+          if (disposed || !notifier.hasSubscribers()) {
+            return;
+          }
 
-        const previousValue = currentValue;
-        const nextValue = evaluate();
+          const nextValue = dirty ? evaluate() : currentValue;
 
-        if (!Object.is(previousValue, nextValue)) {
-          notifier.notify(nextValue);
-        }
-      });
+          if (!Object.is(lastNotifiedValue, nextValue)) {
+            lastNotifiedValue = nextValue;
+            notifier.notify(nextValue);
+          }
+        },
+        () => {
+          recomputeScheduled = false;
+        },
+      );
     }
   };
 
@@ -119,6 +136,7 @@ export function computed<T>(read: () => T): Computed<T> {
     },
     subscribe: (listener) => {
       assertActive();
+      const hadSubscribers = notifier.hasSubscribers();
       const unsubscribe = notifier.subscribe(listener);
 
       try {
@@ -128,6 +146,10 @@ export function computed<T>(read: () => T): Computed<T> {
       } catch (error) {
         unsubscribe();
         throw error;
+      }
+
+      if (!hadSubscribers) {
+        lastNotifiedValue = currentValue;
       }
 
       return unsubscribe;

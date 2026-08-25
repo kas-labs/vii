@@ -278,16 +278,24 @@ export function createField<T>(options: CreateFieldOptions<T>): FieldState<T> {
   };
 
   const setErrors = (errors: readonly string[]): void => {
-    const syntheticIssues: FieldIssue[] = errors.map((err) =>
-      sanitizeIssue({
-        code: err,
-        message: err,
-        source: "validation",
-      }),
+    // Legacy F1/F2 surface: the strings are opaque messages, never keys, so they
+    // are wrapped directly instead of going through sanitizeIssue. Routing them
+    // through the rule sanitizer rejected "" and the reserved-key names, which
+    // are both legal error messages here.
+    const syntheticIssues: readonly FieldIssue[] = Object.freeze(
+      errors.map((err) =>
+        Object.freeze({
+          code: "legacy.error",
+          message: String(err),
+          path: undefined,
+          source: "validation",
+          ruleId: undefined,
+        } as FieldIssue),
+      ),
     );
     batch(() => {
       errorsState.set(errors);
-      issuesState.set(Object.freeze(syntheticIssues));
+      issuesState.set(syntheticIssues);
       validationStatusState.set(errors.length === 0 ? "valid" : "invalid");
     });
   };
@@ -530,7 +538,51 @@ export function createFieldGroup<T extends Record<string, any>>(
     }),
   );
 
+  const groupTriggerSet = new Set<ValidationTriggerMode>();
+  if (validateOn !== undefined) {
+    if (Array.isArray(validateOn)) {
+      for (const t of validateOn) groupTriggerSet.add(t);
+    } else {
+      groupTriggerSet.add(validateOn as ValidationTriggerMode);
+    }
+  } else {
+    groupTriggerSet.add("change");
+  }
+
   let isValidating = false;
+
+  // Single implementation of group-rule execution, shared by validate() and the
+  // change-triggered run in setValues.
+  const runGroupRules = (currentVals: T, trigger: ValidationTriggerMode): readonly FieldIssue[] => {
+    const collectedGroupIssues: FieldIssue[] = [];
+    const ctx: ValidationRuleContext = { trigger };
+
+    for (const rule of rules) {
+      const res: any = rule(currentVals, ctx);
+
+      if (
+        res !== null &&
+        (typeof res === "object" || typeof res === "function") &&
+        typeof (res as any).then === "function"
+      ) {
+        throw new TypeError(
+          "Synchronous validation rule returned a Promise or thenable. Async validation is not supported in F3.",
+        );
+      }
+
+      if (res !== null && res !== undefined) {
+        if (Array.isArray(res)) {
+          for (const item of res) {
+            collectedGroupIssues.push(sanitizeIssue(item));
+          }
+        } else {
+          collectedGroupIssues.push(sanitizeIssue(res));
+        }
+      }
+    }
+
+    return collectedGroupIssues;
+  };
 
   const validate = (trigger: ValidationTriggerMode = "manual"): readonly FieldIssue[] => {
     if (isValidating) {
@@ -539,38 +591,7 @@ export function createFieldGroup<T extends Record<string, any>>(
     isValidating = true;
 
     try {
-      const collectedGroupIssues: FieldIssue[] = [];
-      const currentVals = valuesComputed.get();
-      const ctx: ValidationRuleContext = { trigger };
-
-      for (const rule of rules) {
-        let res: any;
-        try {
-          res = rule(currentVals, ctx);
-        } catch (ruleErr) {
-          throw ruleErr;
-        }
-
-        if (
-          res !== null &&
-          (typeof res === "object" || typeof res === "function") &&
-          typeof (res as any).then === "function"
-        ) {
-          throw new TypeError(
-            "Synchronous validation rule returned a Promise or thenable. Async validation is not supported in F3.",
-          );
-        }
-
-        if (res !== null && res !== undefined) {
-          if (Array.isArray(res)) {
-            for (const item of res) {
-              collectedGroupIssues.push(sanitizeIssue(item));
-            }
-          } else {
-            collectedGroupIssues.push(sanitizeIssue(res));
-          }
-        }
-      }
+      const collectedGroupIssues = runGroupRules(valuesComputed.get(), trigger);
 
       // Validate all children
       for (const k of keys) {
@@ -578,7 +599,7 @@ export function createFieldGroup<T extends Record<string, any>>(
       }
 
       batch(() => {
-        groupIssuesState.set(Object.freeze(collectedGroupIssues));
+        groupIssuesState.set(Object.freeze([...collectedGroupIssues]));
         groupValidationStatusState.set(collectedGroupIssues.length === 0 ? "valid" : "invalid");
       });
 
@@ -607,36 +628,14 @@ export function createFieldGroup<T extends Record<string, any>>(
           }
         }
       }
-      if (rules.length > 0) {
-        // Rerun group validation if group rules exist
-        const collectedGroupIssues: FieldIssue[] = [];
+      if (rules.length > 0 && groupTriggerSet.has("change")) {
         const currentVals = Object.create(null) as T;
         for (const k of keys) {
           const node = fields[k] as any;
           currentVals[k] = node.kind === "field" ? node.value.get() : node.values.get();
         }
-        const ctx: ValidationRuleContext = { trigger: "change" };
-
-        for (const rule of rules) {
-          const res = rule(currentVals, ctx);
-          if (
-            res !== null &&
-            (typeof res === "object" || typeof res === "function") &&
-            typeof (res as any).then === "function"
-          ) {
-            throw new TypeError(
-              "Synchronous validation rule returned a Promise or thenable. Async validation is not supported in F3.",
-            );
-          }
-          if (res !== null && res !== undefined) {
-            if (Array.isArray(res)) {
-              for (const item of res) collectedGroupIssues.push(sanitizeIssue(item));
-            } else {
-              collectedGroupIssues.push(sanitizeIssue(res));
-            }
-          }
-        }
-        groupIssuesState.set(Object.freeze(collectedGroupIssues));
+        const collectedGroupIssues = runGroupRules(currentVals, "change");
+        groupIssuesState.set(Object.freeze([...collectedGroupIssues]));
         groupValidationStatusState.set(collectedGroupIssues.length === 0 ? "valid" : "invalid");
       }
     });
@@ -903,8 +902,7 @@ export function createFieldArray<T>(options: CreateFieldArrayOptions<T>): FieldA
       const item = items[i];
       if (!item) continue;
       const n = item.node as any;
-      const childIssues: readonly FieldIssue[] =
-        typeof n.issues === "function" ? n.issues() : n.issues.get();
+      const childIssues: readonly FieldIssue[] = n.issues.get();
       for (const iss of childIssues) {
         const prefix = [i, ...(iss.path ?? [])];
         res.push({
@@ -927,12 +925,18 @@ export function createFieldArray<T>(options: CreateFieldArrayOptions<T>): FieldA
     return "valid";
   };
 
+  // Memoized once per array instance and owned by the scope: creating a fresh
+  // computed on every property access leaked a dependency subscription on
+  // itemsState for each read and broke reference identity for consumers.
+  const issuesComputed = runInScope(() => computed(() => getIssues()));
+  const validationStatusComputed = runInScope(() => computed(() => getValidationStatus()));
+
   const validate = (trigger: ValidationTriggerMode = "manual"): readonly FieldIssue[] => {
     const items = itemsState.get();
     for (const it of items) {
       (it.node as any).validate(trigger);
     }
-    return getIssues();
+    return issuesComputed.get();
   };
 
   const push = (value: T): void => {
@@ -1216,12 +1220,8 @@ export function createFieldArray<T>(options: CreateFieldArrayOptions<T>): FieldA
     valid: validComputed,
     invalid: invalidComputed,
     errors: errorsComputed,
-    get issues() {
-      return computed(() => getIssues());
-    },
-    get validationStatus() {
-      return computed(() => getValidationStatus());
-    },
+    issues: issuesComputed,
+    validationStatus: validationStatusComputed,
     push,
     insert,
     remove,

@@ -165,7 +165,7 @@ F3 introduces synchronous validation scheduling and machine-readable structured 
    - `ruleId`: optional identifier.
    - **Privacy / Value-Safety**: Raw field values and validator object references are never captured in `FieldIssue` or diagnostic payloads.
 3. **Validation Trigger Semantics (`ValidationTriggerMode`)**:
-   - `"change"`: runs on leaf `setValue` or group `setValues` mutations.
+   - `"change"`: runs on leaf `setValue` or group `setValues` mutations. Both leaf and group nodes honor their own `validateOn` set here: a node configured `validateOn: "submit"` is not evaluated by a mutation.
    - `"blur"`: runs on `setTouched(true)`.
    - `"submit"`: runs form-wide validation across all nodes in the tree without altering touched/dirty.
    - `"manual"`: explicitly invokes `node.validate()` on demand.
@@ -176,7 +176,10 @@ F3 introduces synchronous validation scheduling and machine-readable structured 
    - When dynamic array items are swapped, moved, or reordered, internal issues remain bound to the conceptual item node.
    - The parent array's computed issues dynamically map the issue's presentation path to its current position (`[index, ...childPath]`).
 6. **Prototype Pollution Defense**:
-   - Issue codes and path segments rejecting `__proto__`, `constructor`, `prototype`.
+   - Rule-produced issue codes and path segments reject `__proto__`, `constructor`, `prototype`.
    - Issue records and maps use `Object.create(null)` dictionaries.
-7. **Throwing Validator Behavior**:
+   - The legacy `setErrors(string[])` surface is exempt: those strings are opaque human messages, never used as keys, so they are wrapped as `{ code: "legacy.error", message }` and keep the F1/F2 contract for `""` and reserved-word text.
+7. **Derived Issue Views Are Scope-Owned**:
+   - `FieldArray.issues` and `FieldArray.validationStatus` are single computeds created once per array and registered with the owning scope, so repeated reads neither allocate nor retain dependency subscriptions.
+8. **Throwing Validator Behavior**:
    - Uncaught exceptions inside validation rules propagate as runtime errors without leaking field values in diagnostics.

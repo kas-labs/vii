@@ -530,4 +530,80 @@ describe("Form Research F3 — Validation Scheduling & Structured Issues", () =>
       expect(completed?.payload["status"]).toBe("invalid");
     });
   });
+  // -------------------------------------------------------------------------
+  // 18-21. Review regressions (F3 fix pass)
+  // -------------------------------------------------------------------------
+  it("Fixture 18: FieldArray.issues and .validationStatus are stable, scope-owned computeds", () => {
+    const scope = createScope({ name: "array-issues-identity" });
+    const array = createFieldArray<string>({ initialValues: ["a", "b"], scope });
+
+    expect(array.issues).toBe(array.issues);
+    expect(array.validationStatus).toBe(array.validationStatus);
+
+    scope.dispose();
+  });
+
+  it("Fixture 19: repeated reads of array issues do not accumulate scope resources", () => {
+    const diagnostics = createDiagnostics({ maxEvents: 50000 });
+    diagnostics.run(() => {
+      const rootScope = createScope({ name: "array-issues-leak" });
+      const array = createFieldArray<string>({ initialValues: ["a"], scope: rootScope });
+
+      for (let i = 0; i < 200; i++) {
+        array.issues.get();
+        array.validationStatus.get();
+      }
+
+      const before = diagnostics.getEvents().length;
+      rootScope.dispose();
+      const disposing = diagnostics
+        .getEvents()
+        .slice(before)
+        .find((e) => e.type === "scope.disposing");
+
+      // Constant regardless of how many times the derived issue views were read.
+      expect(disposing?.payload["resourceCount"]).toBeLessThanOrEqual(12);
+    });
+  });
+
+  it("Fixture 20: group validateOn is honored — setValues does not run group rules under submit-only", () => {
+    const matchRule: SyncValidationRule<{ a: string; b: string }> = (vals) =>
+      vals.a === vals.b ? null : { code: "mismatch", source: "validation" };
+
+    const submitOnly = createForm<{ a: string; b: string }>({
+      initialValues: { a: "", b: "" },
+      validateOn: "submit",
+      rules: [matchRule],
+    });
+    submitOnly.setValues({ a: "x" });
+    expect(submitOnly.issues.get()).toHaveLength(0);
+    expect(submitOnly.validate("submit").map((i) => i.code)).toEqual(["mismatch"]);
+    submitOnly.dispose();
+
+    const onChange = createForm<{ a: string; b: string }>({
+      initialValues: { a: "", b: "" },
+      rules: [matchRule],
+    });
+    onChange.setValues({ a: "x" });
+    expect(onChange.issues.get().map((i) => i.code)).toEqual(["mismatch"]);
+    onChange.dispose();
+  });
+
+  it("Fixture 21: setErrors keeps the F1/F2 contract for empty and reserved-word messages", () => {
+    const field = createField<string>({ initialValue: "" });
+
+    expect(() => field.setErrors([""])).not.toThrow();
+    expect(field.errors.get()).toEqual([""]);
+    expect(field.issues.get()).toHaveLength(1);
+    expect(field.issues.get()[0]?.message).toBe("");
+    expect(field.validationStatus.get()).toBe("invalid");
+
+    expect(() => field.setErrors(["constructor", "__proto__", "prototype"])).not.toThrow();
+    expect(field.errors.get()).toEqual(["constructor", "__proto__", "prototype"]);
+    expect(({} as Record<string, unknown>)["polluted"]).toBeUndefined();
+
+    field.setErrors([]);
+    expect(field.issues.get()).toHaveLength(0);
+    expect(field.valid.get()).toBe(true);
+  });
 });

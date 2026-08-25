@@ -128,13 +128,14 @@ export class MutationRecord<TData = unknown, TVariables = unknown, TContext = un
 
       const durationMs = Date.now() - startTime;
       if (controller.signal.aborted) {
-        this.snapshot = { ...this.snapshot, status: "idle" };
+        // This controller only aborts via cancel() (which already reset the
+        // snapshot) or a superseding mutate() (whose pending snapshot must not
+        // be clobbered with "idle" here), so only report and throw.
         emitDiagnostic(this.sink, {
           type: "mutation:cancelled",
           timestamp: Date.now(),
           durationMs,
         });
-        this.notify();
         throw new DOMException("Mutation aborted", "AbortError");
       }
 
@@ -159,13 +160,13 @@ export class MutationRecord<TData = unknown, TVariables = unknown, TContext = un
     } catch (error) {
       const durationMs = Date.now() - startTime;
       if (controller.signal.aborted) {
-        this.snapshot = { ...this.snapshot, status: "idle" };
+        // See the success-path abort branch: the snapshot was already settled
+        // by cancel() or belongs to a superseding mutate() - leave it alone.
         emitDiagnostic(this.sink, {
           type: "mutation:cancelled",
           timestamp: Date.now(),
           durationMs,
         });
-        this.notify();
         throw error;
       }
 

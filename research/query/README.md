@@ -54,6 +54,21 @@ Query identity is governed by deterministic value structure rather than function
 - **Index Optimization**: 32-bit FNV-1a hash maps keys to cache bucket entries.
 - **Collision Safety**: Disambiguated using full canonical string equality within buckets (verified with 100% collision test suites).
 
+### Prototype Cache Bounds (Not Implemented)
+
+`ResearchQueryCache` (`query-cache-prototype.ts`) is intentionally unbounded: it has no maximum
+entry count and no eviction policy, so `set()` grows the cache indefinitely for the lifetime of
+the instance. `matchFamily()` is a full O(n) scan over every bucket and every record in it; it
+does not use a family/prefix index. This is acceptable for a research prototype exercising
+QueryKey identity and collision behavior in isolation, but it is not production-shaped as-is.
+
+A real implementation graduating from this prototype needs:
+
+- a size cap (entry count and/or byte-size budget) enforced on `set()`;
+- an eviction policy once the cap is reached (LRU is the natural default given `gcTime`/inactive
+  retention semantics already established in [Section 4](#4-cancellation-freshness--inactive-gc-p53));
+- a dedicated index for family/prefix matching so `matchFamily()` does not scan the entire cache.
+
 ---
 
 ## 3. QueryRecord State Separation & Deduplication (P5.2)

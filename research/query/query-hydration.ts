@@ -112,7 +112,8 @@ export function hydrate(
 
   const now = Date.now();
   const maxFutureSkewMs = options?.maxFutureSkewMs ?? 60_000;
-  let hydratedCount = 0;
+
+  const validated: Array<{ key: QueryKey; data: unknown; ts: number }> = [];
 
   for (const item of raw.queries) {
     if (typeof item !== "object" || item === null || Array.isArray(item)) {
@@ -144,9 +145,14 @@ export function hydrate(
       );
     }
 
-    client.setQueryData(entry.key as QueryKey, entry.data, ts);
-    hydratedCount += 1;
+    validated.push({ key: entry.key as QueryKey, data: entry.data, ts });
   }
+
+  for (const entry of validated) {
+    client.setQueryData(entry.key, entry.data, entry.ts);
+  }
+
+  const hydratedCount = validated.length;
 
   emitDiagnostic(client.sink, {
     type: "query:hydrated",

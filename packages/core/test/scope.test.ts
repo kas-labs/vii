@@ -248,3 +248,17 @@ test("disposing a child scope removes it from parent retained resources, while p
     expect(disposingEvent?.payload["resourceCount"]).toBe(1);
   });
 });
+
+test("scope.run safely handles a return value with a throwing then getter", () => {
+  const scope = createScope();
+  const hostile = {
+    get then() {
+      throw new Error("hostile getter boom");
+    },
+    value: 42,
+  };
+
+  const result = scope.run(() => hostile);
+  expect(result).toBe(hostile);
+  expect(result.value).toBe(42);
+});

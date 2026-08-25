@@ -1445,9 +1445,10 @@ describe("Form Research F1 & F2 — Complete Prototype and Regression Evidence",
         const afterDisposeEvents = diagnostics.getEvents().slice(beforeDisposeEvents.length);
 
         const disposingEvent = afterDisposeEvents.find((e) => e.type === "scope.disposing");
-        // The parent scope retains strictly the array's own resources (9 total: array computeds + cleanup + 1 active item),
-        // proving that the 50 push/remove cycles detached all 50 dead item scopes without leaking into the parent.
-        expect(disposingEvent?.payload["resourceCount"]).toBeLessThanOrEqual(10);
+        // The parent scope retains strictly the array's own resources (11 total: array computeds,
+        // including the F3 issues/validationStatus computeds, + cleanup + 1 active item), proving
+        // that the 50 push/remove cycles detached all 50 dead item scopes without leaking into the parent.
+        expect(disposingEvent?.payload["resourceCount"]).toBeLessThanOrEqual(12);
       });
     });
   });
@@ -1568,8 +1569,8 @@ describe("Form Research F1 & F2 — Complete Prototype and Regression Evidence",
         const afterDisposeEvents = diagnostics.getEvents().slice(beforeDispose);
         const disposingEvent = afterDisposeEvents.find((e) => e.type === "scope.disposing");
 
-        // Parent resource count is strictly constant (<= 10), retaining no dead item scopes
-        expect(disposingEvent?.payload["resourceCount"]).toBeLessThanOrEqual(10);
+        // Parent resource count is strictly constant (<= 12), retaining no dead item scopes
+        expect(disposingEvent?.payload["resourceCount"]).toBeLessThanOrEqual(12);
       });
     });
   });

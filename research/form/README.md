@@ -144,3 +144,42 @@ The test suite in [`research/form/form-core.test.ts`](./form-core.test.ts) cover
    - Form-side array mutations (`push`) propagating exactly once to external store.
    - 200 sequential updates on scalar and alternating array forms.
    - `form.dispose()` during external binding halting bidirectional propagation.
+
+---
+
+## 4. F3: Synchronous Validation Scheduling & Structured Issues
+
+### Overview & Architecture
+F3 introduces synchronous validation scheduling and machine-readable structured issues to Vii Form without expanding into a schema engine or async validation pipeline (which belongs to F4).
+
+### Key Decisions & Contracts
+1. **Deterministic Synchronous Rule Contract**:
+   - `SyncValidationRule<T, Ctx> = (value: T, context: Ctx) => FieldIssue | readonly FieldIssue[] | null | undefined`.
+   - Rules are strictly synchronous. If a rule returns a Promise or thenable, it is fast-rejected with an explicit `TypeError` stating that async validation is not supported in F3.
+   - Rules are pure functions with respect to Form state and must not mutate internal signals during evaluation.
+2. **Structured Issue Taxonomy (`FieldIssue`)**:
+   - `code`: required machine-readable string identifier (e.g. `"required"`, `"min_length"`).
+   - `message`: optional human-readable message.
+   - `path`: structured array of path segments (`readonly (string | number)[]`), not concatenated dot strings.
+   - `source`: `"validation"`.
+   - `ruleId`: optional identifier.
+   - **Privacy / Value-Safety**: Raw field values and validator object references are never captured in `FieldIssue` or diagnostic payloads.
+3. **Validation Trigger Semantics (`ValidationTriggerMode`)**:
+   - `"change"`: runs on leaf `setValue` or group `setValues` mutations. Both leaf and group nodes honor their own `validateOn` set here: a node configured `validateOn: "submit"` is not evaluated by a mutation.
+   - `"blur"`: runs on `setTouched(true)`.
+   - `"submit"`: runs form-wide validation across all nodes in the tree without altering touched/dirty.
+   - `"manual"`: explicitly invokes `node.validate()` on demand.
+4. **Validation Status Taxonomy (`ValidationStatus`)**:
+   - Form and field nodes distinguish `"unvalidated"`, `"valid"`, and `"invalid"`.
+   - Pristine nodes start as `"unvalidated"`. `valid` computed evaluates `errors.length === 0 && issues.length === 0` (backward-compatible with F1/F2).
+5. **Array Item Issue Ownership vs Positional Paths**:
+   - When dynamic array items are swapped, moved, or reordered, internal issues remain bound to the conceptual item node.
+   - The parent array's computed issues dynamically map the issue's presentation path to its current position (`[index, ...childPath]`).
+6. **Prototype Pollution Defense**:
+   - Rule-produced issue codes and path segments reject `__proto__`, `constructor`, `prototype`.
+   - Issue records and maps use `Object.create(null)` dictionaries.
+   - The legacy `setErrors(string[])` surface is exempt: those strings are opaque human messages, never used as keys, so they are wrapped as `{ code: "legacy.error", message }` and keep the F1/F2 contract for `""` and reserved-word text.
+7. **Derived Issue Views Are Scope-Owned**:
+   - `FieldArray.issues` and `FieldArray.validationStatus` are single computeds created once per array and registered with the owning scope, so repeated reads neither allocate nor retain dependency subscriptions.
+8. **Throwing Validator Behavior**:
+   - Uncaught exceptions inside validation rules propagate as runtime errors without leaking field values in diagnostics.

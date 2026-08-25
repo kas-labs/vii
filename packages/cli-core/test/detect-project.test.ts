@@ -664,3 +664,24 @@ async function createFixture(files: Record<string, string>): Promise<string> {
 async function removeFixture(root: string): Promise<void> {
   await rm(root, { recursive: true, force: true });
 }
+
+test("detectProject reports SSR rendering for Remix manifests", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "vii-detect-remix-"));
+  try {
+    await writeFile(
+      path.join(root, "package.json"),
+      JSON.stringify({
+        name: "remix-app",
+        dependencies: {
+          react: "19.0.0",
+          "react-dom": "19.0.0",
+          "@remix-run/react": "2.0.0",
+        },
+      }),
+    );
+    const detection = await detectProject(root);
+    expect(detection.rendering).toBe("mixed");
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});

@@ -248,7 +248,12 @@ function detectRendering(context: DetectionContext, framework: ProjectFramework)
     hasFilePrefix(context.files, "next.config.") ||
     hasFilePrefix(context.files, "nuxt.config.") ||
     hasDependency(context.manifest, "@angular/ssr") ||
-    hasDependency(context.manifest, "react-dom/server");
+    // "react-dom/server" is a module subpath, never a package.json dependency
+    // key, so it can never match here. Remix packages are the manifest-visible
+    // React SSR markers; hand-rolled renderToString setups have no manifest
+    // signal and stay undetected.
+    hasDependency(context.manifest, "@remix-run/react") ||
+    hasDependency(context.manifest, "@remix-run/node");
   const client = framework !== "unknown" && framework !== "mixed";
   if (ssr && client) {
     context.evidence.push({

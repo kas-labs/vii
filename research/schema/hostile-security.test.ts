@@ -102,3 +102,34 @@ describe("S1: Hostile Input & Security Baselines", () => {
     });
   });
 });
+
+describe("Issue-helper hardening (audit regressions)", () => {
+  it("createFormErrors and groupIssuesByPath survive hostile issue paths", async () => {
+    const { createFormErrors, groupIssuesByPath } = await import("./issues.js");
+    const schema = v.object({ name: v.string() });
+    const hostilePayload = JSON.parse('{"__proto__": {"x": 1}, "constructor": 1, "name": 2}');
+    const result = schema.check(hostilePayload);
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+
+    const formErrors = createFormErrors(result.issues);
+    expect(Array.isArray(formErrors["__proto__"])).toBe(true);
+    expect(Array.isArray(formErrors["constructor"])).toBe(true);
+
+    const grouped = groupIssuesByPath(result.issues);
+    expect(Array.isArray(grouped["__proto__"])).toBe(true);
+    expect({} as Record<string, unknown>).not.toHaveProperty("x");
+  });
+
+  it("rejects arrays exceeding the element-count complexity limit", () => {
+    const schema = v.array(v.number());
+    const oversized = new Array<number>(10_001).fill(1);
+    const result = schema.check(oversized);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.issues[0]?.code).toBe("too_many_items");
+    }
+    expect(schema.check([1, 2, 3]).ok).toBe(true);
+  });
+});

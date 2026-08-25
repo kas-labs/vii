@@ -1,6 +1,7 @@
 import { constants } from "node:fs";
 import { mkdir, open, readFile, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
+
 import { verifyContentIntegrity } from "../registry/integrity.js";
 import {
   createInitialLockState,
@@ -132,7 +133,7 @@ async function inspectDestination(
 ): Promise<DestinationInspection> {
   let handle;
   try {
-    handle = await open(absTarget, constants.O_RDONLY | constants.O_NOFOLLOW);
+    handle = await open(absTarget, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
     const content = await handle.readFile("utf8");
     return content === expectedContent ? "same" : "different";
   } catch (err: any) {

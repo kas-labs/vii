@@ -155,3 +155,40 @@ test("computed tracks plain object with a then method without throwing", () => {
 
   expect(c.get()).toBe(thenableData);
 });
+
+test("subscriber is notified when get() recomputes between invalidation and the scheduled recompute", () => {
+  const count = state(1);
+  const doubled = computed(() => count.get() * 2);
+  const observed: number[] = [];
+
+  doubled.subscribe((value) => observed.push(value));
+  count.subscribe(() => {
+    // Synchronous read in the same flush wave evaluates the computed and
+    // clears the dirty flag before the scheduled recompute job runs.
+    doubled.get();
+  });
+
+  count.set(2);
+
+  expect(observed).toEqual([4]);
+});
+
+test("a recompute that throws does not permanently detach subscribers", () => {
+  const count = state(1);
+  const brittle = computed(() => {
+    const value = count.get();
+    if (value === 2) {
+      throw new Error("transient failure");
+    }
+    return value * 10;
+  });
+  const observed: number[] = [];
+
+  brittle.subscribe((value) => observed.push(value));
+
+  expect(() => count.set(2)).toThrow("transient failure");
+
+  count.set(3);
+
+  expect(observed).toEqual([30]);
+});

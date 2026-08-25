@@ -237,3 +237,42 @@ describe("P5.4 Mutations and Optimistic Transactions Prototype", () => {
     });
   });
 });
+
+describe("Superseding mutation snapshot integrity (audit regression)", () => {
+  it("does not clobber the successor's pending snapshot when the superseded mutation aborts", async () => {
+    const { MutationRecord } = await import("./mutation-record.js");
+    let releaseFirst: (() => void) | undefined;
+    const statuses: string[] = [];
+
+    const record = new MutationRecord<string, string>({
+      mutationFn: async (variables, { signal }) => {
+        if (variables === "first") {
+          await new Promise<void>((resolve) => {
+            releaseFirst = resolve;
+          });
+          if (signal.aborted) {
+            // Simulate a mutation fn that resolves anyway after abort.
+            return "first-late";
+          }
+        }
+        return variables;
+      },
+    });
+
+    record.subscribe((snapshot) => statuses.push(snapshot.status));
+
+    const first = record.mutate("first").catch(() => "aborted");
+    const second = record.mutate("second");
+
+    // Release the superseded mutation after the successor is already pending.
+    releaseFirst?.();
+    await expect(first).resolves.toBe("aborted");
+
+    // The successor must still be pending (or settle to success), never be
+    // reset to idle by the superseded mutation's abort handling.
+    expect(record.getSnapshot().status).not.toBe("idle");
+    await expect(second).resolves.toBe("second");
+    expect(record.getSnapshot().status).toBe("success");
+    expect(statuses).not.toContain("idle");
+  });
+});

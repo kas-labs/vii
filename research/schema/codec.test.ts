@@ -159,3 +159,47 @@ describe("S3: Codec & Serialization Semantics", () => {
     });
   });
 });
+
+describe("Codec input-grammar hardening (audit regressions)", () => {
+  it("bigIntFromString rejects empty and whitespace-only strings", () => {
+    const codec = bigIntFromString();
+    expect(codec.decode("").ok).toBe(false);
+    expect(codec.decode("  \n ").ok).toBe(false);
+  });
+
+  it("bigIntFromString rejects hex, octal, and binary radix prefixes", () => {
+    const codec = bigIntFromString();
+    expect(codec.decode("0x1f").ok).toBe(false);
+    expect(codec.decode("0o17").ok).toBe(false);
+    expect(codec.decode("0b101").ok).toBe(false);
+  });
+
+  it("bigIntFromString still accepts signed decimal integers", () => {
+    const codec = bigIntFromString();
+    const res = codec.decode("-9007199254740993");
+    expect(res.ok).toBe(true);
+    if (res.ok) expect(res.value).toBe(-9007199254740993n);
+  });
+
+  it("dateFromISOString rejects non-ISO formats that Date.parse would accept", () => {
+    const codec = dateFromISOString();
+    expect(codec.decode("Jan 1, 2020").ok).toBe(false);
+    expect(codec.decode("Thu Jan 01 1970").ok).toBe(false);
+    expect(codec.decode("12/31/2020").ok).toBe(false);
+  });
+
+  it("dateFromISOString accepts date-only and full ISO timestamps", () => {
+    const codec = dateFromISOString();
+    expect(codec.decode("2020-06-15").ok).toBe(true);
+    expect(codec.decode("2020-06-15T10:30:00.123Z").ok).toBe(true);
+    expect(codec.decode("2020-06-15T10:30:00+02:00").ok).toBe(true);
+  });
+
+  it("urlSearchParamsCodec rejects present-but-empty numeric params instead of coercing to 0", () => {
+    const codec = urlSearchParamsCodec({ limit: v.number() });
+    expect(codec.decode("limit=").ok).toBe(false);
+    const explicit = codec.decode("limit=0");
+    expect(explicit.ok).toBe(true);
+    if (explicit.ok) expect(explicit.value.limit).toBe(0);
+  });
+});

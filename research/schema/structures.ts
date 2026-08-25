@@ -1,6 +1,7 @@
 import {
   checkStructureSecurity,
   createValidationContext,
+  DEFAULT_MAX_ITEMS,
   DEFAULT_MAX_PROPERTIES,
   enterChildContext,
   releaseObjectPath,
@@ -122,6 +123,19 @@ export class ArraySchema<TItemSchema extends Schema<any, any>> extends BaseSchem
     if (secViolation) return secViolation;
 
     try {
+      if (input.length > DEFAULT_MAX_ITEMS) {
+        return {
+          ok: false,
+          issues: [
+            {
+              code: "too_many_items",
+              expected: `<= ${DEFAULT_MAX_ITEMS} items`,
+              path,
+            },
+          ],
+        };
+      }
+
       const childCtx = enterChildContext(ctx);
       const issues: SchemaIssue[] = [];
 

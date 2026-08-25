@@ -82,3 +82,37 @@ describe("DTCG Token Generator", () => {
     expect(parsed["color.primary"].type).toBe("color");
   });
 });
+
+describe("Generator injection hardening (audit regressions)", () => {
+  it("escapes hostile token names in generated TypeScript", () => {
+    const hostileDoc = {
+      group: {
+        'x": 0} as const; export const pwned = 1; //': {
+          $type: "dimension",
+          $value: { value: 4, unit: "px" },
+        },
+      },
+    };
+    const graph = resolveTokenGraph(hostileDoc as unknown as DTCGDocument);
+    const ts = generateTypeScript(graph);
+
+    // The hostile name must stay inside an escaped string literal: exactly the
+    // two intended top-level bindings, no injected statements.
+    expect(ts.match(/^export const /gm)).toHaveLength(2);
+    expect(ts).toContain('\\"');
+  });
+
+  it("refuses to emit CSS when a string token value contains braces", () => {
+    const hostileDoc = {
+      danger: {
+        breakout: {
+          $type: "fontFamily",
+          $value: "serif;} body{background:url(//evil.example)} .x{",
+        },
+      },
+    };
+    const graph = resolveTokenGraph(hostileDoc as unknown as DTCGDocument);
+
+    expect(() => generateCss(graph)).toThrow(/braces/);
+  });
+});

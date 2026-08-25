@@ -35,11 +35,23 @@ export class CustomCodec<TEncoded, TDecoded>
   }
 }
 
+// Date-only or date-time with optional seconds, fractional seconds, and offset.
+// Date.parse alone falls back to implementation-defined parsing ("Jan 1, 2020"
+// parses on V8 but not everywhere), so the grammar is pinned before parsing.
+const ISO_8601_PATTERN =
+  /^\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,9})?)?(?:Z|[+-]\d{2}:\d{2})?)?$/;
+
 export function dateFromISOString(): Codec<string, Date> {
   return new CustomCodec<string, Date>(
     (input, path) => {
       if (typeof input !== "string") {
         return { ok: false, issues: [{ code: "invalid_type", expected: "string", path }] };
+      }
+      if (!ISO_8601_PATTERN.test(input)) {
+        return {
+          ok: false,
+          issues: [{ code: "invalid_date_format", expected: "ISO-8601 date string", path }],
+        };
       }
       const parsedTime = Date.parse(input);
       if (Number.isNaN(parsedTime)) {
@@ -59,6 +71,14 @@ export function bigIntFromString(): Codec<string, bigint> {
     (input, path) => {
       if (typeof input !== "string") {
         return { ok: false, issues: [{ code: "invalid_type", expected: "string", path }] };
+      }
+      // BigInt() alone accepts ""/whitespace (as 0n) and 0x/0o/0b radix
+      // prefixes; the codec contract is a decimal integer string.
+      if (!/^[+-]?\d+$/.test(input)) {
+        return {
+          ok: false,
+          issues: [{ code: "invalid_bigint_format", expected: "integer string", path }],
+        };
       }
       try {
         const parsed = BigInt(input);
@@ -169,8 +189,13 @@ export function urlSearchParamsCodec<TShape extends Record<string, Schema<any, a
         } else if (effectiveKind === "array") {
           rawRecord[key] = allVals;
         } else if (effectiveKind === "number") {
-          const num = Number(allVals[0]);
-          rawRecord[key] = Number.isNaN(num) ? allVals[0] : num;
+          // Number("") and Number("   ") are 0, which would make a
+          // present-but-empty param ("?count=") indistinguishable from an
+          // explicit "?count=0". Keep it as the raw string so the number
+          // schema rejects it.
+          const raw = allVals[0]!;
+          const num = raw.trim() === "" ? Number.NaN : Number(raw);
+          rawRecord[key] = Number.isNaN(num) ? raw : num;
         } else if (effectiveKind === "boolean") {
           rawRecord[key] =
             allVals[0] === "true" ? true : allVals[0] === "false" ? false : allVals[0];

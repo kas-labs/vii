@@ -433,3 +433,47 @@ describe("Private Network & SSRF Defenses (H7)", () => {
     expect(() => validateUrlSecurity("https://203.0.55.1/", policy)).not.toThrow();
   });
 });
+
+describe("Redirect mode under a security policy (audit regressions)", () => {
+  it('hands the redirect response back when redirect mode is "manual"', async () => {
+    const mockFetch = vi.fn().mockImplementation(() =>
+      Promise.resolve(
+        new Response(null, {
+          status: 302,
+          headers: { Location: "https://api.example.com/next" },
+        }),
+      ),
+    );
+
+    const client = createHttpClient({
+      fetch: mockFetch,
+      security: { allowedHosts: ["api.example.com"] },
+    });
+
+    const res = await client.get("https://api.example.com/start", { redirect: "manual" });
+    expect(res.status).toBe(302);
+    expect(res.headers.get("location")).toBe("https://api.example.com/next");
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('refuses redirects when redirect mode is "error"', async () => {
+    const mockFetch = vi.fn().mockImplementation(() =>
+      Promise.resolve(
+        new Response(null, {
+          status: 302,
+          headers: { Location: "https://api.example.com/next" },
+        }),
+      ),
+    );
+
+    const client = createHttpClient({
+      fetch: mockFetch,
+      security: { allowedHosts: ["api.example.com"] },
+    });
+
+    await expect(
+      client.get("https://api.example.com/start", { redirect: "error" }),
+    ).rejects.toThrow(/redirect mode is "error"/);
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+});

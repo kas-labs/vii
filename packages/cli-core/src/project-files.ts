@@ -1,6 +1,7 @@
 import { constants } from "node:fs";
 import { open, readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
+
 import { type DetectionConflict, type DetectionEvidence, ProjectDetectionError } from "./types.js";
 
 export interface PackageManifest {
@@ -29,7 +30,7 @@ export async function inspectExistingFile(
 ): Promise<ExistingFileInspection> {
   let handle;
   try {
-    handle = await open(target, constants.O_RDONLY | constants.O_NOFOLLOW);
+    handle = await open(target, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
     return (await handle.readFile("utf8")) === expectedContent ? "same" : "different";
   } catch (error) {
     if (isFileMissing(error)) {

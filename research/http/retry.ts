@@ -122,6 +122,18 @@ export function normalizeRetryPolicy(
   return policy;
 }
 
+// Cancels a response body that is being replaced by a retry attempt so the
+// underlying connection is released instead of held open until GC. Same
+// rationale as the redirect-hop drain in client.ts.
+async function drainReplacedResponse(response: Response): Promise<void> {
+  if (!response.body || response.bodyUsed) return;
+  try {
+    await response.body.cancel();
+  } catch {
+    // Ignored: draining is best-effort cleanup, not a correctness requirement.
+  }
+}
+
 /**
  * Execute an HttpHandler pipeline with explicit opt-in retry policy.
  */
@@ -192,6 +204,7 @@ export async function executeWithRetry(
               ? Math.min(maxBackoff, Math.max(0, serverDelay))
               : calculateBackoff(attempt, policy);
 
+          await drainReplacedResponse(response);
           await sleepWithSignal(delay, request.signal);
           continue;
         }

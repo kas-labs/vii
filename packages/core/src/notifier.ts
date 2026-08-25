@@ -99,7 +99,13 @@ export function createNotifier<T>(options: NotifierOptions = {}): Notifier<T> {
 
     if (!flushScheduled) {
       flushScheduled = true;
-      schedule(flush);
+      schedule(flush, () => {
+        // The scheduler discarded this flush (runaway-cycle cutoff). Reset the
+        // scheduling flag so future notify() calls can schedule again, and drop
+        // the stale queued values that will never be delivered.
+        flushScheduled = false;
+        pendingValues.length = 0;
+      });
     }
   };
 

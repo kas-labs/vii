@@ -325,3 +325,34 @@ describe("Retry & Idempotency Engine (H5)", () => {
     expect(mockFetch).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("Retry connection hygiene (audit regressions)", () => {
+  it("drains the replaced response body before a status-based retry", async () => {
+    const cancelSpies: Array<ReturnType<typeof vi.spyOn>> = [];
+    let call = 0;
+
+    const mockFetch = vi.fn().mockImplementation(() => {
+      call++;
+      if (call === 1) {
+        const stream = new ReadableStream<Uint8Array>({
+          start(controller) {
+            controller.enqueue(new TextEncoder().encode("try again later"));
+            controller.close();
+          },
+        });
+        cancelSpies.push(vi.spyOn(stream, "cancel"));
+        return Promise.resolve(new Response(stream, { status: 503 }));
+      }
+      return Promise.resolve(new Response("ok", { status: 200 }));
+    });
+
+    const client = createHttpClient({ fetch: mockFetch });
+    const res = await client.get("https://api.example.com/flaky", {
+      retry: { maxRetries: 2, backoffBaseMs: 1, jitter: false },
+    });
+
+    expect(res.status).toBe(200);
+    expect(cancelSpies).toHaveLength(1);
+    expect(cancelSpies[0]).toHaveBeenCalledTimes(1);
+  });
+});

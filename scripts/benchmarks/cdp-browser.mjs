@@ -24,8 +24,23 @@ export class CDPClient {
   constructor(url) {
     this.ws = new globalThis.WebSocket(url);
     this.id = 0;
+    this.closed = false;
     this.callbacks = new Map();
     this.eventListeners = new Map();
+    // Without these, a crashed renderer or dropped DevTools socket leaves every
+    // pending send() promise unsettled and the benchmark process hangs forever.
+    const failAllPending = (reason) => {
+      this.closed = true;
+      const pending = [...this.callbacks.values()];
+      this.callbacks.clear();
+      for (const { rejectCb } of pending) {
+        rejectCb(reason);
+      }
+    };
+    this.ws.addEventListener("close", () =>
+      failAllPending(new Error("DevTools WebSocket closed before a response arrived")),
+    );
+    this.ws.addEventListener("error", () => failAllPending(new Error("DevTools WebSocket error")));
     this.ws.onmessage = (msg) => {
       const data = JSON.parse(msg.data);
       if (data.id !== undefined && this.callbacks.has(data.id)) {
@@ -52,10 +67,19 @@ export class CDPClient {
   send(method, params = {}, sessionId) {
     const id = ++this.id;
     return new Promise((resolveCb, rejectCb) => {
+      if (this.closed) {
+        rejectCb(new Error(`DevTools WebSocket is closed; cannot send ${method}`));
+        return;
+      }
       this.callbacks.set(id, { resolveCb, rejectCb });
       const msg = { id, method, params };
       if (sessionId) msg.sessionId = sessionId;
-      this.ws.send(JSON.stringify(msg));
+      try {
+        this.ws.send(JSON.stringify(msg));
+      } catch (error) {
+        this.callbacks.delete(id);
+        rejectCb(error);
+      }
     });
   }
 

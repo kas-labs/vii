@@ -69,6 +69,35 @@ export function calculateRelativeLuminance(color: DTCGColorValue): number {
   );
 }
 
+/**
+ * Alpha-composites a translucent foreground over an opaque background in the
+ * token's own (gamma-encoded) space, matching how CSS composites colors.
+ * WCAG contrast is defined for the rendered result, so evaluating the raw
+ * translucent components would inflate the ratio (e.g. 40% black on white
+ * renders as rgb(153 153 153), not black). Colors in different spaces are
+ * returned unblended, as composition across spaces is undefined here.
+ */
+export function compositeOverBackground(
+  foreground: DTCGColorValue,
+  background: DTCGColorValue,
+): DTCGColorValue {
+  const alpha = foreground.alpha ?? 1;
+  if (alpha >= 1 || foreground.colorSpace !== background.colorSpace) {
+    return foreground;
+  }
+  const clampedAlpha = Math.max(0, alpha);
+  const [fr, fgreen, fb] = foreground.components;
+  const [br, bgreen, bb] = background.components;
+  return {
+    colorSpace: foreground.colorSpace,
+    components: [
+      fr * clampedAlpha + br * (1 - clampedAlpha),
+      fgreen * clampedAlpha + bgreen * (1 - clampedAlpha),
+      fb * clampedAlpha + bb * (1 - clampedAlpha),
+    ],
+  };
+}
+
 export function calculateContrastRatio(colorA: DTCGColorValue, colorB: DTCGColorValue): number {
   const lumA = calculateRelativeLuminance(colorA);
   const lumB = calculateRelativeLuminance(colorB);
@@ -84,9 +113,10 @@ export function evaluateContrast(
   fgName = "foreground",
   bgName = "background",
 ): ContrastResult {
-  const fgLuminance = Math.round(calculateRelativeLuminance(fgColor) * 10000) / 10000;
+  const effectiveFg = compositeOverBackground(fgColor, bgColor);
+  const fgLuminance = Math.round(calculateRelativeLuminance(effectiveFg) * 10000) / 10000;
   const bgLuminance = Math.round(calculateRelativeLuminance(bgColor) * 10000) / 10000;
-  const ratio = calculateContrastRatio(fgColor, bgColor);
+  const ratio = calculateContrastRatio(effectiveFg, bgColor);
 
   const passes: Record<WCAGCriterion, boolean> = {
     WCAG_1_4_3_AA_NORMAL: ratio >= WCAG_THRESHOLDS.WCAG_1_4_3_AA_NORMAL,

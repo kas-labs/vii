@@ -39,6 +39,18 @@ This directory contains the throwaway research prototypes for **F1 (Minimal Fiel
     - Calling `getNode`, `setValues`, or `reset` throws `Error("Form is disposed")`.
     - Reading `form.values.get()` throws `Error("Computed is disposed")`.
     - `dispose()` is idempotent.
+8. **Consequence of Null-Prototype `values` (from Item 4's Prototype Pollution Hardening)**:
+    - `fields`, the `form.values.get()` result, and the `errors` record are all allocated with
+      `Object.create(null)` (see Item 4). This is a deliberate consequence of that hardening, not an
+      incidental detail, and it is visible to every consumer of `form.values`:
+      - `values.hasOwnProperty(key)` **throws** (`Object.prototype.hasOwnProperty` does not exist on a
+        null-prototype object). Use `Object.hasOwn(values, key)` instead.
+      - `values.constructor` is `undefined`.
+      - `expect(values).toStrictEqual({ foo: "bar" })` in a consumer's test will **not** match, because
+        `toStrictEqual` also compares prototypes and a plain object literal has `Object.prototype`. Spread
+        into a plain object first: `expect({ ...values }).toStrictEqual({ foo: "bar" })`.
+    - Unaffected: `JSON.stringify(values)` and object spread (`{ ...values }`) both work exactly as they
+      would on a normal object, since neither depends on the prototype chain.
 
 ---
 

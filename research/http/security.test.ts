@@ -380,6 +380,40 @@ describe("Private Network & SSRF Defenses (H7)", () => {
     expect(mockFetch).toHaveBeenCalledTimes(4); // initial + 3 redirects
   });
 
+  it("R9: drains intermediate redirect response bodies before following the next hop", async () => {
+    const cancelSpies: Array<ReturnType<typeof vi.spyOn>> = [];
+
+    const mockFetch = vi.fn().mockImplementation((url: string) => {
+      const parsed = new URL(url);
+      if (parsed.pathname === "/start") {
+        const stream = new ReadableStream<Uint8Array>({
+          start(controller) {
+            controller.enqueue(new TextEncoder().encode("intermediate body"));
+            controller.close();
+          },
+        });
+        cancelSpies.push(vi.spyOn(stream, "cancel"));
+        return Promise.resolve(
+          new Response(stream, {
+            status: 302,
+            headers: { Location: "https://api.example.com/final" },
+          }),
+        );
+      }
+      return Promise.resolve(new Response("final content", { status: 200 }));
+    });
+
+    const client = createHttpClient({
+      fetch: mockFetch,
+      security: { allowedHosts: ["api.example.com"] },
+    });
+
+    const res = await client.get("https://api.example.com/start");
+    expect(res.status).toBe(200);
+    expect(cancelSpies).toHaveLength(1);
+    expect(cancelSpies[0]).toHaveBeenCalledTimes(1);
+  });
+
   it("accurately narrows /24 reserved ranges without blocking valid public IPs in the same /16", () => {
     const policy = { allowPrivateNetworks: false };
 

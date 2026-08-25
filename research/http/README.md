@@ -61,11 +61,12 @@ The purpose of H8 is to research request/response lifecycle hooks (`onRequest`, 
     - **Protocol Allowlist**: Enforces `allowedProtocols` (defaulting to `["http:", "https:"]`). Disallowed schemes (e.g. `file:`, `data:`, `gopher:`, `ws:`) are rejected pre-flight with `HttpSecurityError`.
     - **Client-Side Redirect Security**: When a `security` policy is configured, the client takes over redirect traversal (`redirect: "manual"`), validating `validateUrlSecurity` on every hop, capping redirect hops (default 20, policy-configurable via `maxRedirects`), and enforcing WHATWG method/body transitions.
     - **Cross-Origin Sensitive Header Sanitization**: `stripSensitiveHeaders` automatically removes `Authorization`, `Cookie`, `Proxy-Authorization`, `X-Api-Key`, `X-Auth-Token`, etc. when traversing cross-origin redirect hops.
+    - **Intermediate Redirect Body Draining**: Each intermediate 3xx hop's response body is drained (`response.body.cancel()`) before following `location`, so the underlying connection isn't held open until GC while the redirect chain is traversed.
     - **DNS Limitation Notice**: URL security checks are performed on the URL string/hostname before transport socket resolution. They do not perform DNS lookups or prevent DNS rebinding attacks at the transport/socket level.
     - **Pre-flight Enforcement**: Disallowed requests fail immediately with `HttpSecurityError` prior to socket or network initialization.
 11. **Observability, Tracing & Metrics (H8)**:
     - **W3C Trace Context / OpenTelemetry**: Auto-generation and propagation of `traceparent` (`00-${traceId}-${spanId}-${flags}`).
-    - **Lifecycle Telemetry Hooks**: Non-blocking `onRequest`, `onResponse`, and `onError` lifecycle events.
+    - **Lifecycle Telemetry Hooks**: Non-blocking `onRequest`, `onResponse`, and `onError` lifecycle events. `onRequest` always reports the initial request built before any redirect traversal. `onResponse` and `onError` report the request for the final hop that actually produced the response (or the error) — when a security policy causes the client to follow redirects, that is the last hop's `Request`, not the first; its URL and method can differ from the initial request (e.g. after a 303).
     - **Structured Timing**: Accurate execution duration metrics (`durationMs`).
     - **Sensitive Data Redaction**: Utilities `redactUrl` and `redactHeaders` preventing credential leakage in structured log output.
 

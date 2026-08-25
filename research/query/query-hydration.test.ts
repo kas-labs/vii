@@ -258,5 +258,26 @@ describe("P5.5 SSR Request Scope & Hydration Prototype", () => {
         HydrationValidationError,
       );
     });
+
+    it("applies nothing to the cache when a later entry fails validation", () => {
+      const client = new ResearchQueryClient();
+      const queries = Array.from({ length: 10 }, (_, i) => ({
+        key: ["item", i],
+        data: i,
+        dataUpdatedAt: i === 4 ? Number.NaN : Date.now(),
+      }));
+
+      const envelope: QueryHydrationEnvelope = {
+        protocol: "vii.query",
+        version: 1,
+        queries,
+      };
+
+      expect(() => hydrate(client, envelope)).toThrowError(HydrationValidationError);
+      expect(client.size).toBe(0);
+      for (let i = 0; i < 10; i++) {
+        expect(client.hasRecord(["item", i])).toBe(false);
+      }
+    });
   });
 });

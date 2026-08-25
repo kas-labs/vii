@@ -3,6 +3,7 @@ import {
   createValidationContext,
   DEFAULT_MAX_PROPERTIES,
   enterChildContext,
+  releaseObjectPath,
   type ValidationContext,
 } from "./security.js";
 import {
@@ -40,55 +41,59 @@ export class ObjectSchema<TShape extends Record<string, Schema<any, any>>> exten
     const secViolation = checkStructureSecurity(input, path, ctx, "object");
     if (secViolation) return secViolation;
 
-    const inputRecord = input as Record<string, unknown>;
-    const propNames = Object.getOwnPropertyNames(inputRecord);
+    try {
+      const inputRecord = input as Record<string, unknown>;
+      const propNames = Object.getOwnPropertyNames(inputRecord);
 
-    if (propNames.length > DEFAULT_MAX_PROPERTIES) {
-      return {
-        ok: false,
-        issues: [
-          {
-            code: "too_many_properties",
-            expected: `<= ${DEFAULT_MAX_PROPERTIES} properties`,
-            path,
-          },
-        ],
-      };
-    }
-
-    const issues: SchemaIssue[] = [];
-    for (const key of propNames) {
-      if (FORBIDDEN_KEYS.has(key)) {
-        issues.push({
-          code: "forbidden_property",
-          expected: "safe property name",
-          path: [...path, key],
-        });
-      }
-    }
-
-    const childCtx = enterChildContext(ctx);
-    for (const [key, schema] of Object.entries(this.shape)) {
-      let fieldValue: unknown;
-      try {
-        fieldValue = inputRecord[key];
-      } catch {
-        issues.push({
-          code: "unreadable_property",
-          expected: "readable property",
-          path: [...path, key],
-        });
-        continue;
+      if (propNames.length > DEFAULT_MAX_PROPERTIES) {
+        return {
+          ok: false,
+          issues: [
+            {
+              code: "too_many_properties",
+              expected: `<= ${DEFAULT_MAX_PROPERTIES} properties`,
+              path,
+            },
+          ],
+        };
       }
 
-      const fieldResult = schema.check(fieldValue, [...path, key], childCtx);
-      if (!fieldResult.ok) {
-        issues.push(...fieldResult.issues);
+      const issues: SchemaIssue[] = [];
+      for (const key of propNames) {
+        if (FORBIDDEN_KEYS.has(key)) {
+          issues.push({
+            code: "forbidden_property",
+            expected: "safe property name",
+            path: [...path, key],
+          });
+        }
       }
-    }
 
-    if (issues.length > 0) return { ok: false, issues };
-    return { ok: true, value: input as { [K in keyof TShape]: InferOutput<TShape[K]> } };
+      const childCtx = enterChildContext(ctx);
+      for (const [key, schema] of Object.entries(this.shape)) {
+        let fieldValue: unknown;
+        try {
+          fieldValue = inputRecord[key];
+        } catch {
+          issues.push({
+            code: "unreadable_property",
+            expected: "readable property",
+            path: [...path, key],
+          });
+          continue;
+        }
+
+        const fieldResult = schema.check(fieldValue, [...path, key], childCtx);
+        if (!fieldResult.ok) {
+          issues.push(...fieldResult.issues);
+        }
+      }
+
+      if (issues.length > 0) return { ok: false, issues };
+      return { ok: true, value: input as { [K in keyof TShape]: InferOutput<TShape[K]> } };
+    } finally {
+      releaseObjectPath(input, ctx);
+    }
   }
 }
 
@@ -116,30 +121,34 @@ export class ArraySchema<TItemSchema extends Schema<any, any>> extends BaseSchem
     const secViolation = checkStructureSecurity(input, path, ctx, "array");
     if (secViolation) return secViolation;
 
-    const childCtx = enterChildContext(ctx);
-    const issues: SchemaIssue[] = [];
+    try {
+      const childCtx = enterChildContext(ctx);
+      const issues: SchemaIssue[] = [];
 
-    for (let i = 0; i < input.length; i++) {
-      let itemValue: unknown;
-      try {
-        itemValue = input[i];
-      } catch {
-        issues.push({
-          code: "unreadable_element",
-          expected: "readable array element",
-          path: [...path, i],
-        });
-        continue;
+      for (let i = 0; i < input.length; i++) {
+        let itemValue: unknown;
+        try {
+          itemValue = input[i];
+        } catch {
+          issues.push({
+            code: "unreadable_element",
+            expected: "readable array element",
+            path: [...path, i],
+          });
+          continue;
+        }
+
+        const itemResult = this.elementSchema.check(itemValue, [...path, i], childCtx);
+        if (!itemResult.ok) {
+          issues.push(...itemResult.issues);
+        }
       }
 
-      const itemResult = this.elementSchema.check(itemValue, [...path, i], childCtx);
-      if (!itemResult.ok) {
-        issues.push(...itemResult.issues);
-      }
+      if (issues.length > 0) return { ok: false, issues };
+      return { ok: true, value: input as Array<InferOutput<TItemSchema>> };
+    } finally {
+      releaseObjectPath(input, ctx);
     }
-
-    if (issues.length > 0) return { ok: false, issues };
-    return { ok: true, value: input as Array<InferOutput<TItemSchema>> };
   }
 }
 

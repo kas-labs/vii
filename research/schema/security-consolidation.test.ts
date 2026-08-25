@@ -60,6 +60,57 @@ describe("S4: Security, CSP & Complexity Consolidation", () => {
         expect(result.issues.some((i) => i.code === "cyclic_reference")).toBe(true);
       }
     });
+
+    it("accepts an object referenced by two sibling object fields (DAG, not a cycle)", () => {
+      const shared = { x: 1 };
+      const result = v
+        .object({ a: v.object({ x: v.number() }), b: v.object({ x: v.number() }) })
+        .check({ a: shared, b: shared });
+
+      expect(result.ok).toBe(true);
+    });
+
+    it("accepts an object referenced by multiple array elements (DAG, not a cycle)", () => {
+      const shared = { x: 1 };
+      const result = v.array(v.object({ x: v.number() })).check([shared, shared, shared]);
+
+      expect(result.ok).toBe(true);
+    });
+
+    it("accepts distinct-but-equal sibling objects", () => {
+      const result = v
+        .object({ a: v.object({ x: v.number() }), b: v.object({ x: v.number() }) })
+        .check({ a: { x: 1 }, b: { x: 1 } });
+
+      expect(result.ok).toBe(true);
+    });
+
+    it("accepts the same object referenced at two different depths (DAG, not a cycle)", () => {
+      const shared = { x: 1 };
+      const schema: any = v.object({
+        shallow: v.object({ x: v.number() }),
+        deep: v.object({ mid: v.object({ inner: v.object({ x: v.number() }) }) }),
+      });
+
+      const result = schema.check({
+        shallow: shared,
+        deep: { mid: { inner: shared } },
+      });
+
+      expect(result.ok).toBe(true);
+    });
+
+    it("still fails closed on a genuine self-referential cycle after DAG fix", () => {
+      const node: any = { x: 1 };
+      node.child = node;
+
+      const result = v.object({ x: v.number(), child: v.object({ x: v.number() }) }).check(node);
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.issues.some((i: any) => i.code === "cyclic_reference")).toBe(true);
+      }
+    });
   });
 
   describe("Nesting Depth & Property Limits", () => {

@@ -1,7 +1,7 @@
 # Vii Form Research Roadmap
 
-> **Status**: Active Research Track (F0-F2 Completed)
-> **Current Slice**: F3 (Validation Scheduling + Structured Issues)
+> **Status**: Active Research Track (F0-F4 Completed)
+> **Current Slice**: F4 Completed / Ready for Review
 > **Governing Strategy**: Evidence-driven Build-vs-Buy
 > **Prerequisites**: Phase 1 (Core State), Phase 2 (Adapters/CLI), Scope/Lifecycle Foundations, Schema Research (`Wrap + Reduce`)
 
@@ -85,8 +85,8 @@ Vii Form is a research track investigating whether a small, typed, framework-agn
 | **F0** | **Architecture + Domain Model + Build-vs-Buy Questions** | Define semantic boundaries, candidate domain model, value pipeline, validation/cancellation invariants, accessibility/security contracts, build-vs-buy criteria, and F0–F10 research roadmap. *(Completed)* |
 | **F1** | **Minimal Field/Form State Prototype** | Prototype minimal signal-first Field and Form core with granular subscriptions, `value`, `initialValue`, `dirty`, `touched`, `pending`, `valid`, `invalid`, and disposal. Measure notification fan-out. Compare Form-owned vs external State binding vs controlled hybrid projection. *(Completed Prototype in `research/form/`)* |
 | **F2** | **Nested Objects + Arrays + Identity** | Research object field nodes and array field nodes (`FieldArray`). Compare hierarchical tree vs flat path registry vs hybrid lookup vs lazy field nodes. Research stable item identity vs index identity across insert, remove, swap, move, and reorder. *(Completed Prototype in `research/form/`)* |
-| **F3** | **Validation Scheduling + Structured Issues** | Prototype synchronous validation engine, trigger modes (`change`, `blur`, `submit`), rule precedence, group validation, and structured issue taxonomy (`FieldIssue`, `FormIssue`). |
-| **F4** | **Async Validation + Cancellation + Revisions** | Research asynchronous validation, debounce scheduling (evidence-backed defaults), `AbortSignal` propagation, generation/revision protection to eliminate stale race conditions, and Scope lifecycle integration. |
+| **F3** | **Validation Scheduling + Structured Issues** | Prototype synchronous validation engine, trigger modes (`change`, `blur`, `submit`), rule precedence, group validation, and structured issue taxonomy (`FieldIssue`, `FormIssue`). *(Completed Prototype in `research/form/`)* |
+| **F4** | **Async Validation + Cancellation + Revisions** | Research asynchronous validation, debounce scheduling (evidence-backed defaults), `AbortSignal` propagation, generation/revision protection to eliminate stale race conditions, and Scope lifecycle integration. *(Completed Prototype in `research/form/`)* |
 | **F5** | **Parsing / Input-Output Types / Standard Schema Boundary** | Prototype raw input $\rightarrow$ parse $\rightarrow$ field value $\rightarrow$ validate $\rightarrow$ transform $\rightarrow$ output pipeline. Integrate Standard Schema v1 provider boundary and test against verified providers (Zod 4, Valibot, ArkType). |
 | **F6** | **Submission Lifecycle + Server Errors + Reset/Reinitialize** | Prototype submission state machine (`idle`, `validating`, `submitting`, `succeeded`, `failed`, `cancelled`), duplicate prevention (drop vs reject policy), server error attachment/clearing strategies, reset to initial vs new baseline, and external model reinitialization. |
 | **F7** | **Framework Adapter Compliance (Vanilla, React, Angular, Vue)** | Prototype thin adapters for Vanilla DOM, React (`useViiForm` / `useViiField`), Angular (`viiFormSignal`), and Vue (`useViiFormRef`). Verify zero whole-form rerenders and framework-native ergonomics. |

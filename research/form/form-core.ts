@@ -18,7 +18,7 @@ export type EqualityFn<T> = (a: T, b: T) => boolean;
 export const defaultEquality: EqualityFn<unknown> = (a, b) => Object.is(a, b);
 
 // ---------------------------------------------------------------------------
-// Structured Issues & Validation Taxonomy (F3)
+// Structured Issues & Validation Taxonomy (F3 & F4)
 // ---------------------------------------------------------------------------
 
 export type FieldPathSegment = string | number;
@@ -39,12 +39,21 @@ export interface ValidationRuleContext {
   readonly trigger: ValidationTriggerMode;
   readonly path?: readonly FieldPathSegment[] | undefined;
   readonly form?: FormInstance<any> | undefined;
+  readonly signal?: AbortSignal | undefined;
 }
 
 export type SyncValidationRule<T, Ctx extends ValidationRuleContext = ValidationRuleContext> = (
   value: T,
   context: Ctx,
 ) => FieldIssue | readonly FieldIssue[] | null | undefined;
+
+export type AsyncValidationRule<T, Ctx extends ValidationRuleContext = ValidationRuleContext> = (
+  value: T,
+  context: Ctx & { readonly signal: AbortSignal },
+) => Promise<FieldIssue | readonly FieldIssue[] | null | undefined>;
+
+export type ValidationRule<T, Ctx extends ValidationRuleContext = ValidationRuleContext> =
+  SyncValidationRule<T, Ctx> | AsyncValidationRule<T, Ctx>;
 
 // Defensive result validation & prototype pollution defense
 function sanitizeIssue(raw: any, defaultPath?: readonly FieldPathSegment[]): FieldIssue {
@@ -120,7 +129,7 @@ export interface FieldState<T> {
   setPending(pending: boolean): void;
   setErrors(errors: readonly string[]): void;
   setIssues(issues: readonly FieldIssue[]): void;
-  validate(trigger?: ValidationTriggerMode): readonly FieldIssue[];
+  validate(trigger?: ValidationTriggerMode): Promise<readonly FieldIssue[]> | readonly FieldIssue[];
   reset(...args: [nextInitial?: T]): void;
 }
 
@@ -128,8 +137,9 @@ export interface CreateFieldOptions<T> {
   readonly initialValue: T;
   readonly equality?: EqualityFn<T> | undefined;
   readonly scope?: Scope | undefined;
-  readonly rules?: readonly SyncValidationRule<T>[] | undefined;
+  readonly rules?: readonly ValidationRule<T>[] | undefined;
   readonly validateOn?: ValidationTriggerMode | readonly ValidationTriggerMode[] | undefined;
+  readonly debounceMs?: number | undefined;
 }
 
 export function createField<T>(options: CreateFieldOptions<T>): FieldState<T> {
@@ -138,6 +148,8 @@ export function createField<T>(options: CreateFieldOptions<T>): FieldState<T> {
     equality = defaultEquality as EqualityFn<T>,
     rules = [],
     validateOn,
+    debounceMs = 0,
+    scope,
   } = options;
 
   const valueState = state<T>(initialValue);
@@ -161,7 +173,33 @@ export function createField<T>(options: CreateFieldOptions<T>): FieldState<T> {
     triggerSet.add("change");
   }
 
-  let isValidating = false;
+  let isValidatingSync = false;
+  let activeAbortController: AbortController | null = null;
+  let currentRevision = 0;
+  let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+  let isDisposed = false;
+
+  const cancelActiveAsync = (): void => {
+    if (debounceTimer !== null) {
+      clearTimeout(debounceTimer);
+      debounceTimer = null;
+    }
+    if (activeAbortController) {
+      activeAbortController.abort();
+      activeAbortController = null;
+    }
+  };
+
+  if (scope) {
+    scope.use(() => {
+      isDisposed = true;
+      cancelActiveAsync();
+      currentRevision++;
+      if (pendingState.get()) {
+        pendingState.set(false);
+      }
+    });
+  }
 
   const runInScope = <R>(fn: () => R): R => {
     return options.scope ? options.scope.run(fn) : fn();
@@ -173,19 +211,21 @@ export function createField<T>(options: CreateFieldOptions<T>): FieldState<T> {
 
   const validComputed = runInScope(() =>
     computed(() => {
-      // Retain full backward compatibility with F1/F2: errorsState.get().length === 0
-      // while also checking issuesState
       return errorsState.get().length === 0 && issuesState.get().length === 0;
     }),
   );
 
   const invalidComputed = runInScope(() => computed(() => !validComputed.get()));
 
-  const validate = (trigger: ValidationTriggerMode = "manual"): readonly FieldIssue[] => {
-    if (isValidating) {
+  const executeValidation = (
+    trigger: ValidationTriggerMode,
+    revision: number,
+    abortController: AbortController,
+  ): Promise<readonly FieldIssue[]> | readonly FieldIssue[] => {
+    if (isValidatingSync) {
       throw new Error("Reentrant validation detected in form field");
     }
-    isValidating = true;
+    isValidatingSync = true;
 
     const diag = getActiveDiagnostics();
     if (diag) {
@@ -194,72 +234,182 @@ export function createField<T>(options: CreateFieldOptions<T>): FieldState<T> {
 
     try {
       const currentVal = valueState.get();
-      const collectedIssues: FieldIssue[] = [];
-      const ctx: ValidationRuleContext = { trigger };
+      const collectedSyncIssues: FieldIssue[] = [];
+      const pendingAsyncCalls: Array<Promise<any>> = [];
 
-      for (const rule of rules) {
+      // Step 1: Run all rules. If a rule returns a Promise/thenable, collect it.
+      // If it returns issues synchronously, collect them.
+      for (let i = 0; i < rules.length; i++) {
+        const rule = rules[i]!;
         let res: any;
         try {
-          res = rule(currentVal, ctx);
+          const ctx: ValidationRuleContext = {
+            trigger,
+            signal: abortController.signal,
+          };
+          res = rule(currentVal, ctx as any);
         } catch (ruleErr) {
           throw ruleErr;
         }
 
-        // Fast fail on Promise / Thenable
         if (
           res !== null &&
           (typeof res === "object" || typeof res === "function") &&
           typeof (res as any).then === "function"
         ) {
-          throw new TypeError(
-            "Synchronous validation rule returned a Promise or thenable. Async validation is not supported in F3.",
+          pendingAsyncCalls.push(
+            Promise.resolve(res).catch((err) => {
+              if (
+                abortController.signal.aborted ||
+                (err && (err.name === "AbortError" || err.code === "ABORT_ERR"))
+              ) {
+                return null;
+              }
+              throw err;
+            }),
           );
-        }
-
-        if (res !== null && res !== undefined) {
+        } else if (res !== null && res !== undefined) {
           if (Array.isArray(res)) {
             for (const item of res) {
-              collectedIssues.push(sanitizeIssue(item));
+              collectedSyncIssues.push(sanitizeIssue(item));
             }
           } else {
-            collectedIssues.push(sanitizeIssue(res));
+            collectedSyncIssues.push(sanitizeIssue(res));
           }
         }
       }
 
-      const nextStatus: ValidationStatus = collectedIssues.length === 0 ? "valid" : "invalid";
-      const errorStrings = collectedIssues.map((iss) => iss.message ?? iss.code);
+      // If sync issues exist or there are no async rules in flight, commit sync result immediately
+      if (collectedSyncIssues.length > 0 || pendingAsyncCalls.length === 0) {
+        cancelActiveAsync();
+        const nextStatus: ValidationStatus = collectedSyncIssues.length === 0 ? "valid" : "invalid";
+        const errorStrings = collectedSyncIssues.map((iss) => iss.message ?? iss.code);
 
-      batch(() => {
-        issuesState.set(Object.freeze(collectedIssues));
-        errorsState.set(Object.freeze(errorStrings));
-        validationStatusState.set(nextStatus);
-      });
-
-      if (diag) {
-        diag.record("field.validation.completed", {
-          issueCount: collectedIssues.length,
-          status: nextStatus,
+        batch(() => {
+          issuesState.set(Object.freeze(collectedSyncIssues));
+          errorsState.set(Object.freeze(errorStrings));
+          validationStatusState.set(nextStatus);
+          pendingState.set(false);
         });
+
+        if (diag) {
+          diag.record("field.validation.completed", {
+            issueCount: collectedSyncIssues.length,
+            status: nextStatus,
+          });
+        }
+
+        return collectedSyncIssues;
       }
 
-      return collectedIssues;
+      // Step 2: Sync passed and async calls in flight -> transition to pending
+      activeAbortController = abortController;
+      pendingState.set(true);
+
+      if (diag) {
+        diag.record("field.validation.async.started", { trigger, revision });
+      }
+
+      const asyncPromise = (async (): Promise<readonly FieldIssue[]> => {
+        try {
+          const asyncResults = await Promise.all(pendingAsyncCalls);
+
+          // Revision & cancellation check: only commit if revision matches and not aborted
+          if (revision !== currentRevision || abortController.signal.aborted || isDisposed) {
+            return issuesState.get();
+          }
+
+          const collectedAsyncIssues: FieldIssue[] = [...collectedSyncIssues];
+          for (const res of asyncResults) {
+            if (res !== null && res !== undefined) {
+              if (Array.isArray(res)) {
+                for (const item of res) collectedAsyncIssues.push(sanitizeIssue(item));
+              } else {
+                collectedAsyncIssues.push(sanitizeIssue(res));
+              }
+            }
+          }
+
+          const nextStatus: ValidationStatus =
+            collectedAsyncIssues.length === 0 ? "valid" : "invalid";
+          const errorStrings = collectedAsyncIssues.map((iss) => iss.message ?? iss.code);
+
+          batch(() => {
+            issuesState.set(Object.freeze(collectedAsyncIssues));
+            errorsState.set(Object.freeze(errorStrings));
+            validationStatusState.set(nextStatus);
+            pendingState.set(false);
+          });
+
+          if (diag) {
+            diag.record("field.validation.async.completed", {
+              issueCount: collectedAsyncIssues.length,
+              status: nextStatus,
+              revision,
+            });
+          }
+
+          return collectedAsyncIssues;
+        } catch (asyncErr) {
+          if (revision === currentRevision && !abortController.signal.aborted && !isDisposed) {
+            pendingState.set(false);
+          }
+          throw asyncErr;
+        } finally {
+          if (activeAbortController === abortController) {
+            activeAbortController = null;
+          }
+        }
+      })();
+
+      return asyncPromise;
     } finally {
-      isValidating = false;
+      isValidatingSync = false;
+    }
+  };
+
+  const validate = (
+    trigger: ValidationTriggerMode = "manual",
+  ): Promise<readonly FieldIssue[]> | readonly FieldIssue[] => {
+    if (isDisposed) {
+      throw new Error("Form node is disposed");
+    }
+    cancelActiveAsync();
+    const revision = ++currentRevision;
+    const ac = new AbortController();
+    activeAbortController = ac;
+    return executeValidation(trigger, revision, ac);
+  };
+
+  const scheduleValidation = (trigger: ValidationTriggerMode): void => {
+    cancelActiveAsync();
+    const revision = ++currentRevision;
+    const ac = new AbortController();
+    activeAbortController = ac;
+
+    if (debounceMs > 0 && trigger === "change") {
+      debounceTimer = setTimeout(() => {
+        debounceTimer = null;
+        if (revision === currentRevision && !ac.signal.aborted && !isDisposed) {
+          executeValidation(trigger, revision, ac);
+        }
+      }, debounceMs);
+    } else {
+      executeValidation(trigger, revision, ac);
     }
   };
 
   const setValue = (next: T): void => {
     valueState.set(next);
     if (rules.length > 0 && triggerSet.has("change")) {
-      validate("change");
+      scheduleValidation("change");
     }
   };
 
   const setTouched = (touched = true): void => {
     touchedState.set(touched);
     if (touched && rules.length > 0 && triggerSet.has("blur")) {
-      validate("blur");
+      scheduleValidation("blur");
     }
   };
 
@@ -278,10 +428,6 @@ export function createField<T>(options: CreateFieldOptions<T>): FieldState<T> {
   };
 
   const setErrors = (errors: readonly string[]): void => {
-    // Legacy F1/F2 surface: the strings are opaque messages, never keys, so they
-    // are wrapped directly instead of going through sanitizeIssue. Routing them
-    // through the rule sanitizer rejected "" and the reserved-key names, which
-    // are both legal error messages here.
     const syntheticIssues: readonly FieldIssue[] = Object.freeze(
       errors.map((err) =>
         Object.freeze({
@@ -301,6 +447,9 @@ export function createField<T>(options: CreateFieldOptions<T>): FieldState<T> {
   };
 
   const reset = (...args: [nextInitial?: T]): void => {
+    cancelActiveAsync();
+    currentRevision++;
+
     const hasNextInitial = args.length > 0;
     const nextInitial = args[0] as T;
 
@@ -374,7 +523,7 @@ export interface FieldGroup<T extends Record<string, any>> {
   readonly validationStatus: Computed<ValidationStatus>;
   setValues(partial: Partial<T>): void;
   reset(nextInitials?: Partial<T>): void;
-  validate(trigger?: ValidationTriggerMode): readonly FieldIssue[];
+  validate(trigger?: ValidationTriggerMode): Promise<readonly FieldIssue[]> | readonly FieldIssue[];
 }
 
 export interface CreateFieldGroupOptions<T extends Record<string, any>> {
@@ -382,8 +531,9 @@ export interface CreateFieldGroupOptions<T extends Record<string, any>> {
   readonly scope?: Scope | undefined;
   readonly keyExtractor?: ((item: any) => string | number) | undefined;
   readonly seenObjects?: Set<object> | undefined;
-  readonly rules?: readonly SyncValidationRule<T>[] | undefined;
+  readonly rules?: readonly ValidationRule<T>[] | undefined;
   readonly validateOn?: ValidationTriggerMode | readonly ValidationTriggerMode[] | undefined;
+  readonly debounceMs?: number | undefined;
 }
 
 export type FormNodeFor<T> =
@@ -405,6 +555,7 @@ export function createFieldGroup<T extends Record<string, any>>(
     seenObjects = new Set<object>(),
     rules = [],
     validateOn,
+    debounceMs = 0,
   } = options;
 
   if (seenObjects.has(initialValues)) {
@@ -416,6 +567,7 @@ export function createFieldGroup<T extends Record<string, any>>(
   const fields = Object.create(null) as { [K in keyof T]: FormNodeFor<T[K]> };
   const groupIssuesState = state<readonly FieldIssue[]>([]);
   const groupValidationStatusState = state<ValidationStatus>("unvalidated");
+  const groupPendingState = state<boolean>(false);
 
   for (const key of Object.keys(initialValues) as Array<keyof T>) {
     const val = initialValues[key];
@@ -464,7 +616,7 @@ export function createFieldGroup<T extends Record<string, any>>(
   );
 
   const pendingComputed = runInScope(() =>
-    computed(() => keys.some((k) => (fields[k] as any).pending.get())),
+    computed(() => groupPendingState.get() || keys.some((k) => (fields[k] as any).pending.get())),
   );
 
   const validComputed = runInScope(() =>
@@ -549,64 +701,174 @@ export function createFieldGroup<T extends Record<string, any>>(
     groupTriggerSet.add("change");
   }
 
-  let isValidating = false;
+  let isValidatingGroupSync = false;
+  let activeGroupAbortController: AbortController | null = null;
+  let groupRevision = 0;
+  let groupDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+  let isDisposed = false;
 
-  // Single implementation of group-rule execution, shared by validate() and the
-  // change-triggered run in setValues.
-  const runGroupRules = (currentVals: T, trigger: ValidationTriggerMode): readonly FieldIssue[] => {
-    const collectedGroupIssues: FieldIssue[] = [];
-    const ctx: ValidationRuleContext = { trigger };
-
-    for (const rule of rules) {
-      const res: any = rule(currentVals, ctx);
-
-      if (
-        res !== null &&
-        (typeof res === "object" || typeof res === "function") &&
-        typeof (res as any).then === "function"
-      ) {
-        throw new TypeError(
-          "Synchronous validation rule returned a Promise or thenable. Async validation is not supported in F3.",
-        );
-      }
-
-      if (res !== null && res !== undefined) {
-        if (Array.isArray(res)) {
-          for (const item of res) {
-            collectedGroupIssues.push(sanitizeIssue(item));
-          }
-        } else {
-          collectedGroupIssues.push(sanitizeIssue(res));
-        }
-      }
+  const cancelActiveGroupAsync = (): void => {
+    if (groupDebounceTimer !== null) {
+      clearTimeout(groupDebounceTimer);
+      groupDebounceTimer = null;
     }
-
-    return collectedGroupIssues;
+    if (activeGroupAbortController) {
+      activeGroupAbortController.abort();
+      activeGroupAbortController = null;
+    }
   };
 
-  const validate = (trigger: ValidationTriggerMode = "manual"): readonly FieldIssue[] => {
-    if (isValidating) {
+  if (scope) {
+    scope.use(() => {
+      isDisposed = true;
+      cancelActiveGroupAsync();
+      groupRevision++;
+      if (groupPendingState.get()) {
+        groupPendingState.set(false);
+      }
+    });
+  }
+
+  const executeGroupValidation = (
+    currentVals: T,
+    trigger: ValidationTriggerMode,
+    revision: number,
+    abortController: AbortController,
+  ): Promise<readonly FieldIssue[]> | readonly FieldIssue[] => {
+    if (isValidatingGroupSync) {
       throw new Error("Reentrant validation detected in form group");
     }
-    isValidating = true;
+    isValidatingGroupSync = true;
 
     try {
-      const collectedGroupIssues = runGroupRules(valuesComputed.get(), trigger);
+      const collectedSyncIssues: FieldIssue[] = [];
+      const pendingAsyncCalls: Array<Promise<any>> = [];
 
-      // Validate all children
-      for (const k of keys) {
-        (fields[k] as any).validate(trigger);
+      for (let i = 0; i < rules.length; i++) {
+        const rule = rules[i]!;
+        let res: any;
+        try {
+          res = rule(currentVals, {
+            trigger,
+            signal: abortController.signal,
+          } as any);
+        } catch (err) {
+          throw err;
+        }
+
+        if (
+          res !== null &&
+          (typeof res === "object" || typeof res === "function") &&
+          typeof (res as any).then === "function"
+        ) {
+          pendingAsyncCalls.push(
+            Promise.resolve(res).catch((err) => {
+              if (
+                abortController.signal.aborted ||
+                (err && (err.name === "AbortError" || err.code === "ABORT_ERR"))
+              ) {
+                return null;
+              }
+              throw err;
+            }),
+          );
+        } else if (res !== null && res !== undefined) {
+          if (Array.isArray(res)) {
+            for (const item of res) collectedSyncIssues.push(sanitizeIssue(item));
+          } else {
+            collectedSyncIssues.push(sanitizeIssue(res));
+          }
+        }
       }
 
-      batch(() => {
-        groupIssuesState.set(Object.freeze([...collectedGroupIssues]));
-        groupValidationStatusState.set(collectedGroupIssues.length === 0 ? "valid" : "invalid");
-      });
+      if (collectedSyncIssues.length > 0 || pendingAsyncCalls.length === 0) {
+        cancelActiveGroupAsync();
+        batch(() => {
+          groupIssuesState.set(Object.freeze([...collectedSyncIssues]));
+          groupValidationStatusState.set(collectedSyncIssues.length === 0 ? "valid" : "invalid");
+          groupPendingState.set(false);
+        });
+        return collectedSyncIssues;
+      }
 
-      return issuesComputed.get();
+      activeGroupAbortController = abortController;
+      groupPendingState.set(true);
+
+      const asyncPromise = (async (): Promise<readonly FieldIssue[]> => {
+        try {
+          const asyncResults = await Promise.all(pendingAsyncCalls);
+
+          if (revision !== groupRevision || abortController.signal.aborted || isDisposed) {
+            return groupIssuesState.get();
+          }
+
+          const collectedAsyncIssues: FieldIssue[] = [...collectedSyncIssues];
+          for (const res of asyncResults) {
+            if (res !== null && res !== undefined) {
+              if (Array.isArray(res)) {
+                for (const item of res) collectedAsyncIssues.push(sanitizeIssue(item));
+              } else {
+                collectedAsyncIssues.push(sanitizeIssue(res));
+              }
+            }
+          }
+
+          batch(() => {
+            groupIssuesState.set(Object.freeze([...collectedAsyncIssues]));
+            groupValidationStatusState.set(collectedAsyncIssues.length === 0 ? "valid" : "invalid");
+            groupPendingState.set(false);
+          });
+
+          return collectedAsyncIssues;
+        } catch (err) {
+          if (revision === groupRevision && !abortController.signal.aborted && !isDisposed) {
+            groupPendingState.set(false);
+          }
+          throw err;
+        } finally {
+          if (activeGroupAbortController === abortController) {
+            activeGroupAbortController = null;
+          }
+        }
+      })();
+
+      return asyncPromise;
     } finally {
-      isValidating = false;
+      isValidatingGroupSync = false;
     }
+  };
+
+  const validate = (
+    trigger: ValidationTriggerMode = "manual",
+  ): Promise<readonly FieldIssue[]> | readonly FieldIssue[] => {
+    if (isDisposed) {
+      throw new Error("Form node is disposed");
+    }
+    cancelActiveGroupAsync();
+    const revision = ++groupRevision;
+    const ac = new AbortController();
+    activeGroupAbortController = ac;
+
+    // Validate all children
+    const childPromises: Promise<any>[] = [];
+    for (const k of keys) {
+      const childRes = (fields[k] as any).validate(trigger);
+      if (childRes && typeof childRes.then === "function") {
+        childPromises.push(childRes);
+      }
+    }
+
+    const groupRes = executeGroupValidation(valuesComputed.get(), trigger, revision, ac);
+    const hasGroupPromise = groupRes && typeof (groupRes as any).then === "function";
+
+    if (childPromises.length > 0 || hasGroupPromise) {
+      return Promise.all([
+        hasGroupPromise ? groupRes : Promise.resolve(groupRes),
+        ...childPromises,
+      ]).then(() => issuesComputed.get());
+    }
+
+    return issuesComputed.get();
   };
 
   const setValues = (partial: Partial<T>): void => {
@@ -634,9 +896,11 @@ export function createFieldGroup<T extends Record<string, any>>(
           const node = fields[k] as any;
           currentVals[k] = node.kind === "field" ? node.value.get() : node.values.get();
         }
-        const collectedGroupIssues = runGroupRules(currentVals, "change");
-        groupIssuesState.set(Object.freeze([...collectedGroupIssues]));
-        groupValidationStatusState.set(collectedGroupIssues.length === 0 ? "valid" : "invalid");
+        cancelActiveGroupAsync();
+        const revision = ++groupRevision;
+        const ac = new AbortController();
+        activeGroupAbortController = ac;
+        executeGroupValidation(currentVals, "change", revision, ac);
       }
     });
   };
@@ -656,6 +920,9 @@ export function createFieldGroup<T extends Record<string, any>>(
         }`,
       );
     }
+    cancelActiveGroupAsync();
+    groupRevision++;
+
     batch(() => {
       for (const k of keys) {
         const node = fields[k] as any;
@@ -667,6 +934,7 @@ export function createFieldGroup<T extends Record<string, any>>(
       }
       groupIssuesState.set([]);
       groupValidationStatusState.set("unvalidated");
+      groupPendingState.set(false);
     });
   };
 
@@ -723,7 +991,7 @@ export interface FieldArray<T> {
   move(from: number, to: number): void;
   setValues(next: T[]): void;
   reset(nextInitials?: T[]): void;
-  validate(trigger?: ValidationTriggerMode): readonly FieldIssue[];
+  validate(trigger?: ValidationTriggerMode): Promise<readonly FieldIssue[]> | readonly FieldIssue[];
 }
 
 export interface CreateFieldArrayOptions<T> {
@@ -925,17 +1193,26 @@ export function createFieldArray<T>(options: CreateFieldArrayOptions<T>): FieldA
     return "valid";
   };
 
-  // Memoized once per array instance and owned by the scope: creating a fresh
-  // computed on every property access leaked a dependency subscription on
-  // itemsState for each read and broke reference identity for consumers.
   const issuesComputed = runInScope(() => computed(() => getIssues()));
   const validationStatusComputed = runInScope(() => computed(() => getValidationStatus()));
 
-  const validate = (trigger: ValidationTriggerMode = "manual"): readonly FieldIssue[] => {
+  const validate = (
+    trigger: ValidationTriggerMode = "manual",
+  ): Promise<readonly FieldIssue[]> | readonly FieldIssue[] => {
     const items = itemsState.get();
+    const childPromises: Promise<any>[] = [];
+
     for (const it of items) {
-      (it.node as any).validate(trigger);
+      const childRes = (it.node as any).validate(trigger);
+      if (childRes && typeof childRes.then === "function") {
+        childPromises.push(childRes);
+      }
     }
+
+    if (childPromises.length > 0) {
+      return Promise.all(childPromises).then(() => issuesComputed.get());
+    }
+
     return issuesComputed.get();
   };
 
@@ -1242,8 +1519,9 @@ export type FieldValues = Record<string, any>;
 export interface FormConfig<T extends FieldValues> {
   readonly initialValues: T;
   readonly keyExtractor?: ((item: any) => string | number) | undefined;
-  readonly rules?: readonly SyncValidationRule<T>[] | undefined;
+  readonly rules?: readonly ValidationRule<T>[] | undefined;
   readonly validateOn?: ValidationTriggerMode | readonly ValidationTriggerMode[] | undefined;
+  readonly debounceMs?: number | undefined;
 }
 
 export interface FormInstance<T extends FieldValues> {
@@ -1261,7 +1539,7 @@ export interface FormInstance<T extends FieldValues> {
   getNode(path: string): FormNode | undefined;
   setValues(partial: Partial<T>): void;
   reset(nextInitials?: Partial<T>): void;
-  validate(trigger?: ValidationTriggerMode): readonly FieldIssue[];
+  validate(trigger?: ValidationTriggerMode): Promise<readonly FieldIssue[]> | readonly FieldIssue[];
   dispose(): void;
 }
 
@@ -1352,6 +1630,7 @@ export function createForm<T extends FieldValues>(config: FormConfig<T>): FormIn
     keyExtractor: config.keyExtractor,
     rules: config.rules,
     validateOn: config.validateOn,
+    debounceMs: config.debounceMs,
   });
 
   let isDisposed = false;
@@ -1411,7 +1690,9 @@ export function createForm<T extends FieldValues>(config: FormConfig<T>): FormIn
       assertActive();
       root.reset(nextInitials);
     },
-    validate: (trigger: ValidationTriggerMode = "manual"): readonly FieldIssue[] => {
+    validate: (
+      trigger: ValidationTriggerMode = "manual",
+    ): Promise<readonly FieldIssue[]> | readonly FieldIssue[] => {
       assertActive();
       return root.validate(trigger);
     },

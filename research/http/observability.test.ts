@@ -183,4 +183,72 @@ describe("Lifecycle Hooks & Timing Metrics (H8)", () => {
     const response = await client.get("https://api.example.com/resilient");
     expect(response.status).toBe(200);
   });
+
+  it("R10: onRequest reports the initial request, onResponse reports the final hop", async () => {
+    const startEvents: HttpRequestStartEvent[] = [];
+    const successEvents: HttpResponseSuccessEvent[] = [];
+
+    const mockFetch = vi.fn().mockImplementation((url: string) => {
+      const parsed = new URL(url);
+      if (parsed.pathname === "/see-other") {
+        return Promise.resolve(
+          new Response(null, {
+            status: 303,
+            headers: { Location: "https://api.example.com/result" },
+          }),
+        );
+      }
+      return Promise.resolve(new Response("final content", { status: 200 }));
+    });
+
+    const client = createHttpClient({
+      fetch: mockFetch,
+      security: { allowedHosts: ["api.example.com"] },
+      telemetry: {
+        onRequest: (e) => startEvents.push(e),
+        onResponse: (e) => successEvents.push(e),
+      },
+    });
+
+    const res = await client.post("https://api.example.com/see-other", { body: "payload" });
+    expect(res.status).toBe(200);
+
+    expect(startEvents).toHaveLength(1);
+    expect(startEvents[0]!.request.url).toBe("https://api.example.com/see-other");
+    expect(startEvents[0]!.request.method).toBe("POST");
+
+    expect(successEvents).toHaveLength(1);
+    expect(successEvents[0]!.request.url).toBe("https://api.example.com/result");
+    expect(successEvents[0]!.request.method).toBe("GET");
+  });
+
+  it("R10: onError reports the request for the hop that produced the error", async () => {
+    const errorEvents: HttpResponseErrorEvent[] = [];
+
+    const mockFetch = vi.fn().mockImplementation((url: string) => {
+      const parsed = new URL(url);
+      if (parsed.pathname === "/start") {
+        return Promise.resolve(
+          new Response(null, {
+            status: 302,
+            headers: { Location: "https://api.example.com/next" },
+          }),
+        );
+      }
+      return Promise.reject(new TypeError("Failed to fetch"));
+    });
+
+    const client = createHttpClient({
+      fetch: mockFetch,
+      security: { allowedHosts: ["api.example.com"] },
+      telemetry: {
+        onError: (e) => errorEvents.push(e),
+      },
+    });
+
+    await expect(client.get("https://api.example.com/start")).rejects.toThrow();
+
+    expect(errorEvents).toHaveLength(1);
+    expect(errorEvents[0]!.request.url).toBe("https://api.example.com/next");
+  });
 });

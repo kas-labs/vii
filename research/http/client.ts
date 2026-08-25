@@ -42,6 +42,18 @@ import type {
 } from "./types.js";
 import { resolveUrl } from "./url.js";
 
+// Cancels an intermediate redirect hop's response body so the underlying
+// connection is released instead of held open until GC. Errors from cancel()
+// are not actionable here — the response is already being discarded.
+async function drainRedirectBody(response: Response): Promise<void> {
+  if (!response.body) return;
+  try {
+    await response.body.cancel();
+  } catch {
+    // Ignored: draining is best-effort cleanup, not a correctness requirement.
+  }
+}
+
 class HttpClientImpl implements HttpClient {
   readonly config: Readonly<HttpClientConfig>;
 
@@ -169,6 +181,7 @@ class HttpClientImpl implements HttpClient {
     }
 
     const activeMiddleware = [...(this.config.middleware ?? []), ...(options.middleware ?? [])];
+    let finalRequest: Request = request;
 
     const transport: HttpHandler = async (req) => {
       try {
@@ -227,6 +240,7 @@ class HttpClientImpl implements HttpClient {
           if (options.referrerPolicy !== undefined) hopInit.referrerPolicy = options.referrerPolicy;
 
           const hopRequest = new Request(currentUrl, hopInit);
+          finalRequest = hopRequest;
           response = await executeWithRetry(
             hopRequest,
             handler,
@@ -239,6 +253,7 @@ class HttpClientImpl implements HttpClient {
           const location = response.headers.get("location");
 
           if (isRedirect && location) {
+            await drainRedirectBody(response);
             redirectCount++;
             if (redirectCount > maxRedirects) {
               throw new HttpSecurityError("Maximum redirect limit exceeded", {
@@ -302,7 +317,7 @@ class HttpClientImpl implements HttpClient {
       if (effectiveTelemetry?.onError) {
         try {
           await effectiveTelemetry.onError({
-            request,
+            request: finalRequest,
             error: err,
             context,
             timing: { startTime, durationMs },
@@ -326,7 +341,7 @@ class HttpClientImpl implements HttpClient {
     if (effectiveTelemetry?.onResponse) {
       try {
         await effectiveTelemetry.onResponse({
-          request,
+          request: finalRequest,
           response,
           context,
           timing: { startTime, durationMs },

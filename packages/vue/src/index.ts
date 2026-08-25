@@ -21,6 +21,18 @@ export function useVii<TState, TSelected>(
   selector?: ViiSelector<TState, TSelected>,
   equality?: ViiEquality<TSelected>,
 ): ViiRef<TSelected> {
+  const isProduction =
+    (globalThis as unknown as { process?: { env?: { NODE_ENV?: string } } }).process?.env
+      ?.NODE_ENV === "production";
+
+  if (getCurrentScope() === undefined && !isProduction) {
+    console.warn(
+      "[@vii-labs/vue] useVii was called outside an active effect scope. " +
+        "The underlying store subscription cannot be automatically disposed and will leak memory. " +
+        "Use createViiRef() instead and retain the handle to call dispose() explicitly.",
+    );
+  }
+
   if (selector === undefined) {
     return createViiRef(store).ref as unknown as ViiRef<TSelected>;
   }

@@ -37,7 +37,58 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-25 02:00 CEST | Form Data Correctness & Array Lifetime (Audit Findings 10, 11, 12, 13, 14, 15, 16, 17)
+
+Status: completed
+Branch: `fix/form-data-correctness`
+PR: #151
+
+
+### Scope
+
+- Remediate Audit Findings 10, 11, 12, 13, 14, 15, 16, and 17 in `research/form/form-core.ts`.
+- Finding 10: Use `Object.create(null)` for `fields`, `valuesComputed`, and `errorsComputed` to prevent prototype corruption or dropping fields when keys like `__proto__`, `constructor`, `prototype` are used.
+- Finding 11: Add own-property checks across `getNode`, `FieldGroup.setValues`, and `FieldGroup.reset` to prevent prototype functions from masquerading as field nodes.
+- Finding 12: Validate that `FieldArray.setValues`/`reset` reject non-array types and `FieldGroup.setValues`/`reset` reject non-object types with explicit `TypeError`s, preserving previous state and preventing scope leaks.
+- Finding 13: Propagate `keyExtractor` recursively through nested groups and nested array items.
+- Finding 14: Ensure `FieldArray.push`, `insert`, `setValues`, and `reset` are atomic: validate keys up-front before mutating state or disposing existing items, and roll back freshly created scopes on error.
+- Finding 15: Establish a uniform post-dispose contract across `FormInstance`: throw `Error("Form is disposed")` on `getNode`, `setValues`, and `reset`.
+- Finding 16: Bounds-check `insert(index, value)` accepting `0 <= index <= length` and throwing `RangeError` on invalid indices.
+- Finding 17: Attach array item scopes to parent scope with detach handles (`scope.use(itemScope)`), detaching them synchronously on item disposal (`remove`, `reset`, `setValues`) to prevent dead scope accumulation in parent scopes.
+
+### Changes
+
+- In `research/form/form-core.ts`:
+  - Updated `createFieldGroup` to allocate `fields`, `valuesComputed` result, and `errorsComputed` record with `Object.create(null)`.
+  - Added own-property checks and input type assertions in `FieldGroup.setValues` and `FieldGroup.reset`.
+  - Propagated `keyExtractor` to nested `createFieldGroup` and `createFieldArray` calls.
+  - Added `detach` handle to `ArrayItem<T>` and implemented `disposeItem(item)` in `createFieldArray`.
+  - Hardened `FieldArray.push`, `insert`, `setValues`, and `reset` to validate inputs/keys first, roll back created item scopes on exception, and reject non-array inputs.
+  - Hardened `insert` index bounds checking to throw `RangeError`.
+  - Updated `createForm` to enforce post-dispose contract by throwing `Form is disposed` on `getNode`, `setValues`, and `reset`.
+- In `research/form/form-core.test.ts`: Added 9 regression tests covering findings 10–17 (65/65 tests passing).
+- In `research/form/README.md`: Documented `keyExtractor` scope, object security, atomic mutations, scope detachment, and post-dispose contract.
+
+### Validation
+
+- `pnpm validate`: PASS (clean format, lint, typecheck, package tests, builds, and pack checks)
+- `npx vitest run research/form/form-core.test.ts`: PASS (1 test file, 65/65 tests passed in 63ms)
+- `npx vitest run research/registry research/source-distribution research/http research/query research/schema`: PASS (36 test files + isolated query benchmarks passed)
+- `npx tsc --noEmit -p research/form/tsconfig.json`: PASS (0 errors)
+- `git diff --check`: PASS (clean)
+
+### Architecture / compatibility
+
+- Changes are scoped strictly to research prototype in `research/form/`.
+- No packages (`packages/`) or other research directories (`research/http`, `research/registry`, `research/source-distribution`) modified.
+- `bindFormToExternalState` preserved without out-of-scope cycle modifications.
+
+### Remaining / recovery
+
+- None. Batch 5 fixes are verified and ready.
+
 ## 2026-08-25 01:45 CEST | Registry Integrity & Installer Safety (Audit Findings 9, 21, 22, 23)
+
 
 Status: completed
 Branch: `security/registry-integrity-containment`

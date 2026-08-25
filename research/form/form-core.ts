@@ -325,7 +325,6 @@ export interface ArrayItem<T> {
   readonly id: string | number;
   readonly node: FormNodeFor<T>;
   readonly scope: Scope;
-  readonly detach?: (() => void) | undefined;
 }
 
 export interface FieldArray<T> {
@@ -367,13 +366,13 @@ export function createFieldArray<T>(options: CreateFieldArrayOptions<T>): FieldA
 
   const disposeItem = (item: ArrayItem<T>): void => {
     activeScopes.delete(item.scope);
-    item.detach?.();
     item.scope.dispose();
   };
 
   const createItem = (val: T, assignedKey?: string | number): ArrayItem<T> => {
-    const itemScope = createScope({ name: "vii-array-item" });
-    const detach = scope ? scope.use(itemScope) : undefined;
+    const itemScope = scope
+      ? scope.createChild({ name: "vii-array-item" })
+      : createScope({ name: "vii-array-item" });
     activeScopes.add(itemScope);
 
     let id: string | number;
@@ -411,7 +410,7 @@ export function createFieldArray<T>(options: CreateFieldArrayOptions<T>): FieldA
         scope: itemScope,
       });
     }
-    return { id, node, scope: itemScope, detach };
+    return { id, node, scope: itemScope };
   };
 
   const validateUniqueKeys = (items: readonly ArrayItem<T>[]): void => {
@@ -654,7 +653,6 @@ export function createFieldArray<T>(options: CreateFieldArrayOptions<T>): FieldA
                   id: derivedKey,
                   node: existingItem.node,
                   scope: existingItem.scope,
-                  detach: existingItem.detach,
                 });
               }
             } else {
@@ -1020,10 +1018,16 @@ export function bindFormToExternalState<T extends FieldValues>(
   let isSyncingToExternal = false;
   let isSyncingFromExternal = false;
   let syncDepth = 0;
+  let consecutiveSyncCount = 0;
+  let lastPushedOutward: T | undefined = undefined;
+  let lastAppliedInward: T | undefined = undefined;
 
   const enterSyncDepth = (): void => {
-    if (++syncDepth > MAX_EXTERNAL_SYNC_DEPTH) {
+    if (++syncDepth > MAX_EXTERNAL_SYNC_DEPTH || consecutiveSyncCount > MAX_EXTERNAL_SYNC_DEPTH) {
       syncDepth = 0;
+      consecutiveSyncCount = 0;
+      lastPushedOutward = undefined;
+      lastAppliedInward = undefined;
       throw new Error("Cyclic synchronisation detected in bindFormToExternalState");
     }
   };
@@ -1036,8 +1040,20 @@ export function bindFormToExternalState<T extends FieldValues>(
 
   scope.run(() => {
     form.values.subscribe((nextValues: T) => {
+      if (nextValues === lastAppliedInward) {
+        lastAppliedInward = undefined;
+        consecutiveSyncCount = 0;
+        return;
+      }
       if (isSyncingFromExternal) return;
+      if (lastAppliedInward !== undefined) {
+        consecutiveSyncCount++;
+      } else {
+        consecutiveSyncCount = 1;
+      }
       enterSyncDepth();
+      lastPushedOutward = nextValues;
+      lastAppliedInward = undefined;
       isSyncingToExternal = true;
       try {
         externalState.set(nextValues);
@@ -1050,8 +1066,20 @@ export function bindFormToExternalState<T extends FieldValues>(
 
   scope.run(() => {
     externalState.subscribe((nextExternal: T) => {
+      if (nextExternal === lastPushedOutward) {
+        lastPushedOutward = undefined;
+        consecutiveSyncCount = 0;
+        return;
+      }
       if (isSyncingToExternal) return;
+      if (lastPushedOutward !== undefined) {
+        consecutiveSyncCount++;
+      } else {
+        consecutiveSyncCount = 1;
+      }
       enterSyncDepth();
+      lastAppliedInward = nextExternal;
+      lastPushedOutward = undefined;
       isSyncingFromExternal = true;
       try {
         form.setValues(nextExternal);

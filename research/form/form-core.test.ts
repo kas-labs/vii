@@ -1451,4 +1451,126 @@ describe("Form Research F1 & F2 — Complete Prototype and Regression Evidence",
       });
     });
   });
+
+  describe("Batch 6: Finding 18 & Scope-Graph Fidelity Regression Tests", () => {
+    it("Finding 18: Deliberately non-convergent external binding triggers cyclic sync error rather than looping infinitely", () => {
+      // Non-convergent external store: on every write, increments a sequence tag to produce a fresh structure
+      let seq = 0;
+      let writeCount = 0;
+      const rawState = state({ val: "initial", seq: 0 });
+      const nonConvergentStore: WritableState<{ val: string; seq: number }> = {
+        get: () => rawState.get(),
+        set: (next) => {
+          writeCount++;
+          if (writeCount > 100) {
+            throw new Error("Loop iteration ceiling exceeded: infinite loop detected");
+          }
+          rawState.set({ val: next.val, seq: ++seq });
+        },
+        update: (fn) => nonConvergentStore.set(fn(rawState.get())),
+        subscribe: (listener) => rawState.subscribe(listener),
+      };
+
+      const form = bindFormToExternalState({
+        externalState: nonConvergentStore,
+      });
+
+      // Mutate the form to trigger the non-convergent loop
+      expect(() => {
+        form.fields.val.setValue("trigger-loop");
+      }).toThrow("Cyclic synchronisation detected in bindFormToExternalState");
+    });
+
+    it("Finding 18: Form-originated edit produces exactly one outward write, and echo does not re-enter form.setValues", () => {
+      const external = state({ name: "Alice", count: 1 });
+      let externalSetCount = 0;
+      let formSetValuesCount = 0;
+
+      const spiedExternal: WritableState<{ name: string; count: number }> = {
+        get: () => external.get(),
+        set: (v) => {
+          externalSetCount++;
+          external.set(v);
+        },
+        update: (fn) => spiedExternal.set(fn(external.get())),
+        subscribe: (l) => external.subscribe(l),
+      };
+
+      const form = bindFormToExternalState({ externalState: spiedExternal });
+      const originalSetValues = form.setValues.bind(form);
+      form.setValues = (v) => {
+        formSetValuesCount++;
+        return originalSetValues(v);
+      };
+
+      // Perform a single form-side edit
+      form.fields.name.setValue("Bob");
+
+      // Verify that the write reached externalState exactly once
+      expect(externalSetCount).toBe(1);
+      expect(external.get().name).toBe("Bob");
+
+      // Verify that the echo arriving at external subscriber was absorbed by reference equality and did NOT call form.setValues
+      expect(formSetValuesCount).toBe(0);
+    });
+
+    it("Finding 18: Genuine external update carrying the same object reference as previous push is still applied", () => {
+      const external = state({ name: "Alice" });
+      const form = bindFormToExternalState({ externalState: external });
+
+      // Form edit pushes { name: "Bob" }
+      form.fields.name.setValue("Bob");
+      const pushedRef = external.get();
+      expect(pushedRef.name).toBe("Bob");
+
+      // External store sets something else first
+      external.set({ name: "Charlie" });
+      expect(form.fields.name.value.get()).toBe("Charlie");
+
+      // Now external store re-applies the exact same object reference `pushedRef`
+      external.set(pushedRef);
+      expect(form.fields.name.value.get()).toBe("Bob");
+    });
+
+    it("Batch 5 regression: Array item scopes have parentScopeId linked in diagnostics graph and constant resource count across N = 10, 50, 500", () => {
+      const diagnostics = createDiagnostics({ maxEvents: 50000 });
+
+      diagnostics.run(() => {
+        const rootScope = createScope({ name: "test-root" });
+
+        const array = createFieldArray<number>({
+          initialValues: [1],
+          scope: rootScope,
+        });
+
+        // Check scope.created events for parent link
+        const createdEvents = diagnostics.getEvents().filter((e) => e.type === "scope.created");
+        const rootCreated = createdEvents.find((e) => e.payload["name"] === "test-root");
+        const itemCreated = createdEvents.filter((e) => e.payload["name"] === "vii-array-item");
+
+        expect(rootCreated).toBeDefined();
+        expect(itemCreated.length).toBeGreaterThanOrEqual(1);
+        for (const it of itemCreated) {
+          expect(it.payload["parentScopeId"]).toBe(rootCreated?.payload["scopeId"]);
+        }
+
+        // Test constant resources at N = 10, 50, 500
+        for (const n of [10, 50, 500]) {
+          for (let i = 0; i < n; i++) {
+            array.push(i);
+            array.remove(1);
+          }
+          expect(array.items.get()).toHaveLength(1);
+        }
+
+        const beforeDispose = diagnostics.getEvents().length;
+        rootScope.dispose();
+        const afterDisposeEvents = diagnostics.getEvents().slice(beforeDispose);
+        const disposingEvent = afterDisposeEvents.find((e) => e.type === "scope.disposing");
+
+        // Parent resource count is strictly constant (<= 10), retaining no dead item scopes
+        expect(disposingEvent?.payload["resourceCount"]).toBeLessThanOrEqual(10);
+      });
+    });
+  });
 });

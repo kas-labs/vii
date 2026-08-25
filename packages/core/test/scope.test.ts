@@ -214,3 +214,37 @@ test("scope.run suppresses unhandled rejections from abandoned rejected promises
     processHost?.removeListener("unhandledRejection", onUnhandled);
   }
 });
+
+test("disposing a child scope removes it from parent retained resources, while parent disposal disposes live child once", () => {
+  const diagnostics = createDiagnostics();
+
+  diagnostics.run(() => {
+    const parent = createScope({ name: "parent" });
+    const child1 = parent.createChild({ name: "child1" });
+    const child2 = parent.createChild({ name: "child2" });
+
+    let child1Disposals = 0;
+    let child2Disposals = 0;
+    child1.use(() => {
+      child1Disposals++;
+    });
+    child2.use(() => {
+      child2Disposals++;
+    });
+
+    // Explicitly dispose child1
+    child1.dispose();
+    expect(child1Disposals).toBe(1);
+
+    // Parent teardown should now only see child2 (1 retained resource), not child1
+    const beforeDisposeEvents = diagnostics.getEvents().slice();
+    parent.dispose();
+    const afterDisposeEvents = diagnostics.getEvents().slice(beforeDisposeEvents.length);
+
+    expect(child1Disposals).toBe(1); // not double-disposed
+    expect(child2Disposals).toBe(1); // disposed by parent
+
+    const disposingEvent = afterDisposeEvents.find((e) => e.type === "scope.disposing");
+    expect(disposingEvent?.payload["resourceCount"]).toBe(1);
+  });
+});

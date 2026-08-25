@@ -1,5 +1,5 @@
 import { constants } from "node:fs";
-import { open, readdir, readFile, stat } from "node:fs/promises";
+import { lstat, open, readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 
 import { type DetectionConflict, type DetectionEvidence, ProjectDetectionError } from "./types.js";
@@ -28,6 +28,24 @@ export async function inspectExistingFile(
   target: string,
   expectedContent: string,
 ): Promise<ExistingFileInspection> {
+  // On POSIX the O_NOFOLLOW open below refuses symlinks atomically, so no
+  // lstat probe is needed (avoiding a check-then-open TOCTOU pattern).
+  // Windows has no O_NOFOLLOW (the constant is undefined and the open
+  // silently follows links), so there lstat is the only available symlink
+  // probe - inherently racy, but strictly better than never detecting links.
+  if (constants.O_NOFOLLOW === undefined) {
+    try {
+      if ((await lstat(target)).isSymbolicLink()) {
+        return "symlink";
+      }
+    } catch (error) {
+      if (isFileMissing(error)) {
+        return "missing";
+      }
+      return "different";
+    }
+  }
+
   let handle;
   try {
     handle = await open(target, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));

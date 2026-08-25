@@ -7,10 +7,101 @@ import {
   createScope,
   state,
 } from "../../packages/core/src/index.js";
+import { getActiveDiagnostics } from "../../packages/core/src/diagnostics.js";
+
+// ---------------------------------------------------------------------------
+// Equality & Basic Types
+// ---------------------------------------------------------------------------
 
 export type EqualityFn<T> = (a: T, b: T) => boolean;
 
 export const defaultEquality: EqualityFn<unknown> = (a, b) => Object.is(a, b);
+
+// ---------------------------------------------------------------------------
+// Structured Issues & Validation Taxonomy (F3)
+// ---------------------------------------------------------------------------
+
+export type FieldPathSegment = string | number;
+
+export interface FieldIssue {
+  readonly code: string;
+  readonly message?: string | undefined;
+  readonly path?: readonly FieldPathSegment[] | undefined;
+  readonly source: "validation";
+  readonly ruleId?: string | undefined;
+}
+
+export type ValidationTriggerMode = "change" | "blur" | "submit" | "manual";
+
+export type ValidationStatus = "unvalidated" | "valid" | "invalid";
+
+export interface ValidationRuleContext {
+  readonly trigger: ValidationTriggerMode;
+  readonly path?: readonly FieldPathSegment[] | undefined;
+  readonly form?: FormInstance<any> | undefined;
+}
+
+export type SyncValidationRule<T, Ctx extends ValidationRuleContext = ValidationRuleContext> = (
+  value: T,
+  context: Ctx,
+) => FieldIssue | readonly FieldIssue[] | null | undefined;
+
+// Defensive result validation & prototype pollution defense
+function sanitizeIssue(raw: any, defaultPath?: readonly FieldPathSegment[]): FieldIssue {
+  if (raw === null || typeof raw !== "object") {
+    throw new TypeError(
+      `Validation rule returned invalid issue shape: expected an object, received ${
+        raw === null ? "null" : typeof raw
+      }`,
+    );
+  }
+  if (typeof raw.code !== "string" || raw.code.trim() === "") {
+    throw new TypeError("Validation issue must have a non-empty string 'code'");
+  }
+  if (raw.code === "__proto__" || raw.code === "constructor" || raw.code === "prototype") {
+    throw new Error(
+      `Security error: Prototype pollution attempt blocked on issue code "${raw.code}"`,
+    );
+  }
+
+  let issuePath: readonly FieldPathSegment[] | undefined = undefined;
+  if (raw.path !== undefined) {
+    if (!Array.isArray(raw.path)) {
+      throw new TypeError("Validation issue 'path' must be an array of string | number segments");
+    }
+    for (const seg of raw.path) {
+      if (typeof seg !== "string" && typeof seg !== "number") {
+        throw new TypeError(
+          `Validation issue path segment must be string or number, received ${typeof seg}`,
+        );
+      }
+      if (
+        typeof seg === "string" &&
+        (seg === "__proto__" || seg === "constructor" || seg === "prototype")
+      ) {
+        throw new Error(
+          `Security error: Prototype pollution attempt blocked on issue path segment "${seg}"`,
+        );
+      }
+    }
+    issuePath = Object.freeze([...raw.path]);
+  } else if (defaultPath !== undefined) {
+    issuePath = defaultPath;
+  }
+
+  const sanitized: FieldIssue = {
+    code: String(raw.code),
+    message: typeof raw.message === "string" ? raw.message : undefined,
+    path: issuePath,
+    source: "validation",
+    ruleId: typeof raw.ruleId === "string" ? raw.ruleId : undefined,
+  };
+  return Object.freeze(sanitized);
+}
+
+// ---------------------------------------------------------------------------
+// FieldState (Leaf Node)
+// ---------------------------------------------------------------------------
 
 export interface FieldState<T> {
   readonly kind: "field";
@@ -20,12 +111,16 @@ export interface FieldState<T> {
   readonly dirty: Computed<boolean>;
   readonly pending: WritableState<boolean>;
   readonly errors: WritableState<readonly string[]>;
+  readonly issues: WritableState<readonly FieldIssue[]>;
+  readonly validationStatus: WritableState<ValidationStatus>;
   readonly valid: Computed<boolean>;
   readonly invalid: Computed<boolean>;
   setValue(next: T): void;
   setTouched(touched?: boolean): void;
   setPending(pending: boolean): void;
   setErrors(errors: readonly string[]): void;
+  setIssues(issues: readonly FieldIssue[]): void;
+  validate(trigger?: ValidationTriggerMode): readonly FieldIssue[];
   reset(...args: [nextInitial?: T]): void;
 }
 
@@ -33,16 +128,40 @@ export interface CreateFieldOptions<T> {
   readonly initialValue: T;
   readonly equality?: EqualityFn<T> | undefined;
   readonly scope?: Scope | undefined;
+  readonly rules?: readonly SyncValidationRule<T>[] | undefined;
+  readonly validateOn?: ValidationTriggerMode | readonly ValidationTriggerMode[] | undefined;
 }
 
 export function createField<T>(options: CreateFieldOptions<T>): FieldState<T> {
-  const { initialValue, equality = defaultEquality as EqualityFn<T> } = options;
+  const {
+    initialValue,
+    equality = defaultEquality as EqualityFn<T>,
+    rules = [],
+    validateOn,
+  } = options;
 
   const valueState = state<T>(initialValue);
   const initialValueState = state<T>(initialValue);
   const touchedState = state<boolean>(false);
   const pendingState = state<boolean>(false);
   const errorsState = state<readonly string[]>([]);
+  const issuesState = state<readonly FieldIssue[]>([]);
+  const validationStatusState = state<ValidationStatus>("unvalidated");
+
+  // Determine trigger set
+  const triggerSet = new Set<ValidationTriggerMode>();
+  if (validateOn !== undefined) {
+    if (Array.isArray(validateOn)) {
+      for (const t of validateOn) triggerSet.add(t);
+    } else {
+      triggerSet.add(validateOn as ValidationTriggerMode);
+    }
+  } else {
+    // Default trigger is change
+    triggerSet.add("change");
+  }
+
+  let isValidating = false;
 
   const runInScope = <R>(fn: () => R): R => {
     return options.scope ? options.scope.run(fn) : fn();
@@ -52,24 +171,125 @@ export function createField<T>(options: CreateFieldOptions<T>): FieldState<T> {
     computed(() => !equality(valueState.get(), initialValueState.get())),
   );
 
-  const validComputed = runInScope(() => computed(() => errorsState.get().length === 0));
+  const validComputed = runInScope(() =>
+    computed(() => {
+      // Retain full backward compatibility with F1/F2: errorsState.get().length === 0
+      // while also checking issuesState
+      return errorsState.get().length === 0 && issuesState.get().length === 0;
+    }),
+  );
 
   const invalidComputed = runInScope(() => computed(() => !validComputed.get()));
 
+  const validate = (trigger: ValidationTriggerMode = "manual"): readonly FieldIssue[] => {
+    if (isValidating) {
+      throw new Error("Reentrant validation detected in form field");
+    }
+    isValidating = true;
+
+    const diag = getActiveDiagnostics();
+    if (diag) {
+      diag.record("field.validation.started", { trigger });
+    }
+
+    try {
+      const currentVal = valueState.get();
+      const collectedIssues: FieldIssue[] = [];
+      const ctx: ValidationRuleContext = { trigger };
+
+      for (const rule of rules) {
+        let res: any;
+        try {
+          res = rule(currentVal, ctx);
+        } catch (ruleErr) {
+          throw ruleErr;
+        }
+
+        // Fast fail on Promise / Thenable
+        if (
+          res !== null &&
+          (typeof res === "object" || typeof res === "function") &&
+          typeof (res as any).then === "function"
+        ) {
+          throw new TypeError(
+            "Synchronous validation rule returned a Promise or thenable. Async validation is not supported in F3.",
+          );
+        }
+
+        if (res !== null && res !== undefined) {
+          if (Array.isArray(res)) {
+            for (const item of res) {
+              collectedIssues.push(sanitizeIssue(item));
+            }
+          } else {
+            collectedIssues.push(sanitizeIssue(res));
+          }
+        }
+      }
+
+      const nextStatus: ValidationStatus = collectedIssues.length === 0 ? "valid" : "invalid";
+      const errorStrings = collectedIssues.map((iss) => iss.message ?? iss.code);
+
+      batch(() => {
+        issuesState.set(Object.freeze(collectedIssues));
+        errorsState.set(Object.freeze(errorStrings));
+        validationStatusState.set(nextStatus);
+      });
+
+      if (diag) {
+        diag.record("field.validation.completed", {
+          issueCount: collectedIssues.length,
+          status: nextStatus,
+        });
+      }
+
+      return collectedIssues;
+    } finally {
+      isValidating = false;
+    }
+  };
+
   const setValue = (next: T): void => {
     valueState.set(next);
+    if (rules.length > 0 && triggerSet.has("change")) {
+      validate("change");
+    }
   };
 
   const setTouched = (touched = true): void => {
     touchedState.set(touched);
+    if (touched && rules.length > 0 && triggerSet.has("blur")) {
+      validate("blur");
+    }
   };
 
   const setPending = (pending: boolean): void => {
     pendingState.set(pending);
   };
 
+  const setIssues = (issues: readonly FieldIssue[]): void => {
+    const sanitized = issues.map((iss) => sanitizeIssue(iss));
+    const errorStrings = sanitized.map((iss) => iss.message ?? iss.code);
+    batch(() => {
+      issuesState.set(Object.freeze(sanitized));
+      errorsState.set(Object.freeze(errorStrings));
+      validationStatusState.set(sanitized.length === 0 ? "valid" : "invalid");
+    });
+  };
+
   const setErrors = (errors: readonly string[]): void => {
-    errorsState.set(errors);
+    const syntheticIssues: FieldIssue[] = errors.map((err) =>
+      sanitizeIssue({
+        code: err,
+        message: err,
+        source: "validation",
+      }),
+    );
+    batch(() => {
+      errorsState.set(errors);
+      issuesState.set(Object.freeze(syntheticIssues));
+      validationStatusState.set(errors.length === 0 ? "valid" : "invalid");
+    });
   };
 
   const reset = (...args: [nextInitial?: T]): void => {
@@ -85,6 +305,8 @@ export function createField<T>(options: CreateFieldOptions<T>): FieldState<T> {
       touchedState.set(false);
       pendingState.set(false);
       errorsState.set([]);
+      issuesState.set([]);
+      validationStatusState.set("unvalidated");
     });
   };
 
@@ -96,12 +318,16 @@ export function createField<T>(options: CreateFieldOptions<T>): FieldState<T> {
     dirty: dirtyComputed,
     pending: pendingState,
     errors: errorsState,
+    issues: issuesState,
+    validationStatus: validationStatusState,
     valid: validComputed,
     invalid: invalidComputed,
     setValue,
     setTouched,
     setPending,
     setErrors,
+    setIssues,
+    validate,
     reset,
   };
 }
@@ -135,8 +361,12 @@ export interface FieldGroup<T extends Record<string, any>> {
   readonly valid: Computed<boolean>;
   readonly invalid: Computed<boolean>;
   readonly errors: Computed<Record<string, readonly string[]>>;
+  readonly issues: Computed<readonly FieldIssue[]>;
+  readonly groupIssues: WritableState<readonly FieldIssue[]>;
+  readonly validationStatus: Computed<ValidationStatus>;
   setValues(partial: Partial<T>): void;
   reset(nextInitials?: Partial<T>): void;
+  validate(trigger?: ValidationTriggerMode): readonly FieldIssue[];
 }
 
 export interface CreateFieldGroupOptions<T extends Record<string, any>> {
@@ -144,6 +374,8 @@ export interface CreateFieldGroupOptions<T extends Record<string, any>> {
   readonly scope?: Scope | undefined;
   readonly keyExtractor?: ((item: any) => string | number) | undefined;
   readonly seenObjects?: Set<object> | undefined;
+  readonly rules?: readonly SyncValidationRule<T>[] | undefined;
+  readonly validateOn?: ValidationTriggerMode | readonly ValidationTriggerMode[] | undefined;
 }
 
 export type FormNodeFor<T> =
@@ -158,7 +390,14 @@ export type FormNodeFor<T> =
 export function createFieldGroup<T extends Record<string, any>>(
   options: CreateFieldGroupOptions<T>,
 ): FieldGroup<T> {
-  const { initialValues, scope, keyExtractor, seenObjects = new Set<object>() } = options;
+  const {
+    initialValues,
+    scope,
+    keyExtractor,
+    seenObjects = new Set<object>(),
+    rules = [],
+    validateOn,
+  } = options;
 
   if (seenObjects.has(initialValues)) {
     throw new Error("Cyclic input detected in form data");
@@ -167,6 +406,8 @@ export function createFieldGroup<T extends Record<string, any>>(
   branchSeen.add(initialValues);
 
   const fields = Object.create(null) as { [K in keyof T]: FormNodeFor<T[K]> };
+  const groupIssuesState = state<readonly FieldIssue[]>([]);
+  const groupValidationStatusState = state<ValidationStatus>("unvalidated");
 
   for (const key of Object.keys(initialValues) as Array<keyof T>) {
     const val = initialValues[key];
@@ -193,7 +434,6 @@ export function createFieldGroup<T extends Record<string, any>>(
   }
 
   const keys = Object.keys(fields) as Array<keyof T>;
-
   const runInScope = <R>(fn: () => R): R => (scope ? scope.run(fn) : fn());
 
   const valuesComputed = runInScope(() =>
@@ -220,14 +460,41 @@ export function createFieldGroup<T extends Record<string, any>>(
   );
 
   const validComputed = runInScope(() =>
-    computed(() => keys.every((k) => (fields[k] as any).valid.get())),
+    computed(() => {
+      const groupValid =
+        groupValidationStatusState.get() !== "invalid" && groupIssuesState.get().length === 0;
+      const childrenValid = keys.every((k) => (fields[k] as any).valid.get());
+      return groupValid && childrenValid;
+    }),
   );
 
   const invalidComputed = runInScope(() => computed(() => !validComputed.get()));
 
+  const issuesComputed = runInScope(() =>
+    computed(() => {
+      const res: FieldIssue[] = [...groupIssuesState.get()];
+      for (const k of keys) {
+        const node = fields[k] as any;
+        const childIssues: readonly FieldIssue[] = node.issues.get();
+        for (const iss of childIssues) {
+          const prefix = [k as string, ...(iss.path ?? [])];
+          res.push({
+            ...iss,
+            path: Object.freeze(prefix),
+          });
+        }
+      }
+      return Object.freeze(res);
+    }),
+  );
+
   const errorsComputed = runInScope(() =>
     computed(() => {
       const res: Record<string, readonly string[]> = Object.create(null);
+      const gIssues = groupIssuesState.get();
+      if (gIssues.length > 0) {
+        res[""] = gIssues.map((iss) => iss.message ?? iss.code);
+      }
       for (const k of keys) {
         const node = fields[k] as any;
         if (node.kind === "field") {
@@ -239,7 +506,8 @@ export function createFieldGroup<T extends Record<string, any>>(
           const nested = node.errors.get();
           for (const [nestedKey, nestedErrors] of Object.entries(nested)) {
             if ((nestedErrors as readonly string[]).length > 0) {
-              res[`${String(k)}.${nestedKey}`] = nestedErrors as readonly string[];
+              const prefix = nestedKey === "" ? String(k) : `${String(k)}.${nestedKey}`;
+              res[prefix] = nestedErrors as readonly string[];
             }
           }
         }
@@ -247,6 +515,78 @@ export function createFieldGroup<T extends Record<string, any>>(
       return res;
     }),
   );
+
+  const validationStatusComputed = runInScope(() =>
+    computed(() => {
+      const allIssues = issuesComputed.get();
+      if (allIssues.length > 0) return "invalid";
+      const hasUnvalidatedChild = keys.some(
+        (k) => (fields[k] as any).validationStatus.get() === "unvalidated",
+      );
+      if (groupValidationStatusState.get() === "unvalidated" || hasUnvalidatedChild) {
+        return "unvalidated";
+      }
+      return "valid";
+    }),
+  );
+
+  let isValidating = false;
+
+  const validate = (trigger: ValidationTriggerMode = "manual"): readonly FieldIssue[] => {
+    if (isValidating) {
+      throw new Error("Reentrant validation detected in form group");
+    }
+    isValidating = true;
+
+    try {
+      const collectedGroupIssues: FieldIssue[] = [];
+      const currentVals = valuesComputed.get();
+      const ctx: ValidationRuleContext = { trigger };
+
+      for (const rule of rules) {
+        let res: any;
+        try {
+          res = rule(currentVals, ctx);
+        } catch (ruleErr) {
+          throw ruleErr;
+        }
+
+        if (
+          res !== null &&
+          (typeof res === "object" || typeof res === "function") &&
+          typeof (res as any).then === "function"
+        ) {
+          throw new TypeError(
+            "Synchronous validation rule returned a Promise or thenable. Async validation is not supported in F3.",
+          );
+        }
+
+        if (res !== null && res !== undefined) {
+          if (Array.isArray(res)) {
+            for (const item of res) {
+              collectedGroupIssues.push(sanitizeIssue(item));
+            }
+          } else {
+            collectedGroupIssues.push(sanitizeIssue(res));
+          }
+        }
+      }
+
+      // Validate all children
+      for (const k of keys) {
+        (fields[k] as any).validate(trigger);
+      }
+
+      batch(() => {
+        groupIssuesState.set(Object.freeze(collectedGroupIssues));
+        groupValidationStatusState.set(collectedGroupIssues.length === 0 ? "valid" : "invalid");
+      });
+
+      return issuesComputed.get();
+    } finally {
+      isValidating = false;
+    }
+  };
 
   const setValues = (partial: Partial<T>): void => {
     if (partial === null || typeof partial !== "object" || Array.isArray(partial)) {
@@ -266,6 +606,38 @@ export function createFieldGroup<T extends Record<string, any>>(
             node.setValues(v);
           }
         }
+      }
+      if (rules.length > 0) {
+        // Rerun group validation if group rules exist
+        const collectedGroupIssues: FieldIssue[] = [];
+        const currentVals = Object.create(null) as T;
+        for (const k of keys) {
+          const node = fields[k] as any;
+          currentVals[k] = node.kind === "field" ? node.value.get() : node.values.get();
+        }
+        const ctx: ValidationRuleContext = { trigger: "change" };
+
+        for (const rule of rules) {
+          const res = rule(currentVals, ctx);
+          if (
+            res !== null &&
+            (typeof res === "object" || typeof res === "function") &&
+            typeof (res as any).then === "function"
+          ) {
+            throw new TypeError(
+              "Synchronous validation rule returned a Promise or thenable. Async validation is not supported in F3.",
+            );
+          }
+          if (res !== null && res !== undefined) {
+            if (Array.isArray(res)) {
+              for (const item of res) collectedGroupIssues.push(sanitizeIssue(item));
+            } else {
+              collectedGroupIssues.push(sanitizeIssue(res));
+            }
+          }
+        }
+        groupIssuesState.set(Object.freeze(collectedGroupIssues));
+        groupValidationStatusState.set(collectedGroupIssues.length === 0 ? "valid" : "invalid");
       }
     });
   };
@@ -294,6 +666,8 @@ export function createFieldGroup<T extends Record<string, any>>(
           node.reset();
         }
       }
+      groupIssuesState.set([]);
+      groupValidationStatusState.set("unvalidated");
     });
   };
 
@@ -307,8 +681,12 @@ export function createFieldGroup<T extends Record<string, any>>(
     valid: validComputed,
     invalid: invalidComputed,
     errors: errorsComputed,
+    issues: issuesComputed,
+    groupIssues: groupIssuesState,
+    validationStatus: validationStatusComputed,
     setValues,
     reset,
+    validate,
   };
 }
 
@@ -337,6 +715,8 @@ export interface FieldArray<T> {
   readonly valid: Computed<boolean>;
   readonly invalid: Computed<boolean>;
   readonly errors: Computed<Record<string, readonly string[]>>;
+  readonly issues: Computed<readonly FieldIssue[]>;
+  readonly validationStatus: Computed<ValidationStatus>;
   push(value: T): void;
   insert(index: number, value: T): void;
   remove(index: number): void;
@@ -344,6 +724,7 @@ export interface FieldArray<T> {
   move(from: number, to: number): void;
   setValues(next: T[]): void;
   reset(nextInitials?: T[]): void;
+  validate(trigger?: ValidationTriggerMode): readonly FieldIssue[];
 }
 
 export interface CreateFieldArrayOptions<T> {
@@ -462,8 +843,7 @@ export function createFieldArray<T>(options: CreateFieldArrayOptions<T>): FieldA
       // Length change = dirty
       if (current.length !== initials.length) return true;
 
-      // Identity-strict order/identity check:
-      // Any item created after construction/reset has a new identity, and any reorder changes key order
+      // Identity-strict order/identity check
       for (let i = 0; i < current.length; i++) {
         if (current[i]?.id !== initKeys[i]) {
           return true;
@@ -506,7 +886,8 @@ export function createFieldArray<T>(options: CreateFieldArrayOptions<T>): FieldA
           const nested = n.errors.get();
           for (const [nestedKey, nestedErrors] of Object.entries(nested)) {
             if ((nestedErrors as readonly string[]).length > 0) {
-              res[`[${i}].${nestedKey}`] = nestedErrors as readonly string[];
+              const prefix = nestedKey === "" ? `[${i}]` : `[${i}].${nestedKey}`;
+              res[prefix] = nestedErrors as readonly string[];
             }
           }
         }
@@ -514,6 +895,45 @@ export function createFieldArray<T>(options: CreateFieldArrayOptions<T>): FieldA
       return res;
     }),
   );
+
+  const getIssues = (): readonly FieldIssue[] => {
+    const res: FieldIssue[] = [];
+    const items = itemsState.get();
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (!item) continue;
+      const n = item.node as any;
+      const childIssues: readonly FieldIssue[] =
+        typeof n.issues === "function" ? n.issues() : n.issues.get();
+      for (const iss of childIssues) {
+        const prefix = [i, ...(iss.path ?? [])];
+        res.push({
+          ...iss,
+          path: Object.freeze(prefix),
+        });
+      }
+    }
+    return Object.freeze(res);
+  };
+
+  const getValidationStatus = (): ValidationStatus => {
+    const items = itemsState.get();
+    if (items.some((it) => (it.node as any).validationStatus.get() === "invalid")) {
+      return "invalid";
+    }
+    if (items.some((it) => (it.node as any).validationStatus.get() === "unvalidated")) {
+      return "unvalidated";
+    }
+    return "valid";
+  };
+
+  const validate = (trigger: ValidationTriggerMode = "manual"): readonly FieldIssue[] => {
+    const items = itemsState.get();
+    for (const it of items) {
+      (it.node as any).validate(trigger);
+    }
+    return getIssues();
+  };
 
   const push = (value: T): void => {
     const current = itemsState.get();
@@ -614,7 +1034,6 @@ export function createFieldArray<T>(options: CreateFieldArrayOptions<T>): FieldA
       const current = itemsState.get();
 
       if (keyExtractor) {
-        // Validate uniqueness up-front before creating any nodes or mutating anything
         const derivedKeys = next.map((v) => keyExtractor(v));
         const seenKeys = new Set<string | number>();
         for (const key of derivedKeys) {
@@ -668,7 +1087,6 @@ export function createFieldArray<T>(options: CreateFieldArrayOptions<T>): FieldA
           throw err;
         }
 
-        // Apply mutations on reused existing items
         for (let i = 0; i < next.length; i++) {
           const nextVal = next[i];
           const derivedKey = derivedKeys[i]!;
@@ -683,7 +1101,6 @@ export function createFieldArray<T>(options: CreateFieldArrayOptions<T>): FieldA
           }
         }
 
-        // Dispose old items whose keys disappeared
         for (const [key, oldItem] of currentByDerivedKey.entries()) {
           if (!usedOldKeys.has(key)) {
             disposeItem(oldItem);
@@ -704,7 +1121,6 @@ export function createFieldArray<T>(options: CreateFieldArrayOptions<T>): FieldA
           itemsState.set(newItems);
         }
       } else {
-        // Unkeyed reconciliation
         const createdThisRun: ArrayItem<T>[] = [];
         const newItems: ArrayItem<T>[] = [];
 
@@ -726,7 +1142,6 @@ export function createFieldArray<T>(options: CreateFieldArrayOptions<T>): FieldA
           throw err;
         }
 
-        // Apply mutations on existing items
         for (let i = 0; i < Math.min(current.length, next.length); i++) {
           const nextVal = next[i];
           const item = current[i]!;
@@ -738,7 +1153,6 @@ export function createFieldArray<T>(options: CreateFieldArrayOptions<T>): FieldA
           }
         }
 
-        // Dispose trailing items
         for (let i = next.length; i < current.length; i++) {
           const item = current[i];
           if (item) {
@@ -766,7 +1180,6 @@ export function createFieldArray<T>(options: CreateFieldArrayOptions<T>): FieldA
       const initials = nextInitials !== undefined ? nextInitials : initialValuesState.get();
       const currentItems = itemsState.get();
 
-      // Build and validate new items FIRST before disposing old items
       const createdItems: ArrayItem<T>[] = [];
       try {
         for (const v of initials) {
@@ -784,12 +1197,10 @@ export function createFieldArray<T>(options: CreateFieldArrayOptions<T>): FieldA
         initialValuesState.set(nextInitials);
       }
 
-      // Dispose all previous items
       for (const item of currentItems) {
         disposeItem(item);
       }
 
-      // Re-establish initialKeysState baseline on EVERY reset
       initialKeysState.set(createdItems.map((it) => it.id));
       itemsState.set(createdItems);
     });
@@ -805,6 +1216,12 @@ export function createFieldArray<T>(options: CreateFieldArrayOptions<T>): FieldA
     valid: validComputed,
     invalid: invalidComputed,
     errors: errorsComputed,
+    get issues() {
+      return computed(() => getIssues());
+    },
+    get validationStatus() {
+      return computed(() => getValidationStatus());
+    },
     push,
     insert,
     remove,
@@ -812,6 +1229,7 @@ export function createFieldArray<T>(options: CreateFieldArrayOptions<T>): FieldA
     move,
     setValues,
     reset,
+    validate,
   };
 }
 
@@ -824,6 +1242,8 @@ export type FieldValues = Record<string, any>;
 export interface FormConfig<T extends FieldValues> {
   readonly initialValues: T;
   readonly keyExtractor?: ((item: any) => string | number) | undefined;
+  readonly rules?: readonly SyncValidationRule<T>[] | undefined;
+  readonly validateOn?: ValidationTriggerMode | readonly ValidationTriggerMode[] | undefined;
 }
 
 export interface FormInstance<T extends FieldValues> {
@@ -836,9 +1256,12 @@ export interface FormInstance<T extends FieldValues> {
   readonly valid: Computed<boolean>;
   readonly invalid: Computed<boolean>;
   readonly errors: Computed<Record<string, readonly string[]>>;
+  readonly issues: Computed<readonly FieldIssue[]>;
+  readonly validationStatus: Computed<ValidationStatus>;
   getNode(path: string): FormNode | undefined;
   setValues(partial: Partial<T>): void;
   reset(nextInitials?: Partial<T>): void;
+  validate(trigger?: ValidationTriggerMode): readonly FieldIssue[];
   dispose(): void;
 }
 
@@ -927,6 +1350,8 @@ export function createForm<T extends FieldValues>(config: FormConfig<T>): FormIn
     initialValues: config.initialValues,
     scope,
     keyExtractor: config.keyExtractor,
+    rules: config.rules,
+    validateOn: config.validateOn,
   });
 
   let isDisposed = false;
@@ -975,6 +1400,8 @@ export function createForm<T extends FieldValues>(config: FormConfig<T>): FormIn
     valid: root.valid,
     invalid: root.invalid,
     errors: root.errors,
+    issues: root.issues,
+    validationStatus: root.validationStatus,
     getNode,
     setValues: (partial: Partial<T>): void => {
       assertActive();
@@ -983,6 +1410,10 @@ export function createForm<T extends FieldValues>(config: FormConfig<T>): FormIn
     reset: (nextInitials?: Partial<T>): void => {
       assertActive();
       root.reset(nextInitials);
+    },
+    validate: (trigger: ValidationTriggerMode = "manual"): readonly FieldIssue[] => {
+      assertActive();
+      return root.validate(trigger);
     },
     dispose: () => {
       if (isDisposed) return;

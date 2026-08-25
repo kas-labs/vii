@@ -144,3 +144,39 @@ The test suite in [`research/form/form-core.test.ts`](./form-core.test.ts) cover
    - Form-side array mutations (`push`) propagating exactly once to external store.
    - 200 sequential updates on scalar and alternating array forms.
    - `form.dispose()` during external binding halting bidirectional propagation.
+
+---
+
+## 4. F3: Synchronous Validation Scheduling & Structured Issues
+
+### Overview & Architecture
+F3 introduces synchronous validation scheduling and machine-readable structured issues to Vii Form without expanding into a schema engine or async validation pipeline (which belongs to F4).
+
+### Key Decisions & Contracts
+1. **Deterministic Synchronous Rule Contract**:
+   - `SyncValidationRule<T, Ctx> = (value: T, context: Ctx) => FieldIssue | readonly FieldIssue[] | null | undefined`.
+   - Rules are strictly synchronous. If a rule returns a Promise or thenable, it is fast-rejected with an explicit `TypeError` stating that async validation is not supported in F3.
+   - Rules are pure functions with respect to Form state and must not mutate internal signals during evaluation.
+2. **Structured Issue Taxonomy (`FieldIssue`)**:
+   - `code`: required machine-readable string identifier (e.g. `"required"`, `"min_length"`).
+   - `message`: optional human-readable message.
+   - `path`: structured array of path segments (`readonly (string | number)[]`), not concatenated dot strings.
+   - `source`: `"validation"`.
+   - `ruleId`: optional identifier.
+   - **Privacy / Value-Safety**: Raw field values and validator object references are never captured in `FieldIssue` or diagnostic payloads.
+3. **Validation Trigger Semantics (`ValidationTriggerMode`)**:
+   - `"change"`: runs on leaf `setValue` or group `setValues` mutations.
+   - `"blur"`: runs on `setTouched(true)`.
+   - `"submit"`: runs form-wide validation across all nodes in the tree without altering touched/dirty.
+   - `"manual"`: explicitly invokes `node.validate()` on demand.
+4. **Validation Status Taxonomy (`ValidationStatus`)**:
+   - Form and field nodes distinguish `"unvalidated"`, `"valid"`, and `"invalid"`.
+   - Pristine nodes start as `"unvalidated"`. `valid` computed evaluates `errors.length === 0 && issues.length === 0` (backward-compatible with F1/F2).
+5. **Array Item Issue Ownership vs Positional Paths**:
+   - When dynamic array items are swapped, moved, or reordered, internal issues remain bound to the conceptual item node.
+   - The parent array's computed issues dynamically map the issue's presentation path to its current position (`[index, ...childPath]`).
+6. **Prototype Pollution Defense**:
+   - Issue codes and path segments rejecting `__proto__`, `constructor`, `prototype`.
+   - Issue records and maps use `Object.create(null)` dictionaries.
+7. **Throwing Validator Behavior**:
+   - Uncaught exceptions inside validation rules propagate as runtime errors without leaking field values in diagnostics.

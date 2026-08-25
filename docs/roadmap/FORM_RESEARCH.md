@@ -1,7 +1,7 @@
 # Vii Form Research Roadmap
 
-> **Status**: Active Research Track (F0 Completed)
-> **Current Slice**: F0 (Form Architecture, Domain Model & Build-vs-Buy Questions)
+> **Status**: Active Research Track (F0-F2 Completed)
+> **Current Slice**: F3 (Validation Scheduling + Structured Issues)
 > **Governing Strategy**: Evidence-driven Build-vs-Buy
 > **Prerequisites**: Phase 1 (Core State), Phase 2 (Adapters/CLI), Scope/Lifecycle Foundations, Schema Research (`Wrap + Reduce`)
 

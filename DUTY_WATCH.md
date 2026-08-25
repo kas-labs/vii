@@ -37,7 +37,49 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
-## 2026-08-25 02:27 CEST | Package-Level Tail Hardening (Audit Findings 24-31, R1-R5)
+## 2026-08-26 01:30 CEST | Form Research F3: Validation Scheduling & Structured Issues
+
+Status: completed
+Branch: `feat/form-validation-scheduling`
+PR: not opened (Draft PR pending)
+
+### Scope
+
+- Implement synchronous validation scheduling and structured issue lifecycle in throwaway research module (`research/form/`).
+- Authorize F3 ONLY (no async validation, no schema adapters, no submission lifecycle, no production package).
+- Preserve all existing F1/F2 regression tests and hardening contracts.
+
+### Changes
+
+- **Form Research Core (`research/form/form-core.ts`)**:
+  - Added structured issue taxonomy: `FieldIssue`, `ValidationTriggerMode` (`"change"`, `"blur"`, `"submit"`, `"manual"`), `ValidationStatus` (`"unvalidated"`, `"valid"`, `"invalid"`), `ValidationRuleContext`, `SyncValidationRule`.
+  - Added defensive issue sanitizer `sanitizeIssue` defending against prototype pollution on issue codes and path segments (`__proto__`, `constructor`, `prototype`).
+  - Added synchronous rule execution on `createField` with fast-fail rejection on Promise/thenable return (`TypeError`).
+  - Added `validate()` entrypoint, `issues` and `validationStatus` states across `FieldState`, `FieldGroup`, `FieldArray`, and `FormInstance`.
+  - Maintained full backward compatibility with F1/F2 `errors: Computed<Record<string, readonly string[]>>`.
+  - Preserved O(1) Scope detachment and exact parent scope resource counts.
+- **Form Research Tests (`research/form/form-f3.test.ts`)**:
+  - Added 17 comprehensive fixtures verifying: required rules, multiple rules declaration order, change/blur/manual/form triggers, cross-field validation, nested issue bubbling, array item validation, reordering preserving issue identity with updated positional paths, issue clearing on revalidation, sibling isolation, throwing validator propagation, Promise/thenable rejection, prototype pollution defenses, post-dispose rejection, and diagnostics/batching observation.
+- **Documentation (`docs/roadmap/FORM_RESEARCH.md`, `research/form/README.md`)**:
+  - Synchronized roadmap header to record F0-F2 completed and F3 current.
+  - Documented F3 validation architecture, trigger semantics, issue taxonomy, and prototype safety.
+
+### Validation
+
+- `pnpm vitest run research/form`: 86 tests passed (69 F1/F2 regression + 17 F3 fixtures).
+- `pnpm exec tsc -p research/form/tsconfig.json --noEmit`: 0 type errors.
+- `pnpm validate`: 0 lint, format, typecheck, or test failures.
+- `git diff --check`: Clean, 0 whitespace issues.
+
+### Architecture / compatibility
+
+- Kept in `research/form/` as throwaway research. No production `@vii-labs/form` package created.
+- F4 (Async Validation) has NOT been started.
+
+### Remaining / recovery
+
+- None for F3. Open Draft PR and await review.
+
 
 Status: completed
 Branch: `chore/package-tail-hardening`

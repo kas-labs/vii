@@ -41,7 +41,8 @@ PR: <number or not opened>
 
 Status: completed
 Branch: `fix/form-external-binding-sync`
-PR: not opened
+PR: #152
+
 
 ### Scope
 

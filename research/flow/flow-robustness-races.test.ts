@@ -127,3 +127,64 @@ describe("Flow malicious, unbounded, and cancellation-race fixtures", () => {
     expect(observed).toEqual([]);
   });
 });
+
+describe("switchLatest synchronous inner completion (audit regression)", () => {
+  test("completes when the projected inner source is already closed at subscribe time", async () => {
+    const { createManualSource, switchLatest } = await import("./flow-prototype.js");
+    const inner = createManualSource<number>();
+    inner.complete();
+
+    const outer = createManualSource<string>();
+    let completed = false;
+    const received: number[] = [];
+
+    switchLatest(() => inner.source)(outer.source).subscribe({
+      next: (value: number) => {
+        received.push(value);
+      },
+      error: () => undefined,
+      complete: () => {
+        completed = true;
+      },
+    });
+
+    outer.emit("q");
+    outer.complete();
+
+    expect(received).toEqual([]);
+    expect(completed).toBe(true);
+  });
+
+  test("still switches between live inner sources", async () => {
+    const { createManualSource, switchLatest } = await import("./flow-prototype.js");
+    const first = createManualSource<number>();
+    const second = createManualSource<number>();
+    const outer = createManualSource<0 | 1>();
+    const received: number[] = [];
+    let completed = false;
+
+    switchLatest((index: 0 | 1) => (index === 0 ? first.source : second.source))(
+      outer.source,
+    ).subscribe({
+      next: (value: number) => {
+        received.push(value);
+      },
+      error: () => undefined,
+      complete: () => {
+        completed = true;
+      },
+    });
+
+    outer.emit(0);
+    first.emit(1);
+    outer.emit(1);
+    first.emit(99);
+    second.emit(2);
+    outer.complete();
+    expect(completed).toBe(false);
+    second.complete();
+
+    expect(received).toEqual([1, 2]);
+    expect(completed).toBe(true);
+  });
+});

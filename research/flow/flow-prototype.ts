@@ -451,20 +451,35 @@ export function switchLatest<T, U>(project: (value: T) => FlowSource<U>): FlowOp
             return;
           }
           current?.unsubscribe();
+          current = undefined;
           let nextSource: FlowSource<U>;
           try {
             nextSource = project(value);
           } catch (error) {
             return terminate(error);
           }
-          current = nextSource.subscribe({
+          // An already-closed inner source completes synchronously inside
+          // subscribe(), before the subscription is assigned to `current`.
+          // Track that so the returned (still-open) subscription does not
+          // overwrite the completion and leave maybeComplete() waiting forever.
+          let innerSettled = false;
+          const innerSubscription = nextSource.subscribe({
             next: (result) => observer.next(result),
-            error: terminate,
+            error: (error) => {
+              innerSettled = true;
+              return terminate(error);
+            },
             complete: () => {
+              innerSettled = true;
               current = undefined;
               maybeComplete();
             },
           });
+          if (innerSettled || !active) {
+            innerSubscription.unsubscribe();
+          } else {
+            current = innerSubscription;
+          }
         },
         error: terminate,
         complete: () => {

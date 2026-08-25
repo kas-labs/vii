@@ -123,3 +123,28 @@ describe("WCAG Contrast Evaluator", () => {
     expect(evaluation.passes.WCAG_1_4_6_AAA_NORMAL).toBe(false);
   });
 });
+
+describe("Alpha compositing (audit regression)", () => {
+  it("composites a translucent foreground over the background before rating contrast", () => {
+    const translucentBlack = {
+      colorSpace: "srgb",
+      components: [0, 0, 0],
+      alpha: 0.4,
+    } as const;
+    const white = { colorSpace: "srgb", components: [1, 1, 1] } as const;
+
+    const result = evaluateContrast(translucentBlack, white);
+
+    // Rendered color is rgb(153 153 153): real contrast is ~2.8:1, far from
+    // the 21:1 an opaque-black reading would report.
+    expect(result.ratio).toBeLessThan(3.2);
+    expect(result.ratio).toBeGreaterThan(2.4);
+    expect(result.passes.WCAG_1_4_3_AA_NORMAL).toBe(false);
+  });
+
+  it("leaves opaque colors untouched", () => {
+    const black = { colorSpace: "srgb", components: [0, 0, 0] } as const;
+    const white = { colorSpace: "srgb", components: [1, 1, 1] } as const;
+    expect(evaluateContrast(black, white).ratio).toBe(21);
+  });
+});

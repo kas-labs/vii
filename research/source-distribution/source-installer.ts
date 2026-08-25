@@ -1,5 +1,5 @@
 import { constants } from "node:fs";
-import { mkdir, open, readFile, unlink, writeFile } from "node:fs/promises";
+import { lstat, mkdir, open, readFile, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { verifyContentIntegrity } from "../registry/integrity.js";
 import {
@@ -130,9 +130,22 @@ async function inspectDestination(
   absTarget: string,
   expectedContent: string,
 ): Promise<DestinationInspection> {
+  // O_NOFOLLOW is undefined on Windows (the flag silently degrades to a plain
+  // O_RDONLY open that follows links), so classify symlinks with lstat first.
+  // On POSIX the O_NOFOLLOW open below stays as the race-free second line of
+  // defense.
+  try {
+    if ((await lstat(absTarget)).isSymbolicLink()) {
+      return "symlink";
+    }
+  } catch (err: any) {
+    if (err?.code === "ENOENT") return "missing";
+    return "different";
+  }
+
   let handle;
   try {
-    handle = await open(absTarget, constants.O_RDONLY | constants.O_NOFOLLOW);
+    handle = await open(absTarget, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
     const content = await handle.readFile("utf8");
     return content === expectedContent ? "same" : "different";
   } catch (err: any) {

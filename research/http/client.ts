@@ -253,6 +253,20 @@ class HttpClientImpl implements HttpClient {
           const location = response.headers.get("location");
 
           if (isRedirect && location) {
+            // The security loop forces redirect: "manual" on each hop to
+            // validate every destination, but the caller's redirect mode must
+            // still be honored: "manual" hands the redirect response back,
+            // "error" refuses it - mirroring fetch semantics.
+            if (options.redirect === "manual") {
+              break;
+            }
+            if (options.redirect === "error") {
+              await drainRedirectBody(response);
+              throw new NetworkError('Redirect received but redirect mode is "error"', {
+                request: finalRequest,
+              });
+            }
+
             await drainRedirectBody(response);
             redirectCount++;
             if (redirectCount > maxRedirects) {

@@ -1,5 +1,5 @@
 import { constants } from "node:fs";
-import { mkdir, open, readFile, unlink, writeFile } from "node:fs/promises";
+import { lstat, mkdir, open, readFile, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { verifyContentIntegrity } from "../registry/integrity.js";
@@ -131,6 +131,22 @@ async function inspectDestination(
   absTarget: string,
   expectedContent: string,
 ): Promise<DestinationInspection> {
+  // On POSIX the O_NOFOLLOW open below refuses symlinks atomically, so no
+  // lstat probe is needed (avoiding a check-then-open TOCTOU pattern).
+  // Windows has no O_NOFOLLOW (the constant is undefined and the open
+  // silently follows links), so there lstat is the only available symlink
+  // probe - inherently racy, but strictly better than never detecting links.
+  if (constants.O_NOFOLLOW === undefined) {
+    try {
+      if ((await lstat(absTarget)).isSymbolicLink()) {
+        return "symlink";
+      }
+    } catch (err: any) {
+      if (err?.code === "ENOENT") return "missing";
+      return "different";
+    }
+  }
+
   let handle;
   try {
     handle = await open(absTarget, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));

@@ -33,6 +33,13 @@ export function isObjectCycleDetected(obj: object, context: ValidationContext): 
   return false;
 }
 
+// Marks `obj` as no longer on the current validation path. Must be called once
+// validation of `obj`'s subtree finishes, or sibling branches that legitimately
+// share a reference (a DAG, not a cycle) will be falsely flagged.
+export function releaseObjectPath(obj: object, context: ValidationContext): void {
+  context.seenObjects?.delete(obj);
+}
+
 export function isDepthExceeded(context: ValidationContext): boolean {
   return context.depth > context.maxDepth;
 }

@@ -41,7 +41,8 @@ PR: <number or not opened>
 
 Status: completed
 Branch: `chore/package-tail-hardening`
-PR: not opened
+PR: #153
+
 
 ### Scope
 

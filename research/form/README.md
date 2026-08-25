@@ -93,22 +93,39 @@ The test suite in [`research/form/form-core.test.ts`](./form-core.test.ts) cover
   - Finding 15: Consistent post-dispose contract throwing `Error("Form is disposed")` on all `FormInstance` methods.
   - Finding 16: Strict index validation in `FieldArray.insert` throwing `RangeError` on invalid indices.
   - Finding 17: Diagnostics-verified parent scope resource count proving 0 accumulation of dead item scopes across push/remove cycles.
+- **Batch 6 Cycle Protection & Scope-Graph Fidelity Coverage (4 tests)**:
+  - Finding 18: Reference-based echo suppression in `bindFormToExternalState` (`lastPushedOutward`, `lastAppliedInward`).
+  - Finding 18: Consecutive chained sync counter (`consecutiveSyncCount <= MAX_EXTERNAL_SYNC_DEPTH`) catching deferred ping-pong loops across the scheduler queue.
+  - Finding 18: Spy-verified single outward write per form edit with zero echo re-entry into `form.setValues`.
+  - Finding 18: Re-application of identical object reference after superseding update to ensure updates are not dropped.
+  - Scope-Graph Fidelity: Verification that child item scopes created via `createChild` maintain `parentScopeId` linkage in `scope.created` events and auto-detach in O(1) time upon child disposal.
 
 ---
 
-## 3. F1 + F2 Seam Audit & Re-entrancy Protection
+## 3. External State Binding Cycle Protection & Scope-Graph Fidelity
 
-1. **Root Cause of BUG 7 (Blocker Cycle)**:
-   - `FieldArray.setValues(next)` was allocating a fresh `const newItems = [...]` and calling `itemsState.set(newItems)` unconditionally on every reconciliation, even when all items were positionally identical and unchanged in length.
-   - Because `itemsState` received a new array reference, `valuesComputed` marked itself dirty and evaluated, firing `form.values.subscribe` in `bindFormToExternalState`.
-   - This notified `externalState.set`, triggering `externalState.subscribe`, which called `form.setValues` back into `FieldArray.setValues`, creating a synchronous infinite ping-pong loop that never yielded to the event loop.
-   - **Fix**: In both keyed and unkeyed branches of `FieldArray.setValues`, `itemsState.set(newItems)` is called strictly when `hasStructuralChange === true` (length change or changed item reference).
-2. **Deterministic Re-entrancy Depth Counter (Fix for BUG 8)**:
-   - `bindFormToExternalState` implements a true depth counter (`enterSyncDepth` and `exitSyncDepth`).
-   - Every entry increments `syncDepth`. On completion of the sync operation, `finally` calls `exitSyncDepth()` (decrementing `syncDepth`).
-   - If nested synchronous re-entrancy exceeds `MAX_EXTERNAL_SYNC_DEPTH = 50`, `syncDepth` is reset to 0 and throws `new Error("Cyclic synchronisation detected in bindFormToExternalState")`.
-   - Post-throw, `syncDepth` returns to 0 and the bound form remains fully operational for normal synchronisations.
-3. **Audited Seam Combinations (All Verified)**:
+1. **Root Cause of Deferred Cycle Flaw (Finding 18)**:
+   - Core notifications are deferred: `notifier.notify` queues jobs onto `pendingJobs` in `scheduler.ts`, running each notification in sequence.
+   - When the form pushed values outward to an external store, `externalState.set` scheduled the external subscriber to run in a subsequent job *after* the `finally` block had already cleared `isSyncingToExternal` and reset `syncDepth` to 0.
+   - The echo arriving at `externalState.subscribe` therefore ran unguarded without direction flags or depth awareness.
+2. **Multi-Layered Cycle Protection Design**:
+   - **Layer 1: Directional Reference Markers (`lastPushedOutward`, `lastAppliedInward`)**:
+     - When `form.values.subscribe` pushes `nextValues` outward, it sets `lastPushedOutward = nextValues`.
+     - When `externalState.subscribe` runs, it compares `nextExternal === lastPushedOutward`. If identical by reference, the echo is absorbed, `lastPushedOutward` is cleared, and `form.setValues` is skipped entirely.
+     - Symmetrically, when `externalState.subscribe` applies `nextExternal` inward, it sets `lastAppliedInward = nextExternal`. When `form.values.subscribe` runs, if `nextValues === lastAppliedInward`, the echo is absorbed and outward push is skipped.
+     - Each marker is cleared once its echo has been absorbed or superseded by a new user-initiated update, ensuring genuine subsequent updates with identical references are never dropped.
+   - **Layer 2: Chained Consecutive Sync Counter (`consecutiveSyncCount`)**:
+     - If a binding is deliberately non-convergent (e.g. an external store that mutates or normalizes the object on every write to create a new object reference), reference equality will not match.
+     - `consecutiveSyncCount` increments on each chained ping-pong step across deferred scheduler jobs. If `consecutiveSyncCount > MAX_EXTERNAL_SYNC_DEPTH` (50), `enterSyncDepth` throws `new Error("Cyclic synchronisation detected in bindFormToExternalState")`, halting the infinite loop.
+   - **Layer 3: Synchronous Stack Depth Backstop (`syncDepth`)**:
+     - Protects against direct synchronous re-entrancy within the same call stack.
+   - **Layer 4: Structural Array Reconciliation No-op Guard**:
+     - `FieldArray.setValues` skips `itemsState.set` when reconciled items are structurally unchanged.
+3. **Core Scope Graph Fidelity & Automatic Child Detachment**:
+   - `packages/core/src/scope.ts`'s `createChild` captures the detach handle returned by `use(child)` and registers `child.use(() => { detach(); })`.
+   - When a child scope is disposed (e.g. an array item removed or replaced), it automatically detaches itself from its parent's retained resources in O(1) time without leaking memory.
+   - Because child scopes are instantiated via `parent.createChild(...)`, they properly record `parentScopeId` in `scope.created` diagnostic events and inherit the parent's diagnostics runtime across all creation contexts.
+4. **Audited Seam Combinations (All Verified)**:
    - External binding + unkeyed array (equal length, grow, shrink to empty `[]`).
    - External binding + keyed array with `keyExtractor` reordering.
    - External binding + arrays nested in field groups.

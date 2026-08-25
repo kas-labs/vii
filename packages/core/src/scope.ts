@@ -183,7 +183,10 @@ function createScopeInternal(
     createChild: (childOptions = {}): Scope => {
       assertActive();
       const child = createScopeInternal(childOptions, diagnostics, scopeId);
-      use(child);
+      const detach = use(child);
+      child.use(() => {
+        detach();
+      });
       return child;
     },
     dispose,

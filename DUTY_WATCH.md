@@ -37,7 +37,55 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-25 02:15 CEST | External Binding Cycle Protection & Scope-Graph Fidelity (Audit Finding 18 & Batch 5 Scope Regression)
+
+Status: completed
+Branch: `fix/form-external-binding-sync`
+PR: not opened
+
+### Scope
+
+- Remediate Audit Finding 18 in `research/form/form-core.ts`: Multi-layer external binding cycle guard across the deferred scheduler.
+- Fix Batch 5 Scope Regression in `packages/core/src/scope.ts`: Child scope auto-detachment on disposal in core `createChild`, restoring `parentScopeId` and diagnostics inheritance without scope leakage.
+
+### Changes
+
+- In `packages/core/src/scope.ts`:
+  - In `createChild`, captured the detach handle from `use(child)` and registered `child.use(() => { detach(); })`.
+  - Disposing a child scope automatically detaches it from its parent's retained resources in O(1) time without double-disposal.
+- In `packages/core/test/scope.test.ts`:
+  - Added regression test asserting child auto-detachment at parent teardown and clean single disposal.
+- In `research/form/form-core.ts`:
+  - `bindFormToExternalState`:
+    - Implemented directional reference markers (`lastPushedOutward`, `lastAppliedInward`) to absorb echoes across the deferred scheduler.
+    - Implemented chained consecutive sync counter (`consecutiveSyncCount <= MAX_EXTERNAL_SYNC_DEPTH`) to detect and terminate non-convergent deferred loops with `Error("Cyclic synchronisation detected in bindFormToExternalState")`.
+    - Preserved stack depth counter (`syncDepth`), direction guards, and structural reconciliation guard.
+  - `createFieldArray`:
+    - Replaced manual scope detachment with `scope.createChild({ name: "vii-array-item" })`, restoring diagnostics `parentScopeId` in `scope.created` events while preserving O(1) lifetime.
+- In `research/form/form-core.test.ts`:
+  - Added regression tests for non-convergent cyclic loop error, single outward write without echo re-entry, same-reference re-application, and diagnostics `parentScopeId` linkage with constant resource counts at N = 10, 50, 500.
+- In `research/form/README.md`:
+  - Documented the multi-layered cycle-protection architecture and core scope-graph fidelity.
+
+### Validation
+
+- `pnpm validate`: PASS (clean format, lint, typecheck, package tests, builds, and pack checks)
+- `npx vitest run research/form/form-core.test.ts`: PASS (1 test file, 69/69 tests passed in 58ms)
+- `npx vitest run packages/core/test/scope.test.ts`: PASS (1 test file, 12/12 tests passed in 58ms)
+- `npx vitest run research/registry research/source-distribution research/http research/query research/schema`: PASS (36 test files + isolated query benchmarks passed)
+- `git diff --check`: PASS (clean)
+
+### Architecture / compatibility
+
+- Changes are scoped strictly to `packages/core/src/scope.ts` (plus tests) and `research/form/`.
+- No other packages or research directories modified.
+
+### Remaining / recovery
+
+- None. Batch 6 fixes are verified and ready.
+
 ## 2026-08-25 02:00 CEST | Form Data Correctness & Array Lifetime (Audit Findings 10, 11, 12, 13, 14, 15, 16, 17)
+
 
 Status: completed
 Branch: `fix/form-data-correctness`

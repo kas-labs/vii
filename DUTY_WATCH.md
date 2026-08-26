@@ -37,6 +37,42 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-26 02:40 CEST | Form Research F5: Parsing / Input-Output Types / Standard Schema Boundary
+
+Status: completed
+Branch: `feat/form-parsing-standard-schema`
+PR: not opened (Draft PR pending)
+
+### Scope
+
+- Implement explicit value stages (`RawInput` -> `ParsedValue` -> `ValidatedValue` -> `OutputValue`), parser contracts with structured `ParseIssue` taxonomy, dirty semantics based on domain values, output transformations, and provider-neutral Standard Schema v1 validation (`standardSchema(schema)`) in research prototype (`research/form/`).
+- Authorize F5 ONLY (no submission lifecycle, no framework adapters, no package graduation).
+- Preserve all existing F1–F4 regression tests (112 tests) while adding comprehensive F5 test coverage (29 tests, 141 total).
+
+### Changes
+
+- Created `research/form/parser.ts`: Defined `ParseIssue`, `ValidationIssue`, `FieldParser`, `OutputTransform`, `createNumberParser`, `createBooleanParser`, `createOptionalStringParser`, with strict prototype pollution defenses.
+- Created `research/form/standard-schema.ts`: Implemented provider-neutral `standardSchema` adapter bridging Standard Schema v1 (`~standard`) schemas into Vii `ValidationRule`s with issue path normalization and prototype pollution security.
+- Updated `research/form/form-core.ts`: Extended `FieldState<Value, Raw, Output>` with `rawValue`, `initialRawValue`, `parseIssue`, `parseStatus`, `setRawValue`, `output`, `getOutput()`. Synchronous and asynchronous parser/validation separation, bypassing validation rules on parse failure. Extended `FieldGroup`, `FieldArray`, and `FormInstance` with `output` and `getOutput()`.
+- Created `research/form/form-f5.test.ts`: Added 29 tests covering value stages, dirty semantics, output transforms, Standard Schema v1 integration with Zod 4, Valibot, ArkType, TypeBox verification, async cancellation/stale-result suppression, security defenses, edge cases, lifecycle/memory retention, and TypeScript negative type tests.
+- Updated `research/form/README.md` documenting F5 findings.
+
+### Validation
+
+- `pnpm exec tsc -p research/form/tsconfig.json --noEmit` (exit code 0)
+- `pnpm vitest run research/form/` (141 passed across 4 test files, exit code 0)
+- `pnpm validate` (format, lint, typecheck, tests, build, pack:check all passed, exit code 0)
+
+### Architecture / compatibility
+
+- Core dependency direction preserved: research prototype imports only core signal/scope/diagnostics primitives.
+- Zero bundle impact on `@vii-labs/core`, `@vii-labs/react`, `@vii-labs/angular`, `@vii-labs/vue`.
+- Standard Schema v1 verified with Zod 4, Valibot, ArkType.
+
+### Remaining / recovery
+
+- None for F5. Hard stop reached (F6 submission lifecycle NOT authorized).
+
 ## 2026-08-26 02:00 CEST | Form Research F4: Async Validation + Cancellation + Revisions
 
 Status: completed

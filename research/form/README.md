@@ -214,3 +214,43 @@ F4 extends Vii Form validation with asynchronous rules, cancellation semantics v
 7. **Array & Cross-Field Group Validation**:
    - Dynamic array item validations preserve conceptual item node identity across array mutations (`swap`, `move`, `remove`).
    - Group rules receive aggregate child values and aggregate child + group `pending` states.
+
+---
+
+## 6. F5: Parsing, Input-Output Types & Standard Schema Boundary
+
+### Overview & Architecture
+F5 introduces explicit value stages (`RawInput` -> `ParsedValue` -> `ValidatedValue` -> `OutputValue`), parser contracts with structured `ParseIssue` taxonomy, dirty semantics based on domain values, output transformations on fields, groups, and arrays, and provider-neutral Standard Schema v1 validation (verified with Zod 4, Valibot, and ArkType).
+
+### Key Decisions & Contracts
+1. **Value Pipeline Stages**:
+   - `RawInput` ($\text{TRaw}$): Raw input from user interface/DOM elements (e.g. `string` for text/numeric inputs, `boolean | string` for checkboxes).
+   - `ParsedValue` ($\text{TValue}$): Typed domain model representation (e.g. `number`, `Date`, `string`).
+   - `ValidatedValue` ($\text{TValue}$): Domain value certified by synchronous and asynchronous validation rules.
+   - `OutputValue` ($\text{TOutput}$): Immutable transformed submission payload produced via `OutputTransform<TValue, TOutput>`.
+2. **Parser Contract & Parse Failure Semantics**:
+   - `FieldParser<Raw, Value> = (raw: Raw) => ParseResult<Value>`.
+   - `ParseResult<Value> = { ok: true; value: Value } | { ok: false; issue: ParseIssue | { code: string; message?: string } }`.
+   - `ParseIssue` has `source: "parse"` and structured `code`, `message`, `path`.
+   - **Invariant**: When raw input fails parsing, the field transitions to `parseStatus: "invalid"` and `validationStatus: "invalid"`, the structured `ParseIssue` is recorded in `field.issues` and `field.parseIssue`, and **validation rules are strictly bypassed** (preventing rules from receiving invalid or unparsed types).
+3. **Dirty Semantics & Raw Ownership**:
+   - UI/adapter layers own raw presentation text for invalid inputs.
+   - Core retains `rawValue` and `parseIssue` so raw user keystrokes are not lost.
+   - `dirty` state evaluates whether domain `value` differs from `initialValue` (e.g. typing `"05"` when initial is `5` parses to `5` and remains `dirty === false`).
+4. **Output Transformations**:
+   - `OutputTransform<Value, Output> = (value: Value) => Output`.
+   - Field exposes `output` computed and `getOutput()`.
+   - `FieldGroup` and `FieldArray` aggregate child `getOutput()` values into structured output trees.
+5. **Standard Schema v1 Provider Neutrality**:
+   - Provider-neutral adapter: `standardSchema(schema)` bridges any Standard Schema v1 (`~standard`) object into a Vii `ValidationRule`.
+   - Standard Schema v1 implementations validated:
+     - **Zod 4** (`zod`)
+     - **Valibot** (`valibot`)
+     - **ArkType** (`arktype`)
+   - **TypeBox Status**: TypeBox does not natively implement the `~standard` v1 interface without external wrapper, and is confirmed non-native.
+6. **Async Standard Schema & Cancellation Limitations**:
+   - Standard Schema specification does not accept `AbortSignal` in `validate()`.
+   - Cancellation is handled via **stale-result suppression**: when a superseding mutation arrives, Form increments its monotonic revision and aborts internal controllers, strictly suppressing late async schema results from committing.
+7. **Security & Prototype Pollution Hardening**:
+   - Prototype pollution attempts (`__proto__`, `constructor`, `prototype`) in parse issue codes, schema vendor issue codes, or issue paths are defensively blocked with security errors.
+   - Diagnostics payloads record structural events (`field.parse.completed`, `field.schema.validation.started`, etc.) without exposing raw input values or sensitive error messages.

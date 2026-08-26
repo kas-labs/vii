@@ -204,6 +204,7 @@ F4 extends Vii Form validation with asynchronous rules, cancellation semantics v
    - When an async validator resolves, it commits state *only* if `revision === currentRevision`, `!signal.aborted`, and `!isDisposed`. Late resolutions from superseded validations are strictly suppressed.
 4. **Cancellation vs Validation Failure**:
    - Cancellation is NOT validation failure. When a validator aborts (or rejects with `AbortError`), no validation issue is produced, and validation status is not marked invalid.
+   - **Rejection ownership**: a validation started by a trigger (`setValue`, `setTouched`, `setValues`, or a debounce timer) is fire-and-forget, so nothing holds its promise. A non-abort rejection on that path is recorded as `field.validation.async.failed` / `group.validation.async.failed` (rule error *name* only, never the message, which can embed field values) and then swallowed, because letting it escape would surface as an unhandled rejection and, under Node's default policy, terminate the process. `pending` is still cleared, so the node never strands. A rejection from an explicit `validate()` call is delivered to the caller unchanged. Surfacing rule failures as user-visible issues is deliberately out of scope for F4.
 5. **Scope Lifecycle Integration**:
    - Disposing a field, resetting a form, or removing an array item aborts active async validations immediately.
    - Disposed nodes reject subsequent `validate()` invocations with a clean `Error("Form node is disposed")`.

@@ -8,6 +8,7 @@ import {
   type FieldIssue,
   type SyncValidationRule,
   type AsyncValidationRule,
+  type ValidationRuleContext,
 } from "./form-core.js";
 
 // Helper for controllable deferred promises
@@ -343,9 +344,9 @@ describe("Form Research F4 — Async Validation, Cancellation & Revisions", () =
       initialValue: "valid_start",
       rules: [
         syncRule,
-        (val, ctx) => {
+        (val: string, ctx: ValidationRuleContext) => {
           // If previous sync rule failed, don't return promise
-          return asyncRule(val, ctx as any);
+          return asyncRule(val, ctx as ValidationRuleContext & { readonly signal: AbortSignal });
         },
       ],
       validateOn: "change",
@@ -674,5 +675,87 @@ describe("Form Research F4 — Async Validation, Cancellation & Revisions", () =
       // Resources remain strictly bounded and constant
       expect(disposing?.payload["resourceCount"]).toBeLessThanOrEqual(10);
     });
+  });
+  // -------------------------------------------------------------------------
+  // 19-21. Review regressions (F4 fix pass)
+  // -------------------------------------------------------------------------
+  const microtasks = async (n = 10): Promise<void> => {
+    for (let i = 0; i < n; i++) await Promise.resolve();
+    await new Promise((r) => setImmediate(r));
+    await new Promise((r) => setImmediate(r));
+  };
+
+  it("Fixture 19: a rejecting async field rule on a trigger does not raise an unhandled rejection", async () => {
+    const seen: unknown[] = [];
+    const onUnhandled = (reason: unknown): void => {
+      seen.push(reason);
+    };
+    process.on("unhandledRejection", onUnhandled);
+
+    const field = createField<string>({
+      initialValue: "",
+      rules: [
+        async (): Promise<FieldIssue | null> => {
+          throw new Error("network down");
+        },
+      ],
+    });
+
+    // setValue is fire-and-forget: nobody holds the returned promise.
+    field.setValue("x");
+    await microtasks();
+
+    process.off("unhandledRejection", onUnhandled);
+    expect(seen).toEqual([]);
+    // State stays consistent: the node leaves the pending phase.
+    expect(field.pending.get()).toBe(false);
+  });
+
+  it("Fixture 20: a rejecting async group rule on setValues does not raise an unhandled rejection", async () => {
+    const seen: unknown[] = [];
+    const onUnhandled = (reason: unknown): void => {
+      seen.push(reason);
+    };
+    process.on("unhandledRejection", onUnhandled);
+
+    const form = createForm<{ a: string; b: string }>({
+      initialValues: { a: "", b: "" },
+      rules: [
+        async (): Promise<FieldIssue | null> => {
+          throw new Error("group boom");
+        },
+      ],
+    });
+
+    form.setValues({ a: "x" });
+    await microtasks();
+
+    process.off("unhandledRejection", onUnhandled);
+    expect(seen).toEqual([]);
+    form.dispose();
+  });
+
+  it("Fixture 21: an explicit validate() caller still receives the rejection", async () => {
+    const field = createField<string>({
+      initialValue: "",
+      rules: [
+        async (): Promise<FieldIssue | null> => {
+          throw new Error("explicit failure");
+        },
+      ],
+      validateOn: "manual",
+    });
+
+    await expect(field.validate("manual")).rejects.toThrow("explicit failure");
+    expect(field.pending.get()).toBe(false);
+  });
+
+  it("Fixture 22: FieldArray.validate() throws once its owning scope is disposed", () => {
+    const scope = createScope({ name: "array-dispose-guard" });
+    const array = createFieldArray<string>({ initialValues: ["a"], scope });
+
+    expect(() => array.validate("manual")).not.toThrow();
+    scope.dispose();
+    expect(() => array.validate("manual")).toThrow(/disposed/);
   });
 });

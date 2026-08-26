@@ -108,6 +108,30 @@ function sanitizeIssue(raw: any, defaultPath?: readonly FieldPathSegment[]): Fie
   return Object.freeze(sanitized);
 }
 
+// Terminal handler for validations started by a trigger rather than by a caller
+// (setValue / setTouched / setValues / a debounce timer). Nobody holds the
+// returned promise, so a rejecting async rule would otherwise surface as an
+// unhandled rejection and, under Node's default policy, kill the process.
+// The rejection is recorded structurally and swallowed here; explicit
+// validate() callers still receive the rejection.
+function settleDetachedValidation(
+  result: Promise<readonly FieldIssue[]> | readonly FieldIssue[],
+  eventType: string,
+): void {
+  if (result === null || typeof result !== "object" || typeof (result as any).then !== "function") {
+    return;
+  }
+  void (result as Promise<readonly FieldIssue[]>).catch((err: unknown) => {
+    const diag = getActiveDiagnostics();
+    if (diag) {
+      // Name only: rule error messages may embed field values.
+      diag.record(eventType, {
+        reason: err instanceof Error ? err.name : typeof err,
+      });
+    }
+  });
+}
+
 // ---------------------------------------------------------------------------
 // FieldState (Leaf Node)
 // ---------------------------------------------------------------------------
@@ -391,11 +415,17 @@ export function createField<T>(options: CreateFieldOptions<T>): FieldState<T> {
       debounceTimer = setTimeout(() => {
         debounceTimer = null;
         if (revision === currentRevision && !ac.signal.aborted && !isDisposed) {
-          executeValidation(trigger, revision, ac);
+          settleDetachedValidation(
+            executeValidation(trigger, revision, ac),
+            "field.validation.async.failed",
+          );
         }
       }, debounceMs);
     } else {
-      executeValidation(trigger, revision, ac);
+      settleDetachedValidation(
+        executeValidation(trigger, revision, ac),
+        "field.validation.async.failed",
+      );
     }
   };
 
@@ -900,7 +930,10 @@ export function createFieldGroup<T extends Record<string, any>>(
         const revision = ++groupRevision;
         const ac = new AbortController();
         activeGroupAbortController = ac;
-        executeGroupValidation(currentVals, "change", revision, ac);
+        settleDetachedValidation(
+          executeGroupValidation(currentVals, "change", revision, ac),
+          "group.validation.async.failed",
+        );
       }
     });
   };
@@ -1080,9 +1113,12 @@ export function createFieldArray<T>(options: CreateFieldArrayOptions<T>): FieldA
   const initialValuesState = state<T[]>(initialValues);
   const initialKeysState = state<readonly (string | number)[]>(initialKeys);
 
+  let isDisposed = false;
+
   // Register array cleanup in parent scope
   if (scope) {
     scope.use(() => {
+      isDisposed = true;
       for (const s of activeScopes) {
         s.dispose();
       }
@@ -1199,6 +1235,9 @@ export function createFieldArray<T>(options: CreateFieldArrayOptions<T>): FieldA
   const validate = (
     trigger: ValidationTriggerMode = "manual",
   ): Promise<readonly FieldIssue[]> | readonly FieldIssue[] => {
+    if (isDisposed) {
+      throw new Error("Form node is disposed");
+    }
     const items = itemsState.get();
     const childPromises: Promise<any>[] = [];
 

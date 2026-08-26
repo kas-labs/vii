@@ -4,7 +4,7 @@ import type { FieldPathSegment } from "./form-core.js";
 // Parse Issue & Types
 // ---------------------------------------------------------------------------
 
-export type IssueSource = "validation" | "parse";
+export type IssueSource = "validation" | "parse" | "server";
 
 export interface FormIssueBase {
   readonly code: string;

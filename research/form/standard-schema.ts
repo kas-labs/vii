@@ -126,7 +126,15 @@ export function standardSchema<TInput, TOutput = TInput>(
         if (!result || typeof result !== "object") {
           throw new TypeError("Standard Schema validate returned an invalid result object");
         }
-        if (result.issues && Array.isArray(result.issues)) {
+        if (result.issues !== undefined && result.issues !== null) {
+          // Never fall through to "valid" on a malformed failure payload: a
+          // provider that reports issues in a shape we cannot read must fail
+          // closed, not silently certify the value.
+          if (!Array.isArray(result.issues)) {
+            throw new TypeError(
+              `Standard Schema provider "${vendor}" returned a non-array "issues" property`,
+            );
+          }
           const mappedIssues = result.issues.map((iss: StandardSchemaV1.Issue) =>
             normalizeStandardSchemaIssue(iss),
           );
@@ -155,7 +163,12 @@ export function standardSchema<TInput, TOutput = TInput>(
     if (!syncResult || typeof syncResult !== "object") {
       throw new TypeError("Standard Schema validate returned an invalid result object");
     }
-    if (syncResult.issues && Array.isArray(syncResult.issues)) {
+    if (syncResult.issues !== undefined && syncResult.issues !== null) {
+      if (!Array.isArray(syncResult.issues)) {
+        throw new TypeError(
+          `Standard Schema provider "${vendor}" returned a non-array "issues" property`,
+        );
+      }
       const mappedIssues = syncResult.issues.map((iss: StandardSchemaV1.Issue) =>
         normalizeStandardSchemaIssue(iss),
       );

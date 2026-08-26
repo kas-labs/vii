@@ -664,4 +664,88 @@ describe("Form Research F5: Parsing / Input-Output Types / Standard Schema Bound
       void invalidOut;
     });
   });
+  // -------------------------------------------------------------------------
+  // Review regressions (F5 fix pass)
+  // -------------------------------------------------------------------------
+  describe("F5 review regressions", () => {
+    const makeSchema = (validate: () => unknown) => ({
+      "~standard": {
+        version: 1 as const,
+        vendor: "malformed-provider",
+        validate,
+        types: undefined,
+      },
+    });
+
+    it("a sync provider reporting a non-array issues property fails closed", () => {
+      const rule = standardSchema(
+        makeSchema(() => ({ issues: { 0: { message: "nope" } } })) as any,
+      );
+      expect(() => rule("anything", { trigger: "manual" } as ValidationRuleContext)).toThrow(
+        /non-array "issues"/,
+      );
+    });
+
+    it("an async provider reporting a non-array issues property fails closed", async () => {
+      const rule = standardSchema(
+        makeSchema(async () => ({ issues: "everything is wrong" })) as any,
+      );
+      await expect(
+        rule("anything", { trigger: "manual" } as ValidationRuleContext) as Promise<unknown>,
+      ).rejects.toThrow(/non-array "issues"/);
+    });
+
+    it("a provider reporting an empty issues array is still treated as a failure payload", () => {
+      const rule = standardSchema(makeSchema(() => ({ issues: [] })) as any);
+      expect(rule("anything", { trigger: "manual" } as ValidationRuleContext)).toEqual([]);
+    });
+
+    it("reset(nextInitial) on a parsed field refuses to cast the domain value into Raw", () => {
+      const field = createField<number, string>({
+        initialValue: 5,
+        initialRawValue: "5",
+        parser: createNumberParser(),
+      });
+
+      field.setRawValue("42");
+      expect(field.value.get()).toBe(42);
+
+      expect(() => field.reset(7)).toThrow(/requires the matching raw value/);
+
+      // The explicit two-stage form is accepted and keeps both stages coherent.
+      field.reset(7, "7");
+      expect(field.value.get()).toBe(7);
+      expect(field.rawValue.get()).toBe("7");
+      expect(field.initialRawValue.get()).toBe("7");
+      expect(field.dirty.get()).toBe(false);
+    });
+
+    it("reset(nextInitial) stays valid on a parser-less field where Raw === Value", () => {
+      const field = createField<string>({ initialValue: "a" });
+      field.setValue("b");
+      field.reset("c");
+      expect(field.value.get()).toBe("c");
+      expect(field.rawValue.get()).toBe("c");
+    });
+
+    it("a parser-less field never reports a parsed stage", () => {
+      const field = createField<string>({ initialValue: "" });
+      expect(field.parseStatus.get()).toBe("unparsed");
+      field.setValue("x");
+      expect(field.parseStatus.get()).toBe("unparsed");
+      field.reset();
+      expect(field.parseStatus.get()).toBe("unparsed");
+    });
+
+    it("the number parser rejects non-decimal literal grammars", () => {
+      const parse = createNumberParser();
+      for (const hostile of ["0x10", "0b101", "0o17", "1_000", "Infinity"]) {
+        const res = parse(hostile);
+        expect(res.ok, `expected ${hostile} to be rejected`).toBe(false);
+      }
+      for (const ok of ["5", "05", "-3.5", ".5", "1e3", "+2"]) {
+        expect(parse(ok).ok, `expected ${ok} to be accepted`).toBe(true);
+      }
+    });
+  });
 });

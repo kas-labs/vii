@@ -90,6 +90,8 @@ export function sanitizeParseIssue(
 // Standard Built-in Research Parsers
 // ---------------------------------------------------------------------------
 
+const DECIMAL_NUMBER = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/;
+
 export interface NumberParserOptions {
   readonly allowEmpty?: boolean | undefined;
   readonly emptyValue?: number | undefined;
@@ -123,6 +125,12 @@ export function createNumberParser(options: NumberParserOptions = {}): FieldPars
     // Disallow trailing decimals or partial negative signs
     if (str === "-" || str.endsWith(".")) {
       return { ok: false, issue: { code: "parse.invalid_number", message: "Incomplete number" } };
+    }
+    // Number() also accepts the hex, binary and octal literal grammars, so "0x10"
+    // silently parsed to 16 for text a user typed into a decimal input. Restrict
+    // the accepted grammar to decimal, with an optional sign and exponent.
+    if (!DECIMAL_NUMBER.test(str)) {
+      return { ok: false, issue: { code: "parse.invalid_number", message: "Invalid number" } };
     }
     const num = Number(str);
     if (Number.isNaN(num) || !Number.isFinite(num)) {

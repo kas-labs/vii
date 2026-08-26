@@ -217,7 +217,7 @@ export interface FieldState<Value, Raw = Value, Output = Value> {
   setErrors(errors: readonly string[]): void;
   setIssues(issues: readonly FieldIssue[]): void;
   validate(trigger?: ValidationTriggerMode): Promise<readonly FieldIssue[]> | readonly FieldIssue[];
-  reset(...args: [nextInitial?: Value]): void;
+  reset(...args: [nextInitial?: Value, nextInitialRaw?: Raw]): void;
   getOutput(): Output;
 }
 
@@ -531,7 +531,9 @@ export function createField<Value, Raw = Value, Output = Value>(
     batch(() => {
       valueState.set(next);
       parseIssueState.set(null);
-      parseStatusState.set("parsed");
+      // A field with no parser never enters a parsed state: setValue writes the
+      // domain value directly, so there is nothing to have parsed.
+      parseStatusState.set(parser ? "parsed" : "unparsed");
       if (issuesState.get().some((iss) => iss.source === "parse")) {
         issuesState.set([]);
         errorsState.set([]);
@@ -651,18 +653,33 @@ export function createField<Value, Raw = Value, Output = Value>(
     });
   };
 
-  const reset = (...args: [nextInitial?: Value]): void => {
+  const reset = (...args: [nextInitial?: Value, nextInitialRaw?: Raw]): void => {
+    const hasNextInitial = args.length > 0;
+    const hasNextRaw = args.length > 1;
+    const nextInitial = args[0] as Value;
+
+    // Raw is only interchangeable with Value when no parser is configured. A
+    // parser has no inverse, so a new domain baseline cannot be cast into a raw
+    // one: that silently stored a number in a `Raw = string` slot. Demand the
+    // matching raw instead of corrupting the stage.
+    if (hasNextInitial && !hasNextRaw && parser) {
+      throw new TypeError(
+        "FieldState.reset(nextInitial) on a parsed field requires the matching raw value: " +
+          "reset(nextInitial, nextInitialRaw). A raw input cannot be derived from a domain value " +
+          "without an inverse of the parser.",
+      );
+    }
+
     cancelActiveAsync();
     currentRevision++;
 
-    const hasNextInitial = args.length > 0;
-    const nextInitial = args[0] as Value;
-
     batch(() => {
       const resetValue = hasNextInitial ? nextInitial : initialValueState.get();
-      const resetRaw = hasNextInitial
-        ? (nextInitial as unknown as Raw)
-        : initialRawValueState.get();
+      const resetRaw = hasNextRaw
+        ? (args[1] as Raw)
+        : hasNextInitial
+          ? (nextInitial as unknown as Raw)
+          : initialRawValueState.get();
 
       if (hasNextInitial) {
         initialValueState.set(nextInitial);

@@ -37,6 +37,71 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-27 01:25 CEST | Form Research Slice F6: Submission Lifecycle + Server Errors + Reset / Reinitialize
+
+Status: completed
+Branch: `feat/form-submission-lifecycle`
+PR: not opened (Draft PR pending)
+
+### Scope
+
+- Implement and verify Slice F6 (Submission Lifecycle + Server Errors + Reset / Reinitialize) in `research/form/`.
+- Submission state machine (`idle` -> `validating` -> `submitting` -> `succeeded` / `failed` / `cancelled`).
+- Pre-submission parse and validation gates strictly bypassing submit action on invalid form state.
+- Decoupled application action invocation (`SubmitAction<TOutput, TResult>`) with `AbortSignal`.
+- Configurable duplicate submission handling (`drop`, `reject`, `supersede`).
+- Monotonic submission revision authority and stale-result suppression.
+- `ServerIssue` taxonomy with prototype pollution defense on `code` while preserving structured paths as data.
+- Server issue routing to leaf fields, nested groups, array items via item identity snapshots across in-flight reorders and removals, form root, and unknown paths.
+- Server issue clearing policies on field edit, reset, and next submit.
+- Reset to initial baseline vs `reset(newBaseline)` vs `reinitialize(newBaseline)` without silent dirty mutation on successful submission.
+- Zero Scope or controller leak across repeated submit cycles.
+- Privacy preservation in diagnostics events without leaking form values or sensitive messages.
+- Hard Gate: F6 ONLY. F7 has NOT started and is NOT authorized.
+
+### Changes
+
+- Created `research/form/submission.ts`:
+  - Defined `ServerIssue`, `ServerIssueInput`, `sanitizeServerIssue` with prototype pollution defense on `code`.
+  - Defined `SubmissionStatus` (`idle`, `validating`, `submitting`, `succeeded`, `failed`, `cancelled`), `DuplicateSubmitPolicy` (`drop`, `reject`, `supersede`).
+  - Defined `SubmitAction`, `SubmitActionResult`, `FormSubmitResult`, `SubmitOptions`, `SubmitContext`.
+  - Defined `deepCloneSnapshot` for immutable snapshot capture and array snapshot key derivation utilities.
+- Modified `research/form/parser.ts`:
+  - Updated `IssueSource` union to include `"server"`.
+- Modified `research/form/form-core.ts`:
+  - Exported F6 submission types and functions.
+  - Defined `ValidationIssueInput` and updated `ValidationRule` return signatures.
+  - Updated `FieldState`, `FieldGroup`, `FieldArray`, and `FormInstance` to support `serverIssues`, `setServerIssues()`, `clearServerIssues()`.
+  - Updated `createField` with `validationIssuesState` and `serverIssuesState` allowing server issues and client validation to cleanly coexist, clearing server issues on field edits (`setValue`, `setRawValue`).
+  - Updated `createFieldGroup` with `serverIssuesState`, aggregated issues/errors/valid computeds, and clearing on reset.
+  - Updated `createFieldArray` with `serverIssuesState`, aggregated issues/errors/valid computeds, and clearing on reset.
+  - Updated `createForm` to implement `submit()`, `cancelSubmit()`, `reinitialize()`, `submitting` computed, `submissionStatusState`, `collectArraySnapshots()`, `routeServerIssuesToTree()`, `clearFormServerIssues()`.
+  - Implemented array identity snapshot routing across in-flight array reorders and deletions, localizing issue paths to target nodes and preserving unresolvable paths at `form.serverIssues`.
+  - Updated `bindFormToExternalState` to pass through the complete submission API.
+- Created `research/form/form-f6.test.ts`:
+  - 53 comprehensive automated test fixtures verifying all F6 behaviors: synchronous and asynchronous submission success, validation blocking, parse blocking, output transformations, duplicate policies (`drop`, `reject`, `supersede`), explicit cancellation, disposal, reset in-flight, stale late success/failure suppression, server issue routing on fields/groups/arrays/root/unknown paths, array reorders and deletions in-flight via identity snapshots, server issue clearing on edits, client validation coexistence, dirty state preservation after submit, reset/reinitialize baseline semantics, 100-cycle resource stability, diagnostics privacy, unexpected action/validation errors, and compile-time type constraints.
+- Updated `docs/roadmap/FORM_RESEARCH.md`: Recorded completion of Slices F0-F6 and reiterated that Slice F7 is not started or authorized.
+- Updated `research/form/README.md`: Added Section 7 documenting F6 design decisions, state machine, routing, and lifecycle contracts.
+
+### Validation
+
+- `pnpm exec tsc -p research/form/tsconfig.json --noEmit`: PASS (0 type errors).
+- `pnpm vitest run research/form/`: PASS (5 test files, 210 tests passing, 0 failures).
+- `pnpm validate`: PASS (formatting, linting, typechecking, vitest across all packages, builds across all 10 projects, and package packing validation).
+- `git diff --check`: PASS (clean diff with 0 whitespace or formatting issues).
+
+### Architecture / compatibility
+
+- Preserves the small-core strategy and framework-agnostic runtime design in `research/form/`.
+- No new public packages created; zero external runtime dependencies added.
+- Preserved all F1-F5 regressions (157 existing tests + 53 new F6 tests = 210 total tests passing).
+- Zero side-effects on core packages; all F6 prototypes reside in isolated `research/form/`.
+
+### Remaining / recovery
+
+- None for F6.
+- Slice F7 (DOM & Framework Adapters) has NOT started and is NOT authorized.
+
 ## 2026-08-26 17:15 CEST | Form Issue Path Security Boundary Correction: Structured Issue Paths Are Data
 
 Status: completed

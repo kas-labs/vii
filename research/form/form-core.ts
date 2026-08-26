@@ -31,26 +31,52 @@ import {
   normalizeStandardSchemaIssue,
   standardSchema,
 } from "./standard-schema.js";
+import type {
+  ArraySnapshotMap,
+  DuplicateSubmitPolicy,
+  FormSubmitResult,
+  ServerIssue,
+  ServerIssueInput,
+  SubmissionStatus,
+  SubmitAction,
+  SubmitActionResult,
+  SubmitContext,
+  SubmitOptions,
+} from "./submission.js";
+import { createArraySnapshotKey, deepCloneSnapshot, sanitizeServerIssue } from "./submission.js";
 
 export type {
+  ArraySnapshotMap,
+  DuplicateSubmitPolicy,
   FieldParser,
   FormIssueBase,
+  FormSubmitResult,
   IssueSource,
   NumberParserOptions,
   OutputTransform,
   ParseIssue,
   ParseResult,
   ParseStatus,
+  ServerIssue,
+  ServerIssueInput,
   StandardSchemaV1,
+  SubmissionStatus,
+  SubmitAction,
+  SubmitActionResult,
+  SubmitContext,
+  SubmitOptions,
   ValidationIssue,
 };
 export {
+  createArraySnapshotKey,
   createBooleanParser,
   createNumberParser,
   createOptionalStringParser,
+  deepCloneSnapshot,
   isStandardSchema,
   normalizeStandardSchemaIssue,
   sanitizeParseIssue,
+  sanitizeServerIssue,
   standardSchema,
 };
 
@@ -63,12 +89,19 @@ export type EqualityFn<T> = (a: T, b: T) => boolean;
 export const defaultEquality: EqualityFn<unknown> = (a, b) => Object.is(a, b);
 
 // ---------------------------------------------------------------------------
-// Structured Issues & Validation Taxonomy (F3, F4 & F5)
+// Structured Issues & Validation Taxonomy (F3, F4, F5 & F6)
 // ---------------------------------------------------------------------------
 
 export type FieldPathSegment = string | number;
 
-export type FieldIssue = ValidationIssue | ParseIssue;
+export interface ValidationIssueInput {
+  readonly code: string;
+  readonly message?: string | undefined;
+  readonly path?: readonly FieldPathSegment[] | undefined;
+  readonly source?: IssueSource | undefined;
+}
+
+export type FieldIssue = ValidationIssue | ParseIssue | ServerIssue;
 
 export type ValidationTriggerMode = "change" | "blur" | "submit" | "manual";
 
@@ -84,22 +117,22 @@ export interface ValidationRuleContext {
 export type SyncValidationRule<T, Ctx extends ValidationRuleContext = ValidationRuleContext> = (
   value: T,
   context: Ctx,
-) => FieldIssue | readonly FieldIssue[] | null | undefined;
+) => ValidationIssueInput | readonly ValidationIssueInput[] | null | undefined;
 
 export type AsyncValidationRule<T, Ctx extends ValidationRuleContext = ValidationRuleContext> = (
   value: T,
   context: Ctx & { readonly signal: AbortSignal },
-) => Promise<FieldIssue | readonly FieldIssue[] | null | undefined>;
+) => Promise<ValidationIssueInput | readonly ValidationIssueInput[] | null | undefined>;
 
 export type ValidationRule<T, Ctx extends ValidationRuleContext = ValidationRuleContext> = (
   value: T,
   context: Ctx & { readonly signal?: AbortSignal | undefined },
 ) =>
-  | FieldIssue
-  | readonly FieldIssue[]
+  | ValidationIssueInput
+  | readonly ValidationIssueInput[]
   | null
   | undefined
-  | Promise<FieldIssue | readonly FieldIssue[] | null | undefined>;
+  | Promise<ValidationIssueInput | readonly ValidationIssueInput[] | null | undefined>;
 
 export type AnyValidationRule<T, Ctx extends ValidationRuleContext = ValidationRuleContext> =
   ValidationRule<T, Ctx> | AsyncValidationRule<T, Ctx> | SyncValidationRule<T, Ctx>;
@@ -196,6 +229,7 @@ export interface FieldState<Value, Raw = Value, Output = Value> {
   readonly pending: WritableState<boolean>;
   readonly errors: WritableState<readonly string[]>;
   readonly issues: WritableState<readonly FieldIssue[]>;
+  readonly serverIssues: WritableState<readonly ServerIssue[]>;
   readonly parseIssue: WritableState<ParseIssue | null>;
   readonly parseStatus: WritableState<ParseStatus>;
   readonly validationStatus: WritableState<ValidationStatus>;
@@ -208,6 +242,8 @@ export interface FieldState<Value, Raw = Value, Output = Value> {
   setPending(pending: boolean): void;
   setErrors(errors: readonly string[]): void;
   setIssues(issues: readonly FieldIssue[]): void;
+  setServerIssues(issues: readonly (ServerIssueInput | string)[]): void;
+  clearServerIssues(): void;
   validate(trigger?: ValidationTriggerMode): Promise<readonly FieldIssue[]> | readonly FieldIssue[];
   reset(...args: [nextInitial?: Value, nextInitialRaw?: Raw]): void;
   getOutput(): Output;
@@ -252,9 +288,29 @@ export function createField<Value, Raw = Value, Output = Value>(
   const pendingState = state<boolean>(false);
   const errorsState = state<readonly string[]>([]);
   const issuesState = state<readonly FieldIssue[]>([]);
+  const validationIssuesState = state<readonly ValidationIssue[]>([]);
+  const serverIssuesState = state<readonly ServerIssue[]>([]);
   const parseIssueState = state<ParseIssue | null>(null);
   const parseStatusState = state<ParseStatus>(parser ? "parsed" : "unparsed");
   const validationStatusState = state<ValidationStatus>("unvalidated");
+
+  const syncCombinedIssues = (
+    validationIss: readonly ValidationIssue[] = validationIssuesState.get(),
+    serverIss: readonly ServerIssue[] = serverIssuesState.get(),
+    parseIss: ParseIssue | null = parseIssueState.get(),
+  ): readonly FieldIssue[] => {
+    let combined: readonly FieldIssue[];
+    if (parseIss) {
+      combined = Object.freeze([parseIss]);
+    } else if (validationIss.length === 0 && serverIss.length === 0) {
+      combined = Object.freeze([]);
+    } else {
+      combined = Object.freeze([...validationIss, ...serverIss]);
+    }
+    issuesState.set(combined);
+    errorsState.set(Object.freeze(combined.map((iss) => iss.message ?? iss.code)));
+    return combined;
+  };
 
   // Determine trigger set
   const triggerSet = new Set<ValidationTriggerMode>();
@@ -347,7 +403,7 @@ export function createField<Value, Raw = Value, Output = Value>(
       }
 
       const currentVal = valueState.get();
-      const collectedSyncIssues: FieldIssue[] = [];
+      const collectedSyncIssues: ValidationIssue[] = [];
       const pendingAsyncCalls: Array<Promise<any>> = [];
 
       // Step 1: Run all rules. If a rule returns a Promise/thenable, collect it.
@@ -384,10 +440,10 @@ export function createField<Value, Raw = Value, Output = Value>(
         } else if (res !== null && res !== undefined) {
           if (Array.isArray(res)) {
             for (const item of res) {
-              collectedSyncIssues.push(sanitizeIssue(item));
+              collectedSyncIssues.push(sanitizeIssue(item) as ValidationIssue);
             }
           } else {
-            collectedSyncIssues.push(sanitizeIssue(res));
+            collectedSyncIssues.push(sanitizeIssue(res) as ValidationIssue);
           }
         }
       }
@@ -395,12 +451,13 @@ export function createField<Value, Raw = Value, Output = Value>(
       // If sync issues exist or there are no async rules in flight, commit sync result immediately
       if (collectedSyncIssues.length > 0 || pendingAsyncCalls.length === 0) {
         cancelActiveAsync();
-        const nextStatus: ValidationStatus = collectedSyncIssues.length === 0 ? "valid" : "invalid";
-        const errorStrings = collectedSyncIssues.map((iss) => iss.message ?? iss.code);
+        const sIssues = serverIssuesState.get();
+        const nextStatus: ValidationStatus =
+          collectedSyncIssues.length === 0 && sIssues.length === 0 ? "valid" : "invalid";
 
         batch(() => {
-          issuesState.set(Object.freeze(collectedSyncIssues));
-          errorsState.set(Object.freeze(errorStrings));
+          validationIssuesState.set(Object.freeze(collectedSyncIssues));
+          syncCombinedIssues(collectedSyncIssues, sIssues);
           validationStatusState.set(nextStatus);
           pendingState.set(false);
         });
@@ -412,7 +469,7 @@ export function createField<Value, Raw = Value, Output = Value>(
           });
         }
 
-        return collectedSyncIssues;
+        return issuesState.get();
       }
 
       // Step 2: Sync passed and async calls in flight -> transition to pending
@@ -432,24 +489,25 @@ export function createField<Value, Raw = Value, Output = Value>(
             return issuesState.get();
           }
 
-          const collectedAsyncIssues: FieldIssue[] = [...collectedSyncIssues];
+          const collectedAsyncIssues: ValidationIssue[] = [...collectedSyncIssues];
           for (const res of asyncResults) {
             if (res !== null && res !== undefined) {
               if (Array.isArray(res)) {
-                for (const item of res) collectedAsyncIssues.push(sanitizeIssue(item));
+                for (const item of res)
+                  collectedAsyncIssues.push(sanitizeIssue(item) as ValidationIssue);
               } else {
-                collectedAsyncIssues.push(sanitizeIssue(res));
+                collectedAsyncIssues.push(sanitizeIssue(res) as ValidationIssue);
               }
             }
           }
 
+          const sIssues = serverIssuesState.get();
           const nextStatus: ValidationStatus =
-            collectedAsyncIssues.length === 0 ? "valid" : "invalid";
-          const errorStrings = collectedAsyncIssues.map((iss) => iss.message ?? iss.code);
+            collectedAsyncIssues.length === 0 && sIssues.length === 0 ? "valid" : "invalid";
 
           batch(() => {
-            issuesState.set(Object.freeze(collectedAsyncIssues));
-            errorsState.set(Object.freeze(errorStrings));
+            validationIssuesState.set(Object.freeze(collectedAsyncIssues));
+            syncCombinedIssues(collectedAsyncIssues, sIssues);
             validationStatusState.set(nextStatus);
             pendingState.set(false);
           });
@@ -462,7 +520,7 @@ export function createField<Value, Raw = Value, Output = Value>(
             });
           }
 
-          return collectedAsyncIssues;
+          return issuesState.get();
         } catch (asyncErr) {
           if (revision === currentRevision && !abortController.signal.aborted && !isDisposed) {
             pendingState.set(false);
@@ -523,13 +581,15 @@ export function createField<Value, Raw = Value, Output = Value>(
     batch(() => {
       valueState.set(next);
       parseIssueState.set(null);
+      serverIssuesState.set([]);
       // A field with no parser never enters a parsed state: setValue writes the
       // domain value directly, so there is nothing to have parsed.
       parseStatusState.set(parser ? "parsed" : "unparsed");
-      if (issuesState.get().some((iss) => iss.source === "parse")) {
-        issuesState.set([]);
-        errorsState.set([]);
-        validationStatusState.set("unvalidated");
+      if (issuesState.get().some((iss) => iss.source === "parse" || iss.source === "server")) {
+        syncCombinedIssues(validationIssuesState.get(), [], null);
+        if (validationIssuesState.get().length === 0) {
+          validationStatusState.set("unvalidated");
+        }
       }
     });
     if (!isDisposed && rules.length > 0 && triggerSet.has("change")) {
@@ -545,8 +605,13 @@ export function createField<Value, Raw = Value, Output = Value>(
     if (!parser) {
       batch(() => {
         parseIssueState.set(null);
+        serverIssuesState.set([]);
         parseStatusState.set("unparsed");
         valueState.set(raw as unknown as Value);
+        syncCombinedIssues(validationIssuesState.get(), [], null);
+        if (validationIssuesState.get().length === 0) {
+          validationStatusState.set("unvalidated");
+        }
       });
       if (!isDisposed && rules.length > 0 && triggerSet.has("change")) {
         scheduleValidation("change");
@@ -575,11 +640,11 @@ export function createField<Value, Raw = Value, Output = Value>(
       }
       batch(() => {
         parseIssueState.set(null);
+        serverIssuesState.set([]);
         parseStatusState.set("parsed");
         valueState.set(parsedVal);
-        if (issuesState.get().some((iss) => iss.source === "parse")) {
-          issuesState.set([]);
-          errorsState.set([]);
+        syncCombinedIssues(validationIssuesState.get(), [], null);
+        if (validationIssuesState.get().length === 0) {
           validationStatusState.set("unvalidated");
         }
       });
@@ -596,9 +661,9 @@ export function createField<Value, Raw = Value, Output = Value>(
 
       batch(() => {
         parseIssueState.set(parseIssue);
+        serverIssuesState.set([]);
         parseStatusState.set("invalid");
-        issuesState.set(Object.freeze([parseIssue]));
-        errorsState.set(Object.freeze([parseIssue.message ?? parseIssue.code]));
+        syncCombinedIssues([], [], parseIssue);
         validationStatusState.set("invalid");
         pendingState.set(false);
       });
@@ -618,16 +683,52 @@ export function createField<Value, Raw = Value, Output = Value>(
 
   const setIssues = (issues: readonly FieldIssue[]): void => {
     const sanitized = issues.map((iss) => sanitizeIssue(iss));
-    const errorStrings = sanitized.map((iss) => iss.message ?? iss.code);
+    const vIssues: ValidationIssue[] = [];
+    const sIssues: ServerIssue[] = [];
+    for (const iss of sanitized) {
+      if (iss.source === "server") {
+        sIssues.push(iss as ServerIssue);
+      } else if (iss.source === "validation") {
+        vIssues.push(iss as ValidationIssue);
+      }
+    }
     batch(() => {
-      issuesState.set(Object.freeze(sanitized));
-      errorsState.set(Object.freeze(errorStrings));
+      validationIssuesState.set(Object.freeze(vIssues));
+      serverIssuesState.set(Object.freeze(sIssues));
+      syncCombinedIssues(vIssues, sIssues, parseIssueState.get());
       validationStatusState.set(sanitized.length === 0 ? "valid" : "invalid");
     });
   };
 
+  const setServerIssues = (issues: readonly (ServerIssueInput | string)[]): void => {
+    const sanitized: ServerIssue[] = issues.map((iss) =>
+      typeof iss === "string"
+        ? sanitizeServerIssue({ code: "server.error", message: iss })
+        : sanitizeServerIssue(iss),
+    );
+    batch(() => {
+      serverIssuesState.set(Object.freeze(sanitized));
+      syncCombinedIssues(validationIssuesState.get(), sanitized, parseIssueState.get());
+      if (sanitized.length > 0) {
+        validationStatusState.set("invalid");
+      }
+    });
+  };
+
+  const clearServerIssues = (): void => {
+    batch(() => {
+      serverIssuesState.set([]);
+      syncCombinedIssues(validationIssuesState.get(), [], parseIssueState.get());
+      if (parseIssueState.get() === null && validationIssuesState.get().length === 0) {
+        if (validationStatusState.get() === "invalid") {
+          validationStatusState.set("unvalidated");
+        }
+      }
+    });
+  };
+
   const setErrors = (errors: readonly string[]): void => {
-    const syntheticIssues: readonly FieldIssue[] = Object.freeze(
+    const syntheticIssues: readonly ValidationIssue[] = Object.freeze(
       errors.map((err) =>
         Object.freeze({
           code: "legacy.error",
@@ -635,13 +736,16 @@ export function createField<Value, Raw = Value, Output = Value>(
           path: undefined,
           source: "validation",
           ruleId: undefined,
-        } as FieldIssue),
+        } as ValidationIssue),
       ),
     );
     batch(() => {
       errorsState.set(errors);
-      issuesState.set(syntheticIssues);
-      validationStatusState.set(errors.length === 0 ? "valid" : "invalid");
+      validationIssuesState.set(syntheticIssues);
+      syncCombinedIssues(syntheticIssues, serverIssuesState.get(), parseIssueState.get());
+      validationStatusState.set(
+        errors.length === 0 && serverIssuesState.get().length === 0 ? "valid" : "invalid",
+      );
     });
   };
 
@@ -680,6 +784,8 @@ export function createField<Value, Raw = Value, Output = Value>(
       valueState.set(resetValue);
       rawValueState.set(resetRaw);
       parseIssueState.set(null);
+      serverIssuesState.set([]);
+      validationIssuesState.set([]);
       parseStatusState.set(parser ? "parsed" : "unparsed");
       touchedState.set(false);
       pendingState.set(false);
@@ -704,6 +810,7 @@ export function createField<Value, Raw = Value, Output = Value>(
     pending: pendingState,
     errors: errorsState,
     issues: issuesState,
+    serverIssues: serverIssuesState,
     parseIssue: parseIssueState,
     parseStatus: parseStatusState,
     validationStatus: validationStatusState,
@@ -716,6 +823,8 @@ export function createField<Value, Raw = Value, Output = Value>(
     setPending,
     setErrors,
     setIssues,
+    setServerIssues,
+    clearServerIssues,
     validate,
     reset,
     getOutput,
@@ -754,10 +863,13 @@ export interface FieldGroup<T extends Record<string, any>> {
   readonly errors: Computed<Record<string, readonly string[]>>;
   readonly issues: Computed<readonly FieldIssue[]>;
   readonly groupIssues: WritableState<readonly FieldIssue[]>;
+  readonly serverIssues: WritableState<readonly ServerIssue[]>;
   readonly validationStatus: Computed<ValidationStatus>;
   setValues(partial: Partial<T>): void;
   reset(nextInitials?: Partial<T>): void;
   validate(trigger?: ValidationTriggerMode): Promise<readonly FieldIssue[]> | readonly FieldIssue[];
+  setServerIssues(issues: readonly (ServerIssueInput | string)[]): void;
+  clearServerIssues(): void;
   getOutput(): T;
 }
 
@@ -801,6 +913,7 @@ export function createFieldGroup<T extends Record<string, any>>(
 
   const fields = Object.create(null) as { [K in keyof T]: FormNodeFor<T[K]> };
   const groupIssuesState = state<readonly FieldIssue[]>([]);
+  const serverIssuesState = state<readonly ServerIssue[]>([]);
   const groupValidationStatusState = state<ValidationStatus>("unvalidated");
   const groupPendingState = state<boolean>(false);
 
@@ -872,7 +985,9 @@ export function createFieldGroup<T extends Record<string, any>>(
   const validComputed = runInScope(() =>
     computed(() => {
       const groupValid =
-        groupValidationStatusState.get() !== "invalid" && groupIssuesState.get().length === 0;
+        groupValidationStatusState.get() !== "invalid" &&
+        groupIssuesState.get().length === 0 &&
+        serverIssuesState.get().length === 0;
       const childrenValid = keys.every((k) => (fields[k] as any).valid.get());
       return groupValid && childrenValid;
     }),
@@ -882,7 +997,7 @@ export function createFieldGroup<T extends Record<string, any>>(
 
   const issuesComputed = runInScope(() =>
     computed(() => {
-      const res: FieldIssue[] = [...groupIssuesState.get()];
+      const res: FieldIssue[] = [...groupIssuesState.get(), ...serverIssuesState.get()];
       for (const k of keys) {
         const node = fields[k] as any;
         const childIssues: readonly FieldIssue[] = node.issues.get();
@@ -901,7 +1016,7 @@ export function createFieldGroup<T extends Record<string, any>>(
   const errorsComputed = runInScope(() =>
     computed(() => {
       const res: Record<string, readonly string[]> = Object.create(null);
-      const gIssues = groupIssuesState.get();
+      const gIssues = [...groupIssuesState.get(), ...serverIssuesState.get()];
       if (gIssues.length > 0) {
         res[""] = gIssues.map((iss) => iss.message ?? iss.code);
       }
@@ -1186,9 +1301,23 @@ export function createFieldGroup<T extends Record<string, any>>(
         }
       }
       groupIssuesState.set([]);
+      serverIssuesState.set([]);
       groupValidationStatusState.set("unvalidated");
       groupPendingState.set(false);
     });
+  };
+
+  const setServerIssues = (issues: readonly (ServerIssueInput | string)[]): void => {
+    const sanitized: ServerIssue[] = issues.map((iss) =>
+      typeof iss === "string"
+        ? sanitizeServerIssue({ code: "server.error", message: iss })
+        : sanitizeServerIssue(iss),
+    );
+    serverIssuesState.set(Object.freeze(sanitized));
+  };
+
+  const clearServerIssues = (): void => {
+    serverIssuesState.set([]);
   };
 
   return {
@@ -1204,9 +1333,12 @@ export function createFieldGroup<T extends Record<string, any>>(
     errors: errorsComputed,
     issues: issuesComputed,
     groupIssues: groupIssuesState,
+    serverIssues: serverIssuesState,
     validationStatus: validationStatusComputed,
     setValues,
     reset,
+    setServerIssues,
+    clearServerIssues,
     validate,
     getOutput: () => outputComputed.get(),
   };
@@ -1239,6 +1371,7 @@ export interface FieldArray<T> {
   readonly invalid: Computed<boolean>;
   readonly errors: Computed<Record<string, readonly string[]>>;
   readonly issues: Computed<readonly FieldIssue[]>;
+  readonly serverIssues: WritableState<readonly ServerIssue[]>;
   readonly validationStatus: Computed<ValidationStatus>;
   push(value: T): void;
   insert(index: number, value: T): void;
@@ -1247,6 +1380,8 @@ export interface FieldArray<T> {
   move(from: number, to: number): void;
   setValues(next: T[]): void;
   reset(nextInitials?: T[]): void;
+  setServerIssues(issues: readonly (ServerIssueInput | string)[]): void;
+  clearServerIssues(): void;
   validate(trigger?: ValidationTriggerMode): Promise<readonly FieldIssue[]> | readonly FieldIssue[];
   getOutput(): T[];
 }
@@ -1334,6 +1469,7 @@ export function createFieldArray<T>(options: CreateFieldArrayOptions<T>): FieldA
   const initialKeys = initialItems.map((it) => it.id);
 
   const itemsState = state<readonly ArrayItem<T>[]>(initialItems);
+  const serverIssuesState = state<readonly ServerIssue[]>([]);
   const initialValuesState = state<T[]>(initialValues);
   const initialKeysState = state<readonly (string | number)[]>(initialKeys);
 
@@ -1400,7 +1536,11 @@ export function createFieldArray<T>(options: CreateFieldArrayOptions<T>): FieldA
   );
 
   const validComputed = runInScope(() =>
-    computed(() => itemsState.get().every((item) => (item.node as any).valid.get())),
+    computed(
+      () =>
+        serverIssuesState.get().length === 0 &&
+        itemsState.get().every((item) => (item.node as any).valid.get()),
+    ),
   );
 
   const invalidComputed = runInScope(() => computed(() => !validComputed.get()));
@@ -1408,6 +1548,10 @@ export function createFieldArray<T>(options: CreateFieldArrayOptions<T>): FieldA
   const errorsComputed = runInScope(() =>
     computed(() => {
       const res: Record<string, readonly string[]> = {};
+      const sIssues = serverIssuesState.get();
+      if (sIssues.length > 0) {
+        res[""] = sIssues.map((iss) => iss.message ?? iss.code);
+      }
       const items = itemsState.get();
       for (let i = 0; i < items.length; i++) {
         const item = items[i];
@@ -1433,7 +1577,7 @@ export function createFieldArray<T>(options: CreateFieldArrayOptions<T>): FieldA
   );
 
   const getIssues = (): readonly FieldIssue[] => {
-    const res: FieldIssue[] = [];
+    const res: FieldIssue[] = [...serverIssuesState.get()];
     const items = itemsState.get();
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
@@ -1452,6 +1596,9 @@ export function createFieldArray<T>(options: CreateFieldArrayOptions<T>): FieldA
   };
 
   const getValidationStatus = (): ValidationStatus => {
+    if (serverIssuesState.get().length > 0) {
+      return "invalid";
+    }
     const items = itemsState.get();
     if (items.some((it) => (it.node as any).validationStatus.get() === "invalid")) {
       return "invalid";
@@ -1755,8 +1902,22 @@ export function createFieldArray<T>(options: CreateFieldArrayOptions<T>): FieldA
       }
 
       initialKeysState.set(createdItems.map((it) => it.id));
+      serverIssuesState.set([]);
       itemsState.set(createdItems);
     });
+  };
+
+  const setServerIssues = (issues: readonly (ServerIssueInput | string)[]): void => {
+    const sanitized: ServerIssue[] = issues.map((iss) =>
+      typeof iss === "string"
+        ? sanitizeServerIssue({ code: "server.error", message: iss })
+        : sanitizeServerIssue(iss),
+    );
+    serverIssuesState.set(Object.freeze(sanitized));
+  };
+
+  const clearServerIssues = (): void => {
+    serverIssuesState.set([]);
   };
 
   return {
@@ -1771,6 +1932,7 @@ export function createFieldArray<T>(options: CreateFieldArrayOptions<T>): FieldA
     invalid: invalidComputed,
     errors: errorsComputed,
     issues: issuesComputed,
+    serverIssues: serverIssuesState,
     validationStatus: validationStatusComputed,
     push,
     insert,
@@ -1779,6 +1941,8 @@ export function createFieldArray<T>(options: CreateFieldArrayOptions<T>): FieldA
     move,
     setValues,
     reset,
+    setServerIssues,
+    clearServerIssues,
     validate,
     getOutput: () => outputComputed.get(),
   };
@@ -1796,6 +1960,8 @@ export interface FormConfig<T extends FieldValues> {
   readonly rules?: readonly AnyValidationRule<T>[] | undefined;
   readonly validateOn?: ValidationTriggerMode | readonly ValidationTriggerMode[] | undefined;
   readonly debounceMs?: number | undefined;
+  readonly submitAction?: SubmitAction<T, any> | undefined;
+  readonly duplicatePolicy?: DuplicateSubmitPolicy | undefined;
 }
 
 export interface FormInstance<T extends FieldValues> {
@@ -1810,11 +1976,22 @@ export interface FormInstance<T extends FieldValues> {
   readonly invalid: Computed<boolean>;
   readonly errors: Computed<Record<string, readonly string[]>>;
   readonly issues: Computed<readonly FieldIssue[]>;
+  readonly serverIssues: WritableState<readonly ServerIssue[]>;
   readonly validationStatus: Computed<ValidationStatus>;
+  readonly submissionStatus: WritableState<SubmissionStatus>;
+  readonly submitting: Computed<boolean>;
   getNode(path: string): FormNode | undefined;
   setValues(partial: Partial<T>): void;
   reset(nextInitials?: Partial<T>): void;
+  reinitialize(nextInitials: Partial<T>): void;
   validate(trigger?: ValidationTriggerMode): Promise<readonly FieldIssue[]> | readonly FieldIssue[];
+  setServerIssues(issues: readonly (ServerIssueInput | string)[]): void;
+  clearServerIssues(): void;
+  submit<TResult = void>(
+    action?: SubmitAction<T, TResult>,
+    options?: SubmitOptions,
+  ): Promise<FormSubmitResult<TResult, FieldIssue>>;
+  cancelSubmit(): void;
   getOutput(): T;
   dispose(): void;
 }
@@ -1897,6 +2074,32 @@ export function parsePath(path: string): Array<string | number> {
   return parts;
 }
 
+function collectArraySnapshots(root: FieldGroup<any>): ArraySnapshotMap {
+  const map: ArraySnapshotMap = new Map();
+
+  function traverse(node: any, currentPath: readonly FieldPathSegment[]) {
+    if (!node) return;
+    if (node.kind === "array") {
+      const items = node.items.get();
+      const itemIds = items.map((it: any) => it.id);
+      map.set(createArraySnapshotKey(currentPath), Object.freeze(itemIds));
+      for (let i = 0; i < items.length; i++) {
+        traverse(items[i].node, [...currentPath, i]);
+      }
+    } else if (node.kind === "group") {
+      for (const [key, child] of Object.entries(node.fields)) {
+        traverse(child, [...currentPath, key]);
+      }
+    }
+  }
+
+  for (const [key, child] of Object.entries(root.fields)) {
+    traverse(child, [key]);
+  }
+
+  return map;
+}
+
 export function createForm<T extends FieldValues>(config: FormConfig<T>): FormInstance<T> {
   const scope = createScope({ name: "vii-form-root" });
 
@@ -1909,10 +2112,371 @@ export function createForm<T extends FieldValues>(config: FormConfig<T>): FormIn
     debounceMs: config.debounceMs,
   });
 
+  const submissionStatusState = state<SubmissionStatus>("idle");
+  const formServerIssuesState = state<readonly ServerIssue[]>([]);
+  let activeSubmissionAbortController: AbortController | null = null;
+  let currentSubmissionRevision = 0;
   let isDisposed = false;
+
   const assertActive = (): void => {
     if (isDisposed) {
       throw new Error("Form is disposed");
+    }
+  };
+
+  const submittingComputed = scope.run(() =>
+    computed(() => {
+      const status = submissionStatusState.get();
+      return status === "validating" || status === "submitting";
+    }),
+  );
+
+  const validComputed = scope.run(() =>
+    computed(() => {
+      return root.valid.get() && formServerIssuesState.get().length === 0;
+    }),
+  );
+
+  const invalidComputed = scope.run(() => computed(() => !validComputed.get()));
+
+  const issuesComputed = scope.run(() =>
+    computed(() => {
+      const rootIssues = root.issues.get();
+      const sIssues = formServerIssuesState.get();
+      if (sIssues.length === 0) return rootIssues;
+      return Object.freeze([...rootIssues, ...sIssues]);
+    }),
+  );
+
+  const errorsComputed = scope.run(() =>
+    computed(() => {
+      const base = root.errors.get();
+      const sIssues = formServerIssuesState.get();
+      if (sIssues.length === 0) return base;
+      const res: Record<string, readonly string[]> = Object.create(null);
+      for (const [k, v] of Object.entries(base)) {
+        res[k] = v;
+      }
+      const rootServerErrs = sIssues.map((iss) => iss.message ?? iss.code);
+      if (rootServerErrs.length > 0) {
+        res[""] = Object.freeze([...(res[""] ?? []), ...rootServerErrs]);
+      }
+      return Object.freeze(res);
+    }),
+  );
+
+  const validationStatusComputed = scope.run(() =>
+    computed(() => {
+      if (formServerIssuesState.get().length > 0) return "invalid";
+      return root.validationStatus.get();
+    }),
+  );
+
+  const clearFormServerIssues = (): void => {
+    formServerIssuesState.set([]);
+    function clearNode(node: any) {
+      if (!node) return;
+      if (typeof node.clearServerIssues === "function") {
+        node.clearServerIssues();
+      }
+      if (node.kind === "group") {
+        for (const child of Object.values(node.fields)) {
+          clearNode(child);
+        }
+      } else if (node.kind === "array") {
+        for (const item of node.items.get()) {
+          clearNode((item as any).node);
+        }
+      }
+    }
+    clearNode(root);
+  };
+
+  const routeServerIssuesToTree = (
+    issues: readonly ServerIssue[],
+    arraySnapshots?: ArraySnapshotMap,
+  ): void => {
+    batch(() => {
+      for (const issue of issues) {
+        if (!issue.path || issue.path.length === 0) {
+          formServerIssuesState.set(Object.freeze([...formServerIssuesState.get(), issue]));
+          continue;
+        }
+
+        let curr: any = root;
+        let i = 0;
+        const pathSegments = issue.path;
+        const traversedSegments: FieldPathSegment[] = [];
+
+        while (i < pathSegments.length) {
+          const seg = pathSegments[i]!;
+          traversedSegments.push(seg);
+          if (!curr) break;
+
+          if (curr.kind === "group") {
+            if (
+              typeof seg !== "string" ||
+              !Object.prototype.hasOwnProperty.call(curr.fields, seg)
+            ) {
+              curr = null;
+              break;
+            }
+            curr = curr.fields[seg];
+            i++;
+          } else if (curr.kind === "array") {
+            if (typeof seg !== "number") {
+              curr = null;
+              break;
+            }
+            const arrayPathKey = traversedSegments.slice(0, -1).join(".");
+            const snapshotItemIds = arraySnapshots?.get(arrayPathKey);
+            let targetItem: any = null;
+
+            if (snapshotItemIds && seg in snapshotItemIds) {
+              const targetItemId = snapshotItemIds[seg];
+              const currentItems = curr.items.get();
+              targetItem = currentItems.find((it: any) => it.id === targetItemId);
+            } else {
+              const currentItems = curr.items.get();
+              targetItem = currentItems[seg];
+            }
+
+            if (!targetItem) {
+              curr = null;
+              break;
+            }
+            curr = targetItem.node;
+            i++;
+          } else if (curr.kind === "field") {
+            curr = null;
+            break;
+          } else {
+            curr = null;
+            break;
+          }
+        }
+
+        if (curr && typeof curr.setServerIssues === "function") {
+          const remainingPath = pathSegments.slice(i);
+          const localizedIssue = {
+            ...issue,
+            path: remainingPath.length > 0 ? Object.freeze(remainingPath) : undefined,
+          };
+          curr.setServerIssues([...curr.serverIssues.get(), localizedIssue]);
+        } else {
+          // Unresolvable or removed item or unknown path: preserve at form level
+          formServerIssuesState.set(Object.freeze([...formServerIssuesState.get(), issue]));
+        }
+      }
+    });
+  };
+
+  const cancelSubmit = (): void => {
+    const currentStatus = submissionStatusState.get();
+    if (currentStatus === "validating" || currentStatus === "submitting") {
+      if (activeSubmissionAbortController) {
+        activeSubmissionAbortController.abort();
+        activeSubmissionAbortController = null;
+      }
+      currentSubmissionRevision++;
+      submissionStatusState.set("cancelled");
+      const diag = getActiveDiagnostics();
+      if (diag) {
+        diag.record("form.submission.cancelled", { revision: currentSubmissionRevision });
+      }
+    }
+  };
+
+  const submit = async <TResult = void>(
+    action?: SubmitAction<T, TResult>,
+    options?: SubmitOptions,
+  ): Promise<FormSubmitResult<TResult, FieldIssue>> => {
+    assertActive();
+
+    const duplicatePolicy = options?.duplicatePolicy ?? config.duplicatePolicy ?? "drop";
+    const effectiveAction = action ?? (config.submitAction as SubmitAction<T, TResult> | undefined);
+
+    const currentStatus = submissionStatusState.get();
+    if (currentStatus === "validating" || currentStatus === "submitting") {
+      if (duplicatePolicy === "reject") {
+        throw new Error("Submission is already in progress");
+      }
+      if (duplicatePolicy === "drop") {
+        return { status: "cancelled" };
+      }
+      if (duplicatePolicy === "supersede") {
+        if (activeSubmissionAbortController) {
+          activeSubmissionAbortController.abort();
+          activeSubmissionAbortController = null;
+        }
+      }
+    }
+
+    const revision = ++currentSubmissionRevision;
+    const ac = new AbortController();
+    activeSubmissionAbortController = ac;
+    submissionStatusState.set("validating");
+
+    const diag = getActiveDiagnostics();
+    if (diag) {
+      diag.record("form.submission.started", { revision });
+    }
+
+    const arraySnapshots = collectArraySnapshots(root);
+
+    let outputSnapshot: T;
+    try {
+      outputSnapshot = deepCloneSnapshot(root.getOutput());
+    } catch (outputErr) {
+      if (activeSubmissionAbortController === ac) {
+        activeSubmissionAbortController = null;
+      }
+      submissionStatusState.set("failed");
+      if (diag) {
+        diag.record("form.submission.failed", {
+          reason: outputErr instanceof Error ? outputErr.name : typeof outputErr,
+        });
+      }
+      throw outputErr;
+    }
+
+    clearFormServerIssues();
+
+    let valIssues: readonly FieldIssue[];
+    try {
+      const valResult = root.validate("submit");
+      if (valResult !== null && typeof (valResult as any).then === "function") {
+        valIssues = await valResult;
+      } else {
+        valIssues = valResult as readonly FieldIssue[];
+      }
+    } catch (valErr) {
+      if (revision === currentSubmissionRevision && !ac.signal.aborted && !isDisposed) {
+        submissionStatusState.set("failed");
+        if (activeSubmissionAbortController === ac) {
+          activeSubmissionAbortController = null;
+        }
+        if (diag) {
+          diag.record("form.submission.failed", {
+            reason: valErr instanceof Error ? valErr.name : typeof valErr,
+          });
+        }
+      }
+      throw valErr;
+    }
+
+    if (revision !== currentSubmissionRevision || ac.signal.aborted || isDisposed) {
+      return { status: "cancelled" };
+    }
+
+    if (
+      valIssues.length > 0 ||
+      root.invalid.get() ||
+      root.issues.get().length > 0 ||
+      root.validationStatus.get() === "invalid"
+    ) {
+      submissionStatusState.set("idle");
+      if (activeSubmissionAbortController === ac) {
+        activeSubmissionAbortController = null;
+      }
+      if (diag) {
+        diag.record("form.submission.validation_blocked", {
+          issueCount: root.issues.get().length,
+        });
+      }
+      return { status: "invalid", issues: root.issues.get() };
+    }
+
+    submissionStatusState.set("submitting");
+    if (diag) {
+      diag.record("form.submission.submitting", { revision });
+    }
+
+    if (!effectiveAction) {
+      if (activeSubmissionAbortController === ac) {
+        activeSubmissionAbortController = null;
+      }
+      submissionStatusState.set("succeeded");
+      if (diag) {
+        diag.record("form.submission.succeeded", { revision });
+      }
+      return { status: "succeeded", result: undefined as unknown as TResult };
+    }
+
+    try {
+      const actionResult = await effectiveAction(outputSnapshot, { signal: ac.signal });
+
+      if (revision !== currentSubmissionRevision || ac.signal.aborted || isDisposed) {
+        return { status: "cancelled" };
+      }
+
+      if (
+        actionResult !== null &&
+        typeof actionResult === "object" &&
+        (actionResult as any).ok === false &&
+        Array.isArray((actionResult as any).issues)
+      ) {
+        const rawIssues = (actionResult as any).issues;
+        const sanitizedServerIssues = rawIssues.map((iss: any) =>
+          typeof iss === "string"
+            ? sanitizeServerIssue({ code: "server.error", message: iss })
+            : sanitizeServerIssue(iss),
+        );
+
+        routeServerIssuesToTree(sanitizedServerIssues, arraySnapshots);
+
+        submissionStatusState.set("failed");
+        if (diag) {
+          diag.record("form.submission.failed", {
+            reason: "server_validation",
+            issueCount: sanitizedServerIssues.length,
+          });
+        }
+        return { status: "server-invalid", issues: sanitizedServerIssues };
+      }
+
+      const finalResult =
+        actionResult !== null &&
+        typeof actionResult === "object" &&
+        (actionResult as any).ok === true &&
+        "result" in actionResult
+          ? (actionResult as any).result
+          : actionResult;
+
+      submissionStatusState.set("succeeded");
+      if (diag) {
+        diag.record("form.submission.succeeded", { revision });
+      }
+      return { status: "succeeded", result: finalResult as TResult };
+    } catch (actionErr: any) {
+      if (revision !== currentSubmissionRevision || ac.signal.aborted || isDisposed) {
+        return { status: "cancelled" };
+      }
+
+      if (
+        actionErr &&
+        (actionErr.name === "AbortError" ||
+          actionErr.code === "ABORT_ERR" ||
+          actionErr.message?.includes("aborted"))
+      ) {
+        submissionStatusState.set("cancelled");
+        if (diag) {
+          diag.record("form.submission.cancelled", { revision });
+        }
+        return { status: "cancelled" };
+      }
+
+      submissionStatusState.set("failed");
+      if (diag) {
+        diag.record("form.submission.failed", {
+          reason: actionErr instanceof Error ? actionErr.name : typeof actionErr,
+        });
+      }
+      throw actionErr;
+    } finally {
+      if (activeSubmissionAbortController === ac) {
+        activeSubmissionAbortController = null;
+      }
     }
   };
 
@@ -1945,6 +2509,42 @@ export function createForm<T extends FieldValues>(config: FormConfig<T>): FormIn
     return curr;
   };
 
+  const setServerIssues = (issues: readonly (ServerIssueInput | string)[]): void => {
+    assertActive();
+    const sanitized: ServerIssue[] = issues.map((iss) =>
+      typeof iss === "string"
+        ? sanitizeServerIssue({ code: "server.error", message: iss })
+        : sanitizeServerIssue(iss),
+    );
+    routeServerIssuesToTree(sanitized);
+  };
+
+  const clearServerIssues = (): void => {
+    assertActive();
+    clearFormServerIssues();
+  };
+
+  const setValues = (partial: Partial<T>): void => {
+    assertActive();
+    root.setValues(partial);
+    const s = submissionStatusState.get();
+    if (s === "succeeded" || s === "failed" || s === "cancelled") {
+      submissionStatusState.set("idle");
+    }
+  };
+
+  const reset = (nextInitials?: Partial<T>): void => {
+    assertActive();
+    cancelSubmit();
+    submissionStatusState.set("idle");
+    clearFormServerIssues();
+    root.reset(nextInitials);
+  };
+
+  const reinitialize = (nextInitials: Partial<T>): void => {
+    reset(nextInitials);
+  };
+
   return {
     root,
     fields: root.fields,
@@ -1953,26 +2553,28 @@ export function createForm<T extends FieldValues>(config: FormConfig<T>): FormIn
     dirty: root.dirty,
     touched: root.touched,
     pending: root.pending,
-    valid: root.valid,
-    invalid: root.invalid,
-    errors: root.errors,
-    issues: root.issues,
-    validationStatus: root.validationStatus,
+    valid: validComputed,
+    invalid: invalidComputed,
+    errors: errorsComputed,
+    issues: issuesComputed,
+    serverIssues: formServerIssuesState,
+    validationStatus: validationStatusComputed,
+    submissionStatus: submissionStatusState,
+    submitting: submittingComputed,
     getNode,
-    setValues: (partial: Partial<T>): void => {
-      assertActive();
-      root.setValues(partial);
-    },
-    reset: (nextInitials?: Partial<T>): void => {
-      assertActive();
-      root.reset(nextInitials);
-    },
+    setValues,
+    reset,
+    reinitialize,
+    setServerIssues,
+    clearServerIssues,
     validate: (
       trigger: ValidationTriggerMode = "manual",
     ): Promise<readonly FieldIssue[]> | readonly FieldIssue[] => {
       assertActive();
       return root.validate(trigger);
     },
+    submit,
+    cancelSubmit,
     getOutput: (): T => {
       assertActive();
       return root.getOutput();
@@ -1980,6 +2582,10 @@ export function createForm<T extends FieldValues>(config: FormConfig<T>): FormIn
     dispose: () => {
       if (isDisposed) return;
       isDisposed = true;
+      if (activeSubmissionAbortController) {
+        activeSubmissionAbortController.abort();
+        activeSubmissionAbortController = null;
+      }
       scope.dispose();
     },
   };

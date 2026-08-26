@@ -259,3 +259,69 @@ F5 introduces explicit value stages (`RawInput` -> `ParsedValue` -> `ValidatedVa
    - **Sink Enforcement**: Security enforcement occurs at traversal/materialization sinks. Path-based navigation APIs (`parsePath`, `getNode`) interpret strings as navigation instructions and strictly block reserved words. Issue maps, field maps, and values containers use null-prototype objects (`Object.create(null)`), Maps, or `Object.hasOwn` checks to prevent prototype pollution.
    - **Issue Codes**: Issue codes (`FieldIssue.code`, `ParseIssue.code`, `ValidationIssue.code`) reject prototype pollution strings (`__proto__`, `constructor`, `prototype`) defensively.
    - **Diagnostics Privacy**: Diagnostics payloads record structural events (`field.parse.completed`, `field.schema.validation.started`, etc.) without exposing raw input values or sensitive error messages.
+
+---
+
+## 7. F6: Submission Lifecycle, Server Errors & Reset / Reinitialize
+
+### Overview & Architecture
+F6 implements the complete submission lifecycle state machine (`idle` -> `validating` -> `submitting` -> `succeeded` / `failed` / `cancelled`), pre-submission parse and validation gates, decoupled application action invocation with `AbortSignal`, configurable duplicate submission handling (`drop`, `reject`, `supersede`), monotonic revision authority for stale-result suppression, server issue taxonomy (`ServerIssue`), structured server issue routing (including array item identity snapshots across in-flight reorders and removals), fine-grained server issue clearing policies, and explicit `reset()` / `reinitialize()` baseline management.
+
+### Key Decisions & Contracts
+1. **Submission State Machine**:
+   - `idle`: Form is interactive and not currently in a submission pipeline.
+   - `validating`: Form is running pre-submission validation (sync and async).
+   - `submitting`: Validation passed; application `submitAction` is executing.
+   - `succeeded`: Submit action resolved successfully.
+   - `failed`: Submit action returned server validation issues (`{ ok: false, issues }`) or threw an unexpected runtime exception.
+   - `cancelled`: Submission was aborted via `cancelSubmit()`, `reset()`, `dispose()`, or a superseding submission.
+   - **Signal**: `form.submitting` computed is `true` during `"validating"` and `"submitting"`, `false` otherwise.
+2. **Pre-Submit Validation & Parse Gate**:
+   - `form.submit(action?)` runs pre-submission validation (`root.validate("submit")`) and checks `root.invalid` and `parseStatus`.
+   - If parsing or validation fails, the application action is **strictly bypassed**, `submissionStatus` transitions to `"idle"`, and `form.submit()` returns `{ status: "invalid", issues: form.issues.get() }`.
+   - Output transformations execute before validation; throwing transformers transition `submissionStatus` to `"failed"` and reject the submit promise.
+3. **Application Submit Action Contract**:
+   - `SubmitAction<TOutput, TResult> = (output: TOutput, context: { signal: AbortSignal }) => Promise<SubmitActionResult<TResult>> | SubmitActionResult<TResult>`.
+   - Action result formats supported:
+     - Direct value (e.g. `TResult`).
+     - Structured success: `{ ok: true, result: TResult }`.
+     - Structured failure: `{ ok: false, issues: readonly (ServerIssueInput | string)[] }`.
+   - If no action is passed to `form.submit()`, the form uses `config.submitAction` (if configured).
+4. **Duplicate Submission Policy**:
+   - Configurable via `config.duplicatePolicy` or per-call `options.duplicatePolicy`:
+     - `"drop"` (default): Subsequent submit calls while in-flight immediately return `{ status: "cancelled" }` without calling the action again.
+     - `"reject"`: Subsequent calls synchronously throw `Error("Submission is already in progress")`.
+     - `"supersede"`: Aborts the active in-flight `AbortController` and starts a fresh submission cycle under a new revision.
+5. **Cancellation Semantics**:
+   - Explicit `form.cancelSubmit()` aborts the active `AbortController`, increments the submission revision, and transitions status to `"cancelled"`.
+   - `form.reset()` and `form.dispose()` abort active submissions.
+   - **Invariant**: Cancellation is NOT validation failure. `form.valid` remains `true` upon cancellation if fields are valid.
+6. **Monotonic Revision Authority & Stale-Result Suppression**:
+   - Each submission increments `currentSubmissionRevision`.
+   - When an async submit action resolves or rejects late (e.g. after superseding or cancellation), the result is **strictly suppressed** if `revision !== currentSubmissionRevision` or `signal.aborted`.
+   - Stale late successes, rejections, or server issue attachments cannot mutate form state or status.
+7. **Server Issue Taxonomy & Prototype Pollution Defense**:
+   - `ServerIssue` has `source: "server"`, structured `code: string`, optional `message?: string`, and structured `path?: readonly (string | number)[]`.
+   - Prototype pollution defense: `sanitizeServerIssue` strictly rejects `__proto__`, `constructor`, and `prototype` in `code`.
+   - Structured paths are treated as immutable data: reserved property names occurring as path segments (e.g. `path: ["constructor"]`) are safely routed without polluting prototypes.
+8. **Server Issue Routing Across the Tree**:
+   - **Leaf & Group Routing**: Server issues with matching paths are routed directly to target `FieldState` or `FieldGroup` nodes, localizing the issue and updating the node's `serverIssues` and `valid` computed states.
+   - **Array Snapshot Routing (The Identity Contract Across In-Flight Reorders)**:
+     - At submission start, form captures an immutable snapshot mapping array index positions to item unique IDs (`Map<string, readonly (string | number)[]>`).
+     - When server issues arrive referencing submitted indices (e.g. `["contacts", 0, "email"]`), the form resolves index `0` to its original item ID, locates that item's current position in the live array (e.g. index `1` if reordered), and attaches the error to that specific item.
+     - Sibling items that moved to index `0` stay clean without receiving the error.
+   - **Deleted Items & Unknown Paths**:
+     - If the target array item was deleted while submission was pending, or if the server returned an unknown path, the issue is preserved at `form.serverIssues` with its original structured path intact.
+9. **Server Issue Clearing Policies**:
+   - **Field Edits**: User editing a field (`setValue` / `setRawValue`) clears only that field's owned server issues. Sibling and other field server issues are preserved.
+   - **Client Validation Coexistence**: Re-running client validation updates client validation issues without wiping server issues.
+   - **Form Reset / Next Submit**: Calling `form.reset()` or starting a new `form.submit()` clears prior server issues.
+   - **Successful Submit**: Clears prior server issues and transitions status to `"succeeded"`.
+   - **Dirty Invariant**: Successful submission does NOT implicitly reset dirty baseline state. `form.dirty` remains `true` until caller explicitly invokes `form.reinitialize(newBaseline)` or `form.reset()`.
+10. **Reset vs Reinitialize Baseline Semantics**:
+    - `form.reset()`: Restores initial baseline values, resets dirty/touched states to pristine, clears server issues, and cancels active submissions.
+    - `form.reset(newBaseline)` / `form.reinitialize(newBaseline)`: Adopts new baseline values and resets dirty/touched states to pristine.
+    - Parser-backed fields require both domain value and raw value on rebasing (`reset(nextInitial, nextInitialRaw)`).
+11. **Resource & Diagnostics Privacy**:
+    - 100 repeated submit cycles prove zero controller or Scope leak.
+    - Form submission diagnostics record structural lifecycle events (`form.submission.started`, `form.submission.submitting`, `form.submission.succeeded`, `form.submission.failed`, `form.submission.cancelled`) without leaking form values, output payloads, credentials, or sensitive error messages.

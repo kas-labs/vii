@@ -37,6 +37,53 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-26 02:00 CEST | Form Research F4: Async Validation + Cancellation + Revisions
+
+Status: completed
+Branch: `feat/form-async-validation`
+PR: not opened (Draft PR pending)
+
+### Scope
+
+- Implement asynchronous validation, explicit `AbortSignal` cancellation, monotonic revision tracking, and debounce support in throwaway research module (`research/form/`).
+- Authorize F4 ONLY (no Standard Schema integration, no submission lifecycle, no production package).
+- Preserve all existing F1/F2/F3 regression tests and architectural invariants.
+
+### Changes
+
+- **Form Research Core (`research/form/form-core.ts`)**:
+  - Implemented `AsyncValidationRule<T, Ctx>` with explicit `AbortSignal` propagation in context.
+  - Added synchronous precedence: synchronous rules evaluate first and fast-fail immediately; async rules execute only if synchronous rules pass.
+  - Added monotonic revision authority (`currentRevision`) on field, group, array, and form nodes to strictly suppress stale validator commits.
+  - Implemented cancellation semantics: cancellation/abort is not treated as a validation failure.
+  - Integrated Scope lifecycle: node disposal or array item removal aborts active controllers and rejects future operations.
+  - Implemented opt-in `debounceMs` for change triggers with automatic timer cancellation on subsequent changes or explicit validation calls.
+  - Preserved dynamic array item identity and positional path projection during in-flight async validations.
+- **Form Research F4 Test Suite (`research/form/form-f4.test.ts`)**:
+  - Added 18 comprehensive test fixtures covering async rules, AbortSignal propagation, rapid superseding mutations (A -> B -> C), stale-commit suppression, cancellation vs failure, Scope disposal, debounce scheduling, array item mutations, and resource stability.
+- **Documentation (`docs/roadmap/FORM_RESEARCH.md`, `research/form/README.md`)**:
+  - Updated status to F0-F4 Completed, documented F4 architecture, cancellation rules, and revision authority.
+
+### Validation
+
+- `pnpm exec tsc -p research/form/tsconfig.json --noEmit`: passed (0 errors).
+- `pnpm vitest run research/form`: passed (108/108 tests passing across 3 test files).
+- `git diff --check`: passed (clean).
+- `pnpm format:check`: passed.
+- `pnpm lint`: passed.
+- `pnpm typecheck`: passed.
+- `pnpm validate`: passed.
+
+### Architecture / compatibility
+
+- Self-contained in `research/form/`. Zero dependency additions. Zero modifications to `@vii-labs/core`.
+- Public API unchanged. No `@vii-labs/form` package created.
+- F5 is NOT started.
+
+### Remaining / recovery
+
+- None for F4. Next slice requires authorization.
+
 ## 2026-08-26 01:30 CEST | Form Research F3: Validation Scheduling & Structured Issues
 
 Status: completed

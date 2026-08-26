@@ -183,3 +183,34 @@ F3 introduces synchronous validation scheduling and machine-readable structured 
    - `FieldArray.issues` and `FieldArray.validationStatus` are single computeds created once per array and registered with the owning scope, so repeated reads neither allocate nor retain dependency subscriptions.
 8. **Throwing Validator Behavior**:
    - Uncaught exceptions inside validation rules propagate as runtime errors without leaking field values in diagnostics.
+
+---
+
+## 5. F4: Asynchronous Validation, Cancellation & Revision Management
+
+### Overview & Architecture
+F4 extends Vii Form validation with asynchronous rules, cancellation semantics via explicit `AbortSignal`, generation/revision tracking to suppress stale race conditions, opt-in debounce scheduling, and clean lifecycle integration with Vii Scopes.
+
+### Key Decisions & Contracts
+1. **Async Rule Contract**:
+   - `AsyncValidationRule<T, Ctx> = (value: T, context: Ctx & { readonly signal: AbortSignal }) => Promise<FieldIssue | readonly FieldIssue[] | null | undefined>`.
+   - `ValidationRule<T, Ctx> = SyncValidationRule<T, Ctx> | AsyncValidationRule<T, Ctx>`.
+2. **Synchronous Precedence & Segregation**:
+   - Synchronous rules execute first. If any synchronous rule produces an issue, the field/group transitions to `"invalid"` immediately, and asynchronous validation calls are cancelled/skipped.
+   - If synchronous rules pass and async rules exist, the field transitions to `pending: true` while async rules execute in parallel with a shared `AbortSignal`.
+3. **Monotonic Revision Authority & Stale-Result Suppression**:
+   - Each field and group maintains a monotonic `currentRevision` counter.
+   - On every mutation or explicit re-validation, any in-flight `AbortController` is aborted, active debounce timers are cancelled, and `currentRevision` is incremented.
+   - When an async validator resolves, it commits state *only* if `revision === currentRevision`, `!signal.aborted`, and `!isDisposed`. Late resolutions from superseded validations are strictly suppressed.
+4. **Cancellation vs Validation Failure**:
+   - Cancellation is NOT validation failure. When a validator aborts (or rejects with `AbortError`), no validation issue is produced, and validation status is not marked invalid.
+   - **Rejection ownership**: a validation started by a trigger (`setValue`, `setTouched`, `setValues`, or a debounce timer) is fire-and-forget, so nothing holds its promise. A non-abort rejection on that path is recorded as `field.validation.async.failed` / `group.validation.async.failed` (rule error *name* only, never the message, which can embed field values) and then swallowed, because letting it escape would surface as an unhandled rejection and, under Node's default policy, terminate the process. `pending` is still cleared, so the node never strands. A rejection from an explicit `validate()` call is delivered to the caller unchanged. Surfacing rule failures as user-visible issues is deliberately out of scope for F4.
+5. **Scope Lifecycle Integration**:
+   - Disposing a field, resetting a form, or removing an array item aborts active async validations immediately.
+   - Disposed nodes reject subsequent `validate()` invocations with a clean `Error("Form node is disposed")`.
+6. **Debounce Scheduling**:
+   - `debounceMs` is opt-in (default `0`). When configured, rapid `"change"` triggers debounce execution while cancelling prior timers.
+   - Explicit triggers (`"manual"`, `"submit"`, `"blur"`) bypass debounce and validate immediately.
+7. **Array & Cross-Field Group Validation**:
+   - Dynamic array item validations preserve conceptual item node identity across array mutations (`swap`, `move`, `remove`).
+   - Group rules receive aggregate child values and aggregate child + group `pending` states.

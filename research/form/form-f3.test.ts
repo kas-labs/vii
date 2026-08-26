@@ -13,7 +13,7 @@ describe("Form Research F3 — Validation Scheduling & Structured Issues", () =>
   // -------------------------------------------------------------------------
   // 1. Simple required-like field rule
   // -------------------------------------------------------------------------
-  it("Fixture 1: Simple required-like field rule validates and updates issues / valid / status", () => {
+  it("Fixture 1: Simple required-like field rule validates and updates issues / valid / status", async () => {
     const requiredRule: SyncValidationRule<string> = (val) => {
       if (!val || val.trim() === "") {
         return {
@@ -36,7 +36,7 @@ describe("Form Research F3 — Validation Scheduling & Structured Issues", () =>
     expect(field.errors.get()).toEqual([]);
 
     // Trigger validation
-    const issues = field.validate("manual");
+    const issues = await field.validate("manual");
     expect(issues).toHaveLength(1);
     expect(issues[0]?.code).toBe("required");
     expect(issues[0]?.message).toBe("This field is required");
@@ -169,10 +169,13 @@ describe("Form Research F3 — Validation Scheduling & Structured Issues", () =>
   // -------------------------------------------------------------------------
   // 5. Manual validation
   // -------------------------------------------------------------------------
-  it("Fixture 5: Manual validation explicitly triggers validation without altering touched/dirty unexpectedly", () => {
+  it("Fixture 5: Manual validation explicitly triggers validation without altering touched/dirty unexpectedly", async () => {
     const field = createField({
       initialValue: "initial",
-      rules: [(v) => (v === "initial" ? { code: "must_change", source: "validation" } : null)],
+      rules: [
+        (v: string): FieldIssue | null =>
+          v === "initial" ? { code: "must_change", source: "validation" } : null,
+      ],
       validateOn: "manual",
     });
 
@@ -180,7 +183,7 @@ describe("Form Research F3 — Validation Scheduling & Structured Issues", () =>
     expect(field.dirty.get()).toBe(false);
     expect(field.validationStatus.get()).toBe("unvalidated");
 
-    const issues = field.validate("manual");
+    const issues = await field.validate("manual");
     expect(issues).toHaveLength(1);
     expect(field.validationStatus.get()).toBe("invalid");
     // Manual validation does NOT mark field touched or dirty
@@ -191,7 +194,7 @@ describe("Form Research F3 — Validation Scheduling & Structured Issues", () =>
   // -------------------------------------------------------------------------
   // 6. Form-wide validation entry point
   // -------------------------------------------------------------------------
-  it("Fixture 6: form.validate() validates all fields and groups in the form tree", () => {
+  it("Fixture 6: form.validate() validates all fields and groups in the form tree", async () => {
     const form = createForm({
       initialValues: {
         username: "",
@@ -206,7 +209,7 @@ describe("Form Research F3 — Validation Scheduling & Structured Issues", () =>
         confirm: "456",
       },
       rules: [
-        (vals) =>
+        (vals: { pass: string; confirm: string }): FieldIssue | null =>
           vals.pass !== vals.confirm
             ? {
                 code: "password_mismatch",
@@ -218,7 +221,7 @@ describe("Form Research F3 — Validation Scheduling & Structured Issues", () =>
       ],
     });
 
-    const issues = customGroup.validate("submit");
+    const issues = await customGroup.validate("submit");
     expect(issues).toHaveLength(1);
     expect(issues[0]?.code).toBe("password_mismatch");
     expect(issues[0]?.path).toEqual(["confirm"]);
@@ -227,14 +230,14 @@ describe("Form Research F3 — Validation Scheduling & Structured Issues", () =>
   // -------------------------------------------------------------------------
   // 7. Cross-field group validation
   // -------------------------------------------------------------------------
-  it("Fixture 7: Cross-field group validation receives child values and updates on child change", () => {
+  it("Fixture 7: Cross-field group validation receives child values and updates on child change", async () => {
     const group = createFieldGroup({
       initialValues: {
         password: "secretPassword1",
         confirmPassword: "differentPassword",
       },
       rules: [
-        (vals) => {
+        (vals: { password: string; confirmPassword: string }): FieldIssue | null => {
           if (vals.password !== vals.confirmPassword) {
             return {
               code: "passwords_must_match",
@@ -249,7 +252,7 @@ describe("Form Research F3 — Validation Scheduling & Structured Issues", () =>
     });
 
     // Validate initially
-    group.validate("manual");
+    await group.validate("manual");
     expect(group.valid.get()).toBe(false);
     expect(group.issues.get()).toHaveLength(1);
     expect(group.issues.get()[0]?.code).toBe("passwords_must_match");
@@ -357,10 +360,13 @@ describe("Form Research F3 — Validation Scheduling & Structured Issues", () =>
   // -------------------------------------------------------------------------
   // 11. Successful revalidation clears validation issues
   // -------------------------------------------------------------------------
-  it("Fixture 11: Successful revalidation clears previous validation issues", () => {
+  it("Fixture 11: Successful revalidation clears validation issues", () => {
     const field = createField({
       initialValue: "",
-      rules: [(v) => (v === "" ? { code: "required", source: "validation" } : null)],
+      rules: [
+        (v: string): FieldIssue | null =>
+          v === "" ? { code: "required", source: "validation" } : null,
+      ],
     });
 
     field.validate();
@@ -423,23 +429,19 @@ describe("Form Research F3 — Validation Scheduling & Structured Issues", () =>
   // -------------------------------------------------------------------------
   // 14. Promise / thenable rejection
   // -------------------------------------------------------------------------
-  it("Fixture 14: Fast-rejects Promise / thenable validator return with actionable TypeError", () => {
-    const asyncRule = (() => {
-      return Promise.resolve({ code: "async_err", source: "validation" });
-    }) as any;
+  it("Fixture 14: Async rules returning promises resolve properly in F4", async () => {
+    const asyncRule = async (): Promise<FieldIssue | null> => {
+      return { code: "async_err", source: "validation" as const };
+    };
 
     const field = createField({
       initialValue: "test",
       rules: [asyncRule],
     });
 
-    expect(() => {
-      field.validate("manual");
-    }).toThrow(TypeError);
-
-    expect(() => {
-      field.validate("manual");
-    }).toThrow(/Async validation is not supported in F3/);
+    const issues = await field.validate("manual");
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.code).toBe("async_err");
   });
 
   // -------------------------------------------------------------------------
@@ -506,7 +508,10 @@ describe("Form Research F3 — Validation Scheduling & Structured Issues", () =>
     diagnostics.run(() => {
       const field = createField({
         initialValue: "",
-        rules: [(v) => (v === "" ? { code: "req", source: "validation" } : null)],
+        rules: [
+          (v: string): FieldIssue | null =>
+            v === "" ? { code: "req", source: "validation" } : null,
+        ],
         validateOn: "manual",
       });
 
@@ -566,7 +571,7 @@ describe("Form Research F3 — Validation Scheduling & Structured Issues", () =>
     });
   });
 
-  it("Fixture 20: group validateOn is honored — setValues does not run group rules under submit-only", () => {
+  it("Fixture 20: group validateOn is honored — setValues does not run group rules under submit-only", async () => {
     const matchRule: SyncValidationRule<{ a: string; b: string }> = (vals) =>
       vals.a === vals.b ? null : { code: "mismatch", source: "validation" };
 
@@ -577,7 +582,8 @@ describe("Form Research F3 — Validation Scheduling & Structured Issues", () =>
     });
     submitOnly.setValues({ a: "x" });
     expect(submitOnly.issues.get()).toHaveLength(0);
-    expect(submitOnly.validate("submit").map((i) => i.code)).toEqual(["mismatch"]);
+    const submitIssues = (await submitOnly.validate("submit")) as readonly FieldIssue[];
+    expect(submitIssues.map((i) => i.code)).toEqual(["mismatch"]);
     submitOnly.dispose();
 
     const onChange = createForm<{ a: string; b: string }>({

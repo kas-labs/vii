@@ -63,18 +63,21 @@ export function sanitizeParseIssue(
     if (typeof rawObj.message === "string") {
       message = rawObj.message;
     }
-    if (Array.isArray(rawObj.path)) {
+    if (rawObj.path !== undefined && rawObj.path !== null) {
+      if (!Array.isArray(rawObj.path)) {
+        throw new TypeError(`Parse issue "path" must be an array`);
+      }
+      const segments: FieldPathSegment[] = [];
       for (const seg of rawObj.path) {
-        if (
-          typeof seg === "string" &&
-          (seg === "__proto__" || seg === "constructor" || seg === "prototype")
-        ) {
-          throw new Error(
-            `Security error: Prototype pollution attempt blocked on parse issue path segment "${seg}"`,
+        if (typeof seg === "string" || typeof seg === "number") {
+          segments.push(seg);
+        } else {
+          throw new TypeError(
+            `Parse issue path segment must be string or number, received ${typeof seg}`,
           );
         }
       }
-      path = Object.freeze([...rawObj.path]);
+      path = Object.freeze(segments);
     }
   }
 

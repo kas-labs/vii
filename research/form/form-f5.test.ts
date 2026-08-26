@@ -13,6 +13,8 @@ import {
   createOptionalStringParser,
   isStandardSchema,
   normalizeStandardSchemaIssue,
+  parsePath,
+  sanitizeParseIssue,
   standardSchema,
   type AsyncValidationRule,
   type FieldIssue,
@@ -520,17 +522,238 @@ describe("Form Research F5: Parsing / Input-Output Types / Standard Schema Bound
   });
 
   // -------------------------------------------------------------------------
-  // 7. Security, Privacy & Adversarial Defenses
+  // 7. Security, Privacy & Adversarial Defenses (Issue Paths Are Data)
   // -------------------------------------------------------------------------
   describe("Security & Adversarial Defenses", () => {
-    it("blocks prototype pollution on issue code and path segments in Standard Schema", () => {
-      const hostileIssue: any = {
+    it("blocks prototype pollution on issue code in Standard Schema", () => {
+      const hostileCodeIssue: any = {
         code: "__proto__",
         message: "hostile code",
         path: ["user", "constructor", "role"],
       };
+      expect(() => normalizeStandardSchemaIssue(hostileCodeIssue)).toThrow(
+        /Prototype pollution attempt blocked on issue code/,
+      );
 
-      expect(() => normalizeStandardSchemaIssue(hostileIssue)).toThrow(/Prototype pollution/);
+      const hostileConstructorCode: any = {
+        code: "constructor",
+        message: "hostile code",
+      };
+      expect(() => normalizeStandardSchemaIssue(hostileConstructorCode)).toThrow(
+        /Prototype pollution attempt blocked on issue code/,
+      );
+    });
+
+    it("allows reserved property names (__proto__, constructor, prototype) in FieldIssue and ParseIssue paths as pure data", () => {
+      const issueWithConstructor: FieldIssue = {
+        code: "invalid_constructor",
+        message: "Constructor field invalid",
+        path: Object.freeze(["user", "constructor", "name"]),
+        source: "validation",
+      };
+
+      const field = createField({
+        initialValue: "val",
+        rules: [() => issueWithConstructor],
+      });
+
+      field.validate("manual");
+      expect(field.issues.get()).toHaveLength(1);
+      expect(field.issues.get()[0]?.path).toEqual(["user", "constructor", "name"]);
+
+      // ParseIssue path handling
+      const parseIssueRes = sanitizeParseIssue({
+        code: "parse.custom",
+        message: "Custom parse failure",
+        path: ["items", 0, "__proto__", "prototype"],
+      });
+      expect(parseIssueRes.path).toEqual(["items", 0, "__proto__", "prototype"]);
+    });
+
+    it("normalizes Standard Schema issue paths with reserved field names without crashing", () => {
+      const standardIssue1: any = {
+        message: "Invalid constructor field",
+        path: ["constructor"],
+      };
+      const normalized1 = normalizeStandardSchemaIssue(standardIssue1);
+      expect(normalized1.path).toEqual(["constructor"]);
+      expect(normalized1.source).toBe("validation");
+
+      const standardIssue2: any = {
+        message: "Invalid prototype field",
+        path: ["nested", { key: "prototype" }, "val"],
+      };
+      const normalized2 = normalizeStandardSchemaIssue(standardIssue2);
+      expect(normalized2.path).toEqual(["nested", "prototype", "val"]);
+
+      const standardIssue3: any = {
+        message: "Invalid __proto__ field",
+        path: ["__proto__"],
+      };
+      const normalized3 = normalizeStandardSchemaIssue(standardIssue3);
+      expect(normalized3.path).toEqual(["__proto__"]);
+    });
+
+    describe("Real Standard Schema Providers with Legitimate Reserved Keys", () => {
+      it("Zod 4: validates objects with constructor and prototype property keys", async () => {
+        const zodReserved = z.object({
+          constructor: z.string().min(5),
+          prototype: z.number().min(10),
+        });
+
+        const rule = standardSchema(zodReserved);
+        const input: any = Object.create(null);
+        input.constructor = "abc"; // fails min(5)
+        input.prototype = 2; // fails min(10)
+
+        const issues = (await rule(input, {
+          trigger: "manual",
+          signal: new AbortController().signal,
+        })) as readonly FieldIssue[];
+
+        expect(Array.isArray(issues)).toBe(true);
+        expect(issues).toHaveLength(2);
+        expect(issues.some((i) => i.path?.includes("constructor"))).toBe(true);
+        expect(issues.some((i) => i.path?.includes("prototype"))).toBe(true);
+      });
+
+      it("Valibot: validates objects with constructor and prototype property keys", async () => {
+        const valibotReserved = valibot.object({
+          constructor: valibot.pipe(valibot.string(), valibot.minLength(5)),
+          prototype: valibot.pipe(valibot.number(), valibot.minValue(10)),
+        });
+
+        const rule = standardSchema(valibotReserved);
+        const input: any = Object.create(null);
+        input.constructor = "abc";
+        input.prototype = 2;
+
+        const issues = (await rule(input, {
+          trigger: "manual",
+          signal: new AbortController().signal,
+        })) as readonly FieldIssue[];
+
+        expect(Array.isArray(issues)).toBe(true);
+        expect(issues).toHaveLength(2);
+        expect(issues.some((i) => i.path?.includes("constructor"))).toBe(true);
+        expect(issues.some((i) => i.path?.includes("prototype"))).toBe(true);
+      });
+
+      it("ArkType: validates objects with constructor and prototype property keys", async () => {
+        const arkReserved = type({
+          constructor: "string >= 5",
+          prototype: "number >= 10",
+        });
+
+        const rule = standardSchema(arkReserved);
+        const input: any = Object.create(null);
+        input.constructor = "abc";
+        input.prototype = 2;
+
+        const issues = (await rule(input, {
+          trigger: "manual",
+          signal: new AbortController().signal,
+        })) as readonly FieldIssue[];
+
+        expect(Array.isArray(issues)).toBe(true);
+        expect(issues).toHaveLength(2);
+        expect(issues.some((i) => i.path?.includes("constructor"))).toBe(true);
+        expect(issues.some((i) => i.path?.includes("prototype"))).toBe(true);
+      });
+    });
+
+    it("propagates reserved path segments through FieldGroup and FieldArray aggregation without mutation", () => {
+      const group = createFieldGroup({
+        initialValues: {
+          fieldA: "val",
+        },
+      });
+
+      const issue: FieldIssue = {
+        code: "custom.error",
+        message: "Error on constructor subproperty",
+        path: Object.freeze(["constructor", "nested"]),
+        source: "validation",
+      };
+
+      (group.fields.fieldA as FieldState<string>).setIssues([issue]);
+
+      const groupIssues = group.issues.get();
+      expect(groupIssues).toHaveLength(1);
+      expect(groupIssues[0]?.path).toEqual(["fieldA", "constructor", "nested"]);
+
+      // FieldArray propagation
+      const array = createFieldArray<string>({
+        initialValues: ["item1"],
+      });
+      array.items.get()[0]?.node.setIssues([issue]);
+
+      const arrayIssues = array.issues.get();
+      expect(arrayIssues).toHaveLength(1);
+      expect(arrayIssues[0]?.path).toEqual([0, "constructor", "nested"]);
+    });
+
+    it("Security Proof: accepting reserved path segments as data does NOT pollute Object.prototype", () => {
+      const hostileIssue: FieldIssue = {
+        code: "attack.payload",
+        message: "Pollution attempt",
+        path: Object.freeze(["__proto__", "pollutedFlag", "data"]),
+        source: "validation",
+      };
+
+      const field = createField({ initialValue: "" });
+      field.setIssues([hostileIssue]);
+
+      expect(field.issues.get()[0]?.path).toEqual(["__proto__", "pollutedFlag", "data"]);
+
+      // Verify that Object.prototype was NOT polluted
+      expect((Object.prototype as any).pollutedFlag).toBeUndefined();
+      expect(({} as any).pollutedFlag).toBeUndefined();
+      expect(Object.hasOwn(Object.prototype, "pollutedFlag")).toBe(false);
+      expect(Object.keys({})).toEqual([]);
+    });
+
+    it("rejects malformed non-string/non-number path segments fail-closed", () => {
+      const field = createField({ initialValue: "" });
+
+      expect(() =>
+        field.setIssues([{ code: "err", path: [null as any], source: "validation" }]),
+      ).toThrow(TypeError);
+
+      expect(() =>
+        field.setIssues([{ code: "err", path: [{} as any], source: "validation" }]),
+      ).toThrow(TypeError);
+
+      expect(() => sanitizeParseIssue({ code: "err", path: [true as any] })).toThrow(TypeError);
+
+      expect(() => normalizeStandardSchemaIssue({ message: "err", path: [false as any] })).toThrow(
+        TypeError,
+      );
+
+      expect(() =>
+        normalizeStandardSchemaIssue({ message: "err", path: [{ key: null }] as any }),
+      ).toThrow(TypeError);
+    });
+
+    it("Navigation Traversal Security: parsePath and getNode preserve strict prototype pollution protection", () => {
+      // parsePath interprets strings as navigation instructions and MUST block reserved words
+      expect(() => parsePath("__proto__")).toThrow(/Prototype pollution/);
+      expect(() => parsePath("user.__proto__.name")).toThrow(/Prototype pollution/);
+      expect(() => parsePath("constructor")).toThrow(/Prototype pollution/);
+      expect(() => parsePath("prototype")).toThrow(/Prototype pollution/);
+
+      // getNode protects form hierarchy from prototype access
+      const form = createForm({
+        initialValues: {
+          user: { name: "Alice" },
+        },
+      });
+
+      expect(form.getNode("__proto__")).toBeUndefined();
+      expect(form.getNode("constructor")).toBeUndefined();
+      expect(form.getNode("prototype")).toBeUndefined();
+      expect(form.getNode("toString")).toBeUndefined();
+      expect(form.getNode("valueOf")).toBeUndefined();
     });
 
     it("rejects malformed Standard Schema results defensively", async () => {

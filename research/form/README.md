@@ -254,7 +254,8 @@ F5 introduces explicit value stages (`RawInput` -> `ParsedValue` -> `ValidatedVa
 6. **Async Standard Schema & Cancellation Limitations**:
    - Standard Schema specification does not accept `AbortSignal` in `validate()`.
    - Cancellation is handled via **stale-result suppression**: when a superseding mutation arrives, Form increments its monotonic revision and aborts internal controllers, strictly suppressing late async schema results from committing.
-7. **Security & Prototype Pollution Hardening**:
-   - Prototype pollution attempts (`__proto__`, `constructor`, `prototype`) in parse issue codes, schema vendor issue codes, or issue paths are defensively blocked with security errors.
-   - Known trade-off: issue paths are only ever spread into other arrays, never used to index an object, so this guard is fail-closed rather than protective. A schema validating a domain object with a key literally named `constructor` aborts the whole validation instead of reporting the issue. Revisiting it means changing the F3 contract and is deliberately left out of F5.
-   - Diagnostics payloads record structural events (`field.parse.completed`, `field.schema.validation.started`, etc.) without exposing raw input values or sensitive error messages.
+7. **Security & Prototype Pollution Hardening (Structured Issue Paths Are Data)**:
+   - **Data vs Sink Principle**: Structured issue paths (`FieldIssue.path`, `ParseIssue.path`, `ValidationIssue.path`) are treated as immutable data. Reserved JavaScript property names (`__proto__`, `constructor`, `prototype`) are not rejected merely because they occur as path segments, allowing schema validators (Zod 4, Valibot, ArkType) and custom rules to report issues on legitimate domain fields with these names.
+   - **Sink Enforcement**: Security enforcement occurs at traversal/materialization sinks. Path-based navigation APIs (`parsePath`, `getNode`) interpret strings as navigation instructions and strictly block reserved words. Issue maps, field maps, and values containers use null-prototype objects (`Object.create(null)`), Maps, or `Object.hasOwn` checks to prevent prototype pollution.
+   - **Issue Codes**: Issue codes (`FieldIssue.code`, `ParseIssue.code`, `ValidationIssue.code`) reject prototype pollution strings (`__proto__`, `constructor`, `prototype`) defensively.
+   - **Diagnostics Privacy**: Diagnostics payloads record structural events (`field.parse.completed`, `field.schema.validation.started`, etc.) without exposing raw input values or sensitive error messages.

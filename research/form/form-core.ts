@@ -135,14 +135,6 @@ function sanitizeIssue(raw: any, defaultPath?: readonly FieldPathSegment[]): Fie
     const segments: FieldPathSegment[] = [];
     for (const seg of raw.path) {
       if (typeof seg === "string" || typeof seg === "number") {
-        if (
-          typeof seg === "string" &&
-          (seg === "__proto__" || seg === "constructor" || seg === "prototype")
-        ) {
-          throw new Error(
-            `Security error: Prototype pollution attempt blocked on issue path segment "${seg}"`,
-          );
-        }
         segments.push(seg);
       } else {
         throw new TypeError(

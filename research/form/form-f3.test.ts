@@ -445,9 +445,9 @@ describe("Form Research F3 — Validation Scheduling & Structured Issues", () =>
   });
 
   // -------------------------------------------------------------------------
-  // 15. Prototype-hostile issue codes and paths
+  // 15. Prototype-hostile issue codes and paths (paths are data, codes reject pollution)
   // -------------------------------------------------------------------------
-  it("Fixture 15: Prototype pollution attempts on issue codes and path segments are rejected", () => {
+  it("Fixture 15: Prototype pollution attempts on issue codes are rejected, while path segments are preserved as data", () => {
     const maliciousCodeRule: SyncValidationRule<string> = () => {
       return {
         code: "__proto__",
@@ -464,7 +464,8 @@ describe("Form Research F3 — Validation Scheduling & Structured Issues", () =>
       fieldWithMaliciousCode.validate();
     }).toThrow(/Security error: Prototype pollution attempt blocked/);
 
-    const maliciousPathRule: SyncValidationRule<string> = () => {
+    // Issue paths are data and must be preserved safely without prototype pollution
+    const reservedPathRule: SyncValidationRule<string> = () => {
       return {
         code: "err",
         path: ["constructor", "test"],
@@ -472,14 +473,15 @@ describe("Form Research F3 — Validation Scheduling & Structured Issues", () =>
       };
     };
 
-    const fieldWithMaliciousPath = createField({
+    const fieldWithReservedPath = createField({
       initialValue: "test",
-      rules: [maliciousPathRule],
+      rules: [reservedPathRule],
     });
 
-    expect(() => {
-      fieldWithMaliciousPath.validate();
-    }).toThrow(/Security error: Prototype pollution attempt blocked/);
+    const issues = fieldWithReservedPath.validate() as readonly FieldIssue[];
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.path).toEqual(["constructor", "test"]);
+    expect(Object.prototype.hasOwnProperty.call(Object.prototype, "test")).toBe(false);
   });
 
   // -------------------------------------------------------------------------

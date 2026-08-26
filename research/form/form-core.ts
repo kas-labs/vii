@@ -2527,10 +2527,6 @@ export function createForm<T extends FieldValues>(config: FormConfig<T>): FormIn
   const setValues = (partial: Partial<T>): void => {
     assertActive();
     root.setValues(partial);
-    const s = submissionStatusState.get();
-    if (s === "succeeded" || s === "failed" || s === "cancelled") {
-      submissionStatusState.set("idle");
-    }
   };
 
   const reset = (nextInitials?: Partial<T>): void => {

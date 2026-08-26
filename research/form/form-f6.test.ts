@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  bindFormToExternalState,
   createBooleanParser,
   createField,
   createFieldArray,
@@ -17,6 +18,7 @@ import {
   type SubmitAction,
   type SubmitActionResult,
 } from "./form-core.js";
+import { state } from "../../packages/core/src/state.js";
 import { createDiagnostics } from "../../packages/core/src/diagnostics.js";
 import { deepCloneSnapshot } from "./submission.js";
 
@@ -256,11 +258,16 @@ describe("Form Research Slice F6: Submission Lifecycle + Server Errors + Reset /
     await submitPromise;
     expect(form.submissionStatus.get()).toBe("succeeded");
 
+    // Editing after success preserves terminal status (Model A); dirty becomes true
+    form.setValues({ name: "new name" });
+    expect(form.submissionStatus.get()).toBe("succeeded");
+    expect(form.dirty.get()).toBe(true);
     expect(transitions).toEqual(["idle", "validating", "submitting", "succeeded"]);
 
-    // Editing after success transitions back to idle
-    form.setValues({ name: "new name" });
+    // Explicit reset resets submission status to idle
+    form.reset();
     expect(form.submissionStatus.get()).toBe("idle");
+    expect(form.dirty.get()).toBe(false);
     expect(transitions).toEqual(["idle", "validating", "submitting", "succeeded", "idle"]);
   });
 
@@ -1653,6 +1660,304 @@ describe("Form Research Slice F6: Submission Lifecycle + Server Errors + Reset /
       expect(res.status).toBe("succeeded");
       expect(received).toEqual({ a: "x" });
       form.dispose();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Terminal Submission Status Consistency Correction (Model A)
+  // -------------------------------------------------------------------------
+  describe("Terminal Submission Status Consistency Correction (Model A)", () => {
+    it("successful submit: direct field.setValue keeps 'succeeded' while dirty becomes true", async () => {
+      const form = createForm({ initialValues: { email: "a@b.com" } });
+      await form.submit(async () => "ok");
+
+      expect(form.submissionStatus.get()).toBe("succeeded");
+      expect(form.dirty.get()).toBe(false);
+
+      form.fields.email.setValue("new@b.com");
+      expect(form.submissionStatus.get()).toBe("succeeded");
+      expect(form.dirty.get()).toBe(true);
+      expect(form.fields.email.dirty.get()).toBe(true);
+    });
+
+    it("successful submit: field.setRawValue keeps 'succeeded' while dirty becomes true", async () => {
+      const field = createField<number, string>({
+        initialValue: 10,
+        initialRawValue: "10",
+        parser: createNumberParser(),
+      });
+      field.setRawValue("20");
+      expect(field.value.get()).toBe(20);
+      expect(field.dirty.get()).toBe(true);
+
+      const form = createForm({
+        initialValues: { text: "hello" },
+      });
+      await form.submit(async () => "ok");
+
+      expect(form.submissionStatus.get()).toBe("succeeded");
+      expect(form.dirty.get()).toBe(false);
+
+      form.fields.text.setRawValue("world");
+      expect(form.submissionStatus.get()).toBe("succeeded");
+      expect(form.dirty.get()).toBe(true);
+      expect(form.fields.text.value.get()).toBe("world");
+    });
+
+    it("successful submit: form.setValues keeps 'succeeded' while dirty becomes true", async () => {
+      const form = createForm({ initialValues: { a: 1, b: 2 } });
+      await form.submit(async () => "ok");
+
+      expect(form.submissionStatus.get()).toBe("succeeded");
+      expect(form.dirty.get()).toBe(false);
+
+      form.setValues({ a: 99 });
+      expect(form.submissionStatus.get()).toBe("succeeded");
+      expect(form.dirty.get()).toBe(true);
+      expect(form.fields.a.dirty.get()).toBe(true);
+      expect(form.fields.b.dirty.get()).toBe(false);
+    });
+
+    it("successful submit: nested group mutation keeps 'succeeded' while dirty becomes true", async () => {
+      const form = createForm({
+        initialValues: {
+          user: {
+            profile: {
+              name: "Alice",
+            },
+          },
+        },
+      });
+      await form.submit(async () => "ok");
+
+      expect(form.submissionStatus.get()).toBe("succeeded");
+      expect(form.dirty.get()).toBe(false);
+
+      form.fields.user.fields.profile.fields.name.setValue("Bob");
+      expect(form.submissionStatus.get()).toBe("succeeded");
+      expect(form.dirty.get()).toBe(true);
+      expect(form.fields.user.dirty.get()).toBe(true);
+    });
+
+    it("successful submit: array item mutation keeps 'succeeded' while dirty becomes true", async () => {
+      const form = createForm({
+        initialValues: {
+          tags: ["react", "typescript"],
+        },
+      });
+      await form.submit(async () => "ok");
+
+      expect(form.submissionStatus.get()).toBe("succeeded");
+      expect(form.dirty.get()).toBe(false);
+
+      form.fields.tags.items.get()[0]?.node.setValue("vue");
+      expect(form.submissionStatus.get()).toBe("succeeded");
+      expect(form.dirty.get()).toBe(true);
+      expect(form.fields.tags.dirty.get()).toBe(true);
+    });
+
+    it("successful submit: array insert/remove/swap/move does not reset status", async () => {
+      const form = createForm({
+        initialValues: {
+          items: ["a", "b", "c"],
+        },
+      });
+      await form.submit(async () => "ok");
+
+      expect(form.submissionStatus.get()).toBe("succeeded");
+      expect(form.dirty.get()).toBe(false);
+
+      form.fields.items.push("d");
+      expect(form.submissionStatus.get()).toBe("succeeded");
+      expect(form.dirty.get()).toBe(true);
+
+      form.fields.items.swap(0, 1);
+      expect(form.submissionStatus.get()).toBe("succeeded");
+      expect(form.dirty.get()).toBe(true);
+
+      form.fields.items.remove(0);
+      expect(form.submissionStatus.get()).toBe("succeeded");
+      expect(form.dirty.get()).toBe(true);
+    });
+
+    it("failed submit: ordinary edits (field.setValue, form.setValues) keep 'failed' while dirty updates", async () => {
+      const form = createForm({
+        initialValues: { username: "alex" },
+      });
+      const res = await form.submit(async () => {
+        return {
+          ok: false,
+          issues: [{ code: "server.error", message: "Username rejected" }],
+        };
+      });
+
+      expect(res.status).toBe("server-invalid");
+      expect(form.submissionStatus.get()).toBe("failed");
+      expect(form.dirty.get()).toBe(false);
+
+      form.fields.username.setValue("alex_new");
+      expect(form.submissionStatus.get()).toBe("failed");
+      expect(form.dirty.get()).toBe(true);
+
+      form.setValues({ username: "alex_v2" });
+      expect(form.submissionStatus.get()).toBe("failed");
+      expect(form.dirty.get()).toBe(true);
+    });
+
+    it("cancelled submit: ordinary edits keep 'cancelled' while dirty updates", async () => {
+      const form = createForm({ initialValues: { query: "search" } });
+      const submitPromise = form.submit(async (_, { signal }) => {
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        if (signal.aborted) throw new Error("aborted");
+        return "ok";
+      });
+
+      form.cancelSubmit();
+      await submitPromise;
+
+      expect(form.submissionStatus.get()).toBe("cancelled");
+      expect(form.dirty.get()).toBe(false);
+
+      form.fields.query.setValue("new search");
+      expect(form.submissionStatus.get()).toBe("cancelled");
+      expect(form.dirty.get()).toBe(true);
+
+      form.setValues({ query: "another search" });
+      expect(form.submissionStatus.get()).toBe("cancelled");
+      expect(form.dirty.get()).toBe(true);
+    });
+
+    it("next submit transitions terminal status -> validating -> submitting -> new terminal state", async () => {
+      const form = createForm({ initialValues: { title: "Draft" } });
+      const transitions: string[] = [form.submissionStatus.get()];
+      form.submissionStatus.subscribe((s) => transitions.push(s));
+
+      await form.submit(async () => "ok");
+      expect(form.submissionStatus.get()).toBe("succeeded");
+
+      // Edit field
+      form.fields.title.setValue("Final");
+      expect(form.submissionStatus.get()).toBe("succeeded");
+
+      // Second submit
+      const p2 = form.submit(async () => {
+        await new Promise((r) => setTimeout(r, 10));
+        return "ok2";
+      });
+
+      expect(form.submissionStatus.get()).toBe("submitting");
+      await p2;
+      expect(form.submissionStatus.get()).toBe("succeeded");
+
+      expect(transitions).toEqual([
+        "idle",
+        "validating",
+        "submitting",
+        "succeeded",
+        "validating",
+        "submitting",
+        "succeeded",
+      ]);
+    });
+
+    it("reset() restores baseline, clears server issues, and transitions submissionStatus to 'idle'", async () => {
+      const form = createForm({ initialValues: { email: "a@b.com" } });
+      await form.submit(async () => {
+        return {
+          ok: false,
+          issues: [{ code: "server.error", message: "fail", path: ["email"] }],
+        };
+      });
+
+      expect(form.submissionStatus.get()).toBe("failed");
+      expect(form.fields.email.serverIssues.get().length).toBe(1);
+
+      form.reset();
+
+      expect(form.submissionStatus.get()).toBe("idle");
+      expect(form.fields.email.serverIssues.get().length).toBe(0);
+      expect(form.dirty.get()).toBe(false);
+    });
+
+    it("reinitialize(newBaseline) replaces baseline and transitions submissionStatus to 'idle'", async () => {
+      const form = createForm({ initialValues: { count: 1 } });
+      await form.submit(async () => "ok");
+
+      expect(form.submissionStatus.get()).toBe("succeeded");
+
+      form.reinitialize({ count: 100 });
+
+      expect(form.submissionStatus.get()).toBe("idle");
+      expect(form.fields.count.value.get()).toBe(100);
+      expect(form.dirty.get()).toBe(false);
+    });
+
+    it("active submitting state + field edit does not force idle and preserves submission flow", async () => {
+      const form = createForm({ initialValues: { notes: "initial notes" } });
+      let submittedPayload: unknown = null;
+
+      const submitPromise = form.submit(async (output, { signal }) => {
+        await new Promise((resolve) => setTimeout(resolve, 30));
+        submittedPayload = output;
+        return "saved";
+      });
+
+      expect(form.submissionStatus.get()).toBe("submitting");
+
+      // Edit while submitting is in flight
+      form.fields.notes.setValue("edited notes while in-flight");
+      expect(form.submissionStatus.get()).toBe("submitting");
+
+      const res = await submitPromise;
+      expect(res.status).toBe("succeeded");
+      expect(submittedPayload).toEqual({ notes: "initial notes" });
+      expect(form.submissionStatus.get()).toBe("succeeded");
+      expect(form.dirty.get()).toBe(true);
+      expect(form.values.get()).toEqual({ notes: "edited notes while in-flight" });
+    });
+
+    it("external-state ordinary sync does not force idle and preserves terminal status", () => {
+      const extStore = state({ search: "query1" });
+      const form = bindFormToExternalState({ externalState: extStore });
+
+      form.submissionStatus.set("succeeded");
+      expect(form.submissionStatus.get()).toBe("succeeded");
+
+      // External store update
+      extStore.set({ search: "query2" });
+      expect(form.values.get()).toEqual({ search: "query2" });
+      expect(form.submissionStatus.get()).toBe("succeeded");
+      expect(form.dirty.get()).toBe(true);
+    });
+
+    it("server issue field-clearing behavior remains unchanged while submissionStatus stays in its terminal state", async () => {
+      const form = createForm({
+        initialValues: {
+          first: "A",
+          second: "B",
+        },
+      });
+
+      const res = await form.submit(async () => {
+        return {
+          ok: false,
+          issues: [
+            { code: "err.first", message: "First issue", path: ["first"] },
+            { code: "err.second", message: "Second issue", path: ["second"] },
+          ],
+        };
+      });
+
+      expect(res.status).toBe("server-invalid");
+      expect(form.submissionStatus.get()).toBe("failed");
+      expect(form.fields.first.serverIssues.get().length).toBe(1);
+      expect(form.fields.second.serverIssues.get().length).toBe(1);
+
+      // Editing 'first' clears only 'first' server issues; 'second' stays and status remains 'failed'
+      form.fields.first.setValue("A_edited");
+      expect(form.submissionStatus.get()).toBe("failed");
+      expect(form.fields.first.serverIssues.get().length).toBe(0);
+      expect(form.fields.second.serverIssues.get().length).toBe(1);
     });
   });
 });

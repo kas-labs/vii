@@ -37,6 +37,50 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-27 01:40 CEST | Form F6 Terminal Submission Status Consistency Correction (Model A)
+
+Status: completed
+Branch: `fix/form-submission-status-consistency`
+PR: not opened (Draft PR pending)
+
+### Scope
+
+- Correct the semantic asymmetry in F6 where `form.setValues()` cleared terminal submission status to `"idle"` while direct field edits did not.
+- Implement Model A: `SubmissionStatus` represents the lifecycle/result of the latest submission attempt (`"succeeded"`, `"failed"`, `"cancelled"`).
+- Ordinary form value mutations (`setValue`, `setRawValue`, `setValues`, group mutations, array mutations, and external state bindings) do not reset terminal submission status.
+- Dirtiness and value freshness are orthogonal concerns independently tracked by `dirty` signals.
+- Whole-form lifecycle operations (`reset()`, `reinitialize()`) explicitly reset `submissionStatus` to `"idle"`.
+- Bounded correction ONLY. F7 has NOT started and is NOT authorized.
+
+### Changes
+
+- Modified `research/form/form-core.ts`:
+  - Removed conditional `submissionStatusState.set("idle")` from `setValues()`, making `setValues()` purely mutate values without resetting submission lifecycle state.
+- Modified `research/form/form-f6.test.ts`:
+  - Updated Fixture 7 to assert Model A stability across `setValues` and explicit reset to `"idle"`.
+  - Added 14 new regression test fixtures under `Terminal Submission Status Consistency Correction (Model A)` covering `field.setValue`, `field.setRawValue`, `form.setValues`, nested groups, array mutations, failed edit stability, cancelled edit stability, second submit transitions, `reset()`, `reinitialize()`, active submitting edits, external state sync, Scope resource stability, and server issue clearing coexistence.
+- Modified `research/form/README.md`:
+  - Removed known asymmetry note and documented Model A terminal submission status semantics.
+
+### Validation
+
+- `pnpm exec tsc -p research/form/tsconfig.json --noEmit`: PASS (0 type errors).
+- `pnpm vitest run research/form/`: PASS (5 test files, 229 tests passing, 0 failures).
+- `pnpm validate`: PASS (formatting, linting, typechecking, vitest across all packages, builds across all 10 projects, and package packing validation).
+- `git diff --check`: PASS (clean diff with 0 whitespace or formatting issues).
+
+### Architecture / compatibility
+
+- Eliminates semantic asymmetry between `form.setValues` and direct field mutations.
+- Zero additional Scope resources, subscriptions, or reactive overhead introduced.
+- Preserved all F1-F6 regressions (229/229 passing tests).
+- Completely isolated to `research/form/`.
+
+### Remaining / recovery
+
+- None for this correction.
+- Slice F7 (DOM & Framework Adapters) has NOT started and is NOT authorized.
+
 ## 2026-08-27 01:25 CEST | Form Research Slice F6: Submission Lifecycle + Server Errors + Reset / Reinitialize
 
 Status: completed

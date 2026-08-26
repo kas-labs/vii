@@ -8,6 +8,51 @@ import {
   state,
 } from "../../packages/core/src/index.js";
 import { getActiveDiagnostics } from "../../packages/core/src/diagnostics.js";
+import type {
+  FieldParser,
+  FormIssueBase,
+  IssueSource,
+  NumberParserOptions,
+  OutputTransform,
+  ParseIssue,
+  ParseResult,
+  ParseStatus,
+  ValidationIssue,
+} from "./parser.js";
+import {
+  createBooleanParser,
+  createNumberParser,
+  createOptionalStringParser,
+  sanitizeParseIssue,
+} from "./parser.js";
+import type { StandardSchemaV1 } from "./standard-schema.js";
+import {
+  isStandardSchema,
+  normalizeStandardSchemaIssue,
+  standardSchema,
+} from "./standard-schema.js";
+
+export type {
+  FieldParser,
+  FormIssueBase,
+  IssueSource,
+  NumberParserOptions,
+  OutputTransform,
+  ParseIssue,
+  ParseResult,
+  ParseStatus,
+  StandardSchemaV1,
+  ValidationIssue,
+};
+export {
+  createBooleanParser,
+  createNumberParser,
+  createOptionalStringParser,
+  isStandardSchema,
+  normalizeStandardSchemaIssue,
+  sanitizeParseIssue,
+  standardSchema,
+};
 
 // ---------------------------------------------------------------------------
 // Equality & Basic Types
@@ -18,18 +63,12 @@ export type EqualityFn<T> = (a: T, b: T) => boolean;
 export const defaultEquality: EqualityFn<unknown> = (a, b) => Object.is(a, b);
 
 // ---------------------------------------------------------------------------
-// Structured Issues & Validation Taxonomy (F3 & F4)
+// Structured Issues & Validation Taxonomy (F3, F4 & F5)
 // ---------------------------------------------------------------------------
 
 export type FieldPathSegment = string | number;
 
-export interface FieldIssue {
-  readonly code: string;
-  readonly message?: string | undefined;
-  readonly path?: readonly FieldPathSegment[] | undefined;
-  readonly source: "validation";
-  readonly ruleId?: string | undefined;
-}
+export type FieldIssue = ValidationIssue | ParseIssue;
 
 export type ValidationTriggerMode = "change" | "blur" | "submit" | "manual";
 
@@ -52,8 +91,18 @@ export type AsyncValidationRule<T, Ctx extends ValidationRuleContext = Validatio
   context: Ctx & { readonly signal: AbortSignal },
 ) => Promise<FieldIssue | readonly FieldIssue[] | null | undefined>;
 
-export type ValidationRule<T, Ctx extends ValidationRuleContext = ValidationRuleContext> =
-  SyncValidationRule<T, Ctx> | AsyncValidationRule<T, Ctx>;
+export type ValidationRule<T, Ctx extends ValidationRuleContext = ValidationRuleContext> = (
+  value: T,
+  context: Ctx & { readonly signal?: AbortSignal | undefined },
+) =>
+  | FieldIssue
+  | readonly FieldIssue[]
+  | null
+  | undefined
+  | Promise<FieldIssue | readonly FieldIssue[] | null | undefined>;
+
+export type AnyValidationRule<T, Ctx extends ValidationRuleContext = ValidationRuleContext> =
+  ValidationRule<T, Ctx> | AsyncValidationRule<T, Ctx> | SyncValidationRule<T, Ctx>;
 
 // Defensive result validation & prototype pollution defense
 function sanitizeIssue(raw: any, defaultPath?: readonly FieldPathSegment[]): FieldIssue {
@@ -64,48 +113,56 @@ function sanitizeIssue(raw: any, defaultPath?: readonly FieldPathSegment[]): Fie
       }`,
     );
   }
-  if (typeof raw.code !== "string" || raw.code.trim() === "") {
-    throw new TypeError("Validation issue must have a non-empty string 'code'");
-  }
-  if (raw.code === "__proto__" || raw.code === "constructor" || raw.code === "prototype") {
-    throw new Error(
-      `Security error: Prototype pollution attempt blocked on issue code "${raw.code}"`,
+
+  const rawCode = (raw as any).code;
+  if (typeof rawCode !== "string" || rawCode.trim() === "") {
+    throw new TypeError(
+      `Validation rule returned invalid issue: missing or non-string "code" property`,
     );
   }
 
-  let issuePath: readonly FieldPathSegment[] | undefined = undefined;
-  if (raw.path !== undefined) {
-    if (!Array.isArray(raw.path)) {
-      throw new TypeError("Validation issue 'path' must be an array of string | number segments");
-    }
-    for (const seg of raw.path) {
-      if (typeof seg !== "string" && typeof seg !== "number") {
-        throw new TypeError(
-          `Validation issue path segment must be string or number, received ${typeof seg}`,
-        );
-      }
-      if (
-        typeof seg === "string" &&
-        (seg === "__proto__" || seg === "constructor" || seg === "prototype")
-      ) {
-        throw new Error(
-          `Security error: Prototype pollution attempt blocked on issue path segment "${seg}"`,
-        );
-      }
-    }
-    issuePath = Object.freeze([...raw.path]);
-  } else if (defaultPath !== undefined) {
-    issuePath = defaultPath;
+  if (rawCode === "__proto__" || rawCode === "constructor" || rawCode === "prototype") {
+    throw new Error(
+      `Security error: Prototype pollution attempt blocked on issue code "${rawCode}"`,
+    );
   }
 
-  const sanitized: FieldIssue = {
-    code: String(raw.code),
+  let sanitizedPath: readonly FieldPathSegment[] | undefined = undefined;
+  if (raw.path !== undefined && raw.path !== null) {
+    if (!Array.isArray(raw.path)) {
+      throw new TypeError(`Validation rule returned invalid issue: "path" must be an array`);
+    }
+    const segments: FieldPathSegment[] = [];
+    for (const seg of raw.path) {
+      if (typeof seg === "string" || typeof seg === "number") {
+        if (
+          typeof seg === "string" &&
+          (seg === "__proto__" || seg === "constructor" || seg === "prototype")
+        ) {
+          throw new Error(
+            `Security error: Prototype pollution attempt blocked on issue path segment "${seg}"`,
+          );
+        }
+        segments.push(seg);
+      } else {
+        throw new TypeError(
+          `Validation rule returned invalid issue path segment: must be string or number, received ${typeof seg}`,
+        );
+      }
+    }
+    sanitizedPath = Object.freeze(segments);
+  } else if (defaultPath && defaultPath.length > 0) {
+    sanitizedPath = defaultPath;
+  }
+
+  const issue: FieldIssue = {
+    code: rawCode,
     message: typeof raw.message === "string" ? raw.message : undefined,
-    path: issuePath,
-    source: "validation",
+    path: sanitizedPath,
+    source: (raw as any).source === "parse" ? "parse" : "validation",
     ruleId: typeof raw.ruleId === "string" ? raw.ruleId : undefined,
   };
-  return Object.freeze(sanitized);
+  return Object.freeze(issue);
 }
 
 // Terminal handler for validations started by a trigger rather than by a caller
@@ -136,52 +193,75 @@ function settleDetachedValidation(
 // FieldState (Leaf Node)
 // ---------------------------------------------------------------------------
 
-export interface FieldState<T> {
+export interface FieldState<Value, Raw = Value, Output = Value> {
   readonly kind: "field";
-  readonly value: WritableState<T>;
-  readonly initialValue: WritableState<T>;
+  readonly value: WritableState<Value>;
+  readonly rawValue: WritableState<Raw>;
+  readonly initialValue: WritableState<Value>;
+  readonly initialRawValue: WritableState<Raw>;
   readonly touched: WritableState<boolean>;
   readonly dirty: Computed<boolean>;
   readonly pending: WritableState<boolean>;
   readonly errors: WritableState<readonly string[]>;
   readonly issues: WritableState<readonly FieldIssue[]>;
+  readonly parseIssue: WritableState<ParseIssue | null>;
+  readonly parseStatus: WritableState<ParseStatus>;
   readonly validationStatus: WritableState<ValidationStatus>;
   readonly valid: Computed<boolean>;
   readonly invalid: Computed<boolean>;
-  setValue(next: T): void;
+  readonly output: Computed<Output>;
+  setValue(next: Value): void;
+  setRawValue(raw: Raw): void;
   setTouched(touched?: boolean): void;
   setPending(pending: boolean): void;
   setErrors(errors: readonly string[]): void;
   setIssues(issues: readonly FieldIssue[]): void;
   validate(trigger?: ValidationTriggerMode): Promise<readonly FieldIssue[]> | readonly FieldIssue[];
-  reset(...args: [nextInitial?: T]): void;
+  reset(...args: [nextInitial?: Value, nextInitialRaw?: Raw]): void;
+  getOutput(): Output;
 }
 
-export interface CreateFieldOptions<T> {
-  readonly initialValue: T;
-  readonly equality?: EqualityFn<T> | undefined;
+export interface CreateFieldOptions<Value, Raw = Value, Output = Value> {
+  readonly initialValue: Value;
+  readonly initialRawValue?: Raw | undefined;
+  readonly parser?: FieldParser<Raw, Value> | undefined;
+  readonly transform?: OutputTransform<Value, Output> | undefined;
+  readonly equality?: EqualityFn<Value> | undefined;
   readonly scope?: Scope | undefined;
-  readonly rules?: readonly ValidationRule<T>[] | undefined;
+  readonly rules?: readonly AnyValidationRule<Value>[] | undefined;
   readonly validateOn?: ValidationTriggerMode | readonly ValidationTriggerMode[] | undefined;
   readonly debounceMs?: number | undefined;
 }
 
-export function createField<T>(options: CreateFieldOptions<T>): FieldState<T> {
+export function createField<Value, Raw = Value, Output = Value>(
+  options: CreateFieldOptions<Value, Raw, Output>,
+): FieldState<Value, Raw, Output> {
   const {
     initialValue,
-    equality = defaultEquality as EqualityFn<T>,
+    initialRawValue,
+    parser,
+    transform,
+    equality = defaultEquality as EqualityFn<Value>,
     rules = [],
     validateOn,
     debounceMs = 0,
     scope,
   } = options;
 
-  const valueState = state<T>(initialValue);
-  const initialValueState = state<T>(initialValue);
+  const valueState = state<Value>(initialValue);
+  const rawValueState = state<Raw>(
+    initialRawValue !== undefined ? initialRawValue : (initialValue as unknown as Raw),
+  );
+  const initialValueState = state<Value>(initialValue);
+  const initialRawValueState = state<Raw>(
+    initialRawValue !== undefined ? initialRawValue : (initialValue as unknown as Raw),
+  );
   const touchedState = state<boolean>(false);
   const pendingState = state<boolean>(false);
   const errorsState = state<readonly string[]>([]);
   const issuesState = state<readonly FieldIssue[]>([]);
+  const parseIssueState = state<ParseIssue | null>(null);
+  const parseStatusState = state<ParseStatus>(parser ? "parsed" : "unparsed");
   const validationStatusState = state<ValidationStatus>("unvalidated");
 
   // Determine trigger set
@@ -235,11 +315,24 @@ export function createField<T>(options: CreateFieldOptions<T>): FieldState<T> {
 
   const validComputed = runInScope(() =>
     computed(() => {
-      return errorsState.get().length === 0 && issuesState.get().length === 0;
+      return (
+        errorsState.get().length === 0 &&
+        issuesState.get().length === 0 &&
+        parseStatusState.get() !== "invalid"
+      );
     }),
   );
 
   const invalidComputed = runInScope(() => computed(() => !validComputed.get()));
+
+  const transformFn: OutputTransform<Value, Output> =
+    transform !== undefined ? transform : (v: Value) => v as unknown as Output;
+
+  const outputComputed = runInScope(() =>
+    computed(() => {
+      return transformFn(valueState.get());
+    }),
+  );
 
   const executeValidation = (
     trigger: ValidationTriggerMode,
@@ -257,6 +350,10 @@ export function createField<T>(options: CreateFieldOptions<T>): FieldState<T> {
     }
 
     try {
+      if (parseStatusState.get() === "invalid") {
+        return issuesState.get();
+      }
+
       const currentVal = valueState.get();
       const collectedSyncIssues: FieldIssue[] = [];
       const pendingAsyncCalls: Array<Promise<any>> = [];
@@ -429,16 +526,96 @@ export function createField<T>(options: CreateFieldOptions<T>): FieldState<T> {
     }
   };
 
-  const setValue = (next: T): void => {
-    valueState.set(next);
-    if (rules.length > 0 && triggerSet.has("change")) {
+  const setValue = (next: Value): void => {
+    cancelActiveAsync();
+    batch(() => {
+      valueState.set(next);
+      parseIssueState.set(null);
+      // A field with no parser never enters a parsed state: setValue writes the
+      // domain value directly, so there is nothing to have parsed.
+      parseStatusState.set(parser ? "parsed" : "unparsed");
+      if (issuesState.get().some((iss) => iss.source === "parse")) {
+        issuesState.set([]);
+        errorsState.set([]);
+        validationStatusState.set("unvalidated");
+      }
+    });
+    if (!isDisposed && rules.length > 0 && triggerSet.has("change")) {
       scheduleValidation("change");
+    }
+  };
+
+  const setRawValue = (raw: Raw): void => {
+    rawValueState.set(raw);
+    cancelActiveAsync();
+    const revision = ++currentRevision;
+
+    if (!parser) {
+      batch(() => {
+        parseIssueState.set(null);
+        parseStatusState.set("unparsed");
+        valueState.set(raw as unknown as Value);
+      });
+      if (!isDisposed && rules.length > 0 && triggerSet.has("change")) {
+        scheduleValidation("change");
+      }
+      return;
+    }
+
+    let parseResult: ParseResult<Value>;
+    try {
+      parseResult = parser(raw);
+    } catch (parseErr) {
+      const diag = getActiveDiagnostics();
+      if (diag) {
+        diag.record("field.parse.failed", {
+          reason: parseErr instanceof Error ? parseErr.name : typeof parseErr,
+        });
+      }
+      throw parseErr;
+    }
+
+    if (parseResult.ok) {
+      const parsedVal = parseResult.value;
+      const diag = getActiveDiagnostics();
+      if (diag) {
+        diag.record("field.parse.completed", { status: "parsed" });
+      }
+      batch(() => {
+        parseIssueState.set(null);
+        parseStatusState.set("parsed");
+        valueState.set(parsedVal);
+        if (issuesState.get().some((iss) => iss.source === "parse")) {
+          issuesState.set([]);
+          errorsState.set([]);
+          validationStatusState.set("unvalidated");
+        }
+      });
+
+      if (!isDisposed && rules.length > 0 && triggerSet.has("change")) {
+        scheduleValidation("change");
+      }
+    } else {
+      const parseIssue = sanitizeParseIssue(parseResult.issue);
+      const diag = getActiveDiagnostics();
+      if (diag) {
+        diag.record("field.parse.failed", { code: parseIssue.code });
+      }
+
+      batch(() => {
+        parseIssueState.set(parseIssue);
+        parseStatusState.set("invalid");
+        issuesState.set(Object.freeze([parseIssue]));
+        errorsState.set(Object.freeze([parseIssue.message ?? parseIssue.code]));
+        validationStatusState.set("invalid");
+        pendingState.set(false);
+      });
     }
   };
 
   const setTouched = (touched = true): void => {
     touchedState.set(touched);
-    if (touched && rules.length > 0 && triggerSet.has("blur")) {
+    if (!isDisposed && touched && rules.length > 0 && triggerSet.has("blur")) {
       scheduleValidation("blur");
     }
   };
@@ -476,19 +653,42 @@ export function createField<T>(options: CreateFieldOptions<T>): FieldState<T> {
     });
   };
 
-  const reset = (...args: [nextInitial?: T]): void => {
+  const reset = (...args: [nextInitial?: Value, nextInitialRaw?: Raw]): void => {
+    const hasNextInitial = args.length > 0;
+    const hasNextRaw = args.length > 1;
+    const nextInitial = args[0] as Value;
+
+    // Raw is only interchangeable with Value when no parser is configured. A
+    // parser has no inverse, so a new domain baseline cannot be cast into a raw
+    // one: that silently stored a number in a `Raw = string` slot. Demand the
+    // matching raw instead of corrupting the stage.
+    if (hasNextInitial && !hasNextRaw && parser) {
+      throw new TypeError(
+        "FieldState.reset(nextInitial) on a parsed field requires the matching raw value: " +
+          "reset(nextInitial, nextInitialRaw). A raw input cannot be derived from a domain value " +
+          "without an inverse of the parser.",
+      );
+    }
+
     cancelActiveAsync();
     currentRevision++;
 
-    const hasNextInitial = args.length > 0;
-    const nextInitial = args[0] as T;
-
     batch(() => {
       const resetValue = hasNextInitial ? nextInitial : initialValueState.get();
+      const resetRaw = hasNextRaw
+        ? (args[1] as Raw)
+        : hasNextInitial
+          ? (nextInitial as unknown as Raw)
+          : initialRawValueState.get();
+
       if (hasNextInitial) {
         initialValueState.set(nextInitial);
+        initialRawValueState.set(resetRaw);
       }
       valueState.set(resetValue);
+      rawValueState.set(resetRaw);
+      parseIssueState.set(null);
+      parseStatusState.set(parser ? "parsed" : "unparsed");
       touchedState.set(false);
       pendingState.set(false);
       errorsState.set([]);
@@ -497,25 +697,36 @@ export function createField<T>(options: CreateFieldOptions<T>): FieldState<T> {
     });
   };
 
+  const getOutput = (): Output => {
+    return outputComputed.get();
+  };
+
   return {
     kind: "field",
     value: valueState,
+    rawValue: rawValueState,
     initialValue: initialValueState,
+    initialRawValue: initialRawValueState,
     touched: touchedState,
     dirty: dirtyComputed,
     pending: pendingState,
     errors: errorsState,
     issues: issuesState,
+    parseIssue: parseIssueState,
+    parseStatus: parseStatusState,
     validationStatus: validationStatusState,
     valid: validComputed,
     invalid: invalidComputed,
+    output: outputComputed,
     setValue,
+    setRawValue,
     setTouched,
     setPending,
     setErrors,
     setIssues,
     validate,
     reset,
+    getOutput,
   };
 }
 
@@ -542,6 +753,7 @@ export interface FieldGroup<T extends Record<string, any>> {
   readonly kind: "group";
   readonly fields: { [K in keyof T]: FormNodeFor<T[K]> };
   readonly values: Computed<T>;
+  readonly output: Computed<T>;
   readonly dirty: Computed<boolean>;
   readonly touched: Computed<boolean>;
   readonly pending: Computed<boolean>;
@@ -554,6 +766,7 @@ export interface FieldGroup<T extends Record<string, any>> {
   setValues(partial: Partial<T>): void;
   reset(nextInitials?: Partial<T>): void;
   validate(trigger?: ValidationTriggerMode): Promise<readonly FieldIssue[]> | readonly FieldIssue[];
+  getOutput(): T;
 }
 
 export interface CreateFieldGroupOptions<T extends Record<string, any>> {
@@ -561,7 +774,7 @@ export interface CreateFieldGroupOptions<T extends Record<string, any>> {
   readonly scope?: Scope | undefined;
   readonly keyExtractor?: ((item: any) => string | number) | undefined;
   readonly seenObjects?: Set<object> | undefined;
-  readonly rules?: readonly ValidationRule<T>[] | undefined;
+  readonly rules?: readonly AnyValidationRule<T>[] | undefined;
   readonly validateOn?: ValidationTriggerMode | readonly ValidationTriggerMode[] | undefined;
   readonly debounceMs?: number | undefined;
 }
@@ -632,6 +845,21 @@ export function createFieldGroup<T extends Record<string, any>>(
       for (const k of keys) {
         const node = fields[k] as any;
         res[k] = node.kind === "field" ? node.value.get() : node.values.get();
+      }
+      return res;
+    }),
+  );
+
+  const outputComputed = runInScope(() =>
+    computed(() => {
+      const res = Object.create(null) as T;
+      for (const k of keys) {
+        const node = fields[k] as any;
+        res[k] = node.output
+          ? node.output.get()
+          : node.kind === "field"
+            ? node.value.get()
+            : node.values.get();
       }
       return res;
     }),
@@ -975,6 +1203,7 @@ export function createFieldGroup<T extends Record<string, any>>(
     kind: "group",
     fields,
     values: valuesComputed,
+    output: outputComputed,
     dirty: dirtyComputed,
     touched: touchedComputed,
     pending: pendingComputed,
@@ -987,6 +1216,7 @@ export function createFieldGroup<T extends Record<string, any>>(
     setValues,
     reset,
     validate,
+    getOutput: () => outputComputed.get(),
   };
 }
 
@@ -1009,6 +1239,7 @@ export interface FieldArray<T> {
   readonly kind: "array";
   readonly items: WritableState<readonly ArrayItem<T>[]>;
   readonly values: Computed<T[]>;
+  readonly output: Computed<T[]>;
   readonly dirty: Computed<boolean>;
   readonly touched: Computed<boolean>;
   readonly pending: Computed<boolean>;
@@ -1025,6 +1256,7 @@ export interface FieldArray<T> {
   setValues(next: T[]): void;
   reset(nextInitials?: T[]): void;
   validate(trigger?: ValidationTriggerMode): Promise<readonly FieldIssue[]> | readonly FieldIssue[];
+  getOutput(): T[];
 }
 
 export interface CreateFieldArrayOptions<T> {
@@ -1133,6 +1365,15 @@ export function createFieldArray<T>(options: CreateFieldArrayOptions<T>): FieldA
       return itemsState.get().map((item) => {
         const n = item.node as any;
         return n.kind === "field" ? n.value.get() : n.values.get();
+      });
+    }),
+  );
+
+  const outputComputed = runInScope(() =>
+    computed(() => {
+      return itemsState.get().map((item) => {
+        const n = item.node as any;
+        return n.output ? n.output.get() : n.kind === "field" ? n.value.get() : n.values.get();
       });
     }),
   );
@@ -1530,6 +1771,7 @@ export function createFieldArray<T>(options: CreateFieldArrayOptions<T>): FieldA
     kind: "array",
     items: itemsState,
     values: valuesComputed,
+    output: outputComputed,
     dirty: dirtyComputed,
     touched: touchedComputed,
     pending: pendingComputed,
@@ -1546,6 +1788,7 @@ export function createFieldArray<T>(options: CreateFieldArrayOptions<T>): FieldA
     setValues,
     reset,
     validate,
+    getOutput: () => outputComputed.get(),
   };
 }
 
@@ -1558,7 +1801,7 @@ export type FieldValues = Record<string, any>;
 export interface FormConfig<T extends FieldValues> {
   readonly initialValues: T;
   readonly keyExtractor?: ((item: any) => string | number) | undefined;
-  readonly rules?: readonly ValidationRule<T>[] | undefined;
+  readonly rules?: readonly AnyValidationRule<T>[] | undefined;
   readonly validateOn?: ValidationTriggerMode | readonly ValidationTriggerMode[] | undefined;
   readonly debounceMs?: number | undefined;
 }
@@ -1567,6 +1810,7 @@ export interface FormInstance<T extends FieldValues> {
   readonly root: FieldGroup<T>;
   readonly fields: { [K in keyof T]: FormNodeFor<T[K]> };
   readonly values: Computed<T>;
+  readonly output: Computed<T>;
   readonly dirty: Computed<boolean>;
   readonly touched: Computed<boolean>;
   readonly pending: Computed<boolean>;
@@ -1579,6 +1823,7 @@ export interface FormInstance<T extends FieldValues> {
   setValues(partial: Partial<T>): void;
   reset(nextInitials?: Partial<T>): void;
   validate(trigger?: ValidationTriggerMode): Promise<readonly FieldIssue[]> | readonly FieldIssue[];
+  getOutput(): T;
   dispose(): void;
 }
 
@@ -1712,6 +1957,7 @@ export function createForm<T extends FieldValues>(config: FormConfig<T>): FormIn
     root,
     fields: root.fields,
     values: root.values,
+    output: root.output,
     dirty: root.dirty,
     touched: root.touched,
     pending: root.pending,
@@ -1734,6 +1980,10 @@ export function createForm<T extends FieldValues>(config: FormConfig<T>): FormIn
     ): Promise<readonly FieldIssue[]> | readonly FieldIssue[] => {
       assertActive();
       return root.validate(trigger);
+    },
+    getOutput: (): T => {
+      assertActive();
+      return root.getOutput();
     },
     dispose: () => {
       if (isDisposed) return;

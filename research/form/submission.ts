@@ -101,27 +101,67 @@ export interface SubmitOptions {
 // Snapshot & Routing Utilities
 // ---------------------------------------------------------------------------
 
-export function deepCloneSnapshot<T>(val: T): T {
+export function deepCloneSnapshot<T>(val: T, seen: Map<unknown, unknown> = new Map()): T {
   if (val === null || typeof val !== "object") {
     return val;
   }
+
+  // Shared references and cycles: return the clone already under construction.
+  // Without this a self-referencing output transform blew the stack instead of
+  // producing a snapshot.
+  const existing = seen.get(val);
+  if (existing !== undefined) {
+    return existing as T;
+  }
+
   if (val instanceof Date) {
     return new Date(val.getTime()) as any;
   }
   if (val instanceof RegExp) {
     return new RegExp(val.source, val.flags) as any;
   }
-  if (Array.isArray(val)) {
-    const copy: any[] = [];
-    for (let i = 0; i < val.length; i++) {
-      copy[i] = deepCloneSnapshot(val[i]);
+  if (val instanceof Map) {
+    const copy = new Map();
+    seen.set(val, copy);
+    for (const [k, v] of val) {
+      copy.set(deepCloneSnapshot(k, seen), deepCloneSnapshot(v, seen));
     }
     return Object.freeze(copy) as any;
   }
+  if (val instanceof Set) {
+    const copy = new Set();
+    seen.set(val, copy);
+    for (const v of val) {
+      copy.add(deepCloneSnapshot(v, seen));
+    }
+    return Object.freeze(copy) as any;
+  }
+  if (Array.isArray(val)) {
+    const copy: any[] = [];
+    seen.set(val, copy);
+    for (let i = 0; i < val.length; i++) {
+      copy[i] = deepCloneSnapshot(val[i], seen);
+    }
+    return Object.freeze(copy) as any;
+  }
+
   const copy: any = {};
+  seen.set(val, copy);
   for (const key of Object.keys(val)) {
-    if (Object.prototype.hasOwnProperty.call(val, key) || Object.hasOwn(val, key)) {
-      copy[key] = deepCloneSnapshot((val as any)[key]);
+    const cloned = deepCloneSnapshot((val as any)[key], seen);
+    if (key === "__proto__") {
+      // Plain assignment hits the Object.prototype setter and swaps the
+      // snapshot's prototype for attacker-supplied data instead of copying a
+      // field, so the payload handed to the submit action would inherit keys
+      // that were never in the form. Define it as an own data property.
+      Object.defineProperty(copy, key, {
+        value: cloned,
+        writable: true,
+        enumerable: true,
+        configurable: true,
+      });
+    } else {
+      copy[key] = cloned;
     }
   }
   return Object.freeze(copy);

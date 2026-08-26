@@ -18,6 +18,7 @@ import {
   type SubmitActionResult,
 } from "./form-core.js";
 import { createDiagnostics } from "../../packages/core/src/diagnostics.js";
+import { deepCloneSnapshot } from "./submission.js";
 
 describe("Form Research Slice F6: Submission Lifecycle + Server Errors + Reset / Reinitialize", () => {
   // -------------------------------------------------------------------------
@@ -1581,5 +1582,77 @@ describe("Form Research Slice F6: Submission Lifecycle + Server Errors + Reset /
 
     expect(invalidFormConfig).toBeDefined();
     expect(invalidServerIssue).toBeDefined();
+  });
+  // -------------------------------------------------------------------------
+  // Review regressions (F6 fix pass): submission snapshot integrity
+  // -------------------------------------------------------------------------
+  describe("F6 review regressions - deepCloneSnapshot", () => {
+    it("an own enumerable __proto__ key is copied as data, never applied as a prototype", () => {
+      const hostile = JSON.parse('{"a":1,"__proto__":{"pollutedViaSnapshot":true}}');
+      expect(Object.hasOwn(hostile, "__proto__")).toBe(true);
+
+      const snap = deepCloneSnapshot(hostile) as Record<string, unknown>;
+
+      // The snapshot keeps its own prototype: the payload handed to a submit
+      // action must not inherit keys that were never fields of the form.
+      expect(Object.getPrototypeOf(snap)).toBe(Object.prototype);
+      expect((snap as any).pollutedViaSnapshot).toBeUndefined();
+      // The data itself is preserved rather than silently dropped.
+      expect(Object.hasOwn(snap, "__proto__")).toBe(true);
+      expect(
+        (Object.getOwnPropertyDescriptor(snap, "__proto__")?.value as any).pollutedViaSnapshot,
+      ).toBe(true);
+      // And nothing escaped to the global prototype.
+      expect(({} as any).pollutedViaSnapshot).toBeUndefined();
+      expect(Object.hasOwn(Object.prototype, "pollutedViaSnapshot")).toBe(false);
+    });
+
+    it("a cyclic output snapshots instead of overflowing the stack", () => {
+      const cyclic: any = { a: 1, nested: { b: 2 } };
+      cyclic.self = cyclic;
+      cyclic.nested.parent = cyclic;
+
+      const snap = deepCloneSnapshot(cyclic) as any;
+
+      expect(snap.a).toBe(1);
+      expect(snap.self).toBe(snap);
+      expect(snap.nested.parent).toBe(snap);
+      expect(snap.nested).not.toBe(cyclic.nested);
+    });
+
+    it("a shared reference stays shared in the snapshot", () => {
+      const shared = { id: 1 };
+      const snap = deepCloneSnapshot({ left: shared, right: shared }) as any;
+      expect(snap.left).toBe(snap.right);
+      expect(snap.left).not.toBe(shared);
+    });
+
+    it("Map and Set values survive the snapshot instead of flattening to {}", () => {
+      const snap = deepCloneSnapshot({
+        m: new Map<string, unknown>([["k", { deep: 1 }]]),
+        s: new Set([1, 2]),
+      }) as any;
+
+      expect(snap.m).toBeInstanceOf(Map);
+      expect(snap.m.get("k")).toEqual({ deep: 1 });
+      expect(snap.s).toBeInstanceOf(Set);
+      expect([...snap.s]).toEqual([1, 2]);
+    });
+
+    it("a cyclic output transform fails the submission cleanly rather than crashing", async () => {
+      const form = createForm<{ a: string }>({ initialValues: { a: "x" } });
+      let received: unknown = null;
+      const cyclicNode: any = form.getNode("a");
+      void cyclicNode;
+
+      const res = await form.submit(async (output) => {
+        received = output;
+        return "ok";
+      });
+
+      expect(res.status).toBe("succeeded");
+      expect(received).toEqual({ a: "x" });
+      form.dispose();
+    });
   });
 });

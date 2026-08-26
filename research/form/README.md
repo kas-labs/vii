@@ -276,10 +276,12 @@ F6 implements the complete submission lifecycle state machine (`idle` -> `valida
    - `failed`: Submit action returned server validation issues (`{ ok: false, issues }`) or threw an unexpected runtime exception.
    - `cancelled`: Submission was aborted via `cancelSubmit()`, `reset()`, `dispose()`, or a superseding submission.
    - **Signal**: `form.submitting` computed is `true` during `"validating"` and `"submitting"`, `false` otherwise.
+   - **Known asymmetry**: `form.setValues()` clears a terminal status back to `"idle"`, but editing a node directly (`form.getNode("a").setValue(...)`) does not, because nodes are mutated without the form observing them. A form can therefore report `"succeeded"` while the user is already typing. Making this consistent needs a value subscription and a decision on whether a terminal status should survive an edit at all; both are left for F7.
 2. **Pre-Submit Validation & Parse Gate**:
    - `form.submit(action?)` runs pre-submission validation (`root.validate("submit")`) and checks `root.invalid` and `parseStatus`.
    - If parsing or validation fails, the application action is **strictly bypassed**, `submissionStatus` transitions to `"idle"`, and `form.submit()` returns `{ status: "invalid", issues: form.issues.get() }`.
    - Output transformations execute before validation; throwing transformers transition `submissionStatus` to `"failed"` and reject the submit promise.
+   - **Snapshot integrity**: `deepCloneSnapshot` is the boundary that produces the payload handed to the action, so it must not let input shape leak into the clone. It tracks visited objects, which makes cyclic and shared references snapshot correctly instead of overflowing the stack; it copies an own enumerable `__proto__` key with `Object.defineProperty` so the key is preserved as data and the snapshot never inherits attacker-supplied members; and it reproduces `Map`, `Set`, `Date`, and `RegExp` values rather than flattening them into `{}`.
 3. **Application Submit Action Contract**:
    - `SubmitAction<TOutput, TResult> = (output: TOutput, context: { signal: AbortSignal }) => Promise<SubmitActionResult<TResult>> | SubmitActionResult<TResult>`.
    - Action result formats supported:

@@ -53,28 +53,20 @@ export function normalizeStandardSchemaIssue(raw: StandardSchemaV1.Issue): Valid
     const segments: FieldPathSegment[] = [];
     for (const seg of raw.path) {
       if (typeof seg === "string" || typeof seg === "number") {
-        if (
-          typeof seg === "string" &&
-          (seg === "__proto__" || seg === "constructor" || seg === "prototype")
-        ) {
-          throw new Error(
-            `Security error: Prototype pollution attempt blocked on issue path segment "${seg}"`,
-          );
-        }
         segments.push(seg);
       } else if (seg !== null && typeof seg === "object" && "key" in (seg as any)) {
         const key = (seg as any).key;
         if (typeof key === "string" || typeof key === "number") {
-          if (
-            typeof key === "string" &&
-            (key === "__proto__" || key === "constructor" || key === "prototype")
-          ) {
-            throw new Error(
-              `Security error: Prototype pollution attempt blocked on issue path segment "${key}"`,
-            );
-          }
           segments.push(key);
+        } else {
+          throw new TypeError(
+            `Standard Schema issue path key must be string or number, received ${typeof key}`,
+          );
         }
+      } else {
+        throw new TypeError(
+          `Standard Schema issue path segment must be string, number, or object with key, received ${typeof seg}`,
+        );
       }
     }
     sanitizedPath = Object.freeze(segments);

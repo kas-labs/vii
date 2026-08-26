@@ -37,6 +37,45 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-26 17:15 CEST | Form Issue Path Security Boundary Correction: Structured Issue Paths Are Data
+
+Status: completed
+Branch: `fix/form-issue-path-security-boundary`
+PR: not opened (Draft PR pending)
+
+### Scope
+
+- Correct the security boundary around structured issue paths (`FieldIssue.path`, `ParseIssue.path`, `ValidationIssue.path`): separate data propagation from object traversal/mutation sinks.
+- Allow reserved JavaScript property names (`__proto__`, `constructor`, `prototype`) as valid data segments in structured issue paths so schema validators (Zod 4, Valibot, ArkType) and custom rules can report issues on legitimate domain fields.
+- Preserve prototype pollution defenses at actual traversal sinks (`parsePath`, `getNode`) and issue code validation.
+- Authorize this boundary correction ONLY. F6 submission lifecycle is NOT authorized or started.
+
+### Changes
+
+- Modified `research/form/form-core.ts`: Updated `sanitizeIssue` to allow reserved string property names in `raw.path` as data while preserving strict segment type checking (`string | number`) and immutability via `Object.freeze`.
+- Modified `research/form/parser.ts`: Updated `sanitizeParseIssue` to allow reserved string property names in `rawObj.path` while preserving segment type checking and `Object.freeze`.
+- Modified `research/form/standard-schema.ts`: Updated `normalizeStandardSchemaIssue` to allow reserved string property names in `raw.path` (including segment objects with `{ key }`) while preserving type checking and `Object.freeze`.
+- Modified `research/form/form-f3.test.ts`: Updated Fixture 15 to reflect that issue codes reject prototype pollution strings while issue paths safely preserve reserved keys as data without prototype pollution.
+- Modified `research/form/form-f5.test.ts`: Added comprehensive test coverage validating reserved property names (`__proto__`, `constructor`, `prototype`) across `FieldIssue`, `ParseIssue`, `StandardSchemaV1` (Zod 4, Valibot, ArkType providers), nested path propagation across `FieldGroup` and `FieldArray`, security regression proof verifying `Object.prototype` remains clean, fail-closed handling of malformed segment types, and navigation traversal defenses (`parsePath`, `getNode`).
+- Updated `research/form/README.md` with the explicit Data vs Sink security principle.
+
+### Validation
+
+- `pnpm exec tsc -p research/form/tsconfig.json --noEmit` (exit code 0)
+- `pnpm vitest run research/form/` (157 passed across 4 test files, exit code 0)
+- `git diff --check` (exit code 0)
+- `pnpm validate` (format:check, lint, typecheck, test, build, pack:check all passed, exit code 0)
+
+### Architecture / compatibility
+
+- Core dependency direction preserved.
+- Zero bundle impact on production packages (`@vii-labs/core`, `@vii-labs/react`, `@vii-labs/angular`, `@vii-labs/vue`).
+- Resolves schema validator crash when domain objects have keys named `constructor`, `prototype`, or `__proto__`.
+
+### Remaining / recovery
+
+- None. Hard stop reached (F6 submission lifecycle NOT started).
+
 ## 2026-08-26 02:40 CEST | Form Research F5: Parsing / Input-Output Types / Standard Schema Boundary
 
 Status: completed

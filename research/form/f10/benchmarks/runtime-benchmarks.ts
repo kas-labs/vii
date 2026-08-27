@@ -1,10 +1,14 @@
 /**
- * Form Research F10 — Runtime Comparative Benchmarks (Isolated Setup/Timed/Restore)
+ * Form Research F10 — Runtime Comparative Benchmarks (Batched Isolated Timing)
  *
  * Implements rigorous isolated timing harnesses where compensation and fixture
  * setup are strictly kept outside the timed measurement window:
  *
- * SETUP -> TIMED TARGET OPERATION -> RESTORE
+ * SETUP (untimed) -> START TIMER -> N TARGET OPERATIONS -> STOP TIMER -> RESTORE (untimed)
+ *
+ * Sub-microsecond operations are batched with a single timer pair to eliminate
+ * timer-floor quantization and timer call overhead:
+ * durationUs = ((end - start) * 1000) / batchSize
  *
  * Benchmarks:
  * 1. Single-field keystroke latency: Vii Form vs TanStack Form (10 to 1,000 fields)
@@ -39,53 +43,47 @@ export interface BenchmarkMeasurement {
   readonly opsPerSec: number;
 }
 
-export interface IsolatedBenchmarkOptions<T> {
-  readonly setup?: (batchIndex: number) => T;
-  readonly timed: (ctx: T, batchIndex: number) => void;
-  readonly restore?: (ctx: T, batchIndex: number) => void;
+export interface BatchedTimingOptions<TContext> {
+  readonly setup?: () => TContext;
+  readonly timed: (ctx: TContext, batchSize: number) => void;
+  readonly restore?: (ctx: TContext) => void;
 }
 
 /**
- * Executes an isolated timing harness where setup and restore/compensation
- * are strictly untimed:
+ * Executes a batched isolated timing harness:
  *
- * for each batch:
- *   ctx = setup()       [UNTIMED]
- *   t0 = now()
- *   timed(ctx)          [TIMED]
- *   t1 = now()
- *   restore(ctx)        [UNTIMED]
+ * for each iteration:
+ *   ctx = setup()          [UNTIMED SETUP]
+ *   t0 = performance.now() [START TIMER]
+ *   timed(ctx, batchSize)  [N TARGET OPERATIONS IN TIGHT LOOP]
+ *   t1 = performance.now() [STOP TIMER]
+ *   restore(ctx)           [UNTIMED COMPENSATION / RESTORE]
+ *   durationUs = ((t1 - t0) * 1000) / batchSize
  */
 export function runIsolatedTimingHarness<T = void>(
   iterations: number,
   warmupCount: number,
   batchSize: number,
-  options: IsolatedBenchmarkOptions<T>,
+  options: BatchedTimingOptions<T>,
 ): { medianUs: number; p95Us: number; opsPerSec: number } {
   const { setup, timed, restore } = options;
 
-  // 1. Warmup phase (untimed setup + timed op + untimed restore)
+  // 1. Warmup phase (untimed setup + timed batch op + untimed restore)
   for (let i = 0; i < warmupCount; i++) {
-    for (let k = 0; k < batchSize; k++) {
-      const ctx = setup ? setup(k) : (undefined as unknown as T);
-      timed(ctx, k);
-      if (restore) restore(ctx, k);
-    }
+    const ctx = setup ? setup() : (undefined as unknown as T);
+    timed(ctx, batchSize);
+    if (restore) restore(ctx);
   }
 
   // 2. Measurement phase
   const timesUs: number[] = new Array(iterations);
   for (let i = 0; i < iterations; i++) {
-    let batchDurationMs = 0;
-    for (let k = 0; k < batchSize; k++) {
-      const ctx = setup ? setup(k) : (undefined as unknown as T);
-      const start = performance.now();
-      timed(ctx, k);
-      const end = performance.now();
-      batchDurationMs += end - start;
-      if (restore) restore(ctx, k);
-    }
-    timesUs[i] = (batchDurationMs * 1000) / batchSize;
+    const ctx = setup ? setup() : (undefined as unknown as T);
+    const start = performance.now();
+    timed(ctx, batchSize);
+    const end = performance.now();
+    timesUs[i] = ((end - start) * 1000) / batchSize;
+    if (restore) restore(ctx);
   }
 
   timesUs.sort((a, b) => a - b);
@@ -117,9 +115,11 @@ export function benchmarkComparativeLeafMutation(fieldCounts: number[] = [10, 10
     const viiForm = createForm<Record<string, string>>({ initialValues: initial });
     const viiField = viiForm.getNode("field_0") as FieldState<string>;
 
-    const viiTiming = runIsolatedTimingHarness(100, 20, 50, {
-      timed: (_ctx, k) => {
-        viiField.setValue(k % 2 === 0 ? "val_a" : "val_b");
+    const viiTiming = runIsolatedTimingHarness(100, 20, 100, {
+      timed: (_ctx, batchSize) => {
+        for (let k = 0; k < batchSize; k++) {
+          viiField.setValue(k % 2 === 0 ? "val_a" : "val_b");
+        }
       },
     });
     viiForm.dispose();
@@ -128,7 +128,7 @@ export function benchmarkComparativeLeafMutation(fieldCounts: number[] = [10, 10
       library: "Vii Form",
       scenario: `vii-leaf-mutation-${count}-fields`,
       iterations: 100,
-      batchSize: 50,
+      batchSize: 100,
       medianUs: Number(viiTiming.medianUs.toFixed(3)),
       p95Us: Number(viiTiming.p95Us.toFixed(3)),
       opsPerSec: viiTiming.opsPerSec,
@@ -136,9 +136,11 @@ export function benchmarkComparativeLeafMutation(fieldCounts: number[] = [10, 10
 
     // TanStack Form
     const tsForm = new FormApi({ defaultValues: initial });
-    const tsTiming = runIsolatedTimingHarness(100, 20, 50, {
-      timed: (_ctx, k) => {
-        tsForm.setFieldValue("field_0", k % 2 === 0 ? "val_a" : "val_b");
+    const tsTiming = runIsolatedTimingHarness(100, 20, 100, {
+      timed: (_ctx, batchSize) => {
+        for (let k = 0; k < batchSize; k++) {
+          tsForm.setFieldValue("field_0", k % 2 === 0 ? "val_a" : "val_b");
+        }
       },
     });
 
@@ -146,7 +148,7 @@ export function benchmarkComparativeLeafMutation(fieldCounts: number[] = [10, 10
       library: "TanStack Form",
       scenario: `tanstack-leaf-mutation-${count}-fields`,
       iterations: 100,
-      batchSize: 50,
+      batchSize: 100,
       medianUs: Number(tsTiming.medianUs.toFixed(3)),
       p95Us: Number(tsTiming.p95Us.toFixed(3)),
       opsPerSec: tsTiming.opsPerSec,
@@ -178,12 +180,14 @@ export function benchmarkComparativeAggregateMutation(
     const viiForm = createForm<Record<string, string>>({ initialValues: initial });
     const viiField = viiForm.getNode("field_0") as FieldState<string>;
 
-    const viiTiming = runIsolatedTimingHarness(50, 10, 20, {
-      timed: (_ctx, k) => {
-        viiField.setValue(k % 2 === 0 ? "val_a" : "val_b");
-        const _v = viiForm.values.get();
-        const _d = viiForm.dirty.get();
-        const _e = viiForm.issues.get();
+    const viiTiming = runIsolatedTimingHarness(50, 10, 50, {
+      timed: (_ctx, batchSize) => {
+        for (let k = 0; k < batchSize; k++) {
+          viiField.setValue(k % 2 === 0 ? "val_a" : "val_b");
+          const _v = viiForm.values.get();
+          const _d = viiForm.dirty.get();
+          const _e = viiForm.issues.get();
+        }
       },
     });
     viiForm.dispose();
@@ -192,7 +196,7 @@ export function benchmarkComparativeAggregateMutation(
       library: "Vii Form",
       scenario: `vii-aggregate-mutation-${count}-fields`,
       iterations: 50,
-      batchSize: 20,
+      batchSize: 50,
       medianUs: Number(viiTiming.medianUs.toFixed(3)),
       p95Us: Number(viiTiming.p95Us.toFixed(3)),
       opsPerSec: viiTiming.opsPerSec,
@@ -200,12 +204,14 @@ export function benchmarkComparativeAggregateMutation(
 
     // TanStack Form Aggregate read
     const tsForm = new FormApi({ defaultValues: initial });
-    const tsTiming = runIsolatedTimingHarness(50, 10, 20, {
-      timed: (_ctx, k) => {
-        tsForm.setFieldValue("field_0", k % 2 === 0 ? "val_a" : "val_b");
-        const _v = tsForm.state.values;
-        const _d = tsForm.state.isDirty;
-        const _e = tsForm.state.errors;
+    const tsTiming = runIsolatedTimingHarness(50, 10, 50, {
+      timed: (_ctx, batchSize) => {
+        for (let k = 0; k < batchSize; k++) {
+          tsForm.setFieldValue("field_0", k % 2 === 0 ? "val_a" : "val_b");
+          const _v = tsForm.state.values;
+          const _d = tsForm.state.isDirty;
+          const _e = tsForm.state.errors;
+        }
       },
     });
 
@@ -213,7 +219,7 @@ export function benchmarkComparativeAggregateMutation(
       library: "TanStack Form",
       scenario: `tanstack-aggregate-mutation-${count}-fields`,
       iterations: 50,
-      batchSize: 20,
+      batchSize: 50,
       medianUs: Number(tsTiming.medianUs.toFixed(3)),
       p95Us: Number(tsTiming.p95Us.toFixed(3)),
       opsPerSec: tsTiming.opsPerSec,
@@ -248,36 +254,47 @@ export function benchmarkComparativeFieldArray(itemCount: number = 50): {
   });
   const viiArray = viiForm.getNode("items") as FieldArray<any>;
 
-  // PUSH: Setup ensures baseline -> Timed pushes 1 item -> Restore removes pushed item
+  // PUSH: Setup prepares batch items -> Timed pushes N items -> Restore removes N items untimed
   const viiPush = runIsolatedTimingHarness(50, 10, 20, {
-    timed: (_ctx, k) => {
-      viiArray.push({ id: `pushed_${k}`, title: `New Task ${k}`, done: false });
+    setup: () =>
+      Array.from({ length: 20 }, (_, k) => ({
+        id: `pushed_${k}`,
+        title: `New Task ${k}`,
+        done: false,
+      })),
+    timed: (items, batchSize) => {
+      for (let k = 0; k < batchSize; k++) {
+        viiArray.push(items[k]!);
+      }
     },
     restore: () => {
       // Untimed compensation
-      viiArray.remove(viiArray.items.get().length - 1);
+      for (let k = 0; k < 20; k++) {
+        viiArray.remove(viiArray.items.get().length - 1);
+      }
     },
   });
 
-  // REMOVE: Setup pushes 1 removable item -> Timed removes that item -> Restore verifies baseline
+  // REMOVE: Setup pushes 20 removable items untimed -> Timed removes 20 items -> Restore checks baseline
   const viiRemove = runIsolatedTimingHarness(50, 10, 20, {
-    setup: (k) => {
-      // Untimed setup
-      viiArray.push({ id: `temp_remove_${k}`, title: "Temp Remove", done: false });
-      return { targetIndex: viiArray.items.get().length - 1 };
+    setup: () => {
+      for (let k = 0; k < 20; k++) {
+        viiArray.push({ id: `temp_remove_${k}`, title: "Temp Remove", done: false });
+      }
     },
-    timed: (ctx) => {
-      viiArray.remove(ctx.targetIndex);
+    timed: (_ctx, batchSize) => {
+      for (let k = 0; k < batchSize; k++) {
+        viiArray.remove(viiArray.items.get().length - 1);
+      }
     },
   });
 
-  // SWAP: Timed executes swap(0, 1) -> Restore restores original order untimed
+  // SWAP: Timed executes N swaps -> Restore restores original order untimed
   const viiSwap = runIsolatedTimingHarness(100, 20, 50, {
-    timed: () => {
-      viiArray.swap(0, 1);
-    },
-    restore: () => {
-      viiArray.swap(0, 1);
+    timed: (_ctx, batchSize) => {
+      for (let k = 0; k < batchSize; k++) {
+        viiArray.swap(0, 1);
+      }
     },
   });
 
@@ -288,36 +305,52 @@ export function benchmarkComparativeFieldArray(itemCount: number = 50): {
     defaultValues: { items: makeInitial() },
   });
 
-  // PUSH: Timed pushes 1 item -> Restore removes pushed item
+  // PUSH: Setup prepares items -> Timed pushes N items -> Restore removes N items untimed
   const tsPush = runIsolatedTimingHarness(50, 10, 20, {
-    timed: (_ctx, k) => {
-      tsForm.pushFieldValue("items", { id: `pushed_${k}`, title: `New Task ${k}`, done: false });
+    setup: () =>
+      Array.from({ length: 20 }, (_, k) => ({
+        id: `pushed_${k}`,
+        title: `New Task ${k}`,
+        done: false,
+      })),
+    timed: (items, batchSize) => {
+      for (let k = 0; k < batchSize; k++) {
+        tsForm.pushFieldValue("items", items[k]!);
+      }
     },
     restore: () => {
-      // Untimed compensation
-      const len = tsForm.getFieldValue("items").length;
-      tsForm.removeFieldValue("items", len - 1);
+      for (let k = 0; k < 20; k++) {
+        const len = tsForm.getFieldValue("items").length;
+        tsForm.removeFieldValue("items", len - 1);
+      }
     },
   });
 
-  // REMOVE: Setup pushes 1 removable item -> Timed removes that item
+  // REMOVE: Setup pushes 20 items untimed -> Timed removes 20 items
   const tsRemove = runIsolatedTimingHarness(50, 10, 20, {
-    setup: (k) => {
-      tsForm.pushFieldValue("items", { id: `temp_remove_${k}`, title: "Temp Remove", done: false });
-      return { targetIndex: tsForm.getFieldValue("items").length - 1 };
+    setup: () => {
+      for (let k = 0; k < 20; k++) {
+        tsForm.pushFieldValue("items", {
+          id: `temp_remove_${k}`,
+          title: "Temp Remove",
+          done: false,
+        });
+      }
     },
-    timed: (ctx) => {
-      tsForm.removeFieldValue("items", ctx.targetIndex);
+    timed: (_ctx, batchSize) => {
+      for (let k = 0; k < batchSize; k++) {
+        const len = tsForm.getFieldValue("items").length;
+        tsForm.removeFieldValue("items", len - 1);
+      }
     },
   });
 
-  // SWAP: Timed executes swapFieldValues -> Restore restores untimed
+  // SWAP: Timed executes N swaps -> Restore restores untimed
   const tsSwap = runIsolatedTimingHarness(100, 20, 50, {
-    timed: () => {
-      tsForm.swapFieldValues("items", 0, 1);
-    },
-    restore: () => {
-      tsForm.swapFieldValues("items", 0, 1);
+    timed: (_ctx, batchSize) => {
+      for (let k = 0; k < batchSize; k++) {
+        tsForm.swapFieldValues("items", 0, 1);
+      }
     },
   });
 
@@ -401,12 +434,10 @@ export function benchmarkServerIssueRouting(issueCounts: number[] = [10, 50, 100
     const form = createForm<Record<string, string>>({ initialValues: initial });
     const issues = generateServerIssues(count);
 
-    // Iterations tuned for count: 1000 issues use smaller batch to avoid excessive run duration
     const iterations = count >= 1000 ? 10 : 20;
-    const batchSize = count >= 1000 ? 2 : 10;
 
     // ROUTING: Timed setServerIssues -> Restore clearServerIssues untimed
-    const routeTiming = runIsolatedTimingHarness(iterations, 2, batchSize, {
+    const routeTiming = runIsolatedTimingHarness(iterations, 2, 1, {
       timed: () => {
         form.setServerIssues(issues);
       },
@@ -419,14 +450,14 @@ export function benchmarkServerIssueRouting(issueCounts: number[] = [10, 50, 100
       library: "Vii Form",
       scenario: `vii-server-issue-routing-${count}`,
       iterations,
-      batchSize,
+      batchSize: 1,
       medianUs: Number(routeTiming.medianUs.toFixed(3)),
       p95Us: Number(routeTiming.p95Us.toFixed(3)),
       opsPerSec: routeTiming.opsPerSec,
     };
 
     // CLEAR: Setup setServerIssues untimed -> Timed clearServerIssues
-    const clearTiming = runIsolatedTimingHarness(iterations, 2, batchSize, {
+    const clearTiming = runIsolatedTimingHarness(iterations, 2, 1, {
       setup: () => {
         form.setServerIssues(issues);
       },
@@ -439,7 +470,7 @@ export function benchmarkServerIssueRouting(issueCounts: number[] = [10, 50, 100
       library: "Vii Form",
       scenario: `vii-server-issue-clear-${count}`,
       iterations,
-      batchSize,
+      batchSize: 1,
       medianUs: Number(clearTiming.medianUs.toFixed(3)),
       p95Us: Number(clearTiming.p95Us.toFixed(3)),
       opsPerSec: clearTiming.opsPerSec,

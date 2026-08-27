@@ -496,7 +496,7 @@ Slice F10 executed the definitive real consumer and competitor validation suite 
 
 2. **Direct Competitor Comparisons**:
    - Evaluated against TanStack Form v1.33.5, React Hook Form 7.86.0, real Angular 22 Signal Forms, and TanStack Form v2.0.0-alpha.2 (documentation-only).
-   - Vii Form demonstrated sub-microsecond leaf keystroke mutations (~0.36 µs at 100 fields vs TanStack 3.37 µs) and sub-microsecond FieldArray swap operations (0.26 µs vs TanStack 16.10 µs) in isolated timing harnesses.
+   - Vii Form demonstrated sub-microsecond leaf keystroke mutations (~0.71 µs at 100 fields vs TanStack 3.34 µs) and sub-microsecond FieldArray swap operations (0.22 µs vs TanStack 35.02 µs) in batched isolated timing harnesses.
 
 3. **Security & Privacy Defense**:
    - Safe structured model data handling for `__proto__`, `constructor`, `prototype` on null-prototype objects, sink protection against hostile XSS vectors, and zero sentinel string emission to diagnostics telemetry confirmed in `research/form/f10/tests/security-privacy.test.ts`.

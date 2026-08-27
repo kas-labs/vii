@@ -12,7 +12,7 @@
 
 ## 1. Executive Summary & Graduation Verdict
 
-Form Research Slice F10 represents the definitive, empirical graduation gate for the Vii Form reactive form management initiative (concluding exploratory slices F0 through F9). The primary directive of F10 was to subject the research prototype to realistic consumer applications, direct idiomatic head-to-head competitor comparisons against industry standards (TanStack Form v1.33.5, React Hook Form v7.86.0, and real Angular 22 Signal Forms via `@angular/forms/signals`), comprehensive performance profiling with strict setup/timed/restore isolation, security and privacy threat boundary testing, and a rigorous 32-dimension Build-vs-Buy decision framework.
+Form Research Slice F10 represents the definitive, empirical graduation gate for the Vii Form reactive form management initiative (concluding exploratory slices F0 through F9). The primary directive of F10 was to subject the research prototype to realistic consumer applications, direct idiomatic head-to-head competitor comparisons against industry standards (TanStack Form v1.33.5, React Hook Form v7.86.0, and real Angular 22 Signal Forms via `@angular/forms/signals`), comprehensive performance profiling with strict batched single-timer-pair isolation, security and privacy threat boundary testing, and a rigorous 32-dimension Build-vs-Buy decision framework.
 
 ### Graduation Verdict: GRADUATE TO BUILD (RECOMMEND PRODUCTION PHASE 1)
 
@@ -21,7 +21,7 @@ Based on empirical evidence across 23 test suites (397 passing tests), reproduci
 1. **Architectural Unification with Vii Core:**
    Vii Form natively integrates with `@vii-labs/core` reactive primitives (`State`, `Computed`, `Scope`, `batch`). It provides push-pull lazy computed reactivity, fine-grained subscriber scoping, and automatic Scope lifecycle disposal with zero external store glue.
 2. **Superior Fine-Grained Reactive Performance:**
-   In isolated microbenchmarks across 10 to 1,000 fields, Vii Form delivers sub-microsecond leaf keystroke mutations (~0.36 µs at 100 fields) without triggering whole-tree recomputations.
+   In batched isolated microbenchmarks across 10 to 1,000 fields, Vii Form delivers sub-microsecond leaf keystroke mutations (~0.71 µs at 100 fields, ~0.31 µs at 1,000 fields) without triggering whole-tree recomputations.
 3. **True Multi-Framework Portability:**
    Unlike React Hook Form (strictly locked to React) or Angular Signal Forms (strictly locked to Angular), Vii Form provides a clean headless core with thin adapters for Vanilla DOM, React, Angular, and Vue.
 4. **Standard Schema v1 Native Support:**
@@ -132,9 +132,9 @@ Consumer B (`research/form/f10/consumers/consumer-b-react.tsx`) models a collabo
 
 ## 6. Comparative Performance & Microbenchmark Results
 
-All microbenchmarks were executed via `runtime-benchmarks.ts` using isolated timing harnesses (50–100 iterations, 20–50 batch size) with untimed setup and untimed compensation:
+All microbenchmarks were executed via `runtime-benchmarks.ts` using batched timing harnesses with a single timer pair per batch:
 
-**SETUP (untimed) -> TIMED TARGET OPERATION -> RESTORE (untimed)**
+$$\text{SETUP (untimed)} \longrightarrow \text{START TIMER} \longrightarrow N\text{ OPERATIONS} \longrightarrow \text{STOP TIMER} \longrightarrow \text{RESTORE (untimed)}$$
 
 **Source:** `research/form/f10/benchmarks/runtime-benchmarks.ts`
 **Command:** `bun -e 'import { benchmarkComparativeLeafMutation, benchmarkComparativeAggregateMutation, benchmarkComparativeFieldArray, benchmarkServerIssueRouting } from "./research/form/f10/benchmarks/runtime-benchmarks.ts";'`
@@ -145,38 +145,38 @@ All microbenchmarks were executed via `runtime-benchmarks.ts` using isolated tim
 
 | Form Size (Fields) | Vii Form Median (µs/op) | Vii Form p95 (µs) | TanStack Form Median (µs/op) | TanStack Form p95 (µs) | Speedup Factor |
 | :----------------- | :---------------------- | :---------------- | :--------------------------- | :--------------------- | :------------- |
-| **10 Fields**      | **0.43 µs**             | 0.84 µs           | 1.66 µs                      | 4.10 µs                | **3.8x**       |
-| **100 Fields**     | **0.36 µs**             | 0.50 µs           | 3.37 µs                      | 10.47 µs               | **9.4x**       |
-| **500 Fields**     | **0.28 µs**             | 0.33 µs           | 12.12 µs                     | 22.11 µs               | **42.8x**      |
-| **1,000 Fields**   | **0.31 µs**             | 1.35 µs           | 22.06 µs                     | 32.71 µs               | **71.6x**      |
+| **10 Fields**      | **0.41 µs**             | 0.98 µs           | 1.98 µs                      | 7.54 µs                | **4.8x**       |
+| **100 Fields**     | **0.71 µs**             | 1.42 µs           | 3.34 µs                      | 5.71 µs                | **4.7x**       |
+| **500 Fields**     | **0.26 µs**             | 0.35 µs           | 13.19 µs                     | 27.10 µs               | **50.7x**      |
+| **1,000 Fields**   | **0.31 µs**             | 1.17 µs           | 39.84 µs                     | 96.76 µs               | **128.5x**     |
 
 ### 2. Aggregate Query Invalidation (Values + Dirty + Issues)
 
 | Form Size (Fields) | Vii Form Median (µs/op) | Vii Form p95 (µs) | TanStack Form Median (µs/op) | TanStack Form p95 (µs) |
 | :----------------- | :---------------------- | :---------------- | :--------------------------- | :--------------------- |
-| **10 Fields**      | **1.85 µs**             | 3.20 µs           | 2.65 µs                      | 4.11 µs                |
-| **100 Fields**     | **9.40 µs**             | 23.80 µs          | 4.37 µs                      | 5.77 µs                |
-| **500 Fields**     | **49.45 µs**            | 83.19 µs          | 12.28 µs                     | 20.33 µs               |
-| **1,000 Fields**   | **99.52 µs**            | 131.88 µs         | 22.71 µs                     | 36.86 µs               |
+| **10 Fields**      | **2.97 µs**             | 7.42 µs           | 3.76 µs                      | 9.69 µs                |
+| **100 Fields**     | **11.13 µs**            | 32.66 µs          | 5.30 µs                      | 14.66 µs               |
+| **500 Fields**     | **58.45 µs**            | 83.78 µs          | 14.33 µs                     | 36.99 µs               |
+| **1,000 Fields**   | **124.72 µs**           | 224.63 µs         | 23.10 µs                     | 30.55 µs               |
 
-### 3. FieldArray Operations (50 Items, Isolated Setup/Timed/Restore)
+### 3. FieldArray Operations (50 Items, Batched Single-Timer-Pair Isolation)
 
-*Compensation (e.g. removal after push) is strictly executed in the untimed restore phase.*
+*Compensation (e.g. removal after batch push) is strictly executed in the untimed restore phase.*
 
 | Operation       | Vii Form Median (µs/op) | Vii Form p95 (µs) | TanStack Form Median (µs/op) | TanStack Form p95 (µs) |
 | :-------------- | :---------------------- | :---------------- | :--------------------------- | :--------------------- |
-| **Push Item**   | **10.95 µs**            | 19.99 µs          | 7.89 µs                      | 8.49 µs                |
-| **Remove Item** | **3.00 µs**             | 6.64 µs           | 32.35 µs                     | 35.30 µs               |
-| **Swap Items**  | **0.26 µs**             | 0.52 µs           | 16.10 µs                     | 17.66 µs               |
+| **Push Item**   | **16.32 µs**            | 63.37 µs          | 8.20 µs                      | 9.03 µs                |
+| **Remove Item** | **3.87 µs**             | 9.41 µs           | 35.88 µs                     | 65.50 µs               |
+| **Swap Items**  | **0.22 µs**             | 0.30 µs           | 35.02 µs                     | 76.77 µs               |
 
 ### 4. Server Issue Routing & Clearing (Isolated Measurements)
 
 | Server Issues Count | Timed Routing Median (µs) | Routing Throughput (ops/sec) | Timed Clear Median (µs) | Clear Throughput (ops/sec) |
 | :------------------ | :------------------------ | :--------------------------- | :---------------------- | :------------------------- |
-| **10 Issues**       | **11.94 µs**              | 79,624 / sec                 | **7.21 µs**             | 139,002 / sec              |
-| **50 Issues**       | **136.70 µs**             | 6,914 / sec                  | **33.81 µs**            | 29,924 / sec               |
-| **100 Issues**      | **503.93 µs**             | 1,973 / sec                  | **64.47 µs**            | 15,462 / sec               |
-| **1,000 Issues**    | **46.89 ms**              | 20 / sec                     | **1.80 ms**             | 537 / sec                  |
+| **10 Issues**       | **42.13 µs**              | 13,413 / sec                 | **19.42 µs**            | 29,258 / sec               |
+| **50 Issues**       | **399.71 µs**             | 1,129 / sec                  | **113.04 µs**           | 7,382 / sec                |
+| **100 Issues**      | **1.57 ms**               | 548 / sec                    | **472.00 µs**           | 1,970 / sec                |
+| **1,000 Issues**    | **51.54 ms**              | 19 / sec                     | **1.76 ms**             | 540 / sec                  |
 
 ---
 
@@ -189,7 +189,7 @@ Empirical render counts captured via real React component trees mounted in `reac
 
 | Scenario                             | Component       | Vii Form React | TanStack Form | React Hook Form      |
 | :----------------------------------- | :-------------- | :------------- | :------------ | :------------------- |
-| **Single Leaf Keystroke (Steady)**   | Form Root       | **0**          | 0             | 0                    |
+| **Single Leaf Keystroke (Steady)**   | Form Root       | **1** (badge)  | 0             | 0                    |
 |                                      | Target Input    | **1**          | 1             | 0 (uncontrolled ref) |
 |                                      | Sibling Input   | **0**          | 0             | 0                    |
 |                                      | Array Container | **0**          | 0             | 0                    |
@@ -197,6 +197,9 @@ Empirical render counts captured via real React component trees mounted in `reac
 |                                      | Target Input    | **0**          | 0             | 0                    |
 |                                      | Sibling Input   | **0**          | 0             | 0                    |
 |                                      | Array Container | **1**          | 1             | 1                    |
+
+*Explanation of Form Root Render in Vii Form React:*
+In `<TaskBoardView />`, the root component invokes `useForm(form)` to render aggregate status badges (`dirty`, `pending`, `valid`). When typing into a field with an async validation rule, `form.pending` transitions to `true`, intentionally notifying the root component (1 render) while completely isolating unrelated sibling inputs (0 renders) and array sections (0 renders).
 
 ---
 
@@ -263,7 +266,7 @@ Scoring scale: 1 (Poor / Deficient) to 5 (Industry Leading). Evaluated across 32
 |                              | 4. Tree-Shakable Modular Footprint     |  **5**   |       3       |        4        |          3           | `measure-bundles.mjs`                            |
 |                              | 5. Scope-Based Automatic Disposal      |  **5**   |       2       |        2        |          4           | Scope lifecycle tests (`form-f9-memory.test.ts`) |
 |                              | 6. Pure Functional Core Isolation      |  **5**   |       4       |        2        |          4           | Architecture import isolation audit              |
-| **Reactivity & State**       | 7. Fine-Grained Leaf Reactivity        |  **5**   |       4       |        4        |          5           | `runtime-benchmarks.ts` (0.3-1.5 µs)             |
+| **Reactivity & State**       | 7. Fine-Grained Leaf Reactivity        |  **5**   |       4       |        4        |          5           | `runtime-benchmarks.ts` (0.3-0.7 µs)             |
 |                              | 8. Aggregate Scaling (<150µs at 1k)    |  **5**   |       3       |        3        |          4           | `runtime-benchmarks.ts`                          |
 |                              | 9. FieldArray Identity Stability       |  **5**   |       4       |        3        |          4           | `consumer-b.test.tsx` (item swapping)            |
 |                              | 10. Tear-Free React 19 Concurrency     |  **5**   |       5       |        4        |          2           | `useSyncExternalStore` integration               |

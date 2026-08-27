@@ -37,6 +37,76 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-27 23:45 CEST | Form Research Slice F10: Real Consumer Validation + Build-vs-Buy Graduation Gate
+
+Status: completed
+Branch: `dogfood/form-f10-consumer-validation`
+PR: not opened (Draft PR pending)
+
+### Scope
+
+- Execute final Form Research Slice F10: Real Consumer Validation + Build-vs-Buy Graduation Gate in `research/form/`.
+- Implement two realistic, complex consumer application workloads:
+  1. Consumer A: Multi-step Vanilla DOM Onboarding Wizard (5 steps, step-level validity gates, async username validation with debounce & cancellation, parser-backed number inputs, dynamic address FieldArray, conditional tax ID rules, server issue routing, and automatic ARIA attribute projection).
+  2. Consumer B: React 19 Kanban Task Board Card Editor (controlled inputs, parser story points, async title uniqueness validation with AbortSignal cancellation, dynamic checklist FieldArray, server issue recovery, and leaf-level render isolation).
+- Benchmark against pinned competitor package versions:
+  - TanStack Form: `@tanstack/react-form@1.33.5` + `@tanstack/form-core@1.33.5` (primary) and `@tanstack/react-form@2.0.0-alpha.2` (horizon).
+  - React Hook Form: `react-hook-form@7.86.0`.
+  - Angular Signal Forms: `@angular/forms@22.1.4` (Angular 22).
+- Execute comprehensive performance, render count, and bundle size comparative benchmarks.
+- Verify F9 residual risks, Core push-pull lazy computed caching semantics, FieldArray scaling, and Model A terminal submission status.
+- Conduct security threat and privacy boundary verification (DOM XSS sinks, prototype pollution defense, zero-credential telemetry leakage).
+- Compile the formal 44-dimension Build-vs-Buy decision matrix across 7 categories.
+- Deliver comprehensive graduation report `research/form/F10_CONSUMER_VALIDATION.md` and render the official graduation verdict.
+- Strictly enforce the ABSOLUTE STOP condition: Do NOT create or publish a public `@vii-labs/form` package, do NOT start production implementation phase, do NOT merge PR.
+
+### Changes
+
+- Created `research/form/f10/`:
+  - `competitors/versions.ts`: Verified competitor versions and ecosystem metadata.
+  - `competitors/tanstack-v1.tsx`: Idiomatic TanStack Form 1.33.5 Task Board implementation.
+  - `competitors/react-hook-form.tsx`: Idiomatic React Hook Form 7.86.0 Task Board implementation.
+  - `competitors/angular-signal-forms.ts`: Idiomatic Angular Signal Forms (Angular 22.1.4) Task Board implementation.
+  - `competitors/tanstack-v2-alpha.ts`: Horizon analysis of TanStack Form v2 alpha.
+  - `fixtures/domain-data.ts`: Domain models, initial/valid datasets, privacy sentinels, hostile payloads, and issue generators.
+  - `consumers/consumer-a-vanilla.ts`: 5-step Vanilla Onboarding workflow controller and DOM bindings.
+  - `consumers/consumer-b-react.tsx`: React 19 Task Board workflow components with render counting instrumentation.
+  - `benchmarks/runtime-benchmarks.ts`: Runtime latency and throughput harness (leaf vs aggregate mutation, FieldArray ops, server issue routing).
+  - `benchmarks/render-benchmarks.ts`: React render count comparison framework.
+  - `benchmarks/bundle-benchmarks.ts`: Cold adoption vs incremental bundle size metrics.
+  - `tests/consumer-a.test.ts`: Consumer A unit and integration test suite (6 tests).
+  - `tests/consumer-b.test.tsx`: Consumer B React 19 test suite (5 tests).
+  - `tests/competitors.test.tsx`: Head-to-head competitor comparative test suite (3 tests).
+  - `tests/f9-risks-validation.test.ts`: F9 risks and Core invariant test suite (4 tests).
+  - `tests/security-privacy.test.ts`: Security, prototype pollution, and diagnostics privacy test suite (3 tests).
+- Created `research/form/F10_CONSUMER_VALIDATION.md`:
+  - 12 comprehensive sections containing baseline, methodology, consumer findings, competitor analyses, empirical benchmark evidence, 44-dimension Build-vs-Buy decision matrix (Vii Form scored 208/220 vs TanStack 156, RHF 126, Angular 145), maintenance assessment, residual risks, formal graduation verdict (**GRADUATE TO BUILD - RECOMMEND PRODUCTION PHASE 1**), and absolute stop condition declaration.
+- Updated documentation:
+  - `docs/roadmap/FORM_RESEARCH.md`: Recorded Slice F10 completion, graduation decision, and final roadmap state.
+  - `PROJECT_STATE.md`: Updated durable Form research summary with F0-F10 completion and graduation decision.
+  - `research/form/README.md`: Added Section 10/11 linking F10 evidence report.
+  - `research/form/tsconfig.json`: Added `react/jsx-runtime` path and included `.tsx` files.
+
+### Validation
+
+- `pnpm exec tsc -p research/form/tsconfig.json --noEmit`: PASS (0 type errors).
+- `pnpm exec vitest run research/form/`: PASS (23 test files, 384 tests passing, 0 failures).
+- `pnpm validate`: PASS (formatting, linting, typechecking, tests across all packages, builds across all 10 projects, and tarball packing validation).
+- `git diff --check`: PASS (0 whitespace/syntax issues).
+
+### Architecture / compatibility
+
+- Zero public package mutations: `@vii-labs/core` semantics preserved without modification; no public `@vii-labs/form` package created.
+- Form Core remains completely framework-agnostic and platform-neutral.
+- Measured runtime: 0.46 µs leaf mutation on 1,000 fields, 0.29 µs FieldArray swap.
+- Bundle impact: +4.9 kB gzip incremental to Core consumers.
+- Privacy & security: 0 sentinel leaks into diagnostics; 0 prototype pollution vulnerabilities.
+
+### Remaining / recovery
+
+- None for Form Research F0–F10. Research track is complete.
+- Next phase (Production Form Phase 1) is subject to human maintainer review and future roadmap scheduling. Absolute stop condition enforced.
+
 ## 2026-08-27 18:55 CEST | Form Research Slice F9: Runtime / Memory / TypeScript / Bundle Evidence
 
 Status: completed

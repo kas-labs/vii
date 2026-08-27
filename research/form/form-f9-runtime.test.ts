@@ -143,7 +143,7 @@ describe("Form Research F9: Runtime Scaling, Fan-Out & Aggregate Evidence", () =
       return createForm({
         initialValues,
         rules: [
-          (vals) =>
+          (vals: any) =>
             vals.addresses.length >= 1
               ? null
               : {
@@ -305,7 +305,7 @@ describe("Form Research F9: Runtime Scaling, Fan-Out & Aggregate Evidence", () =
       const field = createField<string>({
         initialValue: "start",
         rules: [
-          (val) => {
+          (val: string) => {
             if (val === "explode") throw new Error("Validator crashed");
             return null;
           },

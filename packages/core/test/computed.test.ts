@@ -192,3 +192,30 @@ test("a recompute that throws does not permanently detach subscribers", () => {
 
   expect(observed).toEqual([30]);
 });
+
+test("computed invalidation follows source state subscriber registration order", () => {
+  const source = state("initial");
+  let seenDerivedInEarlySubscriber: string | undefined;
+
+  // 1. Early subscriber attached to source BEFORE computed evaluates dependencies
+  source.subscribe(() => {
+    // When source changes, this subscriber runs before computed's dependency listener
+    // has invalidated its cache, so get() returns previous cached value.
+    if (derived) {
+      seenDerivedInEarlySubscriber = derived.get();
+    }
+  });
+
+  // 2. Computed created and evaluated (registers dependency listener on source)
+  const derived = computed(() => `derived:${source.get()}`);
+  expect(derived.get()).toBe("derived:initial");
+
+  // 3. Mutate source
+  source.set("updated");
+
+  // Inside the early subscriber callback, derived was not yet invalidated
+  expect(seenDerivedInEarlySubscriber).toBe("derived:initial");
+
+  // Outside the notification cycle, reading derived observes the fresh value
+  expect(derived.get()).toBe("derived:updated");
+});

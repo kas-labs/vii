@@ -27,7 +27,7 @@ describe("Form Research F9: Memory, Lifecycle, and Retained Resource Evidence", 
             tags: ["tag1", "tag2", "tag3"],
           },
           rules: [
-            (vals) => (vals.username.length > 0 ? null : { code: "req", path: ["username"] }),
+            (vals: any) => (vals.username.length > 0 ? null : { code: "req", path: ["username"] }),
           ],
         });
 
@@ -122,7 +122,7 @@ describe("Form Research F9: Memory, Lifecycle, and Retained Resource Evidence", 
       const form = createForm({
         initialValues: { text: "test" },
         debounceMs: 200,
-        rules: [(vals) => (vals.text.length >= 3 ? null : { code: "short", path: ["text"] })],
+        rules: [(vals: any) => (vals.text.length >= 3 ? null : { code: "short", path: ["text"] })],
       });
 
       const field = form.fields.text as FieldState<string>;
@@ -163,7 +163,7 @@ describe("Form Research F9: Memory, Lifecycle, and Retained Resource Evidence", 
         const field = createField<string>({
           initialValue: "init",
           rules: [
-            async (val, ctx) => {
+            async (val: string, ctx: any) => {
               activeControllers++;
               const signal = ctx.signal;
               // Microtask deferral
@@ -212,7 +212,11 @@ describe("Form Research F9: Memory, Lifecycle, and Retained Resource Evidence", 
       const recordedEvents: any[] = [];
       const diag = createDiagnostics({
         mode: "development",
-        sink: (evt) => recordedEvents.push(evt),
+        sink: {
+          emit: (evt) => {
+            recordedEvents.push(evt);
+          },
+        },
       });
 
       const form = createForm({

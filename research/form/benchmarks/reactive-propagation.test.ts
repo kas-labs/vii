@@ -97,7 +97,9 @@ describe("F9 Reactive Propagation Investigation: Derived Computed Semantics", ()
     it("investigates field.invalid / field.valid during setValue with sync rules", () => {
       const field = createField<string>({
         initialValue: "valid",
-        rules: [(val) => (val.length >= 5 ? null : { code: "too_short", message: "Too short" })],
+        rules: [
+          (val: string) => (val.length >= 5 ? null : { code: "too_short", message: "Too short" }),
+        ],
       });
 
       let invalidObservedInValueSub: boolean | undefined = undefined;
@@ -171,7 +173,9 @@ describe("F9 Reactive Propagation Investigation: Derived Computed Semantics", ()
       // to guarantee zero notification race conditions across microtasks / framework loops.
       const field = createField<string>({
         initialValue: "ok",
-        rules: [(v) => (v === "ok" ? null : { code: "invalid_val", message: "Invalid value" })],
+        rules: [
+          (v: string) => (v === "ok" ? null : { code: "invalid_val", message: "Invalid value" }),
+        ],
       });
 
       expect(field.invalid.get()).toBe(false);

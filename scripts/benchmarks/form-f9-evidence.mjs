@@ -1,20 +1,21 @@
 /**
- * Vii Form Research F9 — Comprehensive Evidence Harness
+ * Vii Form Research F9 — Comprehensive Evidence Harness (Corrected & Hardened)
  *
  * Measures:
- * 1. Runtime scaling (Small 10, Medium 100, Large 500, Stress 1,000, Nested 200 fields)
+ * 1. Runtime scaling (Small 10, Medium 100, Large 500, Stress 1,000, Nested 97 leaf fields)
  *    - Leaf-Only Subscriber Scenario: Construction, First-Read, Single-Field Mutation, setValues subset
  *    - Aggregate Consumer Scenario: Mutation with form.values, form.dirty, form.issues active
+ *    - Full Tree Validation: 1 sync validation rule per field (10, 100, 500, 1,000 rules)
  * 2. FieldArray Operations (10 & 100 items)
  *    - Construction (isolated construct + dispose)
- *    - Steady-state Operations (push, insert, remove, swap, move, setValues)
+ *    - Isolated Steady-state Operations (push, insert, remove, swap, move, alternating setValues)
  * 3. Validation & Schemas
  *    - Standard Schema Adapter Invocation Microbenchmark (Single call on valid input)
  *    - Full Form Validation Throughput (10 fields with Native Rule vs Zod 4 vs Valibot vs ArkType)
  * 4. Submission & Snapshot Lifecycle
- *    - Async Completed Submission (Resolved Success, Validation Blocked, Server Error Rejected)
- *    - Snapshot Isolation (deepCloneSnapshot on flat, nested, array, and cyclic data)
- *    - Server Issue Routing (100 and 1,000 issues)
+ *    - Async Completed Submission: strictly timed await form.submit() with untimed setup/reset
+ *    - Snapshot Isolation: deepCloneSnapshot on flat, nested, array
+ *    - Server Issue Routing: isolated setServerIssues (100 and 1,000 issues)
  * 5. TypeScript Diagnostics across Isolated Programs (Small 10, Medium 100, Large 300, Combined)
  * 6. Bundle Footprints & Tree-shaking (adapter/core-owned bytes with externalized peers)
  */
@@ -31,6 +32,22 @@ import { createScope } from "../../packages/core/src/index.js";
 import { createForm, createFieldArray, deepCloneSnapshot } from "../../research/form/form-core.ts";
 import { standardSchema } from "../../research/form/standard-schema.ts";
 import { measureBundles } from "../../research/form/benchmarks/bundle/measure-bundles.mjs";
+
+// Helper: Programmatic Leaf Field Counter
+export function countLeafFields(val) {
+  let count = 0;
+  function traverse(node) {
+    if (node === null || typeof node !== "object") {
+      count++;
+    } else if (Array.isArray(node)) {
+      for (const item of node) traverse(item);
+    } else {
+      for (const key of Object.keys(node)) traverse(node[key]);
+    }
+  }
+  traverse(val);
+  return count;
+}
 
 // Helper: Run synchronous benchmark with warmup, batching, and median aggregation
 export function benchmark(name, fn, { iterations = 50, warmup = 10, batchSize = 1 } = {}) {
@@ -57,6 +74,36 @@ export function benchmark(name, fn, { iterations = 50, warmup = 10, batchSize = 
   const avg = times.reduce((acc, v) => acc + v, 0) / times.length;
 
   return { name, iterations, warmup, batchSize, min, max, median, avg, unit: "ms/op" };
+}
+
+// Helper: Run synchronous benchmark with explicit untimed setup and restore
+export function benchmarkWithSetup(
+  name,
+  { setup, run, restore, iterations = 50, warmup = 10 } = {},
+) {
+  for (let i = 0; i < warmup; i++) {
+    const ctx = setup ? setup() : undefined;
+    run(ctx);
+    if (restore) restore(ctx);
+  }
+
+  const times = [];
+  for (let i = 0; i < iterations; i++) {
+    const ctx = setup ? setup() : undefined;
+    const t0 = performance.now();
+    run(ctx);
+    const t1 = performance.now();
+    times.push(t1 - t0);
+    if (restore) restore(ctx);
+  }
+
+  times.sort((a, b) => a - b);
+  const min = times[0];
+  const max = times[times.length - 1];
+  const median = times[Math.floor(times.length / 2)];
+  const avg = times.reduce((acc, v) => acc + v, 0) / times.length;
+
+  return { name, iterations, warmup, batchSize: 1, min, max, median, avg, unit: "ms/op" };
 }
 
 // Helper: Run asynchronous benchmark with warmup, batching, and median aggregation
@@ -88,6 +135,36 @@ export async function benchmarkAsync(
   const avg = times.reduce((acc, v) => acc + v, 0) / times.length;
 
   return { name, iterations, warmup, batchSize, min, max, median, avg, unit: "ms/op" };
+}
+
+// Helper: Run asynchronous benchmark with explicit untimed setup and restore
+export async function benchmarkAsyncWithSetup(
+  name,
+  { setup, run, restore, iterations = 50, warmup = 10 } = {},
+) {
+  for (let i = 0; i < warmup; i++) {
+    const ctx = setup ? await setup() : undefined;
+    await run(ctx);
+    if (restore) await restore(ctx);
+  }
+
+  const times = [];
+  for (let i = 0; i < iterations; i++) {
+    const ctx = setup ? await setup() : undefined;
+    const t0 = performance.now();
+    await run(ctx);
+    const t1 = performance.now();
+    times.push(t1 - t0);
+    if (restore) await restore(ctx);
+  }
+
+  times.sort((a, b) => a - b);
+  const min = times[0];
+  const max = times[times.length - 1];
+  const median = times[Math.floor(times.length / 2)];
+  const avg = times.reduce((acc, v) => acc + v, 0) / times.length;
+
+  return { name, iterations, warmup, batchSize: 1, min, max, median, avg, unit: "ms/op" };
 }
 
 // ---------------------------------------------------------------------------
@@ -159,26 +236,33 @@ export function runRuntimeBenchmarks() {
       { iterations: 200, warmup: 20, batchSize: 10 },
     );
 
-    // E. form.setValues on subset (10 fields)
-    const subset = {};
+    // E. form.setValues on subset (10 fields) with alternating values to prevent equality fast-paths
+    const subsetA = {};
+    const subsetB = {};
     for (let i = 0; i < Math.min(10, size); i++) {
-      subset[`f_${i}`] = `batch_${i}`;
+      subsetA[`f_${i}`] = `batch_A_${i}`;
+      subsetB[`f_${i}`] = `batch_B_${i}`;
     }
+    let toggleSub = false;
     results[`setValues_subset_${size}`] = benchmark(
       `setValues 10 fields (${size} fields)`,
       () => {
-        formLeaf.setValues(subset);
+        toggleSub = !toggleSub;
+        formLeaf.setValues(toggleSub ? subsetA : subsetB);
       },
       { iterations: 200, warmup: 20 },
     );
 
-    // F. Full Tree Validation (with 1 sync rule per field)
+    // F. Full Tree Validation: 1 sync validation rule per field (Option A)
     const formForVal = createForm({
       initialValues,
-      rules: [(vals) => (vals.f_0.length > 0 ? null : { code: "req", path: ["f_0"] })],
+      rules: Array.from(
+        { length: size },
+        (_, i) => (vals) => (vals[`f_${i}`]?.length > 0 ? null : { code: "req", path: [`f_${i}`] }),
+      ),
     });
     results[`validate_${size}`] = benchmark(
-      `Validate (${size} fields)`,
+      `Validate (${size} fields, ${size} rules)`,
       () => {
         formForVal.validate();
       },
@@ -203,7 +287,7 @@ export function runRuntimeBenchmarks() {
     formForVal.dispose();
   }
 
-  // Realistic Nested Form (~200 leaf fields)
+  // Realistic Nested Form
   const buildNested = () => {
     const initialValues = {
       profile: {
@@ -223,23 +307,27 @@ export function runRuntimeBenchmarks() {
         role: `Role ${i}`,
       })),
     };
-    return createForm({ initialValues });
+    const leafCount = countLeafFields(initialValues);
+    return { form: createForm({ initialValues }), leafCount };
   };
 
+  const { leafCount: nestedLeafCount } = buildNested();
+  console.log(`Nested form actual leaf count: ${nestedLeafCount}`);
+
   results["nested_form_construct"] = benchmark(
-    "Nested Form Construct (~200 fields)",
+    `Nested Form Construct (${nestedLeafCount} leaf fields)`,
     () => {
-      const form = buildNested();
+      const { form } = buildNested();
       form.dispose();
     },
     { iterations: 100, warmup: 20 },
   );
 
-  const nestedForm = buildNested();
+  const { form: nestedForm } = buildNested();
   const deepNode = nestedForm.getNode("addresses[10].city");
   let nestedToggle = false;
   results["nested_form_mutate_deep"] = benchmark(
-    "Nested Form Mutate Deep Leaf",
+    `Nested Form Mutate Deep Leaf (${nestedLeafCount} leaf fields)`,
     () => {
       nestedToggle = !nestedToggle;
       deepNode.setValue(nestedToggle ? "Manchester" : "London");
@@ -252,7 +340,7 @@ export function runRuntimeBenchmarks() {
 }
 
 // ---------------------------------------------------------------------------
-// 2. FieldArray Operations (Separated Construction vs Steady-State)
+// 2. FieldArray Operations (Separated Construction vs True Isolated Operations)
 // ---------------------------------------------------------------------------
 export function runArrayBenchmarks() {
   const results = {};
@@ -274,7 +362,7 @@ export function runArrayBenchmarks() {
       { iterations: 100, warmup: 20 },
     );
 
-    // Steady-state push (push item, pop outside timer to keep constant size)
+    // True isolated steady-state push (push timed, remove untimed in restore)
     const scopePush = createScope();
     const arrPush = createFieldArray({
       initialValues,
@@ -282,18 +370,23 @@ export function runArrayBenchmarks() {
       scope: scopePush,
     });
     let pushCounter = 0;
-    results[`array_push_${count}`] = benchmark(
-      `FieldArray push (${count} items)`,
-      () => {
+    results[`array_push_${count}`] = benchmarkWithSetup(`FieldArray push (${count} items)`, {
+      setup: () => {
         pushCounter++;
-        arrPush.push({ id: `pushed_${pushCounter}`, name: "Pushed" });
+        return { item: { id: `pushed_${pushCounter}`, name: "Pushed" } };
+      },
+      run: ({ item }) => {
+        arrPush.push(item);
+      },
+      restore: () => {
         arrPush.remove(arrPush.items.get().length - 1);
       },
-      { iterations: 100, warmup: 20 },
-    );
+      iterations: 100,
+      warmup: 20,
+    });
     scopePush.dispose();
 
-    // Steady-state insert (insert at 0, remove at 0)
+    // True isolated steady-state insert (insert at 0 timed, remove 0 untimed in restore)
     const scopeInsert = createScope();
     const arrInsert = createFieldArray({
       initialValues,
@@ -301,18 +394,23 @@ export function runArrayBenchmarks() {
       scope: scopeInsert,
     });
     let insertCounter = 0;
-    results[`array_insert_${count}`] = benchmark(
-      `FieldArray insert (${count} items)`,
-      () => {
+    results[`array_insert_${count}`] = benchmarkWithSetup(`FieldArray insert (${count} items)`, {
+      setup: () => {
         insertCounter++;
-        arrInsert.insert(0, { id: `inserted_${insertCounter}`, name: "Inserted" });
+        return { item: { id: `inserted_${insertCounter}`, name: "Inserted" } };
+      },
+      run: ({ item }) => {
+        arrInsert.insert(0, item);
+      },
+      restore: () => {
         arrInsert.remove(0);
       },
-      { iterations: 100, warmup: 20 },
-    );
+      iterations: 100,
+      warmup: 20,
+    });
     scopeInsert.dispose();
 
-    // Steady-state swap
+    // True isolated steady-state swap (swap timed, no length mutation)
     const scopeSwap = createScope();
     const arrSwap = createFieldArray({
       initialValues,
@@ -328,24 +426,28 @@ export function runArrayBenchmarks() {
     );
     scopeSwap.dispose();
 
-    // Steady-state remove & restore
+    // True isolated steady-state remove (setup ensures removable item, remove timed)
     const scopeRemove = createScope();
     const arrRemove = createFieldArray({
-      initialValues: [...initialValues, { id: "removable", name: "Removable" }],
+      initialValues,
       keyExtractor: (x) => x.id,
       scope: scopeRemove,
     });
-    results[`array_remove_${count}`] = benchmark(
-      `FieldArray remove (${count} items)`,
-      () => {
-        arrRemove.remove(arrRemove.items.get().length - 1);
-        arrRemove.push({ id: "removable", name: "Removable" });
+    let removeCounter = 0;
+    results[`array_remove_${count}`] = benchmarkWithSetup(`FieldArray remove (${count} items)`, {
+      setup: () => {
+        removeCounter++;
+        arrRemove.push({ id: `removable_${removeCounter}`, name: "Removable" });
       },
-      { iterations: 100, warmup: 20 },
-    );
+      run: () => {
+        arrRemove.remove(arrRemove.items.get().length - 1);
+      },
+      iterations: 100,
+      warmup: 20,
+    });
     scopeRemove.dispose();
 
-    // Steady-state move
+    // True isolated steady-state move
     const scopeMove = createScope();
     const arrMove = createFieldArray({
       initialValues,
@@ -361,21 +463,27 @@ export function runArrayBenchmarks() {
     );
     scopeMove.dispose();
 
-    // Steady-state setValues
+    // True isolated steady-state setValues with alternating datasets A <-> B
     const scopeSet = createScope();
     const arrSet = createFieldArray({
       initialValues,
       keyExtractor: (x) => x.id,
       scope: scopeSet,
     });
-    const replacementValues = Array.from({ length: count }, (_, i) => ({
+    const replacementA = Array.from({ length: count }, (_, i) => ({
       id: `id_${i}`,
-      name: `Updated ${i}`,
+      name: `Updated_A_${i}`,
     }));
+    const replacementB = Array.from({ length: count }, (_, i) => ({
+      id: `id_${i}`,
+      name: `Updated_B_${i}`,
+    }));
+    let toggleSet = false;
     results[`array_setValues_${count}`] = benchmark(
-      `FieldArray setValues (${count} items)`,
+      `FieldArray setValues alternating (${count} items)`,
       () => {
-        arrSet.setValues(replacementValues);
+        toggleSet = !toggleSet;
+        arrSet.setValues(toggleSet ? replacementA : replacementB);
       },
       { iterations: 100, warmup: 20 },
     );
@@ -391,7 +499,7 @@ export function runArrayBenchmarks() {
 export function runValidationBenchmarks() {
   const results = {};
 
-  // A. Standard Schema Adapter Invocation Microbenchmarks (Single call path)
+  // A. Standard Schema Adapter Invocation Microbenchmarks (Single call path on valid string)
   const nativeRule = (val) =>
     val && val.length >= 3 ? null : { code: "too_short", message: "Too short" };
   results["schema_micro_native_rule"] = benchmark(
@@ -518,15 +626,18 @@ export function runValidationBenchmarks() {
 }
 
 // ---------------------------------------------------------------------------
-// 4. Submission & Snapshot Lifecycle (Async-Correct Measurements)
+// 4. Submission & Snapshots (Async Completed Lifecycle with Untimed Setup/Reset)
 // ---------------------------------------------------------------------------
 export async function runSubmissionBenchmarks() {
   const results = {};
 
-  // deepCloneSnapshot across shapes
-  const flatObj = { a: 1, b: "hello", c: true };
-  const nestedObj = { user: { profile: { name: "Ada", age: 36, tags: ["a", "b"] } } };
-  const arrayObj = Array.from({ length: 50 }, (_, i) => ({ id: i, name: `name_${i}` }));
+  // Snapshot cloning benchmarks (isolated microbenchmarks)
+  const flatObj = { username: "ada", role: "admin", active: true, count: 42 };
+  const nestedObj = {
+    profile: { first: "Ada", last: "Lovelace", contact: { email: "ada@lovelace.org" } },
+    settings: { flags: [1, 2, 3] },
+  };
+  const arrayObj = Array.from({ length: 50 }, (_, i) => ({ id: i, label: `Item ${i}` }));
 
   results["snapshot_flat"] = benchmark(
     "deepCloneSnapshot (flat)",
@@ -552,22 +663,27 @@ export async function runSubmissionBenchmarks() {
     { iterations: 1000, warmup: 100, batchSize: 50 },
   );
 
-  // A. Completed Resolved Async Submission (steady state)
+  // A. Completed Resolved Async Submission (steady state: untimed reset in setup, strictly timed await submit)
   const formSuccess = createForm({
     initialValues: { username: "ada", role: "admin" },
     submitAction: async () => {},
   });
-  results["submit_resolved_success"] = await benchmarkAsync(
+  results["submit_resolved_success"] = await benchmarkAsyncWithSetup(
     "Async Submit: Resolved Success (steady-state)",
-    async () => {
-      await formSuccess.submit();
-      formSuccess.reset();
+    {
+      setup: () => {
+        formSuccess.reset();
+      },
+      run: async () => {
+        await formSuccess.submit();
+      },
+      iterations: 100,
+      warmup: 10,
     },
-    { iterations: 100, warmup: 10 },
   );
   formSuccess.dispose();
 
-  // B. Validation-Blocked Submit (fails validation before action)
+  // B. Validation-Blocked Submit (fails validation before action invocation)
   const formBlocked = createForm({
     initialValues: { username: "" },
     rules: [(vals) => (vals.username.length > 0 ? null : { code: "req", path: ["username"] })],
@@ -582,28 +698,33 @@ export async function runSubmissionBenchmarks() {
   );
   formBlocked.dispose();
 
-  // C. Server Error Rejected Submit (action rejects with error)
+  // C. Server Error Rejected Submit (action rejects with error: untimed reset in setup)
   const formReject = createForm({
     initialValues: { username: "ada" },
     submitAction: async () => {
       throw new Error("Server 500");
     },
   });
-  results["submit_server_rejected"] = await benchmarkAsync(
+  results["submit_server_rejected"] = await benchmarkAsyncWithSetup(
     "Async Submit: Server Rejected",
-    async () => {
-      try {
-        await formReject.submit();
-      } catch {
-        // Expected
-      }
-      formReject.reset();
+    {
+      setup: () => {
+        formReject.reset();
+      },
+      run: async () => {
+        try {
+          await formReject.submit();
+        } catch {
+          // Expected rejection
+        }
+      },
+      iterations: 100,
+      warmup: 10,
     },
-    { iterations: 100, warmup: 10 },
   );
   formReject.dispose();
 
-  // D. Server Issue Routing (100 and 1,000 issues)
+  // D. Server Issue Routing (strictly timed setServerIssues; untimed clear in setup/restore)
   const formForIssues = createForm({
     initialValues: {
       user: { name: "Ada" },
@@ -623,23 +744,33 @@ export async function runSubmissionBenchmarks() {
     path: ["items", i % 20, "label"],
   }));
 
-  results["route_100_server_issues"] = benchmark(
-    "Route 100 Server Issues",
-    () => {
+  results["route_100_server_issues"] = benchmarkWithSetup("Route 100 Server Issues", {
+    setup: () => {
+      formForIssues.clearServerIssues();
+    },
+    run: () => {
       formForIssues.setServerIssues(issues100);
+    },
+    restore: () => {
       formForIssues.clearServerIssues();
     },
-    { iterations: 100, warmup: 10 },
-  );
+    iterations: 100,
+    warmup: 10,
+  });
 
-  results["route_1000_server_issues"] = benchmark(
-    "Route 1000 Server Issues",
-    () => {
-      formForIssues.setServerIssues(issues1000);
+  results["route_1000_server_issues"] = benchmarkWithSetup("Route 1000 Server Issues", {
+    setup: () => {
       formForIssues.clearServerIssues();
     },
-    { iterations: 50, warmup: 10 },
-  );
+    run: () => {
+      formForIssues.setServerIssues(issues1000);
+    },
+    restore: () => {
+      formForIssues.clearServerIssues();
+    },
+    iterations: 50,
+    warmup: 10,
+  });
 
   formForIssues.dispose();
 
@@ -692,28 +823,25 @@ export function runTypeScriptDiagnostics() {
 }
 
 // ---------------------------------------------------------------------------
-// Master Runner
+// Master Runner & Reporter
 // ---------------------------------------------------------------------------
 export async function runAllF9Evidence() {
-  const env = {
-    platform: platform(),
-    arch: arch(),
-    node: process.version,
-    cpuModel: cpus()[0]?.model || "Unknown CPU",
-    cpuCores: cpus().length,
-    totalMemoryGB: (totalmem() / 1024 ** 3).toFixed(2),
-  };
+  console.log("=== Vii Form Research Slice F9 Evidence Harness ===");
+  console.log(`OS: ${platform()} ${arch()}`);
+  console.log(`CPUs: ${cpus().length} cores (${cpus()[0]?.model})`);
+  console.log(`RAM: ${(totalmem() / 1024 / 1024 / 1024).toFixed(2)} GB`);
+  console.log(`Node: ${process.version}`);
+  console.log(`Date: ${new Date().toISOString()}\n`);
 
-  console.log("=== Environment ===");
-  console.log(JSON.stringify(env, null, 2));
-
-  console.log("\n=== 1. Runtime Scaling (Leaf-Only vs Aggregate-Consumer) ===");
+  console.log("=== 1. Runtime Scaling: Leaf-Only vs Aggregate-Consumer ===");
   const runtime = runRuntimeBenchmarks();
   console.log(JSON.stringify(runtime, null, 2));
 
-  console.log("\n=== 2. FieldArray Operations (Separated Construction vs Steady-State) ===");
-  const arrays = runArrayBenchmarks();
-  console.log(JSON.stringify(arrays, null, 2));
+  console.log(
+    "\n=== 2. FieldArray Operations (Separated Construction vs True Isolated Operations) ===",
+  );
+  const arrayOps = runArrayBenchmarks();
+  console.log(JSON.stringify(arrayOps, null, 2));
 
   console.log("\n=== 3. Validation & Schemas (Micro vs Full Form Throughput) ===");
   const validation = runValidationBenchmarks();
@@ -731,12 +859,17 @@ export async function runAllF9Evidence() {
   const bundles = measureBundles();
   console.log(JSON.stringify(bundles, null, 2));
 
-  return { env, runtime, arrays, validation, submission, tsDiag, bundles };
+  return { runtime, arrayOps, validation, submission, tsDiag, bundles };
 }
 
-if (process.argv[1]?.endsWith("form-f9-evidence.mjs")) {
-  runAllF9Evidence().catch((err) => {
-    console.error("Benchmark failed:", err);
-    process.exit(1);
-  });
+// Execute if run directly
+if (import.meta.url === `file://${process.argv[1]}`) {
+  runAllF9Evidence()
+    .then(() => {
+      process.exit(0);
+    })
+    .catch((err) => {
+      console.error("Benchmark failed:", err);
+      process.exit(1);
+    });
 }

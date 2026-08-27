@@ -77,6 +77,13 @@ Computed values invalidate when a dependency changes and notify subscribers only
 result changes. Dependencies that are no longer read are released. Circular reads throw
 `Computed cycle detected`, and `dispose()` releases dependencies and makes further use invalid.
 
+**Dependency Invalidation & Cross-Subscription Freshness:**
+Computed invalidation follows ordinary dependency subscription ordering. A synchronous subscriber
+on a source State may run before a dependent Computed's invalidation callback if that subscriber
+was registered first. Therefore, code inside source-State subscribers must not assume derived
+Computed reads are already fresh. Consumers that require derived updates should subscribe to the
+Computed itself, or read the source state needed for that callback.
+
 Use `batch` to group synchronous writes into one propagation boundary:
 
 ```ts

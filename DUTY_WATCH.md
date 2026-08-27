@@ -48,17 +48,17 @@ PR: #165 (Draft)
 - Implement, correct, and execute Slice F9 (Runtime / Memory / TypeScript / Bundle Evidence) in `research/form/`.
 - Answer research question: Is the F0-F8 Form architecture sufficiently efficient, resource-stable, type-system-friendly, tree-shakeable, and small enough to proceed to real-consumer validation, and where are the actual measured bottlenecks or risks?
 - Gather reproducible empirical evidence across all 14 required categories:
-  1. Runtime update cost across small (10), medium (100), large (500), stress (1,000), and nested (~200) forms with explicit separation of leaf-only mutation (~0.27 - 0.29 µs) vs aggregate-consumer mutation (~1.9 µs to ~149 µs).
+  1. Runtime update cost across small (10), medium (100), large (500), stress (1,000), and nested (97 leaf fields) forms with explicit separation of leaf-only mutation (~0.27 - 0.29 µs) vs aggregate-consumer mutation (~1.9 µs to ~149 µs).
   2. Invalidation fan-out and subscriber granularity (0 sibling notifications).
   3. Memory retention & 100/500 create/dispose cycles (0 active scope leaks, 0 dangling listeners).
-  4. FieldArray item lifecycle: separated construction (0.23 ms for 10; 1.49 ms for 100) vs steady-state operations (0.016 ms push on 100 items; ~0.29 µs swap) with complete resource disposal.
+  4. FieldArray item lifecycle: separated construction (0.23 ms for 10; 1.49 ms for 100) vs true isolated steady-state operations (~3.3 µs push on 100 items; ~2.7 µs remove; ~0.25 µs swap; 0.137 ms alternating setValues) with untimed setup/restore stages and complete resource disposal.
   5. Async validation supersession across 200 rapid changes (199 clean aborts, 1 commit, 0 unhandled rejections).
   6. Debounce scheduling and timer cleanup upon disposal.
-  7. Standard Schema provider integration: adapter microbenchmarks (Native ~0.0025 µs, Valibot ~0.031 µs, ArkType ~0.037 µs, Zod ~0.052 µs) vs realistic full Form validation throughput (~0.027 - 0.029 ms across all providers).
-  8. Submission lifecycle: completed async submission (`await form.submit()` + reset: ~0.040 ms median), snapshot cloning (`deepCloneSnapshot`: ~0.10 µs flat, ~0.43 µs nested), and server issue routing (0.22 ms for 100; 9.30 ms for 1,000 issues).
+  7. Standard Schema provider integration: adapter microbenchmarks (Native ~0.0025 µs, Valibot ~0.030 µs, ArkType ~0.038 µs, Zod ~0.049 µs) vs realistic full Form validation throughput (~0.026 - 0.027 ms across all providers).
+  8. Submission lifecycle: strictly timed completed async submission (`await form.submit()`: ~0.024 ms median), snapshot cloning (`deepCloneSnapshot`: ~0.11 µs flat, ~0.61 µs nested), and isolated server issue routing (0.19 ms for 100; 8.91 ms for 1,000 issues).
   9. Framework adapters & React snapshot stability / render counts / StrictMode cycles.
-  10. Reactive propagation & derived Computed investigation (Items 10 & 57): documented Core push-pull lazy computed caching mechanics and consumer consumption rules.
-  11. TypeScript diagnostics scaling across isolated programs (`tsconfig.small.json`: 0.46s, `tsconfig.medium.json`: 0.49s, `tsconfig.large.json`: 0.50s / 0 deep recursion errors across 80+ files).
+  10. Reactive propagation & derived Computed investigation (Items 10 & 57): documented Core push-pull lazy computed caching mechanics and consumer consumption rules in `packages/core/README.md` and added regression contract test in `packages/core/test/computed.test.ts`.
+  11. TypeScript diagnostics scaling across isolated programs (`tsconfig.small.json`: 0.39s, `tsconfig.medium.json`: 0.40s, `tsconfig.large.json`: 0.40s / 0 deep recursion errors across 80+ files).
   12. Production-style research bundle sizes (`createField` standalone: 12.95 kB min / 4.56 kB gzip / 4.03 kB brotli) and tree-shaking comparison (sheds ~21.1 kB minified code).
   13. Framework and provider isolation (0 cross-framework imports, 0 concrete schema libraries in core).
   14. SSR and Node import safety.
@@ -69,8 +69,9 @@ PR: #165 (Draft)
 - Created research benchmarks and evidence harness:
   - `research/form/benchmarks/typescript/tsconfig.small.json`, `tsconfig.medium.json`, `tsconfig.large.json`, `tsconfig.json`, `small-form.ts`, `medium-form.ts`, `large-form.ts`.
   - `research/form/benchmarks/bundle/measure-bundles.mjs` (measures minified, gzip, brotli bytes via bun & node:zlib).
-  - `scripts/benchmarks/form-f9-evidence.mjs` (master benchmark runner with async helpers, batching, separated array ops, and zero leaks).
-- Created comprehensive test suites in `research/form/`:
+  - `scripts/benchmarks/form-f9-evidence.mjs` (master benchmark runner with `benchmarkWithSetup`, `benchmarkAsyncWithSetup`, true isolated array operations, Option A per-field validation, and programmatic leaf counting).
+- Created comprehensive test suites in `research/form/` and `packages/core/`:
+  - `packages/core/test/computed.test.ts` (15 tests): Added registration-ordering contract test for push-pull signal invalidation.
   - `research/form/benchmarks/reactive-propagation.test.ts` (8 tests): Deterministic proof of Vii Core's push-pull computed caching and notification ordering.
   - `research/form/form-f9-runtime.test.ts` (10 tests): Form scaling (10 to 1,000 fields), fan-out boundaries, batching, error recovery.
   - `research/form/form-f9-memory.test.ts` (7 tests): 100 & 500 create/dispose cycles, FieldArray disposal, debounce timers, async supersession, diagnostics privacy, benchmark harness resource integrity.
@@ -79,6 +80,7 @@ PR: #165 (Draft)
 - Created durable research report:
   - `research/form/F9_EVIDENCE.md` (comprehensive evidence report with all metrics, environment metadata, methodology, and F10 gate recommendation).
 - Updated documentation:
+  - `packages/core/README.md`: Added Dependency Invalidation & Cross-Subscription Freshness caveat.
   - `docs/roadmap/FORM_RESEARCH.md`: Marked F9 completed, updated sequence table and added Section 7 evidence summary.
   - `research/form/README.md`: Added Section 10 F9 evidence summary.
   - `PROJECT_STATE.md`: Updated Form research summary with F9 empirical findings.
@@ -86,10 +88,11 @@ PR: #165 (Draft)
 ### Validation
 
 - `pnpm exec tsc -p research/form/tsconfig.json --noEmit`: PASS (0 errors).
-- `pnpm exec tsc -p research/form/benchmarks/typescript/tsconfig.json --extendedDiagnostics --noEmit`: PASS (0.18s check time / 4,964 instantiations).
-- `pnpm exec tsc -p research/form/benchmarks/typescript/tsconfig.small.json --extendedDiagnostics --noEmit`: PASS (0.46s check time / 31,737 instantiations).
-- `pnpm exec tsc -p research/form/benchmarks/typescript/tsconfig.medium.json --extendedDiagnostics --noEmit`: PASS (0.49s check time / 31,724 instantiations).
-- `pnpm exec tsc -p research/form/benchmarks/typescript/tsconfig.large.json --extendedDiagnostics --noEmit`: PASS (0.50s check time / 31,743 instantiations).
+- `pnpm exec tsc -p research/form/benchmarks/typescript/tsconfig.json --extendedDiagnostics --noEmit`: PASS (0.15s check time / 4,964 instantiations).
+- `pnpm exec tsc -p research/form/benchmarks/typescript/tsconfig.small.json --extendedDiagnostics --noEmit`: PASS (0.39s check time / 31,737 instantiations).
+- `pnpm exec tsc -p research/form/benchmarks/typescript/tsconfig.medium.json --extendedDiagnostics --noEmit`: PASS (0.40s check time / 31,724 instantiations).
+- `pnpm exec tsc -p research/form/benchmarks/typescript/tsconfig.large.json --extendedDiagnostics --noEmit`: PASS (0.40s check time / 31,743 instantiations).
+- `pnpm exec vitest run packages/core/test/computed.test.ts`: PASS (15 tests).
 - `pnpm exec vitest run research/form/`: PASS (18 test files, 363 tests passing, 0 failures).
 - `bun scripts/benchmarks/form-f9-evidence.mjs`: PASS (all runtime, array, validation, submission, TypeScript, and bundle benchmarks executed).
 - `NX_DAEMON=false pnpm validate`: PASS.

@@ -1,4 +1,4 @@
-# Vii Form Research Slice F9: Empirical Evidence & Quality Gate (Corrected)
+# Vii Form Research Slice F9: Empirical Evidence & Quality Gate (Final Corrected)
 
 > **Status**: Completed Evidence Slice (F9 ✅)  
 > **Next Slice**: F10 (Real Consumer Validation + Build-vs-Buy Graduation Gate) — **NOT STARTED**  
@@ -9,7 +9,7 @@
 
 ## Executive Summary & F9 Gate Decision
 
-This document records the corrected, reproducible empirical measurements for **Vii Form Research Slice F9**.
+This document records the final, hardened, and reproducible empirical measurements for **Vii Form Research Slice F9**.
 
 ### Research Question Answer
 > **Is the F0-F8 Form architecture sufficiently efficient, resource-stable, type-system-friendly, tree-shakeable, and small enough to proceed to real-consumer validation, and where are the actual measured bottlenecks or risks?**
@@ -18,10 +18,12 @@ This document records the corrected, reproducible empirical measurements for **V
 
 - **Leaf-Only Mutation**: In the tested leaf-only subscriber scenario, median single-field mutation remained approximately size-insensitive between 10 and 1,000 fields (~0.27 - 0.29 µs), and unrelated field subscribers received 0 notifications.
 - **Aggregate-Consumer Mutation**: When a consumer subscribes to and synchronously reads aggregate computeds (`form.values`, `form.dirty`, `form.issues`), mutation triggers lazy dirty marking and recomputation scaling with aggregate tree size (~1.9 µs for 10 fields to ~149 µs for 1,000 fields).
-- **Completed Submission**: Real completed async submission lifecycle (validate $\rightarrow$ async action $\rightarrow$ state machine transition) resolves at **~0.040 ms median** in steady state.
+- **Completed Submission**: Pure completed async submission lifecycle (validate $\rightarrow$ async action $\rightarrow$ state machine transition, excluding reset) resolves at **~0.024 ms median** in steady state.
+- **FieldArray True Isolated Operations**: With untimed setup/restore stages, isolated steady-state array operations execute in **~3.3 µs** (`push`), **~3.6 µs** (`insert`), **~2.7 µs** (`remove`), **~0.25 µs** (`swap`), **~0.33 µs** (`move`), and **0.137 ms** (`setValues` alternating 100 items).
+- **Per-Field Validation Scaling**: Full tree validation with 1 sync rule per field executes in **0.031 ms** (10 fields / 10 rules), **0.37 ms** (100 fields / 100 rules), **1.40 ms** (500 fields / 500 rules), and **3.97 ms** (1,000 fields / 1,000 rules).
 - **Resource Lifecycle**: 500 complete create/dispose cycles show zero retained resource growth, 0 active scope leaks, and 0 unhandled rejections.
-- **Validation**: Full Form validation throughput across 10 fields is uniform across Native rules and Standard Schema v1 providers (Zod 4, Valibot, ArkType) at ~0.027 - 0.029 ms.
-- **TypeScript Diagnostics**: Checked across 80+ files with zero deep recursion errors (0.46s - 0.50s check time for isolated programs).
+- **Validation Provider Parity**: Full Form validation throughput across 10 fields is uniform across Native rules and Standard Schema v1 providers (Zod 4, Valibot, ArkType) at ~0.026 - 0.027 ms.
+- **TypeScript Diagnostics**: Checked across isolated programs with zero deep recursion errors (0.39s - 0.40s check time for isolated programs).
 - **Bundle Footprint**: `createField` standalone bundles at **12.95 kB minified / 4.56 kB gzip / 4.03 kB brotli** (including all `@vii-labs/core` reactive primitives).
 - **Static Dependency Isolation**: 100% verified zero framework cross-contamination and zero concrete schema provider imports in Core.
 
@@ -33,10 +35,9 @@ This document records the corrected, reproducible empirical measurements for **V
 - **Blockers**: None. Zero memory leaks, zero type-checker hangs, zero SSR crashes, zero framework leaks.
 - **Documented Reactive Invariant & Architectural Caveat (Items 10 & 57)**:
   - In Vii Core's push-pull lazy computed design (`packages/core/src/computed.ts`), when a state dependency updates, its subscribers are notified sequentially in registration order.
-  - If a subscriber to `State A` attached *before* `Computed B(A)` evaluated its dependencies, that subscriber runs *before* `Computed B.invalidate()` executes.
-  - Inside that subscriber, `Computed B.get()` returns the previous cached value because `Computed B.dirty` is still `false`.
-  - **Verdict on Core Semantics**: This behavior is an inherent, intended property of push-pull signal systems that use sequential subscriber lists without topological dependency sorting. Synchronous freshness of a derived `Computed` inside subscriber callbacks of its source dependencies is neither promised nor guaranteed by Vii Core.
-  - **Durable Consumer Rule**: *"Do not rely on synchronously fresh derived `Computed` values inside callbacks of their source dependencies; read source state directly or subscribe to the `Computed` itself."*
+  - If a subscriber to `State A` attached *before* `Computed B(A)` evaluated its dependencies, that subscriber runs *before* `Computed B.invalidate()` executes. Inside that subscriber, `Computed B.get()` returns the previous cached value because `Computed B.dirty` is still `false`.
+  - **Verdict on Core Semantics**: This behavior is an intended property of push-pull signal systems without topological dependency sorting. Synchronous freshness of a derived `Computed` inside subscriber callbacks of its source dependencies is neither promised nor guaranteed by Vii Core.
+  - **Durable Consumer Rule**: *"Do not rely on synchronously fresh derived `Computed` values inside callbacks of their source dependencies; read source state directly or subscribe to the `Computed` itself."* (Documented in `packages/core/README.md` and verified in `packages/core/test/computed.test.ts`).
   - **Form & Adapter Hardening**: In Form F8/F9, internal projections and DOM/ARIA adapters derive state directly from source signals (`issuesState`, `serverIssuesState`, `errorsState`, `parseStatusState`) rather than reading derived computeds inside value callbacks.
 
 > [!IMPORTANT]
@@ -57,42 +58,43 @@ All benchmarks and diagnostics were collected on the canonical repository enviro
 - **React**: `19.2.8`
 - **Angular**: `22.1.1`
 - **Vue**: `3.5.41`
-- **Methodology**: 50–1,000 warmed iterations per scenario; sub-microsecond operations execute with batching ($N = 10 \dots 100$) to eliminate timer-floor quantization; reported values represent median wall-clock durations per operation calculated via `performance.now()`.
+- **Methodology**: 50–1,000 warmed iterations per scenario; sub-microsecond operations execute with batching ($N = 10 \dots 100$) to eliminate timer-floor quantization; stateful mutations utilize `benchmarkWithSetup` or alternating datasets ($A \leftrightarrow B$) to prevent no-op/equality fast paths; reported values represent median wall-clock durations per operation calculated via `performance.now()`.
 
 ---
 
 ## 2. Runtime Scaling: Leaf-Only vs Aggregate-Consumer Scenarios
 
-| Operation | Small (10 fields) | Medium (100 fields) | Large (500 fields) | Stress (1,000 fields) | Nested Form (~200 fields) |
+| Operation | Small (10 fields) | Medium (100 fields) | Large (500 fields) | Stress (1,000 fields) | Nested Form (97 leaf fields) |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Construction (isolated + dispose)** | 0.04 ms | 0.39 ms | 2.32 ms | 4.05 ms | 0.55 ms |
 | **First Read (Lazy computed initialization)** | 0.05 ms | 0.52 ms | 3.45 ms | 6.68 ms | — |
 | **Leaf-Only Mutation (No aggregate listeners)** | **~0.29 µs** | **~0.29 µs** | **~0.27 µs** | **~0.27 µs** | **~0.29 µs** |
 | **Aggregate-Consumer Mutation (`values`/`dirty`/`issues`)** | **~1.9 µs** | **~13.5 µs** | **~74.1 µs** | **~148.8 µs** | — |
-| **`setValues` Subset (10 fields)** | 0.0028 ms | 0.0025 ms | 0.0025 ms | 0.0025 ms | — |
-| **Full Tree Validation (1 sync rule/field)** | 0.031 ms | 0.37 ms | 1.40 ms | 3.97 ms | 0.23 ms |
+| **`setValues` Subset (10 fields, alternating)** | 0.0028 ms | 0.0025 ms | 0.0025 ms | 0.0025 ms | — |
+| **Full Tree Validation (1 sync rule/field)** | **0.031 ms** (10 rules) | **0.37 ms** (100 rules) | **1.40 ms** (500 rules) | **3.97 ms** (1,000 rules) | 0.23 ms |
 | **Form Reset** | 0.018 ms | 0.19 ms | 0.76 ms | 2.08 ms | 0.31 ms |
 
 ### Empirical Observations
 1. **Leaf-Only Subscriber Scaling**: In the tested leaf-only subscriber scenario, median single-field mutation remained approximately size-insensitive between 10 and 1,000 fields (~0.27 - 0.29 µs), and unrelated field subscribers received 0 notifications.
 2. **Aggregate-Consumer Scaling**: When a consumer subscribes to and synchronously reads aggregate computeds (`values`, `dirty`, `issues`), mutating one leaf field causes aggregate computeds to invalidate and recompute upon reading, scaling proportionally with aggregate tree size (~1.9 µs for 10 fields to ~149 µs for 1,000 fields).
-3. **Atomic `setValues` Batching**: Mutating a 10-field subset inside `form.setValues()` takes a constant **~0.0025 ms** regardless of total form size, emitting exactly one batch notification.
+3. **Atomic `setValues` Batching**: Mutating a 10-field subset inside `form.setValues()` with alternating datasets takes a constant **~0.0025 ms** regardless of total form size, emitting exactly one batch notification.
+4. **Nested Form Structure**: The realistic nested form fixture contains programmatically verified **97 leaf fields** (Profile: 5 leaves, Preferences: 2 leaves, Addresses: 60 leaves, History: 30 leaves).
 
 ---
 
-## 3. FieldArray Operations (Separated Construction vs Steady-State)
+## 3. FieldArray Operations (Separated Construction vs True Isolated Operations)
 
-All FieldArray benchmarks isolate creation from steady-state operations and cleanly dispose all created scopes:
+All FieldArray benchmarks isolate creation from operations and use `benchmarkWithSetup` with untimed setup/restore stages so that only the target operation is timed:
 
-| Operation | 10 Items (Median) | 100 Items (Median) |
-| :--- | :--- | :--- |
-| **Construction (`createFieldArray` + dispose)** | **0.230 ms** | **1.487 ms** |
-| **Steady-State `push` (isolated)** | **0.025 ms** | **0.016 ms** |
-| **Steady-State `insert` (at index 0)** | **0.016 ms** | **0.015 ms** |
-| **Steady-State `swap`** | **0.00042 ms** (~0.42 µs) | **0.00029 ms** (~0.29 µs) |
-| **Steady-State `remove` (isolated)** | **0.030 ms** | **0.013 ms** |
-| **Steady-State `move`** | **0.0010 ms** (~1.0 µs) | **0.00033 ms** (~0.33 µs) |
-| **Steady-State `setValues` (replace 10/100 items)** | **0.019 ms** | **0.080 ms** |
+| Operation | 10 Items (Median) | 100 Items (Median) | Isolation Design |
+| :--- | :--- | :--- | :--- |
+| **Construction (`createFieldArray` + `scope.dispose()`)** | **0.230 ms** | **1.487 ms** | Fully scoped lifecycle |
+| **Steady-State `push` (isolated)** | **0.0033 ms** (~3.3 µs) | **0.0033 ms** (~3.3 µs) | Untimed remove in restore |
+| **Steady-State `insert` (at index 0, isolated)** | **0.0036 ms** (~3.6 µs) | **0.0036 ms** (~3.6 µs) | Untimed remove in restore |
+| **Steady-State `swap` (isolated)** | **0.00042 ms** (~0.42 µs) | **0.00025 ms** (~0.25 µs) | In-place item swap |
+| **Steady-State `remove` (isolated)** | **0.0026 ms** (~2.6 µs) | **0.0027 ms** (~2.7 µs) | Untimed push in setup |
+| **Steady-State `move` (isolated)** | **0.00096 ms** (~0.96 µs) | **0.00033 ms** (~0.33 µs) | In-place item move |
+| **Steady-State `setValues` (alternating $A \leftrightarrow B$)** | **0.021 ms** | **0.137 ms** | Guarantees real mutation |
 
 ---
 
@@ -104,38 +106,38 @@ All FieldArray benchmarks isolate creation from steady-state operations and clea
 | Adapter / Provider | Median Latency per Call | Batch Size |
 | :--- | :--- | :--- |
 | **Native Vii Rule (`({ value }) => Issue | null`)** | **~0.0025 µs** | 100 |
-| **Standard Schema: Valibot** | **~0.031 µs** | 100 |
-| **Standard Schema: ArkType** | **~0.037 µs** | 100 |
-| **Standard Schema: Zod 4** | **~0.052 µs** | 100 |
+| **Standard Schema: Valibot** | **~0.030 µs** | 100 |
+| **Standard Schema: ArkType** | **~0.038 µs** | 100 |
+| **Standard Schema: Zod 4** | **~0.049 µs** | 100 |
 
 ### B. Full Form Validation Throughput (10 Fields across Providers)
 *10 fields with 10 validation rules, measured across 1,000 iterations (batch size 50):*
 
 | Provider Mode | Median Latency / Form Validation |
 | :--- | :--- |
-| **10 Fields with Native Vii Rules** | **0.027 ms** |
+| **10 Fields with Native Vii Rules** | **0.026 ms** |
 | **10 Fields with Zod 4 Schemas** | **0.027 ms** |
-| **10 Fields with Valibot Schemas** | **0.029 ms** |
-| **10 Fields with ArkType Schemas** | **0.027 ms** |
+| **10 Fields with Valibot Schemas** | **0.027 ms** |
+| **10 Fields with ArkType Schemas** | **0.026 ms** |
 
-*Verdict: Standard Schema provider overhead is negligible at the Form validation level, with all providers completing 10-field validation in ~0.027 - 0.029 ms.*
+*Verdict: Standard Schema provider overhead is negligible at the Form validation level, with all providers completing 10-field validation in ~0.026 - 0.027 ms.*
 
 ---
 
 ## 5. Completed Async Submission Lifecycle
 
-Measured using `benchmarkAsync` where `await form.submit()` fully completes before stopping the timer:
+Measured using `benchmarkAsyncWithSetup` where `await form.submit()` is strictly timed and form reset is performed during untimed setup:
 
 | Scenario | Median Latency | Description |
 | :--- | :--- | :--- |
-| **`submit_resolved_success`** | **0.040 ms** | Full lifecycle: validate $\rightarrow$ async action $\rightarrow$ succeeded status $\rightarrow$ reset baseline |
+| **`submit_resolved_success`** | **0.024 ms** | Strictly timed `await form.submit()` in steady-state |
 | **`submit_validation_blocked`** | **0.010 ms** | Validation fails before action; immediate transition to failed |
-| **`submit_server_rejected`** | **0.026 ms** | Action throws error; caught and transitioned to failed |
-| **Route 100 Server Issues** | **0.22 ms** | Attaching and clearing 100 path-based server issues |
-| **Route 1,000 Server Issues** | **9.30 ms** | Attaching and clearing 1,000 path-based server issues |
-| **`deepCloneSnapshot` (Flat)** | **~0.10 µs** | Isolated snapshot clone of flat object |
-| **`deepCloneSnapshot` (Nested)** | **~0.43 µs** | Isolated snapshot clone of nested object |
-| **`deepCloneSnapshot` (50 Items)**| **~8.49 µs** | Isolated snapshot clone of 50-item array |
+| **`submit_server_rejected`** | **0.017 ms** | Action throws error; caught and transitioned to failed |
+| **Route 100 Server Issues** | **0.19 ms** | Strictly timed `setServerIssues` (100 issues) |
+| **Route 1,000 Server Issues** | **8.91 ms** | Strictly timed `setServerIssues` (1,000 issues) |
+| **`deepCloneSnapshot` (Flat)** | **~0.11 µs** | Isolated snapshot clone of flat object |
+| **`deepCloneSnapshot` (Nested)** | **~0.61 µs** | Isolated snapshot clone of nested object |
+| **`deepCloneSnapshot` (50 Items)**| **~7.91 µs** | Isolated snapshot clone of 50-item array |
 
 ---
 
@@ -156,12 +158,12 @@ Measured using `benchmarkAsync` where `await form.submit()` fully completes befo
 ## 7. Reactive Propagation & Derived Computed Invariant (Items 10 & 57)
 
 ### Investigation Findings
-We isolated Vii Core's reactive propagation behavior in `research/form/benchmarks/reactive-propagation.test.ts`:
+We isolated Vii Core's reactive propagation behavior in `research/form/benchmarks/reactive-propagation.test.ts` and added a regression contract test to `packages/core/test/computed.test.ts`:
 1. **Push-Pull Notification Ordering**: When `State A` updates, its direct notifier iterates subscribers in order of registration.
 2. **The Stale-Read Scenario**: If `Subscriber S` attaches to `State A` *before* `Computed B(A)` attaches its invalidation listener to `State A`, then when `State A` changes, `Subscriber S` executes first. Inside `Subscriber S`, `Computed B.get()` checks `dirty`. Because `Computed B.invalidate()` has not yet executed, `Computed B` returns its previous cached value.
-3. **Core Semantics Verdict**: This is expected push-pull behavior in Vii Core. Synchronous freshness of a derived Computed inside a dependency subscriber callback is not part of the contract.
+3. **Core Semantics Contract**: Documented in `packages/core/README.md`. Synchronous freshness of a derived Computed inside a dependency subscriber callback is not part of the contract.
 4. **Form & Adapter Hardening**:
-   - Form adapters (e.g. Vanilla DOM `bindField` ARIA projections) must derive dynamic status from direct source signals (`issuesState`, `serverIssuesState`, `errorsState`, `parseStatusState`) rather than reading derived Computeds inside synchronous value subscriber callbacks.
+   - Form adapters (e.g. Vanilla DOM `bindField` ARIA projections) derive dynamic status from direct source signals (`issuesState`, `serverIssuesState`, `errorsState`, `parseStatusState`) rather than reading derived Computeds inside synchronous value subscriber callbacks.
    - External consumer queries outside the notification cycle always observe fresh values once the scheduler flushes.
 
 ---
@@ -172,12 +174,12 @@ Measured via `tsc --extendedDiagnostics --noEmit` across separate program config
 
 | Program Configuration | Files | Lines of TS | Symbols | Types | Instantiations | Check Time | Total Time |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **`small_10_fields` (`tsconfig.small.json`)** | 80 | 4,464 | 60,870 | 31,432 | 31,737 | **0.46 s** | 0.64 s |
-| **`medium_100_fields` (`tsconfig.medium.json`)**| 80 | 4,489 | 60,871 | 31,433 | 31,724 | **0.49 s** | 0.68 s |
-| **`large_300_fields` (`tsconfig.large.json`)** | 80 | 4,468 | 60,893 | 31,443 | 31,743 | **0.50 s** | 0.66 s |
-| **`combined_program` (`tsconfig.json`)** | 82 | 4,603 | 39,673 | 4,255 | 4,964 | **0.18 s** | 0.34 s |
+| **`small_10_fields` (`tsconfig.small.json`)** | 80 | 4,464 | 60,870 | 31,432 | 31,737 | **0.39 s** | 0.55 s |
+| **`medium_100_fields` (`tsconfig.medium.json`)**| 80 | 4,489 | 60,871 | 31,433 | 31,724 | **0.40 s** | 0.54 s |
+| **`large_300_fields` (`tsconfig.large.json`)** | 80 | 4,468 | 60,893 | 31,443 | 31,743 | **0.40 s** | 0.55 s |
+| **`combined_program` (`tsconfig.json`)** | 82 | 4,603 | 39,673 | 4,255 | 4,964 | **0.15 s** | 0.30 s |
 
-*Verdict: Compiler check time scales sub-linearly across small, medium, and large forms with zero deep instantiation errors (`Type instantiation is excessively deep` was NOT encountered).*
+*Verdict: Compiler check time scales sub-linearly across small, medium, and large forms with zero deep instantiation errors.*
 
 ---
 
@@ -223,7 +225,7 @@ Static AST and boundary audit (`research/form/form-f9-bundle.test.ts`) verified:
 ## 11. Summary of Identified Hotspots & Non-Blockers
 
 1. **Aggregate Consumer Invalidation Cost**: While leaf-only mutation is size-insensitive (~0.29 µs), subscribing to and reading `form.values` on every keystroke scales with form size (~149 µs on 1,000 fields). UI architectures should bind components to individual fields rather than reading whole-form values on every keystroke.
-2. **Large Server Issue Routing Scale**: Routing 1,000 server issues takes ~9.3 ms. This is linear and completely safe for real-world forms (which rarely have >20 server issues), but indicates deep tree traversal cost for path-based issues.
+2. **Large Server Issue Routing Scale**: Routing 1,000 server issues takes ~8.9 ms. This is linear and completely safe for real-world forms (which rarely have >20 server issues), but indicates deep tree traversal cost for path-based issues.
 3. **Derived Computed Read-Order Sensitivity**: Push-pull reactive systems require reading source signals directly in notification listeners if synchronous fresh values are needed before the scheduler flush.
 
 ---

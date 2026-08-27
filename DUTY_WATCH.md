@@ -41,7 +41,7 @@ PR: <number or not opened>
 
 Status: completed
 Branch: `perf/form-f9-evidence`
-PR: not opened (Draft PR ready)
+PR: #165 (Draft)
 
 ### Scope
 

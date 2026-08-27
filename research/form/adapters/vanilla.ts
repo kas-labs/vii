@@ -132,7 +132,11 @@ export interface DomElementLike {
   value?: any;
   checked?: boolean;
   type?: string;
+  id?: string;
   textContent?: string | null;
+  getAttribute?(name: string): string | null;
+  setAttribute?(name: string, value: string): void;
+  removeAttribute?(name: string): void;
   addEventListener(event: string, handler: (event: any) => void): void;
   removeEventListener(event: string, handler: (event: any) => void): void;
 }
@@ -146,6 +150,19 @@ export interface BindFieldOptions {
    * Custom issue formatter callback. Must return text string, never HTML.
    */
   readonly formatIssues?: ((issues: readonly FieldIssue[]) => string) | undefined;
+  /**
+   * Projects `aria-invalid` from the field's `invalid` state. Defaults to true
+   * when the element supports attributes. Pending async validation never marks
+   * the control invalid, because `invalid` does not include `pending`.
+   */
+  readonly ariaInvalid?: boolean | undefined;
+  /**
+   * Links the control to `issueElement` by adding its id to `aria-describedby`,
+   * preserving any tokens already present and removing only the added one on
+   * dispose. Defaults to true when both elements support attributes and the
+   * issue element has an id.
+   */
+  readonly ariaDescribedBy?: boolean | undefined;
 }
 
 export interface VanillaDisposer {
@@ -192,6 +209,51 @@ export function bindField<Value, Raw = Value, Output = Value>(
   };
 
   renderIssues();
+
+  // ---------------------------------------------------------------------
+  // ARIA projection. The DOM adapter is the only layer that owns element
+  // attributes; the React, Angular and Vue adapters expose `invalid` and the
+  // template writes the attribute.
+  // ---------------------------------------------------------------------
+  const supportsAttributes =
+    typeof element.setAttribute === "function" && typeof element.removeAttribute === "function";
+  const projectAriaInvalid = (options?.ariaInvalid ?? true) && supportsAttributes;
+
+  // Derived from the raw state nodes rather than the `invalid` computed: a
+  // notification callback can run before a downstream computed has recomputed,
+  // which left the attribute one edit behind. Pending is deliberately absent -
+  // an in-flight async validation must not mark the control invalid.
+  const isCurrentlyInvalid = (): boolean =>
+    field.issues.get().length > 0 ||
+    field.serverIssues.get().length > 0 ||
+    field.errors.get().length > 0 ||
+    field.parseStatus.get() === "invalid";
+
+  const applyAriaInvalid = (): void => {
+    if (!projectAriaInvalid) return;
+    element.setAttribute!("aria-invalid", isCurrentlyInvalid() ? "true" : "false");
+  };
+
+  applyAriaInvalid();
+
+  const describedById = options?.issueElement?.id;
+  const linkDescribedBy =
+    (options?.ariaDescribedBy ?? true) &&
+    supportsAttributes &&
+    typeof element.getAttribute === "function" &&
+    typeof describedById === "string" &&
+    describedById !== "";
+  let addedDescribedByToken = false;
+
+  if (linkDescribedBy) {
+    const existing = element.getAttribute!("aria-describedby");
+    const tokens = existing ? existing.split(/\s+/).filter((t) => t !== "") : [];
+    if (!tokens.includes(describedById!)) {
+      tokens.push(describedById!);
+      element.setAttribute!("aria-describedby", tokens.join(" "));
+      addedDescribedByToken = true;
+    }
+  }
 
   const handleInput = (event: any): void => {
     if (isDisposed || isUpdatingFromStore) return;
@@ -274,6 +336,23 @@ export function bindField<Value, Raw = Value, Output = Value>(
   const unsubIssues = field.issues.subscribe(() => {
     if (isDisposed) return;
     renderIssues();
+    applyAriaInvalid();
+  });
+
+  const unsubServerIssues = field.serverIssues.subscribe(() => {
+    if (isDisposed) return;
+    renderIssues();
+    applyAriaInvalid();
+  });
+
+  const unsubParseStatus = field.parseStatus.subscribe(() => {
+    if (isDisposed) return;
+    applyAriaInvalid();
+  });
+
+  const unsubErrors = field.errors.subscribe(() => {
+    if (isDisposed) return;
+    applyAriaInvalid();
   });
 
   const dispose = (): void => {
@@ -284,6 +363,25 @@ export function bindField<Value, Raw = Value, Output = Value>(
     unsubRaw();
     unsubVal();
     unsubIssues();
+    unsubServerIssues();
+    unsubParseStatus();
+    unsubErrors();
+
+    // Leave the element as it was found: drop only the token this binding added.
+    if (addedDescribedByToken && typeof element.getAttribute === "function") {
+      const current = element.getAttribute("aria-describedby");
+      const remaining = (current ? current.split(/\s+/) : []).filter(
+        (t) => t !== "" && t !== describedById,
+      );
+      if (remaining.length > 0) {
+        element.setAttribute!("aria-describedby", remaining.join(" "));
+      } else {
+        element.removeAttribute!("aria-describedby");
+      }
+    }
+    if (projectAriaInvalid) {
+      element.removeAttribute!("aria-invalid");
+    }
   };
 
   return { dispose };

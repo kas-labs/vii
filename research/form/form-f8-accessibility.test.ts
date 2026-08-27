@@ -87,28 +87,32 @@ describe("Form F8 Accessibility Hardening", () => {
       scope.dispose();
     });
 
-    it("supports React declarative label/input association", () => {
+    it("exposes the state a React template binds to aria attributes", () => {
       const scope = createScope();
-      const nameField = createField({ initialValue: "Alex", scope });
+      const nameField = createField<string>({
+        initialValue: "",
+        scope,
+        rules: [(v: string) => (v ? null : { code: "required", message: "Required" })],
+      });
 
-      // React hook snapshot exposes clean data for JSX attributes
-      const fieldBinding = {
-        id: "name-input",
-        label: "Full Name",
-        value: nameField.value.get(),
-        invalid: nameField.invalid.get(),
-      };
+      // What a component would spread onto <input id=... aria-invalid=...>.
+      const ariaProps = () => ({
+        "aria-invalid": nameField.invalid.get() ? "true" : "false",
+        "aria-describedby": nameField.issues.get().length > 0 ? "name-error" : undefined,
+      });
 
-      expect(fieldBinding.id).toBe("name-input");
-      expect(fieldBinding.label).toBe("Full Name");
-      expect(fieldBinding.value).toBe("Alex");
-      expect(fieldBinding.invalid).toBe(false);
+      expect(ariaProps()).toEqual({ "aria-invalid": "false", "aria-describedby": undefined });
+
+      nameField.validate("change");
+      expect(ariaProps()).toEqual({ "aria-invalid": "true", "aria-describedby": "name-error" });
+
+      nameField.setValue("Alex");
+      nameField.validate("change");
+      expect(ariaProps()).toEqual({ "aria-invalid": "false", "aria-describedby": undefined });
 
       scope.dispose();
     });
-  });
 
-  describe("2. aria-invalid Semantics", () => {
     it("computes aria-invalid accurately across unvalidated, valid, invalid, and server states", () => {
       const scope = createScope();
       const field = createField<string>({
@@ -501,6 +505,143 @@ describe("Form F8 Accessibility Hardening", () => {
       expect(vueField.issues.value[0]?.message).toBe("Required");
 
       vueField.dispose();
+      scope.dispose();
+    });
+  });
+  // -------------------------------------------------------------------------
+  // Review regressions (F8 fix pass): the DOM adapter projects ARIA itself
+  // -------------------------------------------------------------------------
+  describe("F8 review regressions - adapter ARIA projection", () => {
+    it("bindField writes aria-invalid and keeps it in step with field state", async () => {
+      const scope = createScope();
+      const field = createField<string>({
+        initialValue: "",
+        scope,
+        rules: [(v: string) => (v ? null : { code: "required", message: "Required" })],
+        validateOn: "manual",
+      });
+      const input = createMockElement("input", { id: "u" });
+
+      const binding = bindField(field, input);
+      // Projected at bind time, not only after the first change.
+      expect(input.getAttribute("aria-invalid")).toBe("false");
+
+      field.validate("manual");
+      expect(input.getAttribute("aria-invalid")).toBe("true");
+
+      field.setValue("filled");
+      field.validate("manual");
+      expect(input.getAttribute("aria-invalid")).toBe("false");
+
+      binding.dispose();
+      expect(input.getAttribute("aria-invalid")).toBeNull();
+      scope.dispose();
+    });
+
+    it("a pending async validation never marks the control aria-invalid", async () => {
+      const scope = createScope();
+      let release!: () => void;
+      const gate = new Promise<void>((r) => {
+        release = r;
+      });
+      const field = createField<string>({
+        initialValue: "ok",
+        scope,
+        rules: [
+          async () => {
+            await gate;
+            return null;
+          },
+        ],
+        validateOn: "manual",
+      });
+      const input = createMockElement("input", { id: "p" });
+      const binding = bindField(field, input);
+
+      const pending = field.validate("manual");
+      await Promise.resolve();
+      expect(field.pending.get()).toBe(true);
+      expect(input.getAttribute("aria-invalid")).toBe("false");
+
+      release();
+      await pending;
+      expect(input.getAttribute("aria-invalid")).toBe("false");
+
+      binding.dispose();
+      scope.dispose();
+    });
+
+    it("a parse failure is projected as aria-invalid", () => {
+      const scope = createScope();
+      const field = createField<number, string>({
+        initialValue: 0,
+        initialRawValue: "0",
+        scope,
+        parser: createNumberParser(),
+      });
+      const input = createMockElement("input", { id: "n" });
+      const binding = bindField(field, input);
+
+      expect(input.getAttribute("aria-invalid")).toBe("false");
+      field.setRawValue("not-a-number");
+      expect(field.parseStatus.get()).toBe("invalid");
+      expect(input.getAttribute("aria-invalid")).toBe("true");
+
+      binding.dispose();
+      scope.dispose();
+    });
+
+    it("a server issue is projected as aria-invalid", async () => {
+      const scope = createScope();
+      const form = createForm<{ a: string }>({ initialValues: { a: "x" } });
+      const node = form.getNode("a") as ReturnType<typeof createField<string>>;
+      const input = createMockElement("input", { id: "s" });
+      const binding = bindField(node, input);
+
+      expect(input.getAttribute("aria-invalid")).toBe("false");
+      await form.submit(async () => ({
+        ok: false as const,
+        issues: [{ code: "taken", message: "Already taken", path: ["a"] }],
+      }));
+      expect(input.getAttribute("aria-invalid")).toBe("true");
+
+      binding.dispose();
+      form.dispose();
+      scope.dispose();
+    });
+
+    it("bindField adds its issue element to aria-describedby and restores it on dispose", () => {
+      const scope = createScope();
+      const field = createField<string>({ initialValue: "", scope });
+      const input = createMockElement("input", { id: "u2", "aria-describedby": "hint-text" });
+      const errorElem = createMockElement("div", { id: "u2-error" });
+
+      const binding = bindField(field, input, { issueElement: errorElem });
+
+      // The adapter appends, it does not clobber an existing token.
+      expect(input.getAttribute("aria-describedby")).toBe("hint-text u2-error");
+
+      binding.dispose();
+      expect(input.getAttribute("aria-describedby")).toBe("hint-text");
+      scope.dispose();
+    });
+
+    it("aria projection can be opted out of", () => {
+      const scope = createScope();
+      const field = createField<string>({ initialValue: "", scope });
+      const input = createMockElement("input", { id: "u3" });
+      const errorElem = createMockElement("div", { id: "u3-error" });
+
+      const binding = bindField(field, input, {
+        issueElement: errorElem,
+        ariaInvalid: false,
+        ariaDescribedBy: false,
+      });
+
+      expect(input.getAttribute("aria-invalid")).toBeNull();
+      expect(input.getAttribute("aria-describedby")).toBeNull();
+
+      binding.dispose();
       scope.dispose();
     });
   });

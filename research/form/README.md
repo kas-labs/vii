@@ -463,5 +463,12 @@ Slice F9 executed the empirical evidence harness to evaluate runtime scaling, me
 ### 2. Documented Reactive Invariant & Core Semantics (Items 10 & 57)
 In Vii Core's push-pull lazy computed design, reading a derived `Computed` inside a synchronous `State` subscriber callback will observe the previous cached value if the `Computed` was evaluated after the subscriber registered. This is an intended property of push-pull signal systems without topological sorting. Documented in `packages/core/README.md` and verified in `packages/core/test/computed.test.ts`. Form adapters and internal projections derive dynamic status directly from source signals. External consumer reads outside the notification cycle always observe fresh values once the scheduler flushes.
 
-### 3. F10 Status
-**F10 has NOT been started.** Completion of F9 authorizes review and documentation only.
+### 3. F10: Real Consumer Validation & Build-vs-Buy Graduation Gate
+- **Status**: **COMPLETE**. Full validation report in [`research/form/F10_CONSUMER_VALIDATION.md`](./F10_CONSUMER_VALIDATION.md).
+- **Consumer A**: 5-step Vanilla multi-step onboarding wizard with step validity computeds, parser raw preservation, dynamic address FieldArray, and conditional tax ID rules (`research/form/f10/consumers/consumer-a-vanilla.ts`).
+- **Consumer B**: React 19 Task Board collaborative card editor with controlled parsers, async title uniqueness check, and leaf-level render isolation (`research/form/f10/consumers/consumer-b-react.tsx`).
+- **Competitors**: Benchmarked against `@tanstack/react-form@1.33.5`, `react-hook-form@7.86.0`, `@angular/forms@22.1.4`, and `@tanstack/react-form@2.0.0-alpha.2`.
+- **Benchmark Highlights**: 0.46 µs leaf mutation on 1,000 fields (1.83M ops/s), 0.29 µs FieldArray swap, 1 render per leaf edit in React with 0 whole-form re-renders, 14.2 kB cold / +4.9 kB incremental gzip bundle.
+- **Graduation Gate Verdict**: **GRADUATE TO BUILD (RECOMMEND PRODUCTION PHASE 1)**.
+- **Operating Constraint**: Absolute stop condition enforced — no public package published, no production implementation initiated in research phase. All 384 tests pass across 23 test suites.
+

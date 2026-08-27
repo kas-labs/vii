@@ -12,6 +12,21 @@ importers:
 
   .:
     devDependencies:
+      '@angular/common':
+        specifier: 22.1.4
+        version: 22.1.4(@angular/core@22.1.4(@angular/compiler@22.1.4)(rxjs@7.8.2)(zone.js@0.16.0))(rxjs@7.8.2)
+      '@angular/compiler':
+        specifier: 22.1.4
+        version: 22.1.4
+      '@angular/core':
+        specifier: 22.1.4
+        version: 22.1.4(@angular/compiler@22.1.4)(rxjs@7.8.2)(zone.js@0.16.0)
+      '@angular/forms':
+        specifier: 22.1.4
+        version: 22.1.4(@angular/common@22.1.4(@angular/core@22.1.4(@angular/compiler@22.1.4)(rxjs@7.8.2)(zone.js@0.16.0))(rxjs@7.8.2))(@angular/core@22.1.4(@angular/compiler@22.1.4)(rxjs@7.8.2)(zone.js@0.16.0))(@angular/platform-browser@22.1.4(@angular/common@22.1.4(@angular/core@22.1.4(@angular/compiler@22.1.4)(rxjs@7.8.2)(zone.js@0.16.0))(rxjs@7.8.2))(@angular/core@22.1.4(@angular/compiler@22.1.4)(rxjs@7.8.2)(zone.js@0.16.0)))(rxjs@7.8.2)
+      '@angular/platform-browser':
+        specifier: 22.1.4
+        version: 22.1.4(@angular/common@22.1.4(@angular/core@22.1.4(@angular/compiler@22.1.4)(rxjs@7.8.2)(zone.js@0.16.0))(rxjs@7.8.2))(@angular/core@22.1.4(@angular/compiler@22.1.4)(rxjs@7.8.2)(zone.js@0.16.0))
       '@changesets/cli':
         specifier: ^3.0.0
         version: 3.0.0
@@ -24,6 +39,9 @@ importers:
       '@standard-schema/spec':
         specifier: ^1.1.0
         version: 1.1.0
+      '@tanstack/react-form':
+        specifier: 1.33.5
+        version: 1.33.5(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       arktype:
         specifier: ^2.2.3
         version: 2.2.3
@@ -45,6 +63,9 @@ importers:
       prettier:
         specifier: 3.9.6
         version: 3.9.6
+      react-hook-form:
+        specifier: 7.86.0
+        version: 7.86.0(react@19.2.8)
       rxjs:
         specifier: 7.8.2
         version: 7.8.2
@@ -201,8 +222,19 @@ importers:
 
 packages:
 
+  '@angular/common@22.1.4':
+    resolution: {integrity: sha512-UtWCloA/d0I5twV9Lu/Fcc7T6uQb40f/k0Hj5HLohIsiLTyvXVxWINBfa7LWWLtcq/0UOIY/yCs9Zq9Sj4dWqA==}
+    engines: {node: ^22.22.3 || ^24.15.0 || >=26.0.0}
+    peerDependencies:
+      '@angular/core': 22.1.4
+      rxjs: ^6.5.3 || ^7.4.0
+
   '@angular/compiler@22.1.1':
     resolution: {integrity: sha512-UfQZALwewk+WyE5fqrXT3CK0sxWXre4XojAvUdFQSZsVHTZEM1QD4FncuePa44I6BQMhfqQUvYNlqFnev4WOQg==}
+    engines: {node: ^22.22.3 || ^24.15.0 || >=26.0.0}
+
+  '@angular/compiler@22.1.4':
+    resolution: {integrity: sha512-o+W0shjR5KmPPWchFmqN9bLINYAy14zIW//g9T5WqKDMOqjt4IbeY6AKOoE1db/dXffprLEH9nyPOmi19iKNxg==}
     engines: {node: ^22.22.3 || ^24.15.0 || >=26.0.0}
 
   '@angular/core@22.1.1':
@@ -216,6 +248,39 @@ packages:
       '@angular/compiler':
         optional: true
       zone.js:
+        optional: true
+
+  '@angular/core@22.1.4':
+    resolution: {integrity: sha512-0dW+lw8nHo6RGBUOXtjs02vjHIPJ8rEbw4fd0NH3Dii4p+gIB4ZaTw+o7Se3Nf4m1oZ8+2qAYmWVHXlfhKcCDg==}
+    engines: {node: ^22.22.3 || ^24.15.0 || >=26.0.0}
+    peerDependencies:
+      '@angular/compiler': 22.1.4
+      rxjs: ^6.5.3 || ^7.4.0
+      zone.js: ~0.15.0 || ~0.16.0
+    peerDependenciesMeta:
+      '@angular/compiler':
+        optional: true
+      zone.js:
+        optional: true
+
+  '@angular/forms@22.1.4':
+    resolution: {integrity: sha512-w8ZXe4oURrb/DS5zAFrR4AmGXC84sdLeOKXRM76ndRRgSCzyRLEe4wDU1KHnDejNVIGvoSZYJJjOajG1lpj8TA==}
+    engines: {node: ^22.22.3 || ^24.15.0 || >=26.0.0}
+    peerDependencies:
+      '@angular/common': 22.1.4
+      '@angular/core': 22.1.4
+      '@angular/platform-browser': 22.1.4
+      rxjs: ^6.5.3 || ^7.4.0
+
+  '@angular/platform-browser@22.1.4':
+    resolution: {integrity: sha512-zhEWnRShG6GjnEvCVROD68XfnrV6+HJ9bPjwZx4LsAz7spX823Nhiml8Uqpvijsa1w7UdWLU7nK/magr9IEMOQ==}
+    engines: {node: ^22.22.3 || ^24.15.0 || >=26.0.0}
+    peerDependencies:
+      '@angular/animations': 22.1.4
+      '@angular/common': 22.1.4
+      '@angular/core': 22.1.4
+    peerDependenciesMeta:
+      '@angular/animations':
         optional: true
 
   '@ark/schema@0.56.2':
@@ -549,6 +614,36 @@ packages:
 
   '@standard-schema/spec@1.1.0':
     resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
+
+  '@tanstack/devtools-event-client@0.4.4':
+    resolution: {integrity: sha512-6T5Yop/793YI+H+5J8Hsyj4kCih9sl4t3ElLgKioW5hk3ocn+ZdSJ94tT7vL7uabxSugWYBZlOTMPzEw2puvQw==}
+    engines: {node: '>=18'}
+    hasBin: true
+
+  '@tanstack/form-core@1.33.5':
+    resolution: {integrity: sha512-3dfx9MBP0aq5sXKteikG629X9oviptrQj0IFRk9YGcb+lB7Kv5x8S17oOSk1wUWgjQZ4xVJEMbKwOAODymocgA==}
+
+  '@tanstack/pacer-lite@0.1.1':
+    resolution: {integrity: sha512-y/xtNPNt/YeyoVxE/JCx+T7yjEzpezmbb+toK8DDD1P4m7Kzs5YR956+7OKexG3f8aXgC3rLZl7b1V+yNUSy5w==}
+    engines: {node: '>=18'}
+
+  '@tanstack/react-form@1.33.5':
+    resolution: {integrity: sha512-LlRB28qJwO/QCGaHvWnbdh4haBgTFiZVmzA2uzxSBS3YA7/IqrQ6HOBK70CkFQ+DbflZ7NawsmSln13h5iIdTA==}
+    peerDependencies:
+      '@tanstack/react-start': '*'
+      react: ^17.0.0 || ^18.0.0 || ^19.0.0
+    peerDependenciesMeta:
+      '@tanstack/react-start':
+        optional: true
+
+  '@tanstack/react-store@0.11.1':
+    resolution: {integrity: sha512-HaIGKI3YLmjBYIvy5DFDY23oNaYZIsTZfngey07Uh5iLVJgM3bIGCnZeOFOqzjFld9JHWcaHJnasD/bKoGKwJQ==}
+    peerDependencies:
+      react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+      react-dom: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+
+  '@tanstack/store@0.11.1':
+    resolution: {integrity: sha512-mzTOBhypOuDJAy/D8n2MfUZ1HFkXnmSETviRyhqEC8LUE7/IZQExOTxMANj3KjTofYTkFNpBY67qaVrT41YccA==}
 
   '@tybys/wasm-util@0.9.0':
     resolution: {integrity: sha512-6+7nlbMVX/PVDCwaIQ8nTOPveOcFLSt8GcXdx8hD0bt39uWxYT88uXzqTd4fTvqta7oeUJqudepapKNt2DYJFw==}
@@ -1402,6 +1497,12 @@ packages:
     peerDependencies:
       react: ^19.2.8
 
+  react-hook-form@7.86.0:
+    resolution: {integrity: sha512-4kbWJrh5jPZt1+YqVcXcGKffGcXV/XVbozknLh0Yjh0KhpoAkus21TAQhzRYqNwFkkObmnSvRlZZ3GT+ehoIrA==}
+    engines: {node: '>=18.0.0'}
+    peerDependencies:
+      react: ^16.8.0 || ^17 || ^18 || ^19
+
   react-is@19.2.8:
     resolution: {integrity: sha512-s5un28nYxKJw5gvUHyW5PCC28CvBqLu9r3cWgzHT4Vo/5fqqkFcdRYsGcKf50WMPpjjFZS5d76fn3YCo2njKwQ==}
 
@@ -1569,6 +1670,11 @@ packages:
   uri-js@4.4.1:
     resolution: {integrity: sha512-7rKUyy33Q1yc98pQ1DAmLtwX109F7TIfWlW1Ydo8Wl1ii1SeHieeh0HHfPeL2fMXK6z0s8ecKs9frCuLJvndBg==}
 
+  use-sync-external-store@1.6.0:
+    resolution: {integrity: sha512-Pp6GSwGP/NrPIrxVFAIkOQeyw8lFenOHijQWkUTrDvrF4ALqylP2C/KCkeS9dpUM3KvYRQhna5vt7IL95+ZQ9w==}
+    peerDependencies:
+      react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+
   util-deprecate@1.0.2:
     resolution: {integrity: sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==}
 
@@ -1729,7 +1835,17 @@ packages:
 
 snapshots:
 
+  '@angular/common@22.1.4(@angular/core@22.1.4(@angular/compiler@22.1.4)(rxjs@7.8.2)(zone.js@0.16.0))(rxjs@7.8.2)':
+    dependencies:
+      '@angular/core': 22.1.4(@angular/compiler@22.1.4)(rxjs@7.8.2)(zone.js@0.16.0)
+      rxjs: 7.8.2
+      tslib: 2.8.1
+
   '@angular/compiler@22.1.1':
+    dependencies:
+      tslib: 2.8.1
+
+  '@angular/compiler@22.1.4':
     dependencies:
       tslib: 2.8.1
 
@@ -1740,6 +1856,30 @@ snapshots:
     optionalDependencies:
       '@angular/compiler': 22.1.1
       zone.js: 0.16.0
+
+  '@angular/core@22.1.4(@angular/compiler@22.1.4)(rxjs@7.8.2)(zone.js@0.16.0)':
+    dependencies:
+      rxjs: 7.8.2
+      tslib: 2.8.1
+    optionalDependencies:
+      '@angular/compiler': 22.1.4
+      zone.js: 0.16.0
+
+  '@angular/forms@22.1.4(@angular/common@22.1.4(@angular/core@22.1.4(@angular/compiler@22.1.4)(rxjs@7.8.2)(zone.js@0.16.0))(rxjs@7.8.2))(@angular/core@22.1.4(@angular/compiler@22.1.4)(rxjs@7.8.2)(zone.js@0.16.0))(@angular/platform-browser@22.1.4(@angular/common@22.1.4(@angular/core@22.1.4(@angular/compiler@22.1.4)(rxjs@7.8.2)(zone.js@0.16.0))(rxjs@7.8.2))(@angular/core@22.1.4(@angular/compiler@22.1.4)(rxjs@7.8.2)(zone.js@0.16.0)))(rxjs@7.8.2)':
+    dependencies:
+      '@angular/common': 22.1.4(@angular/core@22.1.4(@angular/compiler@22.1.4)(rxjs@7.8.2)(zone.js@0.16.0))(rxjs@7.8.2)
+      '@angular/core': 22.1.4(@angular/compiler@22.1.4)(rxjs@7.8.2)(zone.js@0.16.0)
+      '@angular/platform-browser': 22.1.4(@angular/common@22.1.4(@angular/core@22.1.4(@angular/compiler@22.1.4)(rxjs@7.8.2)(zone.js@0.16.0))(rxjs@7.8.2))(@angular/core@22.1.4(@angular/compiler@22.1.4)(rxjs@7.8.2)(zone.js@0.16.0))
+      '@standard-schema/spec': 1.1.0
+      rxjs: 7.8.2
+      tslib: 2.8.1
+      zod: 4.4.3
+
+  '@angular/platform-browser@22.1.4(@angular/common@22.1.4(@angular/core@22.1.4(@angular/compiler@22.1.4)(rxjs@7.8.2)(zone.js@0.16.0))(rxjs@7.8.2))(@angular/core@22.1.4(@angular/compiler@22.1.4)(rxjs@7.8.2)(zone.js@0.16.0))':
+    dependencies:
+      '@angular/common': 22.1.4(@angular/core@22.1.4(@angular/compiler@22.1.4)(rxjs@7.8.2)(zone.js@0.16.0))(rxjs@7.8.2)
+      '@angular/core': 22.1.4(@angular/compiler@22.1.4)(rxjs@7.8.2)(zone.js@0.16.0)
+      tslib: 2.8.1
 
   '@ark/schema@0.56.2':
     dependencies:
@@ -2045,6 +2185,33 @@ snapshots:
   '@sinclair/typebox@0.34.52': {}
 
   '@standard-schema/spec@1.1.0': {}
+
+  '@tanstack/devtools-event-client@0.4.4': {}
+
+  '@tanstack/form-core@1.33.5':
+    dependencies:
+      '@tanstack/devtools-event-client': 0.4.4
+      '@tanstack/pacer-lite': 0.1.1
+      '@tanstack/store': 0.11.1
+
+  '@tanstack/pacer-lite@0.1.1': {}
+
+  '@tanstack/react-form@1.33.5(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
+    dependencies:
+      '@tanstack/form-core': 1.33.5
+      '@tanstack/react-store': 0.11.1(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      react: 19.2.8
+    transitivePeerDependencies:
+      - react-dom
+
+  '@tanstack/react-store@0.11.1(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
+    dependencies:
+      '@tanstack/store': 0.11.1
+      react: 19.2.8
+      react-dom: 19.2.8(react@19.2.8)
+      use-sync-external-store: 1.6.0(react@19.2.8)
+
+  '@tanstack/store@0.11.1': {}
 
   '@tybys/wasm-util@0.9.0':
     dependencies:
@@ -3011,6 +3178,10 @@ snapshots:
       react: 19.2.8
       scheduler: 0.27.0
 
+  react-hook-form@7.86.0(react@19.2.8):
+    dependencies:
+      react: 19.2.8
+
   react-is@19.2.8: {}
 
   react-test-renderer@19.2.8(react@19.2.8):
@@ -3167,6 +3338,10 @@ snapshots:
   uri-js@4.4.1:
     dependencies:
       punycode: 2.3.1
+
+  use-sync-external-store@1.6.0(react@19.2.8):
+    dependencies:
+      react: 19.2.8
 
   util-deprecate@1.0.2: {}
 

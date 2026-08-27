@@ -10,6 +10,7 @@
     "types": ["node"],
     "paths": {
       "react": ["../../packages/react/node_modules/@types/react/index.d.ts"],
+      "react/jsx-runtime": ["../../packages/react/node_modules/@types/react/jsx-runtime.d.ts"],
       "react-dom": ["../../packages/react/node_modules/@types/react-dom/index.d.ts"],
       "react-dom/server": ["../../packages/react/node_modules/@types/react-dom/server.d.ts"],
       "react-test-renderer": [
@@ -17,7 +18,8 @@
       ],
       "@angular/core": ["../../packages/angular/node_modules/@angular/core/types/core.d.ts"],
       "vue": ["../../packages/vue/node_modules/vue/dist/vue.d.ts"]
-    }
+    },
+    "jsx": "react-jsx"
   },
-  "include": ["./**/*.ts"]
+  "include": ["./**/*.ts", "./**/*.tsx"]
 }

@@ -41,7 +41,7 @@ PR: <number or not opened>
 
 Status: completed
 Branch: `feat/form-framework-adapters`
-PR: not opened (Draft PR ready)
+PR: #163 (Draft)
 
 ### Scope
 

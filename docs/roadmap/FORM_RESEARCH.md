@@ -1,7 +1,7 @@
 # Vii Form Research Roadmap
 
-> **Status**: Active Research Track (F0-F7 Completed)
-> **Current Slice**: F7 Completed / Ready for Review
+> **Status**: Active Research Track (F0-F8 Completed)
+> **Current Slice**: F8 Completed / Ready for Review
 > **Governing Strategy**: Evidence-driven Build-vs-Buy
 > **Prerequisites**: Phase 1 (Core State), Phase 2 (Adapters/CLI), Scope/Lifecycle Foundations, Schema Research (`Wrap + Reduce`)
 
@@ -90,7 +90,7 @@ Vii Form is a research track investigating whether a small, typed, framework-agn
 | **F5** | **Parsing / Input-Output Types / Standard Schema Boundary** | Prototype raw input $\rightarrow$ parse $\rightarrow$ field value $\rightarrow$ validate $\rightarrow$ transform $\rightarrow$ output pipeline. Integrate Standard Schema v1 provider boundary and test against verified providers (Zod 4, Valibot, ArkType). *(Completed Prototype in `research/form/`)* |
 | **F6** | **Submission Lifecycle + Server Errors + Reset/Reinitialize** | Prototype submission state machine (`idle`, `validating`, `submitting`, `succeeded`, `failed`, `cancelled`), duplicate prevention (drop vs reject policy), server error attachment/clearing strategies, reset to initial vs new baseline, and external model reinitialization. *(Completed Prototype in `research/form/`)* |
 | **F7** | **Framework Adapter Compliance (Vanilla, React, Angular, Vue)** | Prototype thin adapters for Vanilla DOM, React (`useForm` / `useField` / `useFieldArray`), Angular (`createAngularForm` / `createAngularField`), and Vue (`createVueForm` / `createVueField`). Verify zero whole-form rerenders, exact cross-framework semantic equivalence, and framework-native ergonomics. *(Completed Prototype in `research/form/adapters/`)* |
-| **F8** | **Accessibility + Security + Privacy Hardening** | Prototype accessible HTML helpers (`aria-invalid`, `aria-describedby`, error focus identification at adapter edge), prototype-pollution defense in field paths, empirical depth/width bounds, and value-free diagnostics redaction. |
+| **F8** | **Accessibility + Security + Privacy Hardening** | Prototype accessible HTML helpers (`aria-invalid`, `aria-describedby`, error focus identification at adapter edge), prototype-pollution defense in field paths, empirical depth/width bounds, and value-free diagnostics redaction. *(Completed Prototype in `research/form/`)* |
 | **F9** | **Runtime / Memory / TypeScript / Bundle Evidence** | Measure bundle footprint (minified, gzip, brotli), field update latency, memory retention across 1,000 mount/dispose cycles (zero retained resources; empirical heap budget), and TypeScript compilation wall time. |
 | **F10** | **Real Consumer Validation + Build-vs-Buy Graduation Gate** | Validate Form prototype on expanded multi-step Vanilla onboarding fixture and React task board. Execute formal Build-vs-Buy comparative benchmarks against TanStack Form, React Hook Form, and Angular Signal Forms. Render graduation decision. |
 
@@ -428,8 +428,35 @@ Slice F7 proved that a single framework-neutral Vii Form semantic model (from F0
 
 ---
 
-## 6. Next Steps & Operating Constraints
+## 6. Slice F8: Accessibility + Security + Privacy Hardening
 
-- **Current Status**: **F0, F1, F2, F3, F4, F5, F6, and F7 are complete (Framework Adapter Compliance Verified with 275 passing tests in research/form/).**
-- **Hard Gate**: **Completion of F7 does NOT authorize F8 (Accessibility + Security + Privacy Hardening) or any downstream package graduation.**
-- **Next Required Action**: Review F7 deliverables, verify test suite, and await explicit maintainer authorization before opening Slice F8.
+Slice F8 evaluated and hardened the framework-neutral core and adapter boundaries with executable evidence:
+
+1. **Accessibility Responsibility Split & WCAG 2.2 AA Evidence**:
+   - **Form Core**: Exposes semantic state (`dirty`, `touched`, `pending`, `valid`, `invalid`, `validationStatus`, `parseStatus`), structured issues, issue ordering determinism, and submission status machine. Issues are plain text/data (zero HTML/ARIA in Core).
+   - **Framework Adapters**: Project accessibility attributes (`aria-invalid="true"` when invalid; `pending` does NOT imply invalid), support `aria-describedby` linkage to issue elements, render issues via safe `textContent` sinks, and preserve native submit events with `preventDefault()`.
+   - **Application / UI**: Owns label text, visual styling, exact error placement, live regions (`role="alert"`, `aria-live="polite"`), and focus management UX (focusing the first invalid field).
+   - Verified across Vanilla DOM, React, Angular, and Vue in `research/form/form-f8-accessibility.test.ts`.
+
+2. **Security Hardening & Hostile Input Defenses**:
+   - **DOM XSS**: Untrusted validation, parse, and server messages containing `<script>`, `<img>`, `<svg>`, and `<iframe>` vectors rendered safely through `textContent` in Vanilla and framework interpolation in React, Angular, and Vue.
+   - **Prototype Pollution**: `__proto__`, `constructor`, `prototype` blocked in issue codes and safely handled as immutable data segments in structured paths without polluting `Object.prototype`.
+   - **Provider Fail-Closed**: Malformed parser outputs (null, missing boolean `ok`) and malformed Standard Schema results (non-array issues, throwing schemas) fail closed with structured `TypeError`.
+   - **Submission Snapshots**: `deepCloneSnapshot` safely handles hostile getters, traps in hostile Proxies, cyclic references, shared object references, `Map`, `Set`, `Date`, and `RegExp`.
+   - **Detached Async Safety**: Process-level unhandled rejection tracking verified zero unhandled rejections across detached validations, debounce timers, framework effects, and DOM submit bindings.
+   - Verified in `research/form/form-f8-security.test.ts`.
+
+3. **Privacy Invariants & Diagnostics Telemetry**:
+   - **Diagnostics Invariant**: Diagnostics telemetry records only value-free structural events (`revision`, `issueCount`, `status`, `reason: Error.name`). Raw field values, parsed values, output payloads, server response bodies, validation messages, and secrets NEVER enter diagnostics.
+   - **Sentinel Testing**: Sensitive sentinel strings (`SECRET_PASSWORD_DO_NOT_LOG_12345`, `AUTH_TOKEN_SECRET_987654321`, `4111_2222_3333_4444_SECRET_CARD`) verified absent from all emitted diagnostic events and serialized traces.
+   - **Exception Privacy**: Detached exception handlers record only safe classifications (`reason: "Error"` or `reason: "TypeError"`) without message strings.
+   - Verified in `research/form/form-f8-privacy.test.ts`.
+
+---
+
+## 7. Next Steps & Operating Constraints
+
+- **Current Status**: **F0, F1, F2, F3, F4, F5, F6, F7, and F8 are complete (Accessibility, Security, and Privacy Hardening Verified with 320 passing tests in `research/form/`).**
+- **Hard Gate**: **Completion of F8 does NOT authorize F9 (Runtime / Memory / TypeScript / Bundle Evidence) or any downstream package graduation.**
+- **F9 Status**: **F9 has NOT been started.**
+- **Next Required Action**: Review F8 deliverables, verify test suites and governance, and await explicit maintainer authorization before opening Slice F9.

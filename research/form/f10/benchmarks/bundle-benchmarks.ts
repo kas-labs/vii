@@ -1,82 +1,75 @@
 /**
- * Form Research F10 — Bundle Size & Tree-Shaking Evidence (Reproducible Build Data)
+ * Form Research F10 — Bundle Size & Tree-Shaking Evidence
  *
- * Generated via production bundler build (`bun build --minify --target=browser`)
- * with gzip (level 9) and brotli compression across all evaluated form libraries.
- * Distinguishes Cold Adoption cost from Incremental Cost in an existing Vii application.
+ * Sourced directly from executable runner `measure-bundles.mjs`
+ * (`node research/form/f10/benchmarks/measure-bundles.mjs`).
+ *
+ * Generated via `bun build --minify --target=browser` with node:zlib gzip (level 9)
+ * and brotli compression across dedicated entrypoint files in `bundle/`.
  */
 
 export interface BundleMeasurement {
   readonly library: string;
   readonly scenario: "cold-adoption" | "incremental-in-vii-app" | "standalone-field";
-  readonly minifiedJsBytes: number;
+  readonly minifiedBytes: number;
   readonly gzipBytes: number;
   readonly brotliBytes: number;
   readonly includedDependencies: readonly string[];
   readonly externalizedPeers: readonly string[];
-  readonly buildCommand: string;
   readonly notes: string;
 }
 
 export const MEASURED_BUNDLE_DATA: BundleMeasurement[] = [
   {
-    library: "Vii Form (createField standalone)",
+    library: "Vii Standalone createField",
     scenario: "standalone-field",
-    minifiedJsBytes: 12950,
-    gzipBytes: 4560,
-    brotliBytes: 4030,
+    minifiedBytes: 12977,
+    gzipBytes: 4567,
+    brotliBytes: 4049,
     includedDependencies: ["@vii-labs/core (State, Computed, Scope)"],
     externalizedPeers: [],
-    buildCommand: "bun build research/form/form-core.ts --minify --target=browser",
-    notes: "Minimal single-field tree-shaken build including Vii Core reactive runtime.",
+    notes: "Minimal single-field tree-shaken build with core reactive runtime.",
   },
   {
-    library: "Vii Form (Full Core + React Adapter)",
+    library: "Vii Form Cold Adoption (Core + React)",
     scenario: "cold-adoption",
-    minifiedJsBytes: 36582,
-    gzipBytes: 11315,
-    brotliBytes: 9866,
-    includedDependencies: ["@vii-labs/core (State, Computed, Batch, Scope, Diagnostics)"],
+    minifiedBytes: 41176,
+    gzipBytes: 12257,
+    brotliBytes: 10730,
+    includedDependencies: [
+      "Form Core, Parsers, Standard Schema, React Adapter, @vii-labs/core runtime",
+    ],
     externalizedPeers: ["react", "react-dom"],
-    buildCommand:
-      "bun build entry-vii-cold.ts --outfile bundle.js --minify --target=browser --external react --external react-dom",
-    notes:
-      "Cold adoption in an application without existing Vii packages. Includes full Vii Core runtime.",
+    notes: "Cold adoption in non-Vii application including full @vii-labs/core engine.",
   },
   {
-    library: "Vii Form (Full Core + React Adapter)",
+    library: "Vii Form Incremental (in Vii Core app)",
     scenario: "incremental-in-vii-app",
-    minifiedJsBytes: 30316,
-    gzipBytes: 9134,
-    brotliBytes: 7948,
+    minifiedBytes: 34911,
+    gzipBytes: 10067,
+    brotliBytes: 8723,
     includedDependencies: ["Form Core, Parsers, Standard Schema Adapter, React Adapter"],
-    externalizedPeers: ["@vii-labs/core", "react", "react-dom"],
-    buildCommand:
-      "bun build entry-vii-inc.ts --outfile bundle.js --minify --target=browser --external @vii-labs/core --external react --external react-dom",
-    notes: "Incremental cost for an application already using @vii-labs/core as its state engine.",
+    externalizedPeers: ["react", "react-dom", "@vii-labs/core"],
+    notes: "Incremental cost for application already using @vii-labs/core as reactive engine.",
   },
   {
-    library: "TanStack Form (v1.33.5 @tanstack/react-form)",
+    library: "TanStack React Form (v1.33.5)",
     scenario: "cold-adoption",
-    minifiedJsBytes: 68661,
-    gzipBytes: 17983,
+    minifiedBytes: 68762,
+    gzipBytes: 18042,
     brotliBytes: 15713,
-    includedDependencies: ["@tanstack/form-core", "@tanstack/store"],
+    includedDependencies: ["@tanstack/react-form", "@tanstack/form-core", "@tanstack/store"],
     externalizedPeers: ["react", "react-dom"],
-    buildCommand:
-      "bun build entry-tanstack.ts --outfile bundle.js --minify --target=browser --external react --external react-dom",
-    notes: "Cold adoption cost for TanStack React Form with built-in store runtime.",
+    notes: "Cold adoption of TanStack React Form with built-in store runtime.",
   },
   {
     library: "React Hook Form (v7.86.0)",
     scenario: "cold-adoption",
-    minifiedJsBytes: 38499,
-    gzipBytes: 13752,
-    brotliBytes: 12426,
+    minifiedBytes: 38513,
+    gzipBytes: 13767,
+    brotliBytes: 12429,
     includedDependencies: ["react-hook-form core"],
     externalizedPeers: ["react", "react-dom"],
-    buildCommand:
-      "bun build entry-rhf.ts --outfile bundle.js --minify --target=browser --external react --external react-dom",
-    notes: "Cold adoption cost for RHF (zero external dependencies).",
+    notes: "Cold adoption of React Hook Form core library.",
   },
 ];

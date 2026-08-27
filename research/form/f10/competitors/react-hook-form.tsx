@@ -88,98 +88,113 @@ export const ReactHookFormTaskBoard: React.FC<ReactHookFormTaskBoardProps> = ({
       <h2>React Hook Form Task Workflow</h2>
 
       {/* Title Field */}
-      <div className="form-group" data-testid="rhf-title-group">
-        <label htmlFor="rhf-title">Task Title</label>
-        <input
-          id="rhf-title"
-          data-testid="rhf-input-title"
-          {...register("title", {
-            required: "Title is required.",
-            minLength: { value: 5, message: "Title must be at least 5 chars." },
-            validate: async (value) => {
-              if (!value || value.length < 5 || !asyncTitleCheck) return true;
-              if (asyncAbortRef.current) asyncAbortRef.current.abort();
-              const ctrl = new AbortController();
-              asyncAbortRef.current = ctrl;
-              try {
-                const isUnique = await asyncTitleCheck(value, ctrl.signal);
-                return isUnique || `Task title '${value}' already exists.`;
-              } catch (e) {
-                if ((e as Error).name === "AbortError") return true;
-                return "Validation failed.";
-              }
-            },
-          })}
-          aria-invalid={errors.title ? "true" : "false"}
-        />
-        {errors.title && (
-          <span data-testid="rhf-title-error" className="error">
-            {errors.title.message}
-          </span>
-        )}
-      </div>
+      {(() => {
+        if (counters) counters.titleField++;
+        return (
+          <div className="form-group" data-testid="rhf-title-group">
+            <label htmlFor="rhf-title">Task Title</label>
+            <input
+              id="rhf-title"
+              data-testid="rhf-input-title"
+              {...register("title", {
+                required: "Title is required.",
+                minLength: { value: 5, message: "Title must be at least 5 chars." },
+                validate: async (value) => {
+                  if (!value || value.length < 5 || !asyncTitleCheck) return true;
+                  if (asyncAbortRef.current) asyncAbortRef.current.abort();
+                  const ctrl = new AbortController();
+                  asyncAbortRef.current = ctrl;
+                  try {
+                    const isUnique = await asyncTitleCheck(value, ctrl.signal);
+                    return isUnique || `Task title '${value}' already exists.`;
+                  } catch (e) {
+                    if ((e as Error).name === "AbortError") return true;
+                    return "Validation failed.";
+                  }
+                },
+              })}
+              aria-invalid={errors.title ? "true" : "false"}
+            />
+            {errors.title && (
+              <span data-testid="rhf-title-error" className="error">
+                {errors.title.message}
+              </span>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Story Points Estimate Field */}
-      <div className="form-group" data-testid="rhf-estimate-group">
-        <label htmlFor="rhf-estimate">Story Points</label>
-        <input
-          id="rhf-estimate"
-          data-testid="rhf-input-estimate"
-          type="number"
-          {...register("estimateStoryPoints", {
-            valueAsNumber: true,
-            min: { value: 0, message: "Estimate must be non-negative." },
-          })}
-          aria-invalid={errors.estimateStoryPoints ? "true" : "false"}
-        />
-        {errors.estimateStoryPoints && (
-          <span data-testid="rhf-estimate-error" className="error">
-            {errors.estimateStoryPoints.message}
-          </span>
-        )}
-      </div>
+      {(() => {
+        if (counters) counters.estimateField++;
+        return (
+          <div className="form-group" data-testid="rhf-estimate-group">
+            <label htmlFor="rhf-estimate">Story Points</label>
+            <input
+              id="rhf-estimate"
+              data-testid="rhf-input-estimate"
+              type="number"
+              {...register("estimateStoryPoints", {
+                valueAsNumber: true,
+                min: { value: 0, message: "Estimate must be non-negative." },
+              })}
+              aria-invalid={errors.estimateStoryPoints ? "true" : "false"}
+            />
+            {errors.estimateStoryPoints && (
+              <span data-testid="rhf-estimate-error" className="error">
+                {errors.estimateStoryPoints.message}
+              </span>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Checklist Field Array */}
-      <div className="checklist-manager" data-testid="rhf-checklist-manager">
-        <h4>Checklist ({fields.length} items)</h4>
-        <ul>
-          {fields.map((field, index) => (
-            <li key={field.id} data-testid={`rhf-checklist-row-${index}`}>
-              <input
-                type="checkbox"
-                data-testid={`rhf-chk-done-${index}`}
-                {...register(`checklist.${index}.done` as const)}
-              />
-              <input
-                data-testid={`rhf-chk-title-${index}`}
-                {...register(`checklist.${index}.title` as const, {
-                  required: "Item title required",
-                })}
-              />
-              <button
-                type="button"
-                data-testid={`rhf-chk-remove-${index}`}
-                onClick={() => remove(index)}
-              >
-                Remove
-              </button>
-            </li>
-          ))}
-        </ul>
-        <button
-          type="button"
-          data-testid="rhf-chk-add-btn"
-          onClick={() =>
-            append({
-              id: `chk_${Date.now()}`,
-              title: "New Requirement",
-              done: false,
-            })
-          }
-        >
-          Add Checklist Item
-        </button>
-      </div>
+      {(() => {
+        if (counters) counters.checklistArray++;
+        return (
+          <div className="checklist-manager" data-testid="rhf-checklist-manager">
+            <h4>Checklist ({fields.length} items)</h4>
+            <ul>
+              {fields.map((field, index) => (
+                <li key={field.id} data-testid={`rhf-checklist-row-${index}`}>
+                  <input
+                    type="checkbox"
+                    data-testid={`rhf-chk-done-${index}`}
+                    {...register(`checklist.${index}.done` as const)}
+                  />
+                  <input
+                    data-testid={`rhf-chk-title-${index}`}
+                    {...register(`checklist.${index}.title` as const, {
+                      required: "Item title required",
+                    })}
+                  />
+                  <button
+                    type="button"
+                    data-testid={`rhf-chk-remove-${index}`}
+                    onClick={() => remove(index)}
+                  >
+                    Remove
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              data-testid="rhf-chk-add-btn"
+              onClick={() =>
+                append({
+                  id: `chk_${Date.now()}`,
+                  title: "New Requirement",
+                  done: false,
+                })
+              }
+            >
+              Add Checklist Item
+            </button>
+          </div>
+        );
+      })()}
 
       <div className="form-actions">
         <button

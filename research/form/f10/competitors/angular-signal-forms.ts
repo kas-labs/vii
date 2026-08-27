@@ -2,10 +2,13 @@
  * Form Research F10 — Competitor Implementation: Angular Signal Forms (Angular 22.1.4)
  *
  * Official implementation of the Task Board workflow using stable Angular 22 Signal Forms
- * from `@angular/forms/signals` (`form()`, `schema()`, `required()`, `minLength()`, `min()`, `submit()`).
+ * from `@angular/forms/signals` (`form()`, `schema()`, `required()`, `minLength()`, `min()`).
  *
- * Evaluates real Signal Forms FieldTree reactivity, schema validation, array synchronization,
- * and submission integration.
+ * Architectural Note on Submission:
+ * Angular Signal Forms focuses on field tree reactivity, signal-backed dirty/touched states,
+ * and declarative schema validation. It does not provide built-in server error path routing
+ * or submission lifecycle state machines; submission orchestration is implemented as
+ * application-owned glue.
  */
 
 import "@angular/compiler";
@@ -17,15 +20,7 @@ import {
   type EnvironmentInjector,
 } from "@angular/core";
 import { createApplication } from "@angular/platform-browser";
-import {
-  form,
-  schema,
-  required,
-  minLength,
-  min,
-  submit,
-  type FieldTree,
-} from "@angular/forms/signals";
+import { form, schema, required, minLength, min, type FieldTree } from "@angular/forms/signals";
 import {
   type TaskBoardFormValues,
   type ChecklistItem,
@@ -58,20 +53,19 @@ function ensureDocumentEnvironment() {
       } as any,
       documentElement: {} as any,
     } as any;
-    globalThis.window = globalThis as any;
   }
 }
 
-export interface RealAngularSignalTaskBoardInstance {
+export interface RealAngularSignalTaskBoard {
   appRef: ApplicationRef;
   injector: EnvironmentInjector;
   model: WritableSignal<TaskBoardFormValues>;
   fieldTree: FieldTree<TaskBoardFormValues>;
   serverErrors: WritableSignal<string[]>;
   isSubmitting: WritableSignal<boolean>;
-  setTitle: (title: string) => void;
-  setDescription: (desc: string) => void;
-  setEstimate: (estimate: number) => void;
+  setTitle: (val: string) => void;
+  setDescription: (val: string) => void;
+  setEstimate: (val: number) => void;
   addChecklistItem: (item: ChecklistItem) => void;
   removeChecklistItem: (index: number) => void;
   swapChecklistItems: (indexA: number, indexB: number) => void;
@@ -81,42 +75,48 @@ export interface RealAngularSignalTaskBoardInstance {
   dispose: () => void;
 }
 
+/**
+ * Creates a real Angular 22 Signal Forms task board controller.
+ */
 export async function createRealAngularSignalTaskBoard(
   initialValues: TaskBoardFormValues = INITIAL_TASK_DATA,
-): Promise<RealAngularSignalTaskBoardInstance> {
+): Promise<RealAngularSignalTaskBoard> {
   ensureDocumentEnvironment();
 
+  // Create real Angular ApplicationRef and EnvironmentInjector
   const appRef = await createApplication({ providers: [] });
   const injector = appRef.injector;
 
-  const model = signal<TaskBoardFormValues>({
+  // Root model signal
+  const model: WritableSignal<TaskBoardFormValues> = signal({
     ...initialValues,
     checklist: [...initialValues.checklist],
   });
 
+  // Declarative validation schema using official Angular Signal Forms validators
+  const taskSchema = schema<TaskBoardFormValues>((path) => {
+    required(path.title, { message: "Title is required" });
+    minLength(path.title, 5, { message: "Title must be at least 5 chars" });
+    min(path.estimateStoryPoints, 0, { message: "Estimate must be non-negative" });
+  });
+
+  // Create official Angular Signal Forms FieldTree
+  const fieldTree = form(model, taskSchema, { injector });
+
+  // Application-owned submission and server error signals (Signal Forms leaves this to application glue)
   const serverErrors = signal<string[]>([]);
   const isSubmitting = signal<boolean>(false);
 
-  // Official Angular 22 Signal Forms schema
-  const taskSchema = schema<TaskBoardFormValues>((path) => {
-    required(path.title, { message: "Title is required" });
-    minLength(path.title, 5, { message: "Title must be at least 5 chars." });
-    required(path.description, { message: "Description is required" });
-    min(path.estimateStoryPoints, 0, { message: "Estimate must be non-negative." });
-  });
-
-  const fieldTree = form(model, taskSchema, { injector });
-
-  const setTitle = (title: string) => {
-    model.update((curr) => ({ ...curr, title }));
+  const setTitle = (val: string) => {
+    model.update((curr) => ({ ...curr, title: val }));
   };
 
-  const setDescription = (description: string) => {
-    model.update((curr) => ({ ...curr, description }));
+  const setDescription = (val: string) => {
+    model.update((curr) => ({ ...curr, description: val }));
   };
 
-  const setEstimate = (estimateStoryPoints: number) => {
-    model.update((curr) => ({ ...curr, estimateStoryPoints }));
+  const setEstimate = (val: number) => {
+    model.update((curr) => ({ ...curr, estimateStoryPoints: val }));
   };
 
   const addChecklistItem = (item: ChecklistItem) => {

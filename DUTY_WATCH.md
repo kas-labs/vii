@@ -37,6 +37,79 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-28 01:05 CEST | Form Research Slice F10: Real Consumer Validation + Build-vs-Buy Graduation Gate (Second & Final Bounded Evidence Correction Pass)
+
+Status: completed
+Branch: `dogfood/form-f10-consumer-validation`
+PR: #166 (Draft)
+
+### Scope
+
+- Execute second and final bounded evidence correction pass for Form Research Slice F10 on branch `dogfood/form-f10-consumer-validation` (PR #166).
+- Address all specific audit findings:
+  1. Fix FieldArray benchmark methodology (`runtime-benchmarks.ts`): Implement strict `SETUP (untimed) -> TIMED TARGET OPERATION -> RESTORE (untimed)` isolation. Compensation (remove after push) is strictly outside timed region. Same isolation applied to TanStack.
+  2. Fix server issue routing benchmark (`runtime-benchmarks.ts`): Isolate `setServerIssues` timed routing from untimed setup and `clearServerIssues` restore. Separate `benchmarkServerIssueClear` into its own standalone benchmark.
+  3. Comparative runtime benchmarking discipline: Focus engine microbenchmarks on equivalent headless form engines (Vii Form vs TanStack Form). Evaluate React Hook Form via React render instrumentation and Angular Signal Forms via Angular functional/DX tests.
+  4. Make React render counts strictly empirical (`render-benchmarks.tsx`): Mount real React 19 component trees, reset counters after mount, execute user interactions, and read exact observed render counts across Vii Form, TanStack Form, and React Hook Form.
+  5. Create real executable bundle measurement runner (`measure-bundles.mjs` and entrypoints in `research/form/f10/benchmarks/bundle/`): Execute `bun build --minify --target=browser` with gzip level 9 and brotli compression.
+  6. Correct Angular submission claim (`angular-signal-forms.ts`): Remove unused `submit` import from `@angular/forms/signals` and document submission as application-owned glue.
+  7. Fix in-flight array swap server response test (`consumer-b.test.tsx`): Drive request through `form.submit()`, swap items while pending, and verify response for submitted index routes to the item by submitted identity snapshot.
+  8. Prove unhandled-rejection ownership (`consumer-b.test.tsx`): Add process-level `unhandledRejection` event listener to pending unmount test and assert 0 unhandled rejections with clean listener teardown.
+  9. Real browser claim discipline: Explicitly document that F10 integration evidence uses Mock DOM / `react-test-renderer` and document real browser testing as a residual gap for Production Phase 1.
+  10. Update 32-Dimension Build-vs-Buy decision matrix (Vii Form: 143/160 vs TanStack: 120/160, RHF: 97/160, Angular: 114/160) and update `research/form/F10_CONSUMER_VALIDATION.md` with exact commands and sources.
+  11. Strictly enforce ABSOLUTE STOP condition: PR #166 remains Draft, do NOT merge, do NOT create or publish a public `@vii-labs/form` package, do NOT start production Phase 1.
+
+### Changes
+
+- Created `research/form/f10/benchmarks/bundle/`:
+  - `entry-vii-cold.ts`: Cold adoption entrypoint.
+  - `entry-vii-incremental.ts`: Incremental adoption entrypoint.
+  - `entry-vii-standalone-field.ts`: Standalone tree-shaken `createField` entrypoint.
+  - `entry-tanstack.ts`: TanStack React Form entrypoint.
+  - `entry-rhf.ts`: React Hook Form entrypoint.
+- Created `research/form/f10/benchmarks/measure-bundles.mjs`:
+  - Executable bundle measurement runner generating raw minified bytes, gzip (level 9), and brotli metrics.
+- Updated `research/form/f10/benchmarks/runtime-benchmarks.ts`:
+  - Implemented `runIsolatedTimingHarness` with untimed setup and untimed compensation.
+  - Benchmarked Vii Form vs TanStack Form leaf mutation (10 to 1,000 fields), aggregate query, and FieldArray (push, remove, swap).
+  - Separated server issue routing from server issue clearing.
+- Updated `research/form/f10/benchmarks/render-benchmarks.tsx`:
+  - Instrumented and captured empirical React render counts across Vii Form, TanStack Form, and React Hook Form.
+- Updated `research/form/f10/benchmarks/bundle-benchmarks.ts`:
+  - Exported empirical bundle measurements sourced directly from `measure-bundles.mjs`.
+- Updated `research/form/f10/competitors/angular-signal-forms.ts`:
+  - Removed unused `submit` import and documented submission as application-owned glue.
+- Updated `research/form/f10/tests/consumer-b.test.tsx`:
+  - Updated pending unmount test with `process.on('unhandledRejection')` tracking (0 unhandled rejections).
+  - Updated Scenario 10 to test in-flight array swap during active `form.submit()` with identity-aware error routing.
+- Updated `research/form/f10/tests/f9-risks-validation.test.ts`:
+  - Added regression test proving compensation is strictly outside the timed window in `runIsolatedTimingHarness`.
+  - Asserted empirical render counts, bundle invariants, and server issue routing vs clear latency.
+- Updated `research/form/F10_CONSUMER_VALIDATION.md`:
+  - Documented exact commands and sources for every numeric table.
+  - Sourced numbers from freshly executed harnesses.
+  - Updated 32-dimension decision matrix and graduation report.
+- Updated `docs/roadmap/FORM_RESEARCH.md`: Synchronized F10 section with verified numbers and test counts (397 tests across 23 test suites).
+
+### Validation
+
+- `pnpm exec tsc -p research/form/tsconfig.json --noEmit`: PASS (0 errors).
+- `pnpm exec vitest run research/form/f10/tests/`: PASS (5 test files, 34 tests passing, 0 failures).
+- `pnpm exec vitest run research/form/`: PASS (23 test files, 397 tests passing, 0 failures).
+- `pnpm exec vitest run packages/core/test/computed.test.ts`: PASS (15 tests passing).
+- `node research/form/f10/benchmarks/measure-bundles.mjs`: PASS (executable bundle runner).
+- `NX_DAEMON=false pnpm validate`: PASS (formatting, linting, typechecking, tests across packages, builds across all 10 projects, and tarball packing validation).
+- `git diff --check`: PASS (0 whitespace/syntax issues).
+
+### Architecture / compatibility
+
+- Zero public package mutations: `@vii-labs/core` production semantics preserved without modification; no public `@vii-labs/form` package created.
+- Form Core remains completely framework-agnostic and platform-neutral.
+
+### Remaining / recovery
+
+- None for Slice F10. Form research track is concluded. PR #166 remains Draft. Hard stop respected.
+
 ## 2026-08-28 00:45 CEST | Form Research Slice F10: Real Consumer Validation + Build-vs-Buy Graduation Gate (Bounded Correction Pass)
 
 Status: completed

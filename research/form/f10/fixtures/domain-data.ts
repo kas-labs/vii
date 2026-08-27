@@ -203,7 +203,7 @@ export const INITIAL_TASK_DATA: TaskBoardFormValues = {
 
 export function generateServerIssues(
   count: number,
-  domain: "onboarding" | "task",
+  domain: "onboarding" | "task" = "task",
 ): ServerIssueInput[] {
   const issues: ServerIssueInput[] = [];
 

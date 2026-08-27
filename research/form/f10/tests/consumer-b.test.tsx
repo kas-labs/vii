@@ -10,7 +10,7 @@
  * - 10 Mandatory React Historical Regression Scenarios (StrictMode, useSyncExternalStore timing, unmount while pending, reinitialize, etc.)
  */
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import React, { StrictMode, useEffect, useState } from "react";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import {
@@ -336,51 +336,70 @@ describe("Form Research F10: Consumer B (React Task Board)", () => {
       form.dispose();
     });
 
-    it("5. Unmount while async validation is pending aborts cleanly without unhandled rejections", async () => {
-      let aborted = false;
-      const asyncCheck = async (title: string, signal: AbortSignal) => {
-        return new Promise<boolean>((resolve, reject) => {
-          signal.addEventListener("abort", () => {
-            aborted = true;
-            reject(new DOMException("Aborted", "AbortError"));
+    it("5. Async validation in-flight during unmount aborts cleanly with 0 unhandled rejections", async () => {
+      const unhandledRejections: any[] = [];
+      const onUnhandled = (err: any) => {
+        unhandledRejections.push(err);
+      };
+      process.on("unhandledRejection", onUnhandled);
+
+      try {
+        let aborted = false;
+        const asyncCheck = vi.fn(async (_title: string, signal?: AbortSignal) => {
+          return new Promise<boolean>((resolve, reject) => {
+            if (signal) {
+              signal.addEventListener("abort", () => {
+                aborted = true;
+                const err = new Error("Aborted");
+                err.name = "AbortError";
+                reject(err);
+              });
+            }
+            setTimeout(() => resolve(true), 200);
           });
         });
-      };
 
-      const form = createTaskBoardForm({ asyncTitleCheck: asyncCheck });
-      const titleField = form.getNode("title") as FieldState<string>;
+        const form = createTaskBoardForm({ asyncTitleCheck: asyncCheck });
+        const titleField = form.getNode("title") as FieldState<string>;
 
-      function PendingComp() {
-        const snap = useField(titleField);
-        return <div>{snap.pending ? "validating" : "idle"}</div>;
+        function PendingComp() {
+          const snap = useField(titleField);
+          return <div>{snap.pending ? "validating" : "idle"}</div>;
+        }
+
+        let renderer!: ReactTestRenderer;
+        act(() => {
+          renderer = create(<PendingComp />);
+        });
+
+        // Trigger first async validation
+        act(() => {
+          titleField.setValue("Long Task Title Initial Check");
+        });
+
+        // Wait for debounce timer to fire and async rule to execute
+        await new Promise((r) => setTimeout(r, 50));
+
+        // Trigger second edit superseding the first
+        act(() => {
+          titleField.setValue("Long Task Title Superseding Check");
+        });
+
+        // Unmount while validation is in flight
+        act(() => {
+          renderer.unmount();
+        });
+
+        form.dispose();
+
+        // Allow microtask queue / event loop to flush
+        await new Promise((r) => setTimeout(r, 60));
+
+        expect(aborted).toBe(true);
+        expect(unhandledRejections).toHaveLength(0);
+      } finally {
+        process.removeListener("unhandledRejection", onUnhandled);
       }
-
-      let renderer!: ReactTestRenderer;
-      act(() => {
-        renderer = create(<PendingComp />);
-      });
-
-      // Trigger first async validation
-      act(() => {
-        titleField.setValue("Long Task Title Initial Check");
-      });
-
-      // Wait for debounce timer to fire and async rule to execute
-      await new Promise((r) => setTimeout(r, 50));
-
-      // Trigger second edit superseding the first
-      act(() => {
-        titleField.setValue("Long Task Title Superseding Check");
-      });
-
-      // Unmount while validation is in flight
-      act(() => {
-        renderer.unmount();
-      });
-
-      form.dispose();
-
-      expect(aborted).toBe(true);
     });
 
     it("6. Repeated mount and unmount cycles preserve reactivity without memory leaks", () => {
@@ -489,7 +508,7 @@ describe("Form Research F10: Consumer B (React Task Board)", () => {
         return new Promise((resolve, reject) => {
           signal.addEventListener("abort", () => {
             aborted = true;
-            resolve({ ok: false });
+            resolve({ ok: false, issues: [] });
           });
         });
       });
@@ -503,7 +522,7 @@ describe("Form Research F10: Consumer B (React Task Board)", () => {
       form.dispose();
     });
 
-    it("10. FieldArray reorder with server response routes issues by stable identity rather than stale numeric index", () => {
+    it("10. FieldArray reorder with server response routes issues by submitted item identity snapshot across array reorder", async () => {
       const form = createForm({
         initialValues: {
           items: [
@@ -516,26 +535,48 @@ describe("Form Research F10: Consumer B (React Task Board)", () => {
 
       const arrayNode = form.getNode("items") as FieldArray<any>;
 
-      // Swap items: [Beta, Alpha]
+      let resolveSubmitAction!: (val: any) => void;
+      const submitPromise = form.submit(
+        () =>
+          new Promise((resolve) => {
+            resolveSubmitAction = resolve;
+          }),
+      );
+
+      expect(form.submissionStatus.get()).toBe("submitting");
+
+      // While submission is in-flight on the server, user reorders array:
+      // Swap items so Beta is at index 0 and Alpha is at index 1
       arrayNode.swap(0, 1);
+      expect(arrayNode.items.get()[0]?.id).toBe("item_beta");
+      expect(arrayNode.items.get()[1]?.id).toBe("item_alpha");
 
-      // Server issue targeting the logical item Alpha (which is now at index 1)
-      form.setServerIssues([
-        {
-          code: "alpha_error",
-          message: "Alpha item rejected by server",
-          path: ["items", 1, "name"],
-          source: "server",
-        },
-      ]);
+      // Server responds with an error targeting submitted index 0 (which was Alpha at submit time)
+      resolveSubmitAction({
+        ok: false,
+        issues: [
+          {
+            path: ["items", 0, "name"],
+            code: "alpha_rejected",
+            message: "Alpha item rejected by server",
+          },
+        ],
+      });
 
+      const submitResult = await submitPromise;
+      expect(submitResult.status).toBe("server-invalid");
+
+      // Identity-aware routing verification:
+      // The error for submitted index 0 MUST attach to Alpha (now at live index 1)
       const currentItems = arrayNode.items.get();
-      const item1Node = currentItems[1]!.node as any;
-      const nameNode = item1Node.fields["name"] as FieldState<string>;
+      const liveBetaNode = currentItems[0]!.node as any;
+      const liveAlphaNode = currentItems[1]!.node as any;
 
-      expect(nameNode.value.get()).toBe("Alpha");
-      expect(nameNode.serverIssues.get().length).toBe(1);
-      expect(nameNode.serverIssues.get()[0]?.message).toBe("Alpha item rejected by server");
+      expect(liveBetaNode.fields["name"].serverIssues.get()).toEqual([]);
+      expect(liveAlphaNode.fields["name"].serverIssues.get()).toHaveLength(1);
+      expect(liveAlphaNode.fields["name"].serverIssues.get()[0]?.message).toBe(
+        "Alpha item rejected by server",
+      );
 
       form.dispose();
     });

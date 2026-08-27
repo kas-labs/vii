@@ -1,10 +1,21 @@
 /**
- * Form Research F10 — Runtime Comparative Benchmarks (Corrected & Executable)
+ * Form Research F10 — Runtime Comparative Benchmarks (Isolated Setup/Timed/Restore)
  *
- * Implements reproducible, fair timing harnesses with batching, warmup, and A/B alternation for:
- * 1. Single-field keystroke latency: leaf-local vs aggregate consumers across Vii Form, TanStack Form, RHF, and Angular Signal Forms.
- * 2. FieldArray steady-state operations (push, remove, swap).
- * 3. Server issue routing across tree nodes.
+ * Implements rigorous isolated timing harnesses where compensation and fixture
+ * setup are strictly kept outside the timed measurement window:
+ *
+ * SETUP -> TIMED TARGET OPERATION -> RESTORE
+ *
+ * Benchmarks:
+ * 1. Single-field keystroke latency: Vii Form vs TanStack Form (10 to 1,000 fields)
+ * 2. Aggregate Query Invalidation: Vii Form vs TanStack Form (10 to 1,000 fields)
+ * 3. FieldArray steady-state operations (Push, Remove, Swap) with isolated compensation
+ * 4. Server Issue Routing (isolated timed setServerIssues) & Server Issue Clear
+ *
+ * Note on Comparison Scope:
+ * - Direct engine microbenchmarks are executed between Vii Form and TanStack Form (equivalent headless form engine models).
+ * - React Hook Form uses an uncontrolled ref-first architecture evaluated via React render instrumentation rather than engine leaf mutation.
+ * - Angular Signal Forms is evaluated via Angular-native functional and DX benchmarks rather than raw signal mutation.
  */
 
 import { performance } from "node:perf_hooks";
@@ -19,7 +30,7 @@ import { FormApi } from "@tanstack/react-form";
 import { generateServerIssues } from "../fixtures/domain-data.js";
 
 export interface BenchmarkMeasurement {
-  readonly library: "Vii Form" | "TanStack Form" | "React Hook Form" | "Angular Signal Forms";
+  readonly library: "Vii Form" | "TanStack Form";
   readonly scenario: string;
   readonly iterations: number;
   readonly batchSize: number;
@@ -28,30 +39,53 @@ export interface BenchmarkMeasurement {
   readonly opsPerSec: number;
 }
 
-export function runBatchedTimingHarness(
+export interface IsolatedBenchmarkOptions<T> {
+  readonly setup?: (batchIndex: number) => T;
+  readonly timed: (ctx: T, batchIndex: number) => void;
+  readonly restore?: (ctx: T, batchIndex: number) => void;
+}
+
+/**
+ * Executes an isolated timing harness where setup and restore/compensation
+ * are strictly untimed:
+ *
+ * for each batch:
+ *   ctx = setup()       [UNTIMED]
+ *   t0 = now()
+ *   timed(ctx)          [TIMED]
+ *   t1 = now()
+ *   restore(ctx)        [UNTIMED]
+ */
+export function runIsolatedTimingHarness<T = void>(
   iterations: number,
   warmupCount: number,
   batchSize: number,
-  operation: (batchIndex: number) => void,
-  reset?: () => void,
+  options: IsolatedBenchmarkOptions<T>,
 ): { medianUs: number; p95Us: number; opsPerSec: number } {
-  // Warmup
+  const { setup, timed, restore } = options;
+
+  // 1. Warmup phase (untimed setup + timed op + untimed restore)
   for (let i = 0; i < warmupCount; i++) {
     for (let k = 0; k < batchSize; k++) {
-      operation(k);
+      const ctx = setup ? setup(k) : (undefined as unknown as T);
+      timed(ctx, k);
+      if (restore) restore(ctx, k);
     }
-    if (reset) reset();
   }
 
+  // 2. Measurement phase
   const timesUs: number[] = new Array(iterations);
   for (let i = 0; i < iterations; i++) {
-    const start = performance.now();
+    let batchDurationMs = 0;
     for (let k = 0; k < batchSize; k++) {
-      operation(k);
+      const ctx = setup ? setup(k) : (undefined as unknown as T);
+      const start = performance.now();
+      timed(ctx, k);
+      const end = performance.now();
+      batchDurationMs += end - start;
+      if (restore) restore(ctx, k);
     }
-    const end = performance.now();
-    timesUs[i] = ((end - start) * 1000) / batchSize;
-    if (reset) reset();
+    timesUs[i] = (batchDurationMs * 1000) / batchSize;
   }
 
   timesUs.sort((a, b) => a - b);
@@ -64,7 +98,7 @@ export function runBatchedTimingHarness(
 }
 
 /**
- * 1. Comparative Single-Field Leaf Mutation Benchmark
+ * 1. Comparative Single-Field Leaf Mutation Benchmark (Vii Form vs TanStack Form)
  */
 export function benchmarkComparativeLeafMutation(fieldCounts: number[] = [10, 100, 500, 1000]): {
   vii: Record<number, BenchmarkMeasurement>;
@@ -83,8 +117,10 @@ export function benchmarkComparativeLeafMutation(fieldCounts: number[] = [10, 10
     const viiForm = createForm<Record<string, string>>({ initialValues: initial });
     const viiField = viiForm.getNode("field_0") as FieldState<string>;
 
-    const viiTiming = runBatchedTimingHarness(100, 20, 50, (k) => {
-      viiField.setValue(k % 2 === 0 ? "val_a" : "val_b");
+    const viiTiming = runIsolatedTimingHarness(100, 20, 50, {
+      timed: (_ctx, k) => {
+        viiField.setValue(k % 2 === 0 ? "val_a" : "val_b");
+      },
     });
     viiForm.dispose();
 
@@ -100,8 +136,10 @@ export function benchmarkComparativeLeafMutation(fieldCounts: number[] = [10, 10
 
     // TanStack Form
     const tsForm = new FormApi({ defaultValues: initial });
-    const tsTiming = runBatchedTimingHarness(100, 20, 50, (k) => {
-      tsForm.setFieldValue("field_0", k % 2 === 0 ? "val_a" : "val_b");
+    const tsTiming = runIsolatedTimingHarness(100, 20, 50, {
+      timed: (_ctx, k) => {
+        tsForm.setFieldValue("field_0", k % 2 === 0 ? "val_a" : "val_b");
+      },
     });
 
     tsResults[count] = {
@@ -119,7 +157,7 @@ export function benchmarkComparativeLeafMutation(fieldCounts: number[] = [10, 10
 }
 
 /**
- * 2. Comparative Aggregate Query Invalidation Benchmark
+ * 2. Comparative Aggregate Query Invalidation Benchmark (Vii Form vs TanStack Form)
  */
 export function benchmarkComparativeAggregateMutation(
   fieldCounts: number[] = [10, 100, 500, 1000],
@@ -140,11 +178,13 @@ export function benchmarkComparativeAggregateMutation(
     const viiForm = createForm<Record<string, string>>({ initialValues: initial });
     const viiField = viiForm.getNode("field_0") as FieldState<string>;
 
-    const viiTiming = runBatchedTimingHarness(50, 10, 20, (k) => {
-      viiField.setValue(k % 2 === 0 ? "val_a" : "val_b");
-      const _v = viiForm.values.get();
-      const _d = viiForm.dirty.get();
-      const _e = viiForm.issues.get();
+    const viiTiming = runIsolatedTimingHarness(50, 10, 20, {
+      timed: (_ctx, k) => {
+        viiField.setValue(k % 2 === 0 ? "val_a" : "val_b");
+        const _v = viiForm.values.get();
+        const _d = viiForm.dirty.get();
+        const _e = viiForm.issues.get();
+      },
     });
     viiForm.dispose();
 
@@ -160,11 +200,13 @@ export function benchmarkComparativeAggregateMutation(
 
     // TanStack Form Aggregate read
     const tsForm = new FormApi({ defaultValues: initial });
-    const tsTiming = runBatchedTimingHarness(50, 10, 20, (k) => {
-      tsForm.setFieldValue("field_0", k % 2 === 0 ? "val_a" : "val_b");
-      const _v = tsForm.state.values;
-      const _d = tsForm.state.isDirty;
-      const _e = tsForm.state.errors;
+    const tsTiming = runIsolatedTimingHarness(50, 10, 20, {
+      timed: (_ctx, k) => {
+        tsForm.setFieldValue("field_0", k % 2 === 0 ? "val_a" : "val_b");
+        const _v = tsForm.state.values;
+        const _d = tsForm.state.isDirty;
+        const _e = tsForm.state.errors;
+      },
     });
 
     tsResults[count] = {
@@ -182,7 +224,7 @@ export function benchmarkComparativeAggregateMutation(
 }
 
 /**
- * 3. Comparative FieldArray Operations (50 Items)
+ * 3. Comparative FieldArray Operations (50 Items) with STRICT Isolated Compensation
  */
 export function benchmarkComparativeFieldArray(itemCount: number = 50): {
   vii: { push: BenchmarkMeasurement; remove: BenchmarkMeasurement; swap: BenchmarkMeasurement };
@@ -206,18 +248,37 @@ export function benchmarkComparativeFieldArray(itemCount: number = 50): {
   });
   const viiArray = viiForm.getNode("items") as FieldArray<any>;
 
-  const viiPush = runBatchedTimingHarness(50, 10, 20, (k) => {
-    viiArray.push({ id: `new_${k}`, title: `New Task ${k}`, done: false });
-    viiArray.remove(viiArray.items.get().length - 1);
+  // PUSH: Setup ensures baseline -> Timed pushes 1 item -> Restore removes pushed item
+  const viiPush = runIsolatedTimingHarness(50, 10, 20, {
+    timed: (_ctx, k) => {
+      viiArray.push({ id: `pushed_${k}`, title: `New Task ${k}`, done: false });
+    },
+    restore: () => {
+      // Untimed compensation
+      viiArray.remove(viiArray.items.get().length - 1);
+    },
   });
 
-  const viiRemove = runBatchedTimingHarness(50, 10, 20, (k) => {
-    viiArray.push({ id: `temp_${k}`, title: "Temp", done: false });
-    viiArray.remove(viiArray.items.get().length - 1);
+  // REMOVE: Setup pushes 1 removable item -> Timed removes that item -> Restore verifies baseline
+  const viiRemove = runIsolatedTimingHarness(50, 10, 20, {
+    setup: (k) => {
+      // Untimed setup
+      viiArray.push({ id: `temp_remove_${k}`, title: "Temp Remove", done: false });
+      return { targetIndex: viiArray.items.get().length - 1 };
+    },
+    timed: (ctx) => {
+      viiArray.remove(ctx.targetIndex);
+    },
   });
 
-  const viiSwap = runBatchedTimingHarness(100, 20, 50, (k) => {
-    viiArray.swap(0, 1);
+  // SWAP: Timed executes swap(0, 1) -> Restore restores original order untimed
+  const viiSwap = runIsolatedTimingHarness(100, 20, 50, {
+    timed: () => {
+      viiArray.swap(0, 1);
+    },
+    restore: () => {
+      viiArray.swap(0, 1);
+    },
   });
 
   viiForm.dispose();
@@ -227,18 +288,37 @@ export function benchmarkComparativeFieldArray(itemCount: number = 50): {
     defaultValues: { items: makeInitial() },
   });
 
-  const tsPush = runBatchedTimingHarness(50, 10, 20, (k) => {
-    tsForm.pushFieldValue("items", { id: `new_${k}`, title: `New Task ${k}`, done: false });
-    tsForm.removeFieldValue("items", tsForm.getFieldValue("items").length - 1);
+  // PUSH: Timed pushes 1 item -> Restore removes pushed item
+  const tsPush = runIsolatedTimingHarness(50, 10, 20, {
+    timed: (_ctx, k) => {
+      tsForm.pushFieldValue("items", { id: `pushed_${k}`, title: `New Task ${k}`, done: false });
+    },
+    restore: () => {
+      // Untimed compensation
+      const len = tsForm.getFieldValue("items").length;
+      tsForm.removeFieldValue("items", len - 1);
+    },
   });
 
-  const tsRemove = runBatchedTimingHarness(50, 10, 20, (k) => {
-    tsForm.pushFieldValue("items", { id: `temp_${k}`, title: "Temp", done: false });
-    tsForm.removeFieldValue("items", tsForm.getFieldValue("items").length - 1);
+  // REMOVE: Setup pushes 1 removable item -> Timed removes that item
+  const tsRemove = runIsolatedTimingHarness(50, 10, 20, {
+    setup: (k) => {
+      tsForm.pushFieldValue("items", { id: `temp_remove_${k}`, title: "Temp Remove", done: false });
+      return { targetIndex: tsForm.getFieldValue("items").length - 1 };
+    },
+    timed: (ctx) => {
+      tsForm.removeFieldValue("items", ctx.targetIndex);
+    },
   });
 
-  const tsSwap = runBatchedTimingHarness(100, 20, 50, (k) => {
-    tsForm.swapFieldValues("items", 0, 1);
+  // SWAP: Timed executes swapFieldValues -> Restore restores untimed
+  const tsSwap = runIsolatedTimingHarness(100, 20, 50, {
+    timed: () => {
+      tsForm.swapFieldValues("items", 0, 1);
+    },
+    restore: () => {
+      tsForm.swapFieldValues("items", 0, 1);
+    },
   });
 
   return {
@@ -304,12 +384,14 @@ export function benchmarkComparativeFieldArray(itemCount: number = 50): {
 }
 
 /**
- * 4. Server Issue Routing Latency
+ * 4. Server Issue Routing Latency (Isolated Timed Routing vs Isolated Timed Clear)
  */
 export function benchmarkServerIssueRouting(issueCounts: number[] = [10, 50, 100, 1000]): {
-  vii: Record<number, BenchmarkMeasurement>;
+  routing: Record<number, BenchmarkMeasurement>;
+  clear: Record<number, BenchmarkMeasurement>;
 } {
-  const viiResults: Record<number, BenchmarkMeasurement> = {};
+  const routingResults: Record<number, BenchmarkMeasurement> = {};
+  const clearResults: Record<number, BenchmarkMeasurement> = {};
 
   for (const count of issueCounts) {
     const initial: Record<string, string> = {};
@@ -319,23 +401,52 @@ export function benchmarkServerIssueRouting(issueCounts: number[] = [10, 50, 100
     const form = createForm<Record<string, string>>({ initialValues: initial });
     const issues = generateServerIssues(count);
 
-    const timing = runBatchedTimingHarness(20, 5, 10, () => {
-      form.setServerIssues(issues);
-      form.clearServerIssues();
+    // Iterations tuned for count: 1000 issues use smaller batch to avoid excessive run duration
+    const iterations = count >= 1000 ? 10 : 20;
+    const batchSize = count >= 1000 ? 2 : 10;
+
+    // ROUTING: Timed setServerIssues -> Restore clearServerIssues untimed
+    const routeTiming = runIsolatedTimingHarness(iterations, 2, batchSize, {
+      timed: () => {
+        form.setServerIssues(issues);
+      },
+      restore: () => {
+        form.clearServerIssues();
+      },
     });
 
-    form.dispose();
-
-    viiResults[count] = {
+    routingResults[count] = {
       library: "Vii Form",
-      scenario: `vii-server-issues-${count}`,
-      iterations: 20,
-      batchSize: 10,
-      medianUs: Number(timing.medianUs.toFixed(3)),
-      p95Us: Number(timing.p95Us.toFixed(3)),
-      opsPerSec: timing.opsPerSec,
+      scenario: `vii-server-issue-routing-${count}`,
+      iterations,
+      batchSize,
+      medianUs: Number(routeTiming.medianUs.toFixed(3)),
+      p95Us: Number(routeTiming.p95Us.toFixed(3)),
+      opsPerSec: routeTiming.opsPerSec,
     };
+
+    // CLEAR: Setup setServerIssues untimed -> Timed clearServerIssues
+    const clearTiming = runIsolatedTimingHarness(iterations, 2, batchSize, {
+      setup: () => {
+        form.setServerIssues(issues);
+      },
+      timed: () => {
+        form.clearServerIssues();
+      },
+    });
+
+    clearResults[count] = {
+      library: "Vii Form",
+      scenario: `vii-server-issue-clear-${count}`,
+      iterations,
+      batchSize,
+      medianUs: Number(clearTiming.medianUs.toFixed(3)),
+      p95Us: Number(clearTiming.p95Us.toFixed(3)),
+      opsPerSec: clearTiming.opsPerSec,
+    };
+
+    form.dispose();
   }
 
-  return { vii: viiResults };
+  return { routing: routingResults, clear: clearResults };
 }

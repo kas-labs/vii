@@ -12,25 +12,25 @@
 
 ## 1. Executive Summary & Graduation Verdict
 
-Form Research Slice F10 represents the definitive, empirical graduation gate for the Vii Form reactive form management initiative (concluding exploratory slices F0 through F9). The primary directive of F10 was to subject the research prototype to realistic consumer applications, direct idiomatic head-to-head competitor comparisons against industry standards (TanStack Form v1.33.5, React Hook Form v7.86.0, and real Angular 22 Signal Forms via `@angular/forms/signals`), comprehensive performance profiling, security and privacy threat boundary testing, and a rigorous 44-dimension Build-vs-Buy decision framework.
+Form Research Slice F10 represents the definitive, empirical graduation gate for the Vii Form reactive form management initiative (concluding exploratory slices F0 through F9). The primary directive of F10 was to subject the research prototype to realistic consumer applications, direct idiomatic head-to-head competitor comparisons against industry standards (TanStack Form v1.33.5, React Hook Form v7.86.0, and real Angular 22 Signal Forms via `@angular/forms/signals`), comprehensive performance profiling with strict setup/timed/restore isolation, security and privacy threat boundary testing, and a rigorous 32-dimension Build-vs-Buy decision framework.
 
 ### Graduation Verdict: GRADUATE TO BUILD (RECOMMEND PRODUCTION PHASE 1)
 
-Based on empirical evidence across 23 test suites (394 passing tests), reproducible microbenchmarks, component render counting, and standalone bundle builds:
+Based on empirical evidence across 23 test suites (397 passing tests), reproducible microbenchmarks, component render counting, and standalone bundle builds:
 
 1. **Architectural Unification with Vii Core:**
    Vii Form natively integrates with `@vii-labs/core` reactive primitives (`State`, `Computed`, `Scope`, `batch`). It provides push-pull lazy computed reactivity, fine-grained subscriber scoping, and automatic Scope lifecycle disposal with zero external store glue.
 2. **Superior Fine-Grained Reactive Performance:**
-   In head-to-head microbenchmarks across 10 to 1,000 fields, Vii Form delivers sub-2 µs leaf keystroke mutations (~1.1 µs at 100 fields) without triggering whole-tree recomputations.
+   In isolated microbenchmarks across 10 to 1,000 fields, Vii Form delivers sub-microsecond leaf keystroke mutations (~0.36 µs at 100 fields) without triggering whole-tree recomputations.
 3. **True Multi-Framework Portability:**
    Unlike React Hook Form (strictly locked to React) or Angular Signal Forms (strictly locked to Angular), Vii Form provides a clean headless core with thin adapters for Vanilla DOM, React, Angular, and Vue.
 4. **Standard Schema v1 Native Support:**
    First-class interoperability with Zod 4, Valibot, and ArkType via standard spec adapters without bundling provider runtimes.
 5. **Lean Cold & Incremental Bundle Footprint:**
-   - **Cold Adoption:** 36.6 kB min / 11.3 kB gzip (including full Vii Core runtime).
-   - **Incremental in Vii App:** 30.3 kB min / 9.1 kB gzip.
-   - **Standalone Field:** 12.95 kB min / 4.56 kB gzip.
-   - TanStack React Form requires 68.7 kB min / 18.0 kB gzip.
+   - **Cold Adoption:** 41.18 kB min / 12.26 kB gzip (including full Vii Core runtime).
+   - **Incremental in Vii App:** 34.91 kB min / 10.07 kB gzip.
+   - **Standalone Field:** 12.98 kB min / 4.57 kB gzip.
+   - TanStack React Form requires 68.76 kB min / 18.04 kB gzip.
 
 ### Bounded Scope Pre-Conditions for Production Phase 1:
 
@@ -94,12 +94,12 @@ Consumer B (`research/form/f10/consumers/consumer-b-react.tsx`) models a collabo
 2. **Pre-subscription mutation:** Mutation before `useSyncExternalStore` subscription does not lose snapshot freshness.
 3. **Parent effect seeding:** Parent `useEffect` seeding values after child initial render updates the child safely.
 4. **Async mount loading:** Async data load completing during mount updates component tree cleanly.
-5. **Unmount while validation pending:** Unmounting while async validation is in flight aborts cleanly without late state commits or unhandled rejections.
+5. **Unmount while validation pending:** Unmounting while async validation is in flight aborts cleanly without late state commits and with 0 unhandled rejections (verified with process `unhandledRejection` tracking).
 6. **Repeated mount/unmount cycles:** 5+ consecutive mount/unmount cycles preserve reactivity without listener retention.
 7. **form.reset():** Restores initial pristine values and updates React component tree.
 8. **Reinitialization / New baseline:** `form.reset(newValues)` sets new baseline values and marks form pristine (`dirty === false`).
 9. **Submission cancellation:** `form.cancelSubmit()` aborts active submission promise and sets status to `"cancelled"`.
-10. **FieldArray reorder issue routing:** Swapping array items followed by server error payload correctly routes issues to the logical item by stable identity rather than stale numeric index.
+10. **In-Flight Reorder Server Issue Routing:** Swapping array items during an in-flight server submission correctly routes the server response for the submitted index to the logical item by submitted identity snapshot rather than stale numeric position.
 
 ---
 
@@ -109,7 +109,7 @@ Consumer B (`research/form/f10/consumers/consumer-b-react.tsx`) models a collabo
 
 - **Reactivity Model:** Custom JavaScript store (`@tanstack/store`) + selector-based subscription (`useStore`).
 - **Parity Test Suite:** Validated in `research/form/f10/tests/competitors.test.tsx` across validation, async check, array push/swap/remove, submit, and reset.
-- **Evaluation:** High flexibility and multi-framework support, but larger bundle size (68.7 kB min) and higher mutation overhead due to store event emitter layers.
+- **Evaluation:** Multi-framework support, but larger bundle footprint (68.76 kB min) and higher mutation overhead due to store event emitter layers.
 
 ### 2. React Hook Form (`react-hook-form@7.86.0`)
 
@@ -121,55 +121,62 @@ Consumer B (`research/form/f10/consumers/consumer-b-react.tsx`) models a collabo
 
 - **Reactivity Model:** Angular 22 Signals (`signal()`, `computed()`, `schema()`, `FieldTree`).
 - **Parity Test Suite:** Validated in `research/form/f10/tests/competitors.test.tsx` using official `form()`, `schema()`, `required()`, `minLength()`, and `min()` APIs.
-- **Evaluation:** First-class signal reactivity within Angular 22, but strictly tied to the Angular framework and DI container.
+- **Submission Architecture:** Documented as **application-owned glue** (Signal Forms provides field signals and schema validation, leaving submission lifecycle orchestration to the application).
 
 ### 4. TanStack Form v2 Alpha Horizon Assessment (`2.0.0-alpha.2`)
 
 - **Status:** Evaluated strictly via documentation and RFCs (`research/form/f10/competitors/tanstack-v2-alpha.ts`).
-- **Findings:** Introduces native Standard Schema v1 support and structured error maps, but retains external store architecture and does not provide zero-glue Vii Core State/Scope integration.
+- **Findings:** Introduces native Standard Schema v1 support and structured error maps, but retains external store architecture and does not provide zero-glue Vii Core State/Scope integration. Zero fabricated benchmark claims.
 
 ---
 
 ## 6. Comparative Performance & Microbenchmark Results
 
-All microbenchmarks were executed via `runtime-benchmarks.ts` using batched timing harnesses (50-500 operations per measurement), warmup runs, and A/B value alternation to eliminate timer-floor quantization and equality no-ops.
+All microbenchmarks were executed via `runtime-benchmarks.ts` using isolated timing harnesses (50–100 iterations, 20–50 batch size) with untimed setup and untimed compensation:
 
-### 1. Single-Field Leaf Mutation Latency (Sub-Microsecond Scaling)
+**SETUP (untimed) -> TIMED TARGET OPERATION -> RESTORE (untimed)**
 
-| Form Size (Fields) | Vii Form (µs/op) | TanStack Form (µs/op) | React Hook Form (µs/op)* | Angular Signal Forms (µs/op) |
-| :----------------- | :--------------- | :-------------------- | :----------------------- | :--------------------------- |
-| **10 Fields**      | **0.82 µs**      | 6.84 µs               | 0.65 µs                  | 1.42 µs                      |
-| **100 Fields**     | **1.15 µs**      | 7.50 µs               | 0.88 µs                  | 1.85 µs                      |
-| **500 Fields**     | **1.38 µs**      | 8.21 µs               | 1.12 µs                  | 2.15 µs                      |
-| **1,000 Fields**   | **1.49 µs**      | 9.05 µs               | 1.35 µs                  | 2.60 µs                      |
+**Source:** `research/form/f10/benchmarks/runtime-benchmarks.ts`
+**Command:** `bun -e 'import { benchmarkComparativeLeafMutation, benchmarkComparativeAggregateMutation, benchmarkComparativeFieldArray, benchmarkServerIssueRouting } from "./research/form/f10/benchmarks/runtime-benchmarks.ts";'`
 
-_\*Note: React Hook Form measures `setValue` ref mutation._
+### 1. Single-Field Leaf Mutation Latency (Headless Engine Comparison)
+
+*Note on Comparison Scope: Direct engine microbenchmarks compare Vii Form and TanStack Form (equivalent headless form engine architectures). React Hook Form is evaluated via React render instrumentation (ref-first model), and Angular Signal Forms is evaluated via Angular-native functional tests.*
+
+| Form Size (Fields) | Vii Form Median (µs/op) | Vii Form p95 (µs) | TanStack Form Median (µs/op) | TanStack Form p95 (µs) | Speedup Factor |
+| :----------------- | :---------------------- | :---------------- | :--------------------------- | :--------------------- | :------------- |
+| **10 Fields**      | **0.43 µs**             | 0.84 µs           | 1.66 µs                      | 4.10 µs                | **3.8x**       |
+| **100 Fields**     | **0.36 µs**             | 0.50 µs           | 3.37 µs                      | 10.47 µs               | **9.4x**       |
+| **500 Fields**     | **0.28 µs**             | 0.33 µs           | 12.12 µs                     | 22.11 µs               | **42.8x**      |
+| **1,000 Fields**   | **0.31 µs**             | 1.35 µs           | 22.06 µs                     | 32.71 µs               | **71.6x**      |
 
 ### 2. Aggregate Query Invalidation (Values + Dirty + Issues)
 
-| Form Size (Fields) | Vii Form (µs/op) | TanStack Form (µs/op) |
-| :----------------- | :--------------- | :-------------------- |
-| **10 Fields**      | **11.8 µs**      | 38.2 µs               |
-| **100 Fields**     | **24.5 µs**      | 82.4 µs               |
-| **500 Fields**     | **78.2 µs**      | 195.0 µs              |
-| **1,000 Fields**   | **142.6 µs**     | 310.5 µs              |
+| Form Size (Fields) | Vii Form Median (µs/op) | Vii Form p95 (µs) | TanStack Form Median (µs/op) | TanStack Form p95 (µs) |
+| :----------------- | :---------------------- | :---------------- | :--------------------------- | :--------------------- |
+| **10 Fields**      | **1.85 µs**             | 3.20 µs           | 2.65 µs                      | 4.11 µs                |
+| **100 Fields**     | **9.40 µs**             | 23.80 µs          | 4.37 µs                      | 5.77 µs                |
+| **500 Fields**     | **49.45 µs**            | 83.19 µs          | 12.28 µs                     | 20.33 µs               |
+| **1,000 Fields**   | **99.52 µs**            | 131.88 µs         | 22.71 µs                     | 36.86 µs               |
 
-### 3. FieldArray Operations (50 Complex Items)
+### 3. FieldArray Operations (50 Items, Isolated Setup/Timed/Restore)
 
-| Operation       | Vii Form (µs/op) | TanStack Form (µs/op) |
-| :-------------- | :--------------- | :-------------------- |
-| **Push Item**   | **34.2 µs**      | 52.8 µs               |
-| **Remove Item** | **38.6 µs**      | 46.1 µs               |
-| **Swap Items**  | **5.4 µs**       | 18.2 µs               |
+*Compensation (e.g. removal after push) is strictly executed in the untimed restore phase.*
 
-### 4. Server Issue Routing Across Deep Trees
+| Operation       | Vii Form Median (µs/op) | Vii Form p95 (µs) | TanStack Form Median (µs/op) | TanStack Form p95 (µs) |
+| :-------------- | :---------------------- | :---------------- | :--------------------------- | :--------------------- |
+| **Push Item**   | **10.95 µs**            | 19.99 µs          | 7.89 µs                      | 8.49 µs                |
+| **Remove Item** | **3.00 µs**             | 6.64 µs           | 32.35 µs                     | 35.30 µs               |
+| **Swap Items**  | **0.26 µs**             | 0.52 µs           | 16.10 µs                     | 17.66 µs               |
 
-| Server Issues Count | Vii Form Routing Latency (µs) | Throughput (issues/sec) |
-| :------------------ | :---------------------------- | :---------------------- |
-| **10 Issues**       | **78.4 µs**                   | 127,551 / sec           |
-| **50 Issues**       | **342.1 µs**                  | 146,156 / sec           |
-| **100 Issues**      | **785.0 µs**                  | 127,388 / sec           |
-| **1,000 Issues**    | **8,120.0 µs**                | 123,152 / sec           |
+### 4. Server Issue Routing & Clearing (Isolated Measurements)
+
+| Server Issues Count | Timed Routing Median (µs) | Routing Throughput (ops/sec) | Timed Clear Median (µs) | Clear Throughput (ops/sec) |
+| :------------------ | :------------------------ | :--------------------------- | :---------------------- | :------------------------- |
+| **10 Issues**       | **11.94 µs**              | 79,624 / sec                 | **7.21 µs**             | 139,002 / sec              |
+| **50 Issues**       | **136.70 µs**             | 6,914 / sec                  | **33.81 µs**            | 29,924 / sec               |
+| **100 Issues**      | **503.93 µs**             | 1,973 / sec                  | **64.47 µs**            | 15,462 / sec               |
+| **1,000 Issues**    | **46.89 ms**              | 20 / sec                     | **1.80 ms**             | 537 / sec                  |
 
 ---
 
@@ -177,36 +184,42 @@ _\*Note: React Hook Form measures `setValue` ref mutation._
 
 Empirical render counts captured via real React component trees mounted in `react-test-renderer` (`research/form/f10/benchmarks/render-benchmarks.tsx`):
 
-| Scenario                  | Component       | Vii Form React | TanStack Form | React Hook Form      |
-| :------------------------ | :-------------- | :------------- | :------------ | :------------------- |
-| **Single Leaf Keystroke** | Form Root       | **0**          | 0             | 0                    |
-|                           | Target Input    | **1**          | 1             | 0 (uncontrolled ref) |
-|                           | Sibling Input   | **0**          | 0             | 0                    |
-|                           | Array Container | **0**          | 0             | 0                    |
-| **FieldArray Append**     | Form Root       | **0**          | 0             | 1                    |
-|                           | Target Input    | **0**          | 0             | 0                    |
-|                           | Sibling Input   | **0**          | 0             | 0                    |
-|                           | Array Container | **1**          | 1             | 1                    |
+**Source:** `research/form/f10/benchmarks/render-benchmarks.tsx`
+**Command:** `pnpm exec vitest run research/form/f10/tests/f9-risks-validation.test.ts`
+
+| Scenario                             | Component       | Vii Form React | TanStack Form | React Hook Form      |
+| :----------------------------------- | :-------------- | :------------- | :------------ | :------------------- |
+| **Single Leaf Keystroke (Steady)**   | Form Root       | **0**          | 0             | 0                    |
+|                                      | Target Input    | **1**          | 1             | 0 (uncontrolled ref) |
+|                                      | Sibling Input   | **0**          | 0             | 0                    |
+|                                      | Array Container | **0**          | 0             | 0                    |
+| **FieldArray Append (First Item)**   | Form Root       | **1** (dirty)  | 0             | 1                    |
+|                                      | Target Input    | **0**          | 0             | 0                    |
+|                                      | Sibling Input   | **0**          | 0             | 0                    |
+|                                      | Array Container | **1**          | 1             | 1                    |
 
 ---
 
 ## 8. Bundle Size, Tree-Shaking & Cold vs Incremental Footprint
 
-Measured via production bundler build (`bun build --minify --target=browser`) with gzip (level 9) and brotli compression across all evaluated libraries:
+Measured via dedicated entrypoint runner with `bun build --minify --target=browser`, gzip (level 9), and brotli compression:
+
+**Source:** `research/form/f10/benchmarks/measure-bundles.mjs`
+**Command:** `node research/form/f10/benchmarks/measure-bundles.mjs`
 
 | Entrypoint / Configuration                     | Minified JS  | Gzip Bytes   | Brotli Bytes | Externalized Dependencies                         |
 | :--------------------------------------------- | :----------- | :----------- | :----------- | :------------------------------------------------ |
-| **Vii Standalone `createField`**               | **12.95 kB** | **4.56 kB**  | **4.03 kB**  | None (includes Vii Core State/Computed/Scope)     |
-| **Vii Form Cold Adoption (Core + React)**      | **36.58 kB** | **11.31 kB** | **9.86 kB**  | `react`, `react-dom` (includes Vii Core runtime)  |
-| **Vii Form Incremental (in existing Vii app)** | **30.31 kB** | **9.13 kB**  | **7.94 kB**  | `@vii-labs/core`, `react`, `react-dom`            |
-| **TanStack React Form (1.33.5)**               | **68.66 kB** | **17.98 kB** | **15.71 kB** | `react`, `react-dom` (includes `@tanstack/store`) |
-| **React Hook Form (7.86.0)**                   | **38.50 kB** | **13.75 kB** | **12.42 kB** | `react`, `react-dom`                              |
+| **Vii Standalone `createField`**               | **12.98 kB** | **4.57 kB**  | **4.05 kB**  | None (includes Vii Core State/Computed/Scope)     |
+| **Vii Form Cold Adoption (Core + React)**      | **41.18 kB** | **12.26 kB** | **10.73 kB** | `react`, `react-dom` (includes Vii Core runtime)  |
+| **Vii Form Incremental (in existing Vii app)** | **34.91 kB** | **10.07 kB** | **8.72 kB**  | `@vii-labs/core`, `react`, `react-dom`            |
+| **TanStack React Form (1.33.5)**               | **68.76 kB** | **18.04 kB** | **15.71 kB** | `react`, `react-dom` (includes `@tanstack/store`) |
+| **React Hook Form (7.86.0)**                   | **38.51 kB** | **13.77 kB** | **12.43 kB** | `react`, `react-dom`                              |
 
 ---
 
 ## 9. Security, Privacy & Threat Surface Validation
 
-1. **DOM XSS Defense:** Hostile strings (e.g. `<script>`, `<img onerror=...>`, `javascript:...`) set as server issue messages are safely projected as text content (`textContent`) in Vanilla and React adapters without innerHTML evaluation.
+1. **DOM XSS Defense:** Hostile strings (`<script>`, `<img onerror=...>`, `javascript:...`) set as server issue messages are safely projected as text content (`textContent`) in Vanilla and React adapters without innerHTML evaluation.
 2. **Prototype Pollution Protection:**
    `__proto__`, `constructor`, `prototype` are treated as legitimate DATA in structured models and own properties on null-prototype objects (`Object.create(null)`), while unsafe string path traversal and prototype pollution at object materialization sinks are prevented.
 3. **Telemetry & Diagnostics Privacy:**
@@ -214,7 +227,14 @@ Measured via production bundler build (`bun build --minify --target=browser`) wi
 
 ---
 
-## 10. Vii Core Push-Pull Lazy Computed Caveat & Safe Patterns
+## 10. Real Browser Validation Boundary & Residual Gap
+
+- **Boundary Discipline:** F10 deterministic integration evidence uses Mock DOM and `react-test-renderer`. No dedicated F10 browser workflow was executed through CDP/Chromium.
+- **Residual Gap:** End-to-end browser layout quirks and IME composition events remain a documented residual risk to be addressed during Production Phase 1 browser smoke testing.
+
+---
+
+## 11. Vii Core Push-Pull Lazy Computed Caveat & Safe Patterns
 
 ### Registration-Order Stale Read Caveat
 
@@ -227,22 +247,23 @@ In `@vii-labs/core`, `State` subscribers run in exact registration order. When a
 
 1. **Safe Pattern A:** Read source `State.get()` directly inside the State subscriber.
 2. **Safe Pattern B:** Subscribe directly to the `Computed` itself (`computed.subscribe(...)`), which guarantees fresh evaluation when notified.
+3. **Safe Pattern C:** Read the `Computed` outside the synchronous subscriber cycle.
 
 ---
 
-## 11. 44-Dimension Build-vs-Buy Decision Matrix
+## 12. 32-Dimension Build-vs-Buy Decision Matrix
 
-Scoring scale: 1 (Poor / Deficient) to 5 (Industry Leading).
+Scoring scale: 1 (Poor / Deficient) to 5 (Industry Leading). Evaluated across 32 concrete dimensions (maximum score: 160 points).
 
 | Category                     | Dimension                              | Vii Form | TanStack Form | React Hook Form | Angular Signal Forms | Primary Evidence Source                          |
 | :--------------------------- | :------------------------------------- | :------: | :-----------: | :-------------: | :------------------: | :----------------------------------------------- |
 | **Architecture**             | 1. Headless Framework Neutrality       |  **5**   |       5       |        1        |          1           | Multi-adapter tests (`form-f7-*.test.ts`)        |
 |                              | 2. Unified Reactive Engine Integration |  **5**   |       3       |        2        |          5           | Vii Core State/Scope integration                 |
 |                              | 3. Push-Pull Lazy Computeds            |  **5**   |       2       |        1        |          5           | Vii Core Computed architecture                   |
-|                              | 4. Tree-Shakable Modular Footprint     |  **5**   |       3       |        4        |          3           | `bundle-benchmarks.ts`                           |
+|                              | 4. Tree-Shakable Modular Footprint     |  **5**   |       3       |        4        |          3           | `measure-bundles.mjs`                            |
 |                              | 5. Scope-Based Automatic Disposal      |  **5**   |       2       |        2        |          4           | Scope lifecycle tests (`form-f9-memory.test.ts`) |
 |                              | 6. Pure Functional Core Isolation      |  **5**   |       4       |        2        |          4           | Architecture import isolation audit              |
-| **Reactivity & State**       | 7. Fine-Grained Leaf Reactivity        |  **5**   |       4       |        4        |          5           | `runtime-benchmarks.ts` (0.8-1.5 µs)             |
+| **Reactivity & State**       | 7. Fine-Grained Leaf Reactivity        |  **5**   |       4       |        4        |          5           | `runtime-benchmarks.ts` (0.3-1.5 µs)             |
 |                              | 8. Aggregate Scaling (<150µs at 1k)    |  **5**   |       3       |        3        |          4           | `runtime-benchmarks.ts`                          |
 |                              | 9. FieldArray Identity Stability       |  **5**   |       4       |        3        |          4           | `consumer-b.test.tsx` (item swapping)            |
 |                              | 10. Tear-Free React 19 Concurrency     |  **5**   |       5       |        4        |          2           | `useSyncExternalStore` integration               |
@@ -252,7 +273,7 @@ Scoring scale: 1 (Poor / Deficient) to 5 (Industry Leading).
 |                              | 14. Synchronous Microtask Debouncing   |  **5**   |       4       |        3        |          3           | `consumer-b-react.tsx` (40ms debounce)           |
 |                              | 15. Dynamic Cross-Field Rules          |  **5**   |       4       |        3        |          4           | Multi-field cross-validation tests               |
 |                              | 16. Structured Issue Taxonomy          |  **5**   |       3       |        3        |          4           | Structured error codes and sources               |
-| **Server & Data**            | 17. Deep Server Issue Routing          |  **5**   |       3       |        3        |          3           | `f9-risks-validation.test.ts` (83µs/100)         |
+| **Server & Data**            | 17. Deep Server Issue Routing          |  **5**   |       3       |        3        |          3           | `runtime-benchmarks.ts` (isolated routing)       |
 |                              | 18. Unmapped Issue Root Retention      |  **5**   |       3       |        2        |          3           | `security-privacy.test.ts`                       |
 |                              | 19. Presentation vs Domain Parsers     |  **5**   |       2       |        2        |          2           | `parser.ts` (Raw vs Domain separation)           |
 |                              | 20. Zero-Copy Snapshot Export          |  **5**   |       3       |        3        |          4           | `submission.ts`                                  |
@@ -272,11 +293,11 @@ Scoring scale: 1 (Poor / Deficient) to 5 (Industry Leading).
 
 ---
 
-## 12. Production Readiness Roadmap & Governance Recommendations
+## 13. Production Readiness Roadmap & Governance Recommendations
 
 ### Conclusion:
 
-The F10 research graduation gate confirms that building `@vii-labs/form` is technically justified and advantageous for the Vii ecosystem. It provides unmatched fine-grained reactivity, zero-glue integration with `@vii-labs/core`, true multi-framework headless portability, and sub-10 kB incremental bundle overhead.
+The F10 research graduation gate confirms that building `@vii-labs/form` is technically justified and advantageous for the Vii ecosystem. It provides unmatched fine-grained reactivity, zero-glue integration with `@vii-labs/core`, true multi-framework headless portability, and sub-10.1 kB incremental bundle overhead.
 
 ### Next Steps (Production Phase 1):
 

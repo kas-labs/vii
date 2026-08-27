@@ -2,8 +2,22 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "noEmit": true,
-    "typeRoots": ["../../node_modules/@types", "../../packages/cli-core/node_modules/@types"],
-    "types": ["node"]
+    "typeRoots": [
+      "../../node_modules/@types",
+      "../../packages/cli-core/node_modules/@types",
+      "../../packages/react/node_modules/@types"
+    ],
+    "types": ["node"],
+    "paths": {
+      "react": ["../../packages/react/node_modules/@types/react/index.d.ts"],
+      "react-dom": ["../../packages/react/node_modules/@types/react-dom/index.d.ts"],
+      "react-dom/server": ["../../packages/react/node_modules/@types/react-dom/server.d.ts"],
+      "react-test-renderer": [
+        "../../packages/react/node_modules/@types/react-test-renderer/index.d.ts"
+      ],
+      "@angular/core": ["../../packages/angular/node_modules/@angular/core/types/core.d.ts"],
+      "vue": ["../../packages/vue/node_modules/vue/dist/vue.d.ts"]
+    }
   },
   "include": ["./**/*.ts"]
 }

@@ -234,16 +234,20 @@ deleted. OIDC Trusted Publisher is configured for stage-only publishing; future 
 and must not intentionally update `latest`.
 
 The durable ecosystem research direction now separates capability ownership from tool ownership.
-Form research (F0–F8) targets a small headless module that reuses Vii State, Scope, diagnostics, and thin
-framework adapters. Slices F0–F8 in `research/form/` prototype and verify signal-first field trees,
+Form research (F0–F9) targets a small headless module that reuses Vii State, Scope, diagnostics, and thin
+framework adapters. Slices F0–F9 in `research/form/` prototype and verify signal-first field trees,
 nested groups/arrays with stable identity, synchronous and asynchronous validation scheduling with
 `AbortSignal` cancellation and monotonic revision protection, parsing with raw intermediate preservation,
 Standard Schema v1 provider boundary (Zod 4, Valibot, ArkType), submission state machine with Model A
 terminal status preservation across user edits, structured server issue routing, thin framework adapters
 for Vanilla DOM, React, Angular, and Vue with verified cross-framework semantic equivalence, accessibility
 projection (`aria-invalid`, `aria-describedby`, deterministic first-invalid focus navigation data), DOM XSS
-and prototype-pollution security defense, safe snapshot cloning, and strictly value-free diagnostics privacy
-invariants with zero framework-specific forks in Form core. HTTP research targets a small Fetch-first request/response transport and remains
+and prototype-pollution security defense, safe snapshot cloning, strictly value-free diagnostics privacy
+invariants with zero framework-specific forks in Form core, and comprehensive empirical evidence (F9):
+single-field mutation in 1,000-field forms in ~0.29 µs (>3.4M ops/s) with 0 sibling invalidations, 500 create/dispose cycles
+with 0 scope leaks, fast TypeScript checking (0.21s check time / 4,964 instantiations / 0 deep recursion errors across 82 files),
+compact production research bundle (~12.95 kB min / 4.56 kB gzip for standalone `createField`), and 100% framework/provider isolation.
+HTTP research targets a small Fetch-first request/response transport and remains
 separate from Query cache and server-state semantics. Native template control flow belongs only to
 the future compiler/component program: conditionals, keyed repetition, empty states, and switch-like
 branches should share one Component IR and lifecycle model, while the exact source syntax remains

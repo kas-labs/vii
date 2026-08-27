@@ -438,3 +438,25 @@ Slice F8 established and proved the smallest necessary accessibility, security, 
 - **Residual Risks Deferred to F9 / F10**:
   - F9 owns quantitative bundle footprint (minified, gzip, brotli), field update latency under heavy load, and 1,000-cycle heap benchmarks.
   - F10 owns multi-step consumer dogfooding and final build-vs-buy graduation.
+
+---
+
+## 10. F9: Runtime, Memory, TypeScript, and Bundle Evidence
+
+### Overview & Objectives
+Slice F9 executed the empirical evidence harness to evaluate runtime scaling, memory lifecycle, TypeScript compiler overhead, and production-style bundle footprints across realistic and stress test forms up to 1,000 fields. Detailed findings are in [`research/form/F9_EVIDENCE.md`](./F9_EVIDENCE.md).
+
+### 1. Empirical Highlights
+- **$O(1)$ Single-Field Mutation**: Mutating a single field in a 1,000-field form executes in **0.00029 ms** (>3.4 million ops/sec), showing absolute signal isolation with zero sibling field notification.
+- **Linear Construction**: Full form construction scales linearly (~4.7 µs per field).
+- **Atomic `setValues` Batching**: Mutating a 10-field subset inside `form.setValues` executes in a constant **0.0028 ms** regardless of total form size.
+- **Zero Memory Leaks**: 500 complete form create/dispose cycles show 0 active scope leaks, 0 dangling listeners, and 0 unhandled promise rejections.
+- **Fast TypeScript Checking**: 82 files / 4,603 lines of TypeScript / 300+ fields checked in **0.21 s** check time / 4,964 instantiations with 0 deep recursion errors.
+- **Compact Bundle Footprint**: `createField` standalone bundles at **12.95 kB minified / 4.56 kB gzip / 4.03 kB brotli** (including all `@vii-labs/core` reactive primitives).
+- **100% Framework & Provider Isolation**: Verified zero framework cross-contamination and zero concrete schema provider bundling in Core.
+
+### 2. Documented Reactive Invariant (Items 10 & 57)
+In Vii Core's push-pull lazy computed design, reading a derived `Computed` inside a synchronous `State` subscriber callback will observe the previous cached value if the `Computed` was evaluated after the subscriber registered. As hardened in F8, adapters and internal projections derive dynamic status directly from source signals. External consumer reads outside the notification cycle always observe fresh values once the scheduler flushes.
+
+### 3. F10 Status
+**F10 has NOT been started.** Completion of F9 authorizes review and documentation only.

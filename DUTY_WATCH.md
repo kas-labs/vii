@@ -37,6 +37,71 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-27 18:55 CEST | Form Research Slice F9: Runtime / Memory / TypeScript / Bundle Evidence
+
+Status: completed
+Branch: `perf/form-f9-evidence`
+PR: not opened (Draft PR ready)
+
+### Scope
+
+- Implement and execute Slice F9 (Runtime / Memory / TypeScript / Bundle Evidence) in `research/form/`.
+- Answer research question: Is the F0-F8 Form architecture sufficiently efficient, resource-stable, type-system-friendly, tree-shakeable, and small enough to proceed to real-consumer validation, and where are the actual measured bottlenecks or risks?
+- Gather reproducible empirical evidence across all 14 required categories:
+  1. Runtime update cost across small (10), medium (100), large (500), stress (1,000), and nested (~200) forms.
+  2. Invalidation fan-out and subscriber granularity (0 sibling notifications).
+  3. Memory retention & 100/500 create/dispose cycles (0 active scope leaks, 0 dangling listeners).
+  4. FieldArray item lifecycle across push, insert, remove, swap, move, and reorder.
+  5. Async validation supersession across 200 rapid changes (199 clean aborts, 1 commit, 0 unhandled rejections).
+  6. Debounce scheduling and timer cleanup upon disposal.
+  7. Standard Schema provider integration overhead (Native rule vs Zod 4 vs Valibot vs ArkType).
+  8. Submission lifecycle, snapshot cloning (`deepCloneSnapshot`), and server issue routing (100 & 1,000 issues).
+  9. Framework adapters & React snapshot stability / render counts / StrictMode cycles.
+  10. Reactive propagation & derived Computed investigation (Items 10 & 57).
+  11. TypeScript diagnostics scaling (`tsc --extendedDiagnostics`: 0.21s check time / 4,964 instantiations / 0 deep errors across 82 files).
+  12. Production-style research bundle sizes (`createField` standalone: 12.95 kB min / 4.56 kB gzip / 4.03 kB brotli).
+  13. Framework and provider isolation (0 cross-framework imports, 0 concrete schema libraries in core).
+  14. SSR and Node import safety.
+- Bounded slice ONLY. F10 is NOT authorized and NOT started.
+
+### Changes
+
+- Created research benchmarks and evidence harness:
+  - `research/form/benchmarks/typescript/tsconfig.json`, `small-form.ts`, `medium-form.ts`, `large-form.ts`.
+  - `research/form/benchmarks/bundle/measure-bundles.mjs` (measures minified, gzip, brotli bytes via bun & node:zlib).
+  - `scripts/benchmarks/form-f9-evidence.mjs` (master benchmark runner).
+- Created comprehensive test suites in `research/form/`:
+  - `research/form/benchmarks/reactive-propagation.test.ts` (8 tests): Deterministic proof of Vii Core's push-pull computed caching and notification ordering.
+  - `research/form/form-f9-runtime.test.ts` (10 tests): Form scaling (10 to 1,000 fields), fan-out boundaries, batching, error recovery.
+  - `research/form/form-f9-memory.test.ts` (6 tests): 100 & 500 create/dispose cycles, FieldArray disposal, debounce timers, async supersession, diagnostics privacy.
+  - `research/form/form-f9-types.test.ts` (4 tests): Generic inference, nested forms, Standard Schema typing, negative compile tests.
+  - `research/form/form-f9-bundle.test.ts` (8 tests): Framework isolation, provider isolation, SSR/Node import safety, browser globals audit.
+- Created durable research report:
+  - `research/form/F9_EVIDENCE.md` (comprehensive evidence report with all metrics, environment metadata, methodology, and F10 gate recommendation).
+- Updated documentation:
+  - `docs/roadmap/FORM_RESEARCH.md`: Marked F9 completed, updated sequence table and added Section 7 evidence summary.
+  - `research/form/README.md`: Added Section 10 F9 evidence summary.
+  - `PROJECT_STATE.md`: Updated Form research summary with F9 empirical findings.
+
+### Validation
+
+- `pnpm exec tsc -p research/form/tsconfig.json --noEmit`: PASS (0 errors).
+- `pnpm exec tsc -p research/form/benchmarks/typescript/tsconfig.json --extendedDiagnostics --noEmit`: PASS (0.21s check time / 4,964 instantiations).
+- `pnpm exec vitest run research/form/`: PASS (18 test files, 362 tests passing, 0 failures).
+- `bun scripts/benchmarks/form-f9-evidence.mjs`: PASS (all runtime, array, validation, submission, TypeScript, and bundle benchmarks executed).
+- `pnpm validate`: PASS.
+- `git diff --check`: PASS.
+
+### Architecture / compatibility
+
+- 100% clean architectural separation: Form Core remains pure Vii State/Scope without DOM or framework dependencies.
+- Zero public package mutations or release changes.
+- Framework adapters remain thin projections with verified isolation.
+
+### Remaining / recovery
+
+- F9 complete. Open Draft PR and await maintainer review. F10 has NOT started.
+
 ## 2026-08-27 02:25 CEST | Form Research Slice F8: Accessibility + Security + Privacy Hardening
 
 Status: completed

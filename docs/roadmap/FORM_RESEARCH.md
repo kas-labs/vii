@@ -1,7 +1,7 @@
 # Vii Form Research Roadmap
 
-> **Status**: Active Research Track (F0-F8 Completed)
-> **Current Slice**: F8 Completed / Ready for Review
+> **Status**: Active Research Track (F0-F9 Completed)
+> **Current Slice**: F9 Completed / Ready for Review
 > **Governing Strategy**: Evidence-driven Build-vs-Buy
 > **Prerequisites**: Phase 1 (Core State), Phase 2 (Adapters/CLI), Scope/Lifecycle Foundations, Schema Research (`Wrap + Reduce`)
 
@@ -91,8 +91,8 @@ Vii Form is a research track investigating whether a small, typed, framework-agn
 | **F6** | **Submission Lifecycle + Server Errors + Reset/Reinitialize** | Prototype submission state machine (`idle`, `validating`, `submitting`, `succeeded`, `failed`, `cancelled`), duplicate prevention (drop vs reject policy), server error attachment/clearing strategies, reset to initial vs new baseline, and external model reinitialization. *(Completed Prototype in `research/form/`)* |
 | **F7** | **Framework Adapter Compliance (Vanilla, React, Angular, Vue)** | Prototype thin adapters for Vanilla DOM, React (`useForm` / `useField` / `useFieldArray`), Angular (`createAngularForm` / `createAngularField`), and Vue (`createVueForm` / `createVueField`). Verify zero whole-form rerenders, exact cross-framework semantic equivalence, and framework-native ergonomics. *(Completed Prototype in `research/form/adapters/`)* |
 | **F8** | **Accessibility + Security + Privacy Hardening** | Prototype accessible HTML helpers (`aria-invalid`, `aria-describedby`, error focus identification at adapter edge), prototype-pollution defense in field paths, empirical depth/width bounds, and value-free diagnostics redaction. *(Completed Prototype in `research/form/`)* |
-| **F9** | **Runtime / Memory / TypeScript / Bundle Evidence** | Measure bundle footprint (minified, gzip, brotli), field update latency, memory retention across 1,000 mount/dispose cycles (zero retained resources; empirical heap budget), and TypeScript compilation wall time. |
-| **F10** | **Real Consumer Validation + Build-vs-Buy Graduation Gate** | Validate Form prototype on expanded multi-step Vanilla onboarding fixture and React task board. Execute formal Build-vs-Buy comparative benchmarks against TanStack Form, React Hook Form, and Angular Signal Forms. Render graduation decision. |
+| **F9** | **Runtime / Memory / TypeScript / Bundle Evidence** | Measure bundle footprint (minified, gzip, brotli), field update latency, memory retention across 100/500 cycles (zero retained resources; empirical heap budget), and TypeScript compilation wall time. *(Completed Prototype & Evidence in `research/form/F9_EVIDENCE.md`)* |
+| **F10** | **Real Consumer Validation + Build-vs-Buy Graduation Gate** | Validate Form prototype on expanded multi-step Vanilla onboarding fixture and React task board. Execute formal Build-vs-Buy comparative benchmarks against TanStack Form, React Hook Form, and Angular Signal Forms. Render graduation decision. *(Not Started)* |
 
 ---
 
@@ -452,11 +452,37 @@ Slice F8 evaluated and hardened the framework-neutral core and adapter boundarie
    - **Exception Privacy**: Detached exception handlers record only safe classifications (`reason: "Error"` or `reason: "TypeError"`) without message strings.
    - Verified in `research/form/form-f8-privacy.test.ts`.
 
+## 7. Slice F9: Runtime, Memory, TypeScript, and Bundle Evidence
+
+Slice F9 executed the comprehensive empirical evidence suite documented in `research/form/F9_EVIDENCE.md`:
+
+1. **Runtime Scaling & Signal Isolation**:
+   - Single-field mutation in a 1,000-field form executes in **0.00029 ms** (>3.4 million ops/sec), showing identical performance to a 10-field form ($O(1)$ signal isolation).
+   - Linear tree construction (~4.7 µs per field) and atomic `form.setValues` batching (0.0028 ms for 10 fields).
+   - Invalidation fan-out confirmed strictly bounded: 0 sibling field notifications.
+
+2. **Memory Retention & Lifecycle**:
+   - 500 create/dispose cycles completed with zero retained scope leaks or listeners.
+   - `FieldArray` push/swap/remove cycles (100 iterations) verify stable item keys and proper disposal of removed items.
+   - Async validation supersession: 200 rapid changes cleanly abort 199 intermediate `AbortController` instances with 1 final commit and 0 unhandled rejections.
+
+3. **Validation & Standard Schema Providers**:
+   - Native rule (0.042 µs) $\approx$ ArkType (0.042 µs) $\le$ Valibot (0.125 µs) $\le$ Zod 4 (0.166 µs). Zero provider coupling in core.
+
+4. **TypeScript Diagnostics & Bundle Footprint**:
+   - Check time: 0.21s / 4,964 instantiations / 0 deep recursion errors across 82 files.
+   - `createField` minimal bundle: **12.95 kB min / 4.56 kB gzip / 4.03 kB brotli** (includes `@vii-labs/core` runtime).
+   - Framework isolation verified: Vanilla (0 framework imports), React (no Angular/Vue), Angular (no React/Vue), Vue (no React/Angular).
+   - Full SSR and Node import safety verified.
+
+5. **Reactive Propagation Invariant (Items 10 & 57)**:
+   - In Vii Core's push-pull lazy computed design, reading a derived `Computed` inside a synchronous `State` subscriber callback observes the previous cached value if the `Computed` was evaluated after the subscriber registered. Form adapters (e.g. Vanilla DOM `bindField` ARIA projections) derive state directly from source signals.
+
 ---
 
-## 7. Next Steps & Operating Constraints
+## 8. Next Steps & Operating Constraints
 
-- **Current Status**: **F0, F1, F2, F3, F4, F5, F6, F7, and F8 are complete (Accessibility, Security, and Privacy Hardening Verified with 320 passing tests in `research/form/`).**
-- **Hard Gate**: **Completion of F8 does NOT authorize F9 (Runtime / Memory / TypeScript / Bundle Evidence) or any downstream package graduation.**
-- **F9 Status**: **F9 has NOT been started.**
-- **Next Required Action**: Review F8 deliverables, verify test suites and governance, and await explicit maintainer authorization before opening Slice F9.
+- **Current Status**: **F0, F1, F2, F3, F4, F5, F6, F7, F8, and F9 are complete (Runtime, Memory, TypeScript, and Bundle Evidence verified with 362 passing tests in `research/form/`).**
+- **Hard Gate**: **Completion of F9 does NOT authorize F10 (Real Consumer Validation + Build-vs-Buy Graduation Gate) or any downstream package graduation.**
+- **F10 Status**: **F10 has NOT been started.**
+- **Next Required Action**: Review F9 evidence deliverables in `research/form/F9_EVIDENCE.md` and await explicit maintainer authorization before opening Slice F10.

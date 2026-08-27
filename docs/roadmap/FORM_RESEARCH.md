@@ -1,7 +1,7 @@
 # Vii Form Research Roadmap
 
-> **Status**: Active Research Track (F0-F8 Completed)
-> **Current Slice**: F8 Completed / Ready for Review
+> **Status**: Active Research Track (F0-F9 Completed)
+> **Current Slice**: F9 Completed / Ready for Review
 > **Governing Strategy**: Evidence-driven Build-vs-Buy
 > **Prerequisites**: Phase 1 (Core State), Phase 2 (Adapters/CLI), Scope/Lifecycle Foundations, Schema Research (`Wrap + Reduce`)
 
@@ -91,8 +91,8 @@ Vii Form is a research track investigating whether a small, typed, framework-agn
 | **F6** | **Submission Lifecycle + Server Errors + Reset/Reinitialize** | Prototype submission state machine (`idle`, `validating`, `submitting`, `succeeded`, `failed`, `cancelled`), duplicate prevention (drop vs reject policy), server error attachment/clearing strategies, reset to initial vs new baseline, and external model reinitialization. *(Completed Prototype in `research/form/`)* |
 | **F7** | **Framework Adapter Compliance (Vanilla, React, Angular, Vue)** | Prototype thin adapters for Vanilla DOM, React (`useForm` / `useField` / `useFieldArray`), Angular (`createAngularForm` / `createAngularField`), and Vue (`createVueForm` / `createVueField`). Verify zero whole-form rerenders, exact cross-framework semantic equivalence, and framework-native ergonomics. *(Completed Prototype in `research/form/adapters/`)* |
 | **F8** | **Accessibility + Security + Privacy Hardening** | Prototype accessible HTML helpers (`aria-invalid`, `aria-describedby`, error focus identification at adapter edge), prototype-pollution defense in field paths, empirical depth/width bounds, and value-free diagnostics redaction. *(Completed Prototype in `research/form/`)* |
-| **F9** | **Runtime / Memory / TypeScript / Bundle Evidence** | Measure bundle footprint (minified, gzip, brotli), field update latency, memory retention across 1,000 mount/dispose cycles (zero retained resources; empirical heap budget), and TypeScript compilation wall time. |
-| **F10** | **Real Consumer Validation + Build-vs-Buy Graduation Gate** | Validate Form prototype on expanded multi-step Vanilla onboarding fixture and React task board. Execute formal Build-vs-Buy comparative benchmarks against TanStack Form, React Hook Form, and Angular Signal Forms. Render graduation decision. |
+| **F9** | **Runtime / Memory / TypeScript / Bundle Evidence** | Measure bundle footprint (minified, gzip, brotli), field update latency, memory retention across 100/500 cycles (zero retained resources; empirical heap budget), and TypeScript compilation wall time. *(Completed Prototype & Evidence in `research/form/F9_EVIDENCE.md`)* |
+| **F10** | **Real Consumer Validation + Build-vs-Buy Graduation Gate** | Validate Form prototype on expanded multi-step Vanilla onboarding fixture and React task board. Execute formal Build-vs-Buy comparative benchmarks against TanStack Form, React Hook Form, and Angular Signal Forms. Render graduation decision. *(Not Started)* |
 
 ---
 
@@ -452,11 +452,42 @@ Slice F8 evaluated and hardened the framework-neutral core and adapter boundarie
    - **Exception Privacy**: Detached exception handlers record only safe classifications (`reason: "Error"` or `reason: "TypeError"`) without message strings.
    - Verified in `research/form/form-f8-privacy.test.ts`.
 
+## 7. Slice F9: Runtime, Memory, TypeScript, and Bundle Evidence
+
+Slice F9 executed the comprehensive empirical evidence suite documented in `research/form/F9_EVIDENCE.md`:
+
+1. **Runtime Scaling (Leaf-Only vs Aggregate-Consumer Scenarios)**:
+   - In the tested leaf-only subscriber scenario, median single-field mutation remained approximately size-insensitive between 10 and 1,000 fields (~0.27 - 0.29 µs), and unrelated field subscribers received 0 notifications.
+   - In the aggregate-consumer scenario, mutating a single field causes aggregate computeds (`values`, `dirty`, `issues`) to invalidate and recompute upon reading, scaling proportionally with aggregate tree size (~1.9 µs on 10 fields to ~149 µs on 1,000 fields).
+   - Linear tree construction (~4.0 - 4.7 µs per field) and atomic `form.setValues` subset batching (~0.0025 ms for 10 fields).
+   - Realistic nested form fixture programmatically verified at 97 leaf fields.
+
+2. **FieldArray Lifecycle & True Isolated Operations**:
+   - FieldArray construction (0.23 ms for 10 items; 1.49 ms for 100 items) is isolated from steady-state operations.
+   - True isolated steady-state operations (with untimed setup/restore stages) execute in **~3.3 µs** (`push`), **~3.6 µs** (`insert`), **~2.7 µs** (`remove`), **~0.25 µs** (`swap`), **~0.33 µs** (`move`), and **0.137 ms** (`setValues` alternating 100 items).
+   - 500 create/dispose cycles completed with zero retained scope leaks, zero dangling listeners, and zero unhandled rejections.
+
+3. **Validation & Async Submission Lifecycle**:
+   - Standard Schema adapter microbenchmarks on valid string input: Native rule (~0.0025 µs), Valibot (~0.030 µs), ArkType (~0.038 µs), Zod 4 (~0.049 µs).
+   - Full Form validation throughput (10 fields) is uniform across providers (~0.026 - 0.027 ms).
+   - Full tree validation (1 sync rule per field) scales predictably: 0.031 ms (10 fields / 10 rules), 0.37 ms (100 fields / 100 rules), 1.40 ms (500 fields / 500 rules), 3.97 ms (1,000 fields / 1,000 rules).
+   - Completed async submission in steady state (timed strictly `await form.submit()`) executes at **~0.024 ms median**.
+   - Server issue routing scales linearly (0.19 ms for 100 issues; 8.91 ms for 1,000 issues).
+
+4. **TypeScript Diagnostics & Bundle Footprint**:
+   - Compiler check time scales sub-linearly across isolated programs (0.39s for small, 0.40s for medium, 0.40s for large) with zero deep recursion errors.
+   - `createField` standalone bundle: **12.95 kB min / 4.56 kB gzip / 4.03 kB brotli** (includes `@vii-labs/core` runtime), shedding ~21.1 kB minified code compared to full Form Core.
+   - Static dependency isolation verified: 0 framework cross-contamination, 0 concrete schema dependencies in Core.
+   - Full SSR and Node import safety verified.
+
+5. **Reactive Propagation Invariant & Core Semantics (Items 10 & 57)**:
+   - In Vii Core's push-pull lazy computed design, reading a derived `Computed` inside a synchronous `State` subscriber callback observes the previous cached value if the `Computed`'s invalidation listener was registered after the subscriber. This is an intended property of push-pull signal systems without topological sorting. Documented in `packages/core/README.md` and verified in `packages/core/test/computed.test.ts`. Form adapters and internal projections derive status directly from source signals.
+
 ---
 
-## 7. Next Steps & Operating Constraints
+## 8. Next Steps & Operating Constraints
 
-- **Current Status**: **F0, F1, F2, F3, F4, F5, F6, F7, and F8 are complete (Accessibility, Security, and Privacy Hardening Verified with 320 passing tests in `research/form/`).**
-- **Hard Gate**: **Completion of F8 does NOT authorize F9 (Runtime / Memory / TypeScript / Bundle Evidence) or any downstream package graduation.**
-- **F9 Status**: **F9 has NOT been started.**
-- **Next Required Action**: Review F8 deliverables, verify test suites and governance, and await explicit maintainer authorization before opening Slice F9.
+- **Current Status**: **F0, F1, F2, F3, F4, F5, F6, F7, F8, and F9 are complete (Runtime, Memory, TypeScript, and Bundle Evidence verified with 363 passing tests in `research/form/`).**
+- **Hard Gate**: **Completion of F9 does NOT authorize F10 (Real Consumer Validation + Build-vs-Buy Graduation Gate) or any downstream package graduation.**
+- **F10 Status**: **F10 has NOT been started.**
+- **Next Required Action**: Review F9 evidence deliverables in `research/form/F9_EVIDENCE.md` and await explicit maintainer authorization before opening Slice F10.

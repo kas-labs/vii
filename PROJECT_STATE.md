@@ -234,16 +234,22 @@ deleted. OIDC Trusted Publisher is configured for stage-only publishing; future 
 and must not intentionally update `latest`.
 
 The durable ecosystem research direction now separates capability ownership from tool ownership.
-Form research (F0–F8) targets a small headless module that reuses Vii State, Scope, diagnostics, and thin
-framework adapters. Slices F0–F8 in `research/form/` prototype and verify signal-first field trees,
+Form research (F0–F9) targets a small headless module that reuses Vii State, Scope, diagnostics, and thin
+framework adapters. Slices F0–F9 in `research/form/` prototype and verify signal-first field trees,
 nested groups/arrays with stable identity, synchronous and asynchronous validation scheduling with
 `AbortSignal` cancellation and monotonic revision protection, parsing with raw intermediate preservation,
 Standard Schema v1 provider boundary (Zod 4, Valibot, ArkType), submission state machine with Model A
 terminal status preservation across user edits, structured server issue routing, thin framework adapters
 for Vanilla DOM, React, Angular, and Vue with verified cross-framework semantic equivalence, accessibility
 projection (`aria-invalid`, `aria-describedby`, deterministic first-invalid focus navigation data), DOM XSS
-and prototype-pollution security defense, safe snapshot cloning, and strictly value-free diagnostics privacy
-invariants with zero framework-specific forks in Form core. HTTP research targets a small Fetch-first request/response transport and remains
+and prototype-pollution security defense, safe snapshot cloning, strictly value-free diagnostics privacy
+invariants with zero framework-specific forks in Form core, and comprehensive empirical evidence (F9):
+leaf-only mutation in 10 to 1,000-field forms in ~0.27 - 0.29 µs with 0 sibling invalidations, aggregate-consumer
+mutation scaling predictably with aggregate tree size (~1.9 µs on 10 fields to ~149 µs on 1,000 fields),
+isolated FieldArray operations (~3.3 µs push on 100 items), completed async submission (~0.024 ms median),
+500 create/dispose cycles with 0 scope leaks, fast TypeScript checking (0.39s - 0.40s check time across isolated programs / 0 deep recursion errors),
+compact production research bundle (~12.95 kB min / 4.56 kB gzip for standalone `createField`), and 100% framework/provider isolation.
+HTTP research targets a small Fetch-first request/response transport and remains
 separate from Query cache and server-state semantics. Native template control flow belongs only to
 the future compiler/component program: conditionals, keyed repetition, empty states, and switch-like
 branches should share one Component IR and lifecycle model, while the exact source syntax remains

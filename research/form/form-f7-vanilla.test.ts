@@ -289,4 +289,130 @@ describe("Form Research F7: Vanilla DOM Adapter", () => {
       expect(field.value.get()).toBe(20);
     });
   });
+  // -------------------------------------------------------------------------
+  // Review regressions (F7 fix pass)
+  // -------------------------------------------------------------------------
+  describe("F7 review regressions", () => {
+    const microtasks = async (n = 10): Promise<void> => {
+      for (let i = 0; i < n; i++) await Promise.resolve();
+      await new Promise((r) => setImmediate(r));
+      await new Promise((r) => setImmediate(r));
+    };
+
+    it("a throwing submit action does not raise an unhandled rejection from the DOM handler", async () => {
+      const seen: unknown[] = [];
+      const onUnhandled = (reason: unknown): void => {
+        seen.push(reason);
+      };
+      process.on("unhandledRejection", onUnhandled);
+
+      const form = createForm<{ a: string }>({ initialValues: { a: "x" } });
+      const formElement = new MockDomElement("form");
+      const captured: unknown[] = [];
+      const binding = bindForm(form, formElement, {
+        action: async () => {
+          throw new Error("server exploded");
+        },
+        onSubmitException: (err) => {
+          captured.push(err);
+        },
+      });
+
+      formElement.dispatchEvent({ type: "submit" });
+      await microtasks();
+
+      process.off("unhandledRejection", onUnhandled);
+      expect(seen).toEqual([]);
+      expect(captured).toHaveLength(1);
+      expect((captured[0] as Error).message).toBe("server exploded");
+      expect(form.submissionStatus.get()).toBe("failed");
+
+      binding.dispose();
+      form.dispose();
+    });
+
+    it("a submit exception is contained even with no onSubmitException handler", async () => {
+      const seen: unknown[] = [];
+      const onUnhandled = (reason: unknown): void => {
+        seen.push(reason);
+      };
+      process.on("unhandledRejection", onUnhandled);
+
+      const form = createForm<{ a: string }>({ initialValues: { a: "x" } });
+      const formElement = new MockDomElement("form");
+      const binding = bindForm(form, formElement, {
+        action: async () => {
+          throw new Error("silent boom");
+        },
+      });
+
+      formElement.dispatchEvent({ type: "submit" });
+      await microtasks();
+
+      process.off("unhandledRejection", onUnhandled);
+      expect(seen).toEqual([]);
+
+      binding.dispose();
+      form.dispose();
+    });
+
+    it("a parser-backed control keeps the raw string the user typed", async () => {
+      const field = createField<number, string>({
+        initialValue: 0,
+        initialRawValue: "0",
+        parser: createNumberParser(),
+      });
+      const input = new MockDomElement("text");
+      const binding = bindField(field, input);
+
+      // "05" parses to 5, but the control must keep showing what was typed.
+      input.simulateInput("05");
+      await Promise.resolve();
+      expect(field.value.get()).toBe(5);
+      expect(input.value).toBe("05");
+
+      // A raw string that fails to parse is preserved too.
+      input.simulateInput("-");
+      await Promise.resolve();
+      expect(field.parseStatus.get()).toBe("invalid");
+      expect(input.value).toBe("-");
+
+      binding.dispose();
+    });
+
+    it("a text control runs the field pipeline once per edit, not once per DOM event", () => {
+      let runs = 0;
+      const field = createField<string>({
+        initialValue: "",
+        rules: [
+          (): null => {
+            runs++;
+            return null;
+          },
+        ],
+      });
+      const input = new MockDomElement("text");
+      const binding = bindField(field, input);
+
+      // A browser fires "input" while typing and "change" again on blur.
+      input.simulateInput("hello");
+      input.simulateChange("hello");
+
+      expect(runs).toBe(1);
+      expect(field.value.get()).toBe("hello");
+
+      binding.dispose();
+    });
+
+    it("a select control still commits on change", () => {
+      const field = createField<string>({ initialValue: "option_a" });
+      const select = new MockDomElement("select-one");
+      const binding = bindField(field, select);
+
+      select.simulateChange("option_b");
+      expect(field.value.get()).toBe("option_b");
+
+      binding.dispose();
+    });
+  });
 });

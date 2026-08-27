@@ -25,6 +25,44 @@ import type {
   ValidationStatus,
 } from "../form-core.js";
 
+/**
+ * useSyncExternalStore requires getSnapshot to read the store as it is *now*.
+ * Caching a snapshot that only a subscription callback refreshes loses every
+ * change that lands before the subscription is established - React then asks
+ * for the snapshot, gets the stale object, and the component stays wrong until
+ * the next unrelated notification. This reads live on every call and keeps the
+ * previous object when nothing changed, so identity stays stable and React does
+ * not re-render (or loop) on equal snapshots.
+ */
+function createStableSnapshot<S extends object>(
+  read: () => S,
+): {
+  getSnapshot: () => S;
+  refresh: () => void;
+} {
+  let cached = read();
+
+  const sync = (): S => {
+    const next = read();
+    const a = next as Record<string, unknown>;
+    const b = cached as Record<string, unknown>;
+    for (const key of Object.keys(a)) {
+      if (!Object.is(a[key], b[key])) {
+        cached = next;
+        return cached;
+      }
+    }
+    return cached;
+  };
+
+  return {
+    getSnapshot: sync,
+    refresh: (): void => {
+      sync();
+    },
+  };
+}
+
 // ============================================================================
 // 1. useField Hook
 // ============================================================================
@@ -61,7 +99,7 @@ export function useField<Value, Raw = Value, Output = Value>(
   field: FieldState<Value, Raw, Output>,
 ): ReactFieldBinding<Value, Raw, Output> {
   const bridge = useMemo(() => {
-    let cachedSnapshot: ReactFieldSnapshot<Value, Raw, Output> = {
+    const readSnapshot = (): ReactFieldSnapshot<Value, Raw, Output> => ({
       value: field.value.get(),
       rawValue: field.rawValue.get(),
       dirty: field.dirty.get(),
@@ -75,29 +113,13 @@ export function useField<Value, Raw = Value, Output = Value>(
       issues: field.issues.get(),
       serverIssues: field.serverIssues.get(),
       output: field.output.get(),
-    };
+    });
 
-    const updateSnapshot = (): void => {
-      cachedSnapshot = {
-        value: field.value.get(),
-        rawValue: field.rawValue.get(),
-        dirty: field.dirty.get(),
-        touched: field.touched.get(),
-        pending: field.pending.get(),
-        valid: field.valid.get(),
-        invalid: field.invalid.get(),
-        parseStatus: field.parseStatus.get(),
-        parseIssue: field.parseIssue.get(),
-        validationStatus: field.validationStatus.get(),
-        issues: field.issues.get(),
-        serverIssues: field.serverIssues.get(),
-        output: field.output.get(),
-      };
-    };
+    const { getSnapshot, refresh } = createStableSnapshot(readSnapshot);
 
     const subscribe = (onStoreChange: () => void): (() => void) => {
       const notify = () => {
-        updateSnapshot();
+        refresh();
         onStoreChange();
       };
 
@@ -117,8 +139,6 @@ export function useField<Value, Raw = Value, Output = Value>(
         for (const u of unsubs) u();
       };
     };
-
-    const getSnapshot = () => cachedSnapshot;
 
     return {
       subscribe,
@@ -187,7 +207,7 @@ export interface ReactFormBinding<T extends Record<string, any>> extends ReactFo
 
 export function useForm<T extends Record<string, any>>(form: FormInstance<T>): ReactFormBinding<T> {
   const bridge = useMemo(() => {
-    let cachedSnapshot: ReactFormSnapshot<T> = {
+    const readSnapshot = (): ReactFormSnapshot<T> => ({
       values: form.values.get(),
       output: form.output.get(),
       dirty: form.dirty.get(),
@@ -200,28 +220,13 @@ export function useForm<T extends Record<string, any>>(form: FormInstance<T>): R
       validationStatus: form.validationStatus.get(),
       submissionStatus: form.submissionStatus.get(),
       submitting: form.submitting.get(),
-    };
+    });
 
-    const updateSnapshot = (): void => {
-      cachedSnapshot = {
-        values: form.values.get(),
-        output: form.output.get(),
-        dirty: form.dirty.get(),
-        touched: form.touched.get(),
-        pending: form.pending.get(),
-        valid: form.valid.get(),
-        invalid: form.invalid.get(),
-        issues: form.issues.get(),
-        serverIssues: form.serverIssues.get(),
-        validationStatus: form.validationStatus.get(),
-        submissionStatus: form.submissionStatus.get(),
-        submitting: form.submitting.get(),
-      };
-    };
+    const { getSnapshot, refresh } = createStableSnapshot(readSnapshot);
 
     const subscribe = (onStoreChange: () => void): (() => void) => {
       const notify = () => {
-        updateSnapshot();
+        refresh();
         onStoreChange();
       };
 
@@ -240,8 +245,6 @@ export function useForm<T extends Record<string, any>>(form: FormInstance<T>): R
         for (const u of unsubs) u();
       };
     };
-
-    const getSnapshot = () => cachedSnapshot;
 
     return {
       subscribe,
@@ -313,7 +316,7 @@ export interface ReactArrayBinding<T> extends ReactArraySnapshot<T> {
 
 export function useFieldArray<T>(arrayNode: FieldArray<T>): ReactArrayBinding<T> {
   const bridge = useMemo(() => {
-    let cachedSnapshot: ReactArraySnapshot<T> = {
+    const readSnapshot = (): ReactArraySnapshot<T> => ({
       items: arrayNode.items.get(),
       values: arrayNode.values.get(),
       output: arrayNode.output.get(),
@@ -326,28 +329,13 @@ export function useFieldArray<T>(arrayNode: FieldArray<T>): ReactArrayBinding<T>
       serverIssues: arrayNode.serverIssues.get(),
       validationStatus: arrayNode.validationStatus.get(),
       length: arrayNode.items.get().length,
-    };
+    });
 
-    const updateSnapshot = (): void => {
-      cachedSnapshot = {
-        items: arrayNode.items.get(),
-        values: arrayNode.values.get(),
-        output: arrayNode.output.get(),
-        dirty: arrayNode.dirty.get(),
-        touched: arrayNode.touched.get(),
-        pending: arrayNode.pending.get(),
-        valid: arrayNode.valid.get(),
-        invalid: arrayNode.invalid.get(),
-        issues: arrayNode.issues.get(),
-        serverIssues: arrayNode.serverIssues.get(),
-        validationStatus: arrayNode.validationStatus.get(),
-        length: arrayNode.items.get().length,
-      };
-    };
+    const { getSnapshot, refresh } = createStableSnapshot(readSnapshot);
 
     const subscribe = (onStoreChange: () => void): (() => void) => {
       const notify = () => {
-        updateSnapshot();
+        refresh();
         onStoreChange();
       };
 
@@ -366,8 +354,6 @@ export function useFieldArray<T>(arrayNode: FieldArray<T>): ReactArrayBinding<T>
         for (const u of unsubs) u();
       };
     };
-
-    const getSnapshot = () => cachedSnapshot;
 
     return {
       subscribe,

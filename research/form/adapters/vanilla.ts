@@ -197,9 +197,15 @@ export function bindField<Value, Raw = Value, Output = Value>(
     if (isDisposed || isUpdatingFromStore) return;
     if (isCheckbox) {
       const nextChecked = Boolean(event?.target?.checked ?? element.checked);
+      if (Object.is(nextChecked, Boolean(field.value.get()))) return;
       field.setValue(nextChecked as unknown as Value);
     } else {
       const nextRaw = (event?.target?.value ?? element.value) as unknown as Raw;
+      // A browser fires "input" while typing and "change" again on blur, and a
+      // caller may re-dispatch either. Re-running the pipeline for a raw value
+      // the field already holds re-fires validation, which for an async rule is
+      // a duplicate request per blur.
+      if (Object.is(nextRaw, field.rawValue.get())) return;
       field.setRawValue(nextRaw);
     }
   };
@@ -209,11 +215,16 @@ export function bindField<Value, Raw = Value, Output = Value>(
     field.setTouched(true);
   };
 
-  const inputEventName = isCheckbox ? "change" : "input";
+  // Controls that commit on change rather than on keystroke. Registering both
+  // "input" and "change" on a text field ran the handler twice per edit.
+  const commitsOnChange =
+    isCheckbox ||
+    element.type === "radio" ||
+    element.type === "select-one" ||
+    element.type === "select-multiple" ||
+    element.type === "file";
+  const inputEventName = commitsOnChange ? "change" : "input";
   element.addEventListener(inputEventName, handleInput);
-  if (!isCheckbox) {
-    element.addEventListener("change", handleInput);
-  }
   element.addEventListener("blur", handleBlur);
 
   const unsubRaw = field.rawValue.subscribe((nextRaw) => {
@@ -243,7 +254,11 @@ export function bindField<Value, Raw = Value, Output = Value>(
           isUpdatingFromStore = false;
         }
       }
-    } else if (field.parseStatus.get() !== "invalid") {
+    } else if (field.parseStatus.get() === "unparsed") {
+      // Only a field with no parser displays its domain value. On a parsed field
+      // the raw string is what the user typed and what the control must show:
+      // writing String(value) here snapped "05" back to "5" mid-keystroke, and
+      // raced the rawValue subscriber for which one landed last.
       const nextStr = nextVal !== undefined && nextVal !== null ? String(nextVal) : "";
       if (element.value !== nextStr) {
         isUpdatingFromStore = true;
@@ -265,9 +280,6 @@ export function bindField<Value, Raw = Value, Output = Value>(
     if (isDisposed) return;
     isDisposed = true;
     element.removeEventListener(inputEventName, handleInput);
-    if (!isCheckbox) {
-      element.removeEventListener("change", handleInput);
-    }
     element.removeEventListener("blur", handleBlur);
     unsubRaw();
     unsubVal();
@@ -282,6 +294,12 @@ export interface BindFormOptions<T extends Record<string, any>, TResult = void> 
   readonly submitOptions?: SubmitOptions | undefined;
   readonly onSubmitSuccess?: ((result: TResult) => void) | undefined;
   readonly onSubmitError?: ((issues: readonly FieldIssue[]) => void) | undefined;
+  /**
+   * Invoked when the submit action throws or rejects with something other than
+   * server validation issues. A DOM submit listener cannot return a promise to
+   * anyone, so without this the rejection has no owner.
+   */
+  readonly onSubmitException?: ((error: unknown) => void) | undefined;
 }
 
 /**
@@ -310,8 +328,13 @@ export function bindForm<T extends Record<string, any>, TResult = void>(
           options?.onSubmitError?.(res.issues);
         }
       })
-      .catch((err) => {
-        if (!isDisposed) throw err;
+      .catch((err: unknown) => {
+        // Rethrowing here produces a fresh rejected promise that nobody owns,
+        // which surfaces as an unhandled rejection and, under Node's default
+        // policy, terminates the process. A DOM event handler has no caller to
+        // return the failure to, so it goes to the callback or nowhere.
+        if (isDisposed) return;
+        options?.onSubmitException?.(err);
       });
   };
 

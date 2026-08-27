@@ -442,4 +442,39 @@ describe("Form Research F7: React Adapter", () => {
       expect(field.value.get()).toBe(99);
     });
   });
+  // -------------------------------------------------------------------------
+  // Review regression (F7 fix pass)
+  // -------------------------------------------------------------------------
+  describe("F7 review regression - snapshot freshness", () => {
+    it("a store change that lands before the subscription is established is not lost", () => {
+      const field = createField<string>({ initialValue: "initial" });
+      const rendered: string[] = [];
+
+      function Mutator({ target }: { target: FieldState<string> }) {
+        // Mounts before the consumer below, so this runs before useField subscribes.
+        useEffect(() => {
+          target.setValue("changed-before-subscribe");
+        }, [target]);
+        return null;
+      }
+
+      function Consumer({ target }: { target: FieldState<string> }) {
+        const binding = useField(target);
+        rendered.push(binding.value);
+        return createElement("span", null, binding.value);
+      }
+
+      render(
+        createElement(
+          "div",
+          null,
+          createElement(Mutator, { target: field, key: "mutator" }),
+          createElement(Consumer, { target: field, key: "consumer" }),
+        ),
+      );
+
+      expect(field.value.get()).toBe("changed-before-subscribe");
+      expect(rendered[rendered.length - 1]).toBe("changed-before-subscribe");
+    });
+  });
 });

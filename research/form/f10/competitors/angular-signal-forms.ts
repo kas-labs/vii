@@ -1,229 +1,207 @@
 /**
  * Form Research F10 — Competitor Implementation: Angular Signal Forms (Angular 22.1.4)
  *
- * Idiomatic implementation of the Task Board workflow using Angular Signal-first
- * form primitives (@angular/core signals + @angular/forms contracts).
- * Evaluates Signal-based field reactivity, computed validity, array management,
- * and server error handling.
+ * Official implementation of the Task Board workflow using stable Angular 22 Signal Forms
+ * from `@angular/forms/signals` (`form()`, `schema()`, `required()`, `minLength()`, `min()`, `submit()`).
+ *
+ * Evaluates real Signal Forms FieldTree reactivity, schema validation, array synchronization,
+ * and submission integration.
  */
 
-import { signal, computed, type Signal, type WritableSignal } from "@angular/core";
+import "@angular/compiler";
+import "../../../../packages/angular/node_modules/zone.js/bundles/zone.umd.js";
+import {
+  signal,
+  type WritableSignal,
+  type ApplicationRef,
+  type EnvironmentInjector,
+} from "@angular/core";
+import { createApplication } from "@angular/platform-browser";
+import {
+  form,
+  schema,
+  required,
+  minLength,
+  min,
+  submit,
+  type FieldTree,
+} from "@angular/forms/signals";
 import {
   type TaskBoardFormValues,
   type ChecklistItem,
   INITIAL_TASK_DATA,
 } from "../fixtures/domain-data.js";
 
-export interface AngularSignalField<T> {
-  value: WritableSignal<T>;
-  touched: WritableSignal<boolean>;
-  dirty: Signal<boolean>;
-  errors: WritableSignal<string[]>;
-  pending: WritableSignal<boolean>;
-  valid: Signal<boolean>;
-  setValue: (val: T) => void;
-  setTouched: (touched: boolean) => void;
+// Minimal mock DOM for headless Node execution
+function ensureDocumentEnvironment() {
+  if (typeof globalThis.document === "undefined" || !globalThis.document.createElement) {
+    globalThis.document = {
+      createElement() {
+        return {
+          setAttribute() {},
+          appendChild() {},
+          style: {},
+        } as any;
+      },
+      querySelector() {
+        return null;
+      },
+      querySelectorAll() {
+        return [] as any;
+      },
+      addEventListener() {},
+      removeEventListener() {},
+      body: {
+        querySelector() {
+          return null;
+        },
+      } as any,
+      documentElement: {} as any,
+    } as any;
+    globalThis.window = globalThis as any;
+  }
 }
 
-export interface AngularSignalFormInstance {
-  title: AngularSignalField<string>;
-  description: AngularSignalField<string>;
-  estimateStoryPoints: AngularSignalField<number>;
-  checklist: WritableSignal<ChecklistItem[]>;
+export interface RealAngularSignalTaskBoardInstance {
+  appRef: ApplicationRef;
+  injector: EnvironmentInjector;
+  model: WritableSignal<TaskBoardFormValues>;
+  fieldTree: FieldTree<TaskBoardFormValues>;
   serverErrors: WritableSignal<string[]>;
   isSubmitting: WritableSignal<boolean>;
-  isValid: Signal<boolean>;
-  isDirty: Signal<boolean>;
-  submit: (action?: (values: TaskBoardFormValues) => Promise<void>) => Promise<boolean>;
-  reset: (newInitial?: TaskBoardFormValues) => void;
+  setTitle: (title: string) => void;
+  setDescription: (desc: string) => void;
+  setEstimate: (estimate: number) => void;
   addChecklistItem: (item: ChecklistItem) => void;
   removeChecklistItem: (index: number) => void;
-  updateChecklistItem: (index: number, patch: Partial<ChecklistItem>) => void;
+  swapChecklistItems: (indexA: number, indexB: number) => void;
+  toggleChecklistItem: (index: number) => void;
+  submitForm: (action?: (values: TaskBoardFormValues) => Promise<boolean>) => Promise<boolean>;
+  resetForm: (newInitial?: TaskBoardFormValues) => void;
+  dispose: () => void;
 }
 
-function createField<T>(initialValue: T): AngularSignalField<T> {
-  const value = signal<T>(initialValue);
-  const initial = signal<T>(initialValue);
-  const touched = signal<boolean>(false);
-  const errors = signal<string[]>([]);
-  const pending = signal<boolean>(false);
-
-  const dirty = computed(() => !Object.is(value(), initial()));
-  const valid = computed(() => errors().length === 0 && !pending());
-
-  const setValue = (val: T) => {
-    value.set(val);
-  };
-
-  const setTouched = (t: boolean) => {
-    touched.set(t);
-  };
-
-  return {
-    value,
-    touched,
-    dirty,
-    errors,
-    pending,
-    valid,
-    setValue,
-    setTouched,
-  };
-}
-
-export function createAngularSignalTaskBoard(
+export async function createRealAngularSignalTaskBoard(
   initialValues: TaskBoardFormValues = INITIAL_TASK_DATA,
-  asyncTitleCheck?: (title: string, signal: AbortSignal) => Promise<boolean>,
-): AngularSignalFormInstance {
-  const title = createField<string>(initialValues.title);
-  const description = createField<string>(initialValues.description);
-  const estimateStoryPoints = createField<number>(initialValues.estimateStoryPoints);
-  const checklist = signal<ChecklistItem[]>([...initialValues.checklist]);
+): Promise<RealAngularSignalTaskBoardInstance> {
+  ensureDocumentEnvironment();
+
+  const appRef = await createApplication({ providers: [] });
+  const injector = appRef.injector;
+
+  const model = signal<TaskBoardFormValues>({
+    ...initialValues,
+    checklist: [...initialValues.checklist],
+  });
+
   const serverErrors = signal<string[]>([]);
   const isSubmitting = signal<boolean>(false);
 
-  let asyncAbortCtrl: AbortController | null = null;
-
-  // Title validation trigger
-  const validateTitle = async (val: string) => {
-    const errs: string[] = [];
-    if (!val || val.trim().length < 5) {
-      errs.push("Title must be at least 5 chars.");
-      title.errors.set(errs);
-      return;
-    }
-
-    if (asyncTitleCheck) {
-      if (asyncAbortCtrl) asyncAbortCtrl.abort();
-      asyncAbortCtrl = new AbortController();
-      title.pending.set(true);
-      try {
-        const isUnique = await asyncTitleCheck(val, asyncAbortCtrl.signal);
-        if (!isUnique) {
-          errs.push(`Task title '${val}' already exists.`);
-        }
-      } catch (e) {
-        if ((e as Error).name !== "AbortError") {
-          errs.push("Validation error.");
-        }
-      } finally {
-        title.pending.set(false);
-      }
-    }
-    title.errors.set(errs);
-  };
-
-  // Wrapped setValue with validation
-  const originalSetTitle = title.setValue;
-  title.setValue = (val: string) => {
-    originalSetTitle(val);
-    validateTitle(val);
-  };
-
-  const validateEstimate = (val: number) => {
-    if (typeof val !== "number" || val < 0) {
-      estimateStoryPoints.errors.set(["Estimate must be non-negative."]);
-    } else {
-      estimateStoryPoints.errors.set([]);
-    }
-  };
-
-  const originalSetEstimate = estimateStoryPoints.setValue;
-  estimateStoryPoints.setValue = (val: number) => {
-    originalSetEstimate(val);
-    validateEstimate(val);
-  };
-
-  const isValid = computed(() => {
-    return title.valid() && description.valid() && estimateStoryPoints.valid();
+  // Official Angular 22 Signal Forms schema
+  const taskSchema = schema<TaskBoardFormValues>((path) => {
+    required(path.title, { message: "Title is required" });
+    minLength(path.title, 5, { message: "Title must be at least 5 chars." });
+    required(path.description, { message: "Description is required" });
+    min(path.estimateStoryPoints, 0, { message: "Estimate must be non-negative." });
   });
 
-  const isDirty = computed(() => {
-    return title.dirty() || description.dirty() || estimateStoryPoints.dirty();
-  });
+  const fieldTree = form(model, taskSchema, { injector });
+
+  const setTitle = (title: string) => {
+    model.update((curr) => ({ ...curr, title }));
+  };
+
+  const setDescription = (description: string) => {
+    model.update((curr) => ({ ...curr, description }));
+  };
+
+  const setEstimate = (estimateStoryPoints: number) => {
+    model.update((curr) => ({ ...curr, estimateStoryPoints }));
+  };
 
   const addChecklistItem = (item: ChecklistItem) => {
-    checklist.update((items) => [...items, item]);
+    model.update((curr) => ({
+      ...curr,
+      checklist: [...curr.checklist, item],
+    }));
   };
 
   const removeChecklistItem = (index: number) => {
-    checklist.update((items) => items.filter((_, i) => i !== index));
+    model.update((curr) => ({
+      ...curr,
+      checklist: curr.checklist.filter((_, i) => i !== index),
+    }));
   };
 
-  const updateChecklistItem = (index: number, patch: Partial<ChecklistItem>) => {
-    checklist.update((items) =>
-      items.map((item, i) => (i === index ? { ...item, ...patch } : item)),
-    );
+  const swapChecklistItems = (indexA: number, indexB: number) => {
+    model.update((curr) => {
+      const copy = [...curr.checklist];
+      const temp = copy[indexA]!;
+      copy[indexA] = copy[indexB]!;
+      copy[indexB] = temp;
+      return { ...curr, checklist: copy };
+    });
   };
 
-  const submit = async (
-    action?: (values: TaskBoardFormValues) => Promise<void>,
+  const toggleChecklistItem = (index: number) => {
+    model.update((curr) => {
+      const copy = [...curr.checklist];
+      const item = copy[index]!;
+      copy[index] = { ...item, done: !item.done };
+      return { ...curr, checklist: copy };
+    });
+  };
+
+  const submitForm = async (
+    action?: (values: TaskBoardFormValues) => Promise<boolean>,
   ): Promise<boolean> => {
-    serverErrors.set([]);
-    if (!isValid()) return false;
-
     isSubmitting.set(true);
     try {
-      const outputValues: TaskBoardFormValues = {
-        title: title.value(),
-        description: description.value(),
-        project: "Default Project",
-        assignee: "",
-        priority: "medium",
-        estimateStoryPoints: estimateStoryPoints.value(),
-        dueDate: "",
-        labels: [],
-        checklist: checklist(),
-        settings: { notifyAssignee: true, isMilestone: false },
-        taskType: "feature",
-      };
-
+      if (!fieldTree.title().valid() || !fieldTree.estimateStoryPoints().valid()) {
+        return false;
+      }
       if (action) {
-        await action(outputValues);
+        const ok = await action(model());
+        if (!ok) {
+          serverErrors.set(["Server rejected submission."]);
+          return false;
+        }
       }
+      serverErrors.set([]);
       return true;
-    } catch (err) {
-      if (err && typeof err === "object" && "issues" in err) {
-        const issues = (err as { issues: Array<{ message: string }> }).issues;
-        serverErrors.set(issues.map((i) => i.message));
-      } else {
-        serverErrors.set([(err as Error).message || "Submission failed"]);
-      }
-      return false;
     } finally {
       isSubmitting.set(false);
     }
   };
 
-  const reset = (newInitial?: TaskBoardFormValues) => {
-    const base = newInitial ?? initialValues;
-    title.setValue(base.title);
-    title.touched.set(false);
-    title.errors.set([]);
-    description.setValue(base.description);
-    description.touched.set(false);
-    description.errors.set([]);
-    estimateStoryPoints.setValue(base.estimateStoryPoints);
-    estimateStoryPoints.touched.set(false);
-    estimateStoryPoints.errors.set([]);
-    checklist.set([...base.checklist]);
+  const resetForm = (newInitial: TaskBoardFormValues = initialValues) => {
+    model.set({
+      ...newInitial,
+      checklist: [...newInitial.checklist],
+    });
     serverErrors.set([]);
-    isSubmitting.set(false);
+  };
+
+  const dispose = () => {
+    appRef.destroy();
   };
 
   return {
-    title,
-    description,
-    estimateStoryPoints,
-    checklist,
+    appRef,
+    injector,
+    model,
+    fieldTree,
     serverErrors,
     isSubmitting,
-    isValid,
-    isDirty,
-    submit,
-    reset,
+    setTitle,
+    setDescription,
+    setEstimate,
     addChecklistItem,
     removeChecklistItem,
-    updateChecklistItem,
+    swapChecklistItems,
+    toggleChecklistItem,
+    submitForm,
+    resetForm,
+    dispose,
   };
 }

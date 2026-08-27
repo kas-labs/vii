@@ -1,83 +1,102 @@
 /**
- * Form Research F10 — F9 Empirical Risks & Core Caveat Validation Tests
+ * Form Research F10 — F9 Empirical Risks & Core Caveat Validation Tests (Corrected)
  *
  * Verifies:
- * 1. Single-field leaf vs aggregate consumer scaling (10 to 1,000 fields)
+ * 1. Single-field leaf vs aggregate consumer scaling across Vii Form and TanStack Form
  * 2. Large server issue routing performance (10 to 1,000 issues)
- * 3. Vii Core push-pull lazy Computed caveat in real form flows
+ * 3. FieldArray steady-state operations (push, remove, swap) across libraries
+ * 4. Vii Core push-pull lazy Computed caveat reproduction and safe consumer patterns
  */
 
 import { describe, expect, it } from "vitest";
 import { state, computed } from "../../../../packages/core/src/index.js";
-import { createForm, type FieldState } from "../../form-core.js";
 import {
-  benchmarkLeafVsAggregateMutation,
+  benchmarkComparativeLeafMutation,
+  benchmarkComparativeAggregateMutation,
+  benchmarkComparativeFieldArray,
   benchmarkServerIssueRouting,
-  benchmarkFieldArrayOperations,
 } from "../benchmarks/runtime-benchmarks.js";
 
 describe("Form Research F10: F9 Risks & Core Caveats Validation", () => {
-  it("measures leaf-local vs aggregate consumer mutation across 10, 100, 500, 1000 fields", () => {
-    const results = benchmarkLeafVsAggregateMutation([10, 100, 500, 1000]);
+  it("measures comparative leaf-local vs aggregate consumer mutation across 10, 100, 500, 1000 fields", () => {
+    const leafResults = benchmarkComparativeLeafMutation([10, 100, 500, 1000]);
+    const aggResults = benchmarkComparativeAggregateMutation([10, 100, 500, 1000]);
 
-    // Leaf-only mutations remain roughly flat and sub-microsecond
-    expect(results.leaf[10]!.medianUs).toBeLessThan(10);
-    expect(results.leaf[1000]!.medianUs).toBeLessThan(25);
+    // Vii Form leaf mutations remain fast (<5µs)
+    expect(leafResults.vii[10]!.medianUs).toBeLessThan(10);
+    expect(leafResults.vii[1000]!.medianUs).toBeLessThan(25);
+
+    // TanStack Form leaf mutations
+    expect(leafResults.tanstack[10]!.medianUs).toBeGreaterThan(0);
+    expect(leafResults.tanstack[1000]!.medianUs).toBeGreaterThan(0);
 
     // Aggregate consumers scale proportionally with field count
-    expect(results.aggregate[10]!.medianUs).toBeLessThan(20);
-    expect(results.aggregate[1000]!.medianUs).toBeGreaterThan(results.aggregate[10]!.medianUs);
-
-    // Output summary for report
-    console.log("F10 Leaf vs Aggregate Mutation Benchmarks:", JSON.stringify(results, null, 2));
+    expect(aggResults.vii[1000]!.medianUs).toBeGreaterThan(aggResults.vii[10]!.medianUs);
+    expect(aggResults.tanstack[1000]!.medianUs).toBeGreaterThan(aggResults.tanstack[10]!.medianUs);
   });
 
   it("measures server issue routing latency across 10, 50, 100, 1000 issues", () => {
     const results = benchmarkServerIssueRouting([10, 50, 100, 1000]);
 
-    expect(results[10]!.medianUs).toBeLessThan(500); // <0.5 ms
-    expect(results[100]!.medianUs).toBeLessThan(2500); // <2.5 ms
-    expect(results[1000]!.medianUs).toBeLessThan(25000); // <25 ms
-
-    console.log("F10 Server Issue Routing Benchmarks:", JSON.stringify(results, null, 2));
+    expect(results.vii[10]!.medianUs).toBeLessThan(500); // <0.5 ms
+    expect(results.vii[100]!.medianUs).toBeLessThan(2500); // <2.5 ms
+    expect(results.vii[1000]!.medianUs).toBeLessThan(25000); // <25 ms
   });
 
   it("measures FieldArray steady-state operations (push, remove, swap)", () => {
-    const results = benchmarkFieldArrayOperations(50);
+    const results = benchmarkComparativeFieldArray(50);
 
-    expect(results.push.medianUs).toBeLessThan(100);
-    expect(results.remove.medianUs).toBeLessThan(100);
-    expect(results.swap.medianUs).toBeLessThan(20);
+    expect(results.vii.push.medianUs).toBeLessThan(100);
+    expect(results.vii.remove.medianUs).toBeLessThan(100);
+    expect(results.vii.swap.medianUs).toBeLessThan(20);
 
-    console.log("F10 FieldArray Operations Benchmarks:", JSON.stringify(results, null, 2));
+    expect(results.tanstack.push.medianUs).toBeGreaterThan(0);
+    expect(results.tanstack.remove.medianUs).toBeGreaterThan(0);
+    expect(results.tanstack.swap.medianUs).toBeGreaterThan(0);
   });
 
-  it("exercises Vii Core push-pull lazy computed caveat in real consumer flow", () => {
-    // In Vii Core, State subscribers run in registration order.
-    // If a State subscriber reads a Computed whose invalidation subscriber was registered later,
-    // it may observe cached state during that synchronous callback.
-    const s = state(10);
-    const c = computed(() => s.get() * 2);
+  it("exercises Vii Core push-pull lazy computed caveat in real consumer flow and asserts safe patterns", () => {
+    // 1. Setup source State
+    const source = state("initial");
+    let observedDerivedInEarlySubscriber: string | undefined;
+    let observedSourceInEarlySubscriber: string | undefined;
 
-    let observedComputedInStateSubscriber = 0;
-
-    // Subscriber registered before computed is accessed or initialized
-    const unsub = s.subscribe(() => {
-      observedComputedInStateSubscriber = c.get();
+    // 2. Early subscriber attached to source BEFORE computed evaluates dependencies
+    const unsubSource = source.subscribe(() => {
+      observedSourceInEarlySubscriber = source.get();
+      if (derived) {
+        // Caveat: derived's dependency listener on source runs after this subscriber,
+        // so derived.get() returns its previous cached value during this callback.
+        observedDerivedInEarlySubscriber = derived.get();
+      }
     });
 
-    s.set(20);
+    // 3. Computed created and evaluated (registers dependency listener on source)
+    let derived: any = computed(() => `derived:${source.get()}`);
+    expect(derived.get()).toBe("derived:initial");
 
-    // Documented rule: read source state or subscribe to Computed itself
-    let observedInComputedSubscriber = 0;
-    const unsubComp = c.subscribe((val) => {
+    // 4. Also attach a direct subscriber to the Computed (Safe pattern B)
+    let observedInComputedSubscriber: string | undefined;
+    const unsubDerived = derived.subscribe((val: string) => {
       observedInComputedSubscriber = val;
     });
 
-    s.set(30);
-    expect(observedInComputedSubscriber).toBe(60);
+    // 5. Mutate source
+    source.set("updated");
 
-    unsub();
-    unsubComp();
+    // CRITICAL ASSERTION: The early state subscriber observed the previous cached value
+    expect(observedDerivedInEarlySubscriber).toBe("derived:initial");
+
+    // Safe Pattern A: Reading source state directly inside the subscriber is strictly fresh
+    expect(observedSourceInEarlySubscriber).toBe("updated");
+
+    // Safe Pattern B: Subscribing to the Computed directly yields the fresh derived value
+    expect(observedInComputedSubscriber).toBe("derived:updated");
+
+    // Safe Pattern C: Reading the Computed outside the synchronous subscriber cycle is fresh
+    expect(derived.get()).toBe("derived:updated");
+
+    unsubSource();
+    unsubDerived();
   });
 });

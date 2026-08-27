@@ -16,18 +16,29 @@ import { type RenderCounters } from "../consumers/consumer-b-react.js";
 
 export interface ReactHookFormTaskBoardProps {
   initialValues?: TaskBoardFormValues;
+  initialData?: TaskBoardFormValues;
   asyncTitleCheck?: (title: string, signal: AbortSignal) => Promise<boolean>;
   onSubmitAction?: (values: TaskBoardFormValues) => Promise<void>;
+  onFormReady?: (methods: any) => void;
   counters?: RenderCounters;
 }
 
 export const ReactHookFormTaskBoard: React.FC<ReactHookFormTaskBoardProps> = ({
-  initialValues = INITIAL_TASK_DATA,
+  initialValues,
+  initialData,
   asyncTitleCheck,
   onSubmitAction,
+  onFormReady,
   counters,
 }) => {
   if (counters) counters.formRoot++;
+
+  const effectiveInitial = initialValues || initialData || INITIAL_TASK_DATA;
+
+  const methods = useForm<TaskBoardFormValues>({
+    defaultValues: effectiveInitial,
+    mode: "onChange",
+  });
 
   const {
     register,
@@ -37,10 +48,11 @@ export const ReactHookFormTaskBoard: React.FC<ReactHookFormTaskBoardProps> = ({
     setError,
     clearErrors,
     formState: { errors, isSubmitting, isValid },
-  } = useForm<TaskBoardFormValues>({
-    defaultValues: initialValues,
-    mode: "onChange",
-  });
+  } = methods;
+
+  React.useEffect(() => {
+    onFormReady?.(methods);
+  }, [methods, onFormReady]);
 
   const { fields, append, remove } = useFieldArray({
     control,

@@ -15,10 +15,7 @@ export default defineConfig({
       ),
       "react-dom": resolve(__dirname, "packages/react/node_modules/react-dom"),
       "react-test-renderer": resolve(__dirname, "packages/react/node_modules/react-test-renderer"),
-      "@angular/core": resolve(
-        __dirname,
-        "packages/angular/node_modules/@angular/core/fesm2022/core.mjs",
-      ),
+      "@angular/core": resolve(__dirname, "node_modules/@angular/core/fesm2022/core.mjs"),
       vue: resolve(__dirname, "packages/vue/node_modules/vue/dist/vue.runtime.esm-bundler.js"),
     },
   },

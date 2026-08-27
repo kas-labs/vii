@@ -7,8 +7,9 @@
 
 export interface CompetitorMetadata {
   readonly package: string;
-  readonly testedVersion: string;
+  readonly evaluatedVersion: string;
   readonly status: "stable" | "alpha" | "beta" | "research-prototype";
+  readonly executionStatus: "executed" | "documentation-only";
   readonly retrievalDate: string;
   readonly officialDocsUrl: string;
   readonly selectionRationale: string;
@@ -22,9 +23,10 @@ export interface CompetitorMetadata {
 export const COMPETITOR_VERSIONS: Record<string, CompetitorMetadata> = {
   viiForm: {
     package: "@vii-labs/form (research prototype)",
-    testedVersion: "0.0.0-f10-research",
+    evaluatedVersion: "0.0.0-f10-research",
     status: "research-prototype",
-    retrievalDate: "2026-08-27",
+    executionStatus: "executed",
+    retrievalDate: "2026-08-28",
     officialDocsUrl: "https://github.com/kas-labs/vii/blob/main/docs/roadmap/FORM_RESEARCH.md",
     selectionRationale:
       "Vii Form research track candidate undergoing graduation evaluation at F10.",
@@ -36,12 +38,13 @@ export const COMPETITOR_VERSIONS: Record<string, CompetitorMetadata> = {
   },
   tanStackFormStable: {
     package: "@tanstack/react-form",
-    testedVersion: "1.33.5",
+    evaluatedVersion: "1.33.5",
     status: "stable",
-    retrievalDate: "2026-08-27",
+    executionStatus: "executed",
+    retrievalDate: "2026-08-28",
     officialDocsUrl: "https://tanstack.com/form/v1",
     selectionRationale:
-      "Primary production baseline. Latest stable 1.33.x release on npm as of 2026-08-27.",
+      "Primary production baseline. Latest stable 1.33.x release on npm as of August 2026.",
     runtimePrerequisites: ["React >=18.0.0 || >=19.0.0", "@tanstack/form-core >=1.33.5"],
     packageDependencies: ["@tanstack/form-core", "@tanstack/store"],
     license: "MIT",
@@ -50,23 +53,25 @@ export const COMPETITOR_VERSIONS: Record<string, CompetitorMetadata> = {
   },
   tanStackFormV2Alpha: {
     package: "@tanstack/react-form",
-    testedVersion: "2.0.0-alpha.2",
+    evaluatedVersion: "2.0.0-alpha.2 (assessedVersion)",
     status: "alpha",
-    retrievalDate: "2026-08-27",
+    executionStatus: "documentation-only",
+    retrievalDate: "2026-08-28",
     officialDocsUrl: "https://tanstack.com/form/latest",
     selectionRationale:
-      "Forward-looking horizon check. Announced alpha on 2026-08-06; evaluated strictly as preview software.",
+      "Forward-looking horizon assessment. Not installed in package.json; evaluated strictly via documentation and RFCs.",
     runtimePrerequisites: ["React >=18.0.0 || >=19.0.0", "@tanstack/form-core >=2.0.0-alpha.2"],
     packageDependencies: ["@tanstack/form-core", "@tanstack/store"],
     license: "MIT",
     isPrimaryComparison: false,
-    evaluationRole: "Secondary forward-looking architecture horizon check.",
+    evaluationRole: "Secondary forward-looking architecture horizon check (no runtime benchmarks).",
   },
   reactHookForm: {
     package: "react-hook-form",
-    testedVersion: "7.86.0",
+    evaluatedVersion: "7.86.0",
     status: "stable",
-    retrievalDate: "2026-08-27",
+    executionStatus: "executed",
+    retrievalDate: "2026-08-28",
     officialDocsUrl: "https://react-hook-form.com",
     selectionRationale:
       "Primary production baseline. Most widely adopted React form library, latest stable 7.x line.",
@@ -78,14 +83,19 @@ export const COMPETITOR_VERSIONS: Record<string, CompetitorMetadata> = {
   },
   angularSignalForms: {
     package: "@angular/forms",
-    testedVersion: "22.1.4",
+    evaluatedVersion: "22.1.4",
     status: "stable",
-    retrievalDate: "2026-08-27",
+    executionStatus: "executed",
+    retrievalDate: "2026-08-28",
     officialDocsUrl: "https://angular.dev/guide/forms/signals",
     selectionRationale:
-      "Primary Angular baseline. Angular Signal Forms is stable and production-ready in Angular 22.",
-    runtimePrerequisites: ["@angular/core 22.1.4", "rxjs 7.8.2"],
-    packageDependencies: ["@angular/core", "@angular/common", "rxjs"],
+      "Primary Angular baseline. Angular Signal Forms is stable and production-ready in Angular 22 (@angular/forms/signals).",
+    runtimePrerequisites: [
+      "@angular/core 22.1.4",
+      "rxjs 7.8.2",
+      "@angular/platform-browser 22.1.4",
+    ],
+    packageDependencies: ["@angular/core", "@angular/common", "@angular/platform-browser", "rxjs"],
     license: "MIT",
     isPrimaryComparison: true,
     evaluationRole: "Framework-native signal-first form model comparator for Angular applications.",

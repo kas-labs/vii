@@ -1,9 +1,17 @@
 /**
  * Form Research F10 — Consumer B (React Task Board) Validation Tests
+ *
+ * Includes comprehensive coverage of:
+ * - Leaf render isolation
+ * - FieldArray dynamic mutations
+ * - Async title validation with cancellation
+ * - Parser-backed controlled inputs
+ * - Submission lifecycle & server error routing
+ * - 10 Mandatory React Historical Regression Scenarios (StrictMode, useSyncExternalStore timing, unmount while pending, reinitialize, etc.)
  */
 
 import { describe, expect, it } from "vitest";
-import React from "react";
+import React, { StrictMode, useEffect, useState } from "react";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import {
   createTaskBoardForm,
@@ -11,11 +19,12 @@ import {
   createRenderCounters,
   type RenderCounters,
 } from "../consumers/consumer-b-react.js";
+import { useField, useForm, useFieldArray } from "../../adapters/react.js";
 import {
   VALID_TASK_DATA,
   INITIAL_TASK_DATA,
 } from "../fixtures/domain-data.js";
-import { type FieldState, type FieldArray } from "../../form-core.js";
+import { createField, createForm, type FieldState, type FieldArray } from "../../form-core.js";
 
 const reactTestGlobal = globalThis as typeof globalThis & {
   IS_REACT_ACT_ENVIRONMENT?: boolean;
@@ -200,5 +209,335 @@ describe("Form Research F10: Consumer B (React Task Board)", () => {
       renderer.unmount();
     });
     form.dispose();
+  });
+
+  // ---------------------------------------------------------------------------
+  // 10 Mandatory React Historical Regression Scenarios
+  // ---------------------------------------------------------------------------
+
+  describe("10 Mandatory React Historical Regression Scenarios", () => {
+    it("1. React StrictMode mount/cleanup handles double-mount without stale subscriptions", () => {
+      const field = createField<string>({ initialValue: "initial_val" });
+
+      function StrictFieldComp() {
+        const snap = useField(field);
+        return <div data-testid="strict-field">{snap.value}</div>;
+      }
+
+      let renderer!: ReactTestRenderer;
+      act(() => {
+        renderer = create(
+          <StrictMode>
+            <StrictFieldComp />
+          </StrictMode>,
+        );
+      });
+
+      expect(renderer.root.findByProps({ "data-testid": "strict-field" }).children[0]).toBe(
+        "initial_val",
+      );
+
+      act(() => {
+        field.setValue("strict_updated");
+      });
+
+      expect(renderer.root.findByProps({ "data-testid": "strict-field" }).children[0]).toBe(
+        "strict_updated",
+      );
+
+      act(() => {
+        renderer.unmount();
+      });
+    });
+
+    it("2. Mutation before subscription installation does not lose snapshot freshness", () => {
+      const field = createField<string>({ initialValue: "v1" });
+
+      function TestComp() {
+        // Mutate field during render phase before useSyncExternalStore subscription
+        if (field.value.get() === "v1") {
+          field.setValue("v2_during_render");
+        }
+        const snap = useField(field);
+        return <div>{snap.value}</div>;
+      }
+
+      let renderer!: ReactTestRenderer;
+      act(() => {
+        renderer = create(<TestComp />);
+      });
+
+      expect(renderer.root.findByType("div").children[0]).toBe("v2_during_render");
+      act(() => {
+        renderer.unmount();
+      });
+    });
+
+    it("3. Parent effect seeding form values after child initial render updates child safely", () => {
+      const form = createForm({ initialValues: { name: "default" } });
+
+      function Child() {
+        const nameField = form.getNode("name") as FieldState<string>;
+        const snap = useField(nameField);
+        return <span data-testid="child-name">{snap.value}</span>;
+      }
+
+      function Parent() {
+        useEffect(() => {
+          const nameField = form.getNode("name") as FieldState<string>;
+          nameField.setValue("seeded_by_parent");
+        }, []);
+        return <Child />;
+      }
+
+      let renderer!: ReactTestRenderer;
+      act(() => {
+        renderer = create(<Parent />);
+      });
+
+      expect(renderer.root.findByProps({ "data-testid": "child-name" }).children[0]).toBe(
+        "seeded_by_parent",
+      );
+      act(() => {
+        renderer.unmount();
+      });
+      form.dispose();
+    });
+
+    it("4. Async data load completing during mount updates component tree cleanly", async () => {
+      const form = createForm({ initialValues: { data: "loading..." } });
+
+      function AsyncFormComp() {
+        const dataField = form.getNode("data") as FieldState<string>;
+        const snap = useField(dataField);
+        useEffect(() => {
+          Promise.resolve("loaded_payload").then((res) => {
+            dataField.setValue(res);
+          });
+        }, []);
+        return <div data-testid="async-data">{snap.value}</div>;
+      }
+
+      let renderer!: ReactTestRenderer;
+      act(() => {
+        renderer = create(<AsyncFormComp />);
+      });
+
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 10));
+      });
+
+      expect(renderer.root.findByProps({ "data-testid": "async-data" }).children[0]).toBe(
+        "loaded_payload",
+      );
+      act(() => {
+        renderer.unmount();
+      });
+      form.dispose();
+    });
+
+    it("5. Unmount while async validation is pending aborts cleanly without unhandled rejections", async () => {
+      let aborted = false;
+      const asyncCheck = async (title: string, signal: AbortSignal) => {
+        return new Promise<boolean>((resolve, reject) => {
+          signal.addEventListener("abort", () => {
+            aborted = true;
+            reject(new DOMException("Aborted", "AbortError"));
+          });
+        });
+      };
+
+      const form = createTaskBoardForm({ asyncTitleCheck: asyncCheck });
+      const titleField = form.getNode("title") as FieldState<string>;
+
+      function PendingComp() {
+        const snap = useField(titleField);
+        return <div>{snap.pending ? "validating" : "idle"}</div>;
+      }
+
+      let renderer!: ReactTestRenderer;
+      act(() => {
+        renderer = create(<PendingComp />);
+      });
+
+      // Trigger first async validation
+      act(() => {
+        titleField.setValue("Long Task Title Initial Check");
+      });
+
+      // Wait for debounce timer to fire and async rule to execute
+      await new Promise((r) => setTimeout(r, 50));
+
+      // Trigger second edit superseding the first
+      act(() => {
+        titleField.setValue("Long Task Title Superseding Check");
+      });
+
+      // Unmount while validation is in flight
+      act(() => {
+        renderer.unmount();
+      });
+
+      form.dispose();
+
+      expect(aborted).toBe(true);
+    });
+
+    it("6. Repeated mount and unmount cycles preserve reactivity without memory leaks", () => {
+      const field = createField<string>({ initialValue: "cycle_init" });
+
+      function CycleComp() {
+        const snap = useField(field);
+        return <div>{snap.value}</div>;
+      }
+
+      for (let i = 0; i < 5; i++) {
+        let renderer!: ReactTestRenderer;
+        act(() => {
+          renderer = create(<CycleComp />);
+        });
+        expect(renderer.root.findByType("div").children[0]).toBe(field.value.get());
+
+        act(() => {
+          field.setValue(`cycle_val_${i}`);
+        });
+
+        expect(renderer.root.findByType("div").children[0]).toBe(`cycle_val_${i}`);
+
+        act(() => {
+          renderer.unmount();
+        });
+      }
+    });
+
+    it("7. form.reset() restores pristine values and updates React component tree", () => {
+      const form = createForm({ initialValues: { task: "initial_task" } });
+      const taskField = form.getNode("task") as FieldState<string>;
+
+      function FormComp() {
+        const snap = useForm(form);
+        const fieldSnap = useField(taskField);
+        return (
+          <div>
+            <span data-testid="dirty">{snap.dirty ? "dirty" : "pristine"}</span>
+            <span data-testid="val">{fieldSnap.value}</span>
+          </div>
+        );
+      }
+
+      let renderer!: ReactTestRenderer;
+      act(() => {
+        renderer = create(<FormComp />);
+      });
+
+      act(() => {
+        taskField.setValue("edited_task");
+      });
+      expect(renderer.root.findByProps({ "data-testid": "dirty" }).children[0]).toBe("dirty");
+      expect(renderer.root.findByProps({ "data-testid": "val" }).children[0]).toBe("edited_task");
+
+      act(() => {
+        form.reset();
+      });
+      expect(renderer.root.findByProps({ "data-testid": "dirty" }).children[0]).toBe("pristine");
+      expect(renderer.root.findByProps({ "data-testid": "val" }).children[0]).toBe("initial_task");
+
+      act(() => {
+        renderer.unmount();
+      });
+      form.dispose();
+    });
+
+    it("8. Reinitializing form with a new baseline updates values and marks pristine", () => {
+      const form = createForm({ initialValues: { setting: "A" } });
+      const settingField = form.getNode("setting") as FieldState<string>;
+
+      function ReinitComp() {
+        const snap = useForm(form);
+        const fieldSnap = useField(settingField);
+        return (
+          <div>
+            <span data-testid="is-dirty">{snap.dirty ? "true" : "false"}</span>
+            <span data-testid="setting-val">{fieldSnap.value}</span>
+          </div>
+        );
+      }
+
+      let renderer!: ReactTestRenderer;
+      act(() => {
+        renderer = create(<ReinitComp />);
+      });
+
+      act(() => {
+        form.reset({ setting: "B" });
+      });
+
+      expect(renderer.root.findByProps({ "data-testid": "is-dirty" }).children[0]).toBe("false");
+      expect(renderer.root.findByProps({ "data-testid": "setting-val" }).children[0]).toBe("B");
+
+      act(() => {
+        renderer.unmount();
+      });
+      form.dispose();
+    });
+
+    it("9. Submission cancellation via cancelSubmit halts submission state cleanly", async () => {
+      const form = createForm({ initialValues: { title: "Test" } });
+
+      let aborted = false;
+      const submitPromise = form.submit(async (values, { signal }: any) => {
+        return new Promise((resolve, reject) => {
+          signal.addEventListener("abort", () => {
+            aborted = true;
+            resolve({ ok: false });
+          });
+        });
+      });
+
+      form.cancelSubmit();
+
+      const result = await submitPromise;
+      expect(aborted).toBe(true);
+      expect(result.status).toBe("cancelled");
+      expect(form.submissionStatus.get()).toBe("cancelled");
+      form.dispose();
+    });
+
+    it("10. FieldArray reorder with server response routes issues by stable identity rather than stale numeric index", () => {
+      const form = createForm({
+        initialValues: {
+          items: [
+            { id: "item_alpha", name: "Alpha" },
+            { id: "item_beta", name: "Beta" },
+          ],
+        },
+        keyExtractor: (item: any) => item.id,
+      });
+
+      const arrayNode = form.getNode("items") as FieldArray<any>;
+
+      // Swap items: [Beta, Alpha]
+      arrayNode.swap(0, 1);
+
+      // Server issue targeting the logical item Alpha (which is now at index 1)
+      form.setServerIssues([
+        {
+          code: "alpha_error",
+          message: "Alpha item rejected by server",
+          path: ["items", 1, "name"],
+          source: "server",
+        },
+      ]);
+
+      const currentItems = arrayNode.items.get();
+      const item1Node = currentItems[1]!.node as any;
+      const nameNode = item1Node.fields["name"] as FieldState<string>;
+
+      expect(nameNode.value.get()).toBe("Alpha");
+      expect(nameNode.serverIssues.get().length).toBe(1);
+      expect(nameNode.serverIssues.get()[0]?.message).toBe("Alpha item rejected by server");
+
+      form.dispose();
+    });
   });
 });

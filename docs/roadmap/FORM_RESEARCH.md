@@ -491,22 +491,22 @@ Slice F10 executed the definitive real consumer and competitor validation suite 
 
 1. **Realistic Consumer Applications**:
    - **Consumer A (Vanilla Multi-Step Onboarding)**: 5-step wizard with step validity computeds, parser presentation retention, dynamic address `FieldArray`, conditional tax ID rules, and automatic ARIA attribute projection verified in `research/form/f10/tests/consumer-a.test.ts`.
-   - **Consumer B (React 19 Task Board)**: High-frequency collaborative card editor with controlled parser inputs, async title uniqueness check with `AbortSignal` cancellation, and leaf-level render isolation (1 render on leaf edit, 0 root re-renders, 0 sibling re-renders) verified in `research/form/f10/tests/consumer-b.test.tsx`.
-   - **Angular Signal Forms (Angular 22.1.4)**: Idiomatic Signal-based Task Board implementation verified in `research/form/f10/tests/competitors.test.tsx`.
+   - **Consumer B (React 19 Task Board)**: Collaborative card editor with controlled parser inputs, async title uniqueness check with `AbortSignal` cancellation, 10 verified React historical regression scenarios (StrictMode, unmount abort, etc.), and leaf-level render isolation (1 render on leaf edit, 0 root re-renders, 0 sibling re-renders) verified in `research/form/f10/tests/consumer-b.test.tsx`.
+   - **Angular Signal Forms (Angular 22.1.4)**: Real Signal Forms implementation using official `@angular/forms/signals` APIs (`form`, `schema`, `required`, `minLength`, `min`, `submit`) verified in `research/form/f10/tests/competitors.test.tsx`.
 
 2. **Direct Competitor Comparisons**:
-   - Evaluated against TanStack Form v1.33.5, React Hook Form 7.86.0, and TanStack Form v2.0.0-alpha.2.
-   - Vii Form demonstrated 5x–10x faster single-keystroke leaf mutation throughput (0.46 µs / 1.83M ops/s on 1,000 fields) and FieldArray swap operations (0.29 µs).
+   - Evaluated against TanStack Form v1.33.5, React Hook Form 7.86.0, real Angular 22 Signal Forms, and TanStack Form v2.0.0-alpha.2 (documentation-only).
+   - Vii Form demonstrated sub-2 µs leaf keystroke mutations (~1.15 µs at 100 fields vs TanStack 7.50 µs) and fast FieldArray swap operations (5.4 µs vs TanStack 18.2 µs).
 
 3. **Security & Privacy Defense**:
-   - Prototype pollution defense, automatic DOM textContent sink protection against hostile XSS vectors, and zero sentinel string emission to diagnostics telemetry confirmed in `research/form/f10/tests/security-privacy.test.ts`.
+   - Safe structured model data handling for `__proto__`, `constructor`, `prototype` on null-prototype objects, sink protection against hostile XSS vectors, and zero sentinel string emission to diagnostics telemetry confirmed in `research/form/f10/tests/security-privacy.test.ts`.
 
 4. **44-Dimension Build-vs-Buy Decision Matrix**:
-   - Comprehensive multi-axis evaluation scored Vii Form at **208 / 220 (94.5%)** vs TanStack Form at **156 (70.9%)**, React Hook Form at **126 (57.3%)**, and Angular Forms at **145 (65.9%)**.
+   - Comprehensive multi-axis evaluation scored Vii Form at **143 / 160** vs TanStack Form at **120 / 160**, React Hook Form at **97 / 160**, and Angular Signal Forms at **114 / 160**.
 
 5. **Formal Graduation Gate Verdict**:
    - **GRADUATE TO BUILD (RECOMMEND PRODUCTION PHASE 1)**.
-   - All 384 Form research tests pass across 23 test suites.
+   - All 394 Form research tests pass across 23 test suites.
 
 ---
 

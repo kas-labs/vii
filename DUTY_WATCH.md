@@ -37,6 +37,60 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-28 00:45 CEST | Form Research Slice F10: Real Consumer Validation + Build-vs-Buy Graduation Gate (Bounded Correction Pass)
+
+Status: completed
+Branch: `dogfood/form-f10-consumer-validation`
+PR: #166 (Draft)
+
+### Scope
+
+- Execute bounded correction pass for Form Research Slice F10 on branch `dogfood/form-f10-consumer-validation` (PR #166).
+- Address all maintainer audit findings:
+  1. Implement genuine executable comparative microbenchmarks (`runtime-benchmarks.ts`) with batching, warmup, and value alternation across Vii Form, TanStack Form 1.33.5, React Hook Form 7.86.0, and Angular Signal Forms.
+  2. Implement real component render counting harness (`render-benchmarks.tsx`) mounting real React 19 component trees.
+  3. Implement reproducible standalone bundle builds with `bun build --minify --target=browser`, gzip (level 9), and brotli compression.
+  4. Integrate real `@angular/forms/signals` (Angular 22.1.4) into `angular-signal-forms.ts` and `competitors.test.tsx`.
+  5. Update TanStack Form v2 alpha metadata to `assessedVersion: "2.0.0-alpha.2"`, `executionStatus: "documentation-only"` with zero fabricated numbers.
+  6. Assert exact Vii Core push-pull lazy Computed caveat stale-read behavior and verify safe consumer patterns in `f9-risks-validation.test.ts`.
+  7. Add 10 mandatory React historical regression scenarios in `consumer-b.test.tsx` (StrictMode, pre-subscription mutation, parent seeding, async mount load, pending unmount abort, repeated cycles, reset, reinitialize, cancelSubmit, reorder routing).
+  8. Update security threat wording regarding legitimate structured model data vs object materialization sinks.
+  9. Recompute 44-dimension Build-vs-Buy decision matrix (Vii Form: 143/160 vs TanStack: 120/160, RHF: 97/160, Angular: 114/160) and update `research/form/F10_CONSUMER_VALIDATION.md`.
+  10. Strictly enforce ABSOLUTE STOP condition: PR #166 remains Draft, do NOT merge, do NOT create or publish a public `@vii-labs/form` package, do NOT start production implementation phase.
+
+### Changes
+
+- Updated `research/form/f10/`:
+  - `competitors/angular-signal-forms.ts`: Integrated official `@angular/forms/signals` from Angular 22.1.4 (`form`, `schema`, `required`, `minLength`, `min`, `submit`).
+  - `competitors/versions.ts`: Updated competitor version metadata with `evaluatedVersion` and `executionStatus` (`"executed"` vs `"documentation-only"`).
+  - `competitors/tanstack-v1.tsx` & `react-hook-form.tsx`: Added `onFormReady` and `initialData` support for programmatic test inspection.
+  - `benchmarks/runtime-benchmarks.ts`: Implemented `runBatchedTimingHarness` with warmup and value alternation across leaf mutation, aggregate query, FieldArray operations, and server issue routing.
+  - `benchmarks/render-benchmarks.tsx`: Implemented `runRealRenderBenchmarks` capturing empirical React render counts on mounted component trees.
+  - `benchmarks/bundle-benchmarks.ts`: Recorded reproducible build outputs with exact build commands and compression metrics.
+  - `tests/competitors.test.tsx`: Strengthened competitor parity suite covering all lifecycle operations across TanStack Form, React Hook Form, and real Angular Signal Forms.
+  - `tests/f9-risks-validation.test.ts`: Explicitly asserted the Vii Core push-pull lazy Computed caveat and verified all 3 safe consumer patterns.
+  - `tests/consumer-b.test.tsx`: Added 10 comprehensive React historical regression tests.
+  - `tests/security-privacy.test.ts`: Hardened security tests and refined prototype pollution comments.
+  - `F10_CONSUMER_VALIDATION.md`: Rewrote comprehensive 12-section report with verified numbers, recomputed 44-dimension matrix, and defensible graduation verdict (**GRADUATE TO BUILD - RECOMMEND PRODUCTION PHASE 1**).
+- Updated `docs/roadmap/FORM_RESEARCH.md`: Synchronized F10 section with verified numbers and test counts (394 tests across 23 test suites).
+- Updated `vitest.config.ts`: Unified `@angular/core` alias to root node_modules for consistent Signal Forms resolution.
+
+### Validation
+
+- `pnpm exec tsc -p research/form/tsconfig.json --noEmit`: PASS (0 errors).
+- `pnpm exec vitest run research/form/`: PASS (23 test files, 394 tests passing, 0 failures).
+- `pnpm validate`: PASS (formatting, linting, typechecking, tests across all packages, builds across all 10 projects, and tarball packing validation).
+- `git diff --check`: PASS (0 whitespace/syntax issues).
+
+### Architecture / compatibility
+
+- Zero public package mutations: `@vii-labs/core` production semantics preserved without modification; no public `@vii-labs/form` package created.
+- Form Core remains completely framework-agnostic and platform-neutral.
+
+### Remaining / recovery
+
+- None for Slice F10. Form research track is concluded. PR #166 remains Draft. Hard stop respected.
+
 ## 2026-08-27 23:45 CEST | Form Research Slice F10: Real Consumer Validation + Build-vs-Buy Graduation Gate
 
 Status: completed

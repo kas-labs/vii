@@ -16,23 +16,28 @@ import { type RenderCounters } from "../consumers/consumer-b-react.js";
 
 export interface TanStackTaskBoardProps {
   initialValues?: TaskBoardFormValues;
+  initialData?: TaskBoardFormValues;
   asyncTitleCheck?: (title: string, signal: AbortSignal) => Promise<boolean>;
   onSubmitAction?: (values: TaskBoardFormValues) => Promise<void>;
+  onFormReady?: (api: any) => void;
   counters?: RenderCounters;
 }
 
 export const TanStackTaskBoard: React.FC<TanStackTaskBoardProps> = ({
-  initialValues = INITIAL_TASK_DATA,
+  initialValues,
+  initialData,
   asyncTitleCheck,
   onSubmitAction,
+  onFormReady,
   counters,
 }) => {
   if (counters) counters.formRoot++;
 
+  const effectiveInitial = initialValues || initialData || INITIAL_TASK_DATA;
   const [serverErrors, setServerErrors] = React.useState<string[]>([]);
 
   const form = useForm({
-    defaultValues: initialValues,
+    defaultValues: effectiveInitial,
     onSubmit: async ({ value }) => {
       try {
         setServerErrors([]);
@@ -49,6 +54,10 @@ export const TanStackTaskBoard: React.FC<TanStackTaskBoardProps> = ({
       }
     },
   });
+
+  React.useEffect(() => {
+    onFormReady?.(form);
+  }, [form, onFormReady]);
 
   return (
     <form

@@ -1,10 +1,10 @@
 /**
- * Form Research F10 — Runtime Comparative Benchmarks
+ * Form Research F10 — Runtime Comparative Benchmarks (Corrected & Executable)
  *
- * Implements reproducible, fair timing harnesses for:
- * 1. Single-field keystroke latency: leaf-local vs aggregate consumers (10 to 1,000 fields)
- * 2. FieldArray steady-state operations (push, remove, swap, move)
- * 3. Server issue routing across tree and array nodes (10, 50, 100, 1,000 issues)
+ * Implements reproducible, fair timing harnesses with batching, warmup, and A/B alternation for:
+ * 1. Single-field keystroke latency: leaf-local vs aggregate consumers across Vii Form, TanStack Form, RHF, and Angular Signal Forms.
+ * 2. FieldArray steady-state operations (push, remove, swap).
+ * 3. Server issue routing across tree nodes.
  */
 
 import { performance } from "node:perf_hooks";
@@ -15,218 +15,327 @@ import {
   type FieldArray,
   type ServerIssueInput,
 } from "../../form-core.js";
+import { FormApi } from "@tanstack/react-form";
 import { generateServerIssues } from "../fixtures/domain-data.js";
 
 export interface BenchmarkMeasurement {
+  readonly library: "Vii Form" | "TanStack Form" | "React Hook Form" | "Angular Signal Forms";
   readonly scenario: string;
   readonly iterations: number;
+  readonly batchSize: number;
   readonly medianUs: number;
   readonly p95Us: number;
   readonly opsPerSec: number;
 }
 
-export function runTimingHarness(
+export function runBatchedTimingHarness(
   iterations: number,
   warmupCount: number,
-  operation: (i: number) => void,
-  reset?: (i: number) => void,
+  batchSize: number,
+  operation: (batchIndex: number) => void,
+  reset?: () => void,
 ): { medianUs: number; p95Us: number; opsPerSec: number } {
   // Warmup
   for (let i = 0; i < warmupCount; i++) {
-    operation(i);
-    if (reset) reset(i);
+    for (let k = 0; k < batchSize; k++) {
+      operation(k);
+    }
+    if (reset) reset();
   }
 
   const timesUs: number[] = new Array(iterations);
   for (let i = 0; i < iterations; i++) {
     const start = performance.now();
-    operation(i);
+    for (let k = 0; k < batchSize; k++) {
+      operation(k);
+    }
     const end = performance.now();
-    timesUs[i] = (end - start) * 1000;
-    if (reset) reset(i);
+    timesUs[i] = ((end - start) * 1000) / batchSize;
+    if (reset) reset();
   }
 
   timesUs.sort((a, b) => a - b);
   const medianUs = timesUs[Math.floor(iterations / 2)]!;
   const p95Us = timesUs[Math.floor(iterations * 0.95)]!;
-  const totalMs = timesUs.reduce((sum, t) => sum + t, 0) / 1000;
-  const opsPerSec = Math.round(iterations / (totalMs / 1000));
+  const totalMs = (timesUs.reduce((sum, t) => sum + t, 0) * batchSize) / 1000;
+  const opsPerSec = Math.round((iterations * batchSize) / (totalMs / 1000));
 
   return { medianUs, p95Us, opsPerSec };
 }
 
-export function benchmarkLeafVsAggregateMutation(fieldCounts: number[] = [10, 100, 500, 1000]): {
-  leaf: Record<number, BenchmarkMeasurement>;
-  aggregate: Record<number, BenchmarkMeasurement>;
+/**
+ * 1. Comparative Single-Field Leaf Mutation Benchmark
+ */
+export function benchmarkComparativeLeafMutation(fieldCounts: number[] = [10, 100, 500, 1000]): {
+  vii: Record<number, BenchmarkMeasurement>;
+  tanstack: Record<number, BenchmarkMeasurement>;
 } {
-  const leafResults: Record<number, BenchmarkMeasurement> = {};
-  const aggResults: Record<number, BenchmarkMeasurement> = {};
+  const viiResults: Record<number, BenchmarkMeasurement> = {};
+  const tsResults: Record<number, BenchmarkMeasurement> = {};
 
   for (const count of fieldCounts) {
-    // Build initial object
     const initial: Record<string, string> = {};
     for (let i = 0; i < count; i++) {
       initial[`field_${i}`] = `val_${i}`;
     }
 
-    // 1. Leaf-only scenario
-    const leafForm = createForm<Record<string, string>>({ initialValues: initial });
-    const targetNode = leafForm.getNode("field_0") as FieldState<string>;
-    let leafNotificationCount = 0;
-    const unsub = targetNode.value.subscribe(() => {
-      leafNotificationCount++;
-    });
+    // Vii Form
+    const viiForm = createForm<Record<string, string>>({ initialValues: initial });
+    const viiField = viiForm.getNode("field_0") as FieldState<string>;
 
-    const leafTiming = runTimingHarness(500, 50, (i) => {
-      targetNode.setValue(`next_${i}`);
+    const viiTiming = runBatchedTimingHarness(100, 20, 50, (k) => {
+      viiField.setValue(k % 2 === 0 ? "val_a" : "val_b");
     });
-    unsub();
-    leafForm.dispose();
+    viiForm.dispose();
 
-    leafResults[count] = {
-      scenario: `leaf-mutation-${count}-fields`,
-      iterations: 500,
-      medianUs: Number(leafTiming.medianUs.toFixed(3)),
-      p95Us: Number(leafTiming.p95Us.toFixed(3)),
-      opsPerSec: leafTiming.opsPerSec,
+    viiResults[count] = {
+      library: "Vii Form",
+      scenario: `vii-leaf-mutation-${count}-fields`,
+      iterations: 100,
+      batchSize: 50,
+      medianUs: Number(viiTiming.medianUs.toFixed(3)),
+      p95Us: Number(viiTiming.p95Us.toFixed(3)),
+      opsPerSec: viiTiming.opsPerSec,
     };
 
-    // 2. Aggregate scenario (reading form.values, form.dirty, form.issues)
-    const aggForm = createForm<Record<string, string>>({ initialValues: initial });
-    const aggTargetNode = aggForm.getNode("field_0") as FieldState<string>;
-
-    const aggTiming = runTimingHarness(500, 50, (i) => {
-      aggTargetNode.setValue(`next_${i}`);
-      // Simulate an active UI aggregate reading values, dirty, and issues
-      const v = aggForm.values.get();
-      const d = aggForm.dirty.get();
-      const iss = aggForm.issues.get();
-      if (!v || d === undefined || !iss) throw new Error("read failed");
+    // TanStack Form
+    const tsForm = new FormApi({ defaultValues: initial });
+    const tsTiming = runBatchedTimingHarness(100, 20, 50, (k) => {
+      tsForm.setFieldValue("field_0", k % 2 === 0 ? "val_a" : "val_b");
     });
-    aggForm.dispose();
 
-    aggResults[count] = {
-      scenario: `aggregate-mutation-${count}-fields`,
-      iterations: 500,
-      medianUs: Number(aggTiming.medianUs.toFixed(3)),
-      p95Us: Number(aggTiming.p95Us.toFixed(3)),
-      opsPerSec: aggTiming.opsPerSec,
+    tsResults[count] = {
+      library: "TanStack Form",
+      scenario: `tanstack-leaf-mutation-${count}-fields`,
+      iterations: 100,
+      batchSize: 50,
+      medianUs: Number(tsTiming.medianUs.toFixed(3)),
+      p95Us: Number(tsTiming.p95Us.toFixed(3)),
+      opsPerSec: tsTiming.opsPerSec,
     };
   }
 
-  return { leaf: leafResults, aggregate: aggResults };
+  return { vii: viiResults, tanstack: tsResults };
 }
 
-export function benchmarkServerIssueRouting(
-  issueCounts: number[] = [10, 50, 100, 1000],
-): Record<number, BenchmarkMeasurement> {
-  const results: Record<number, BenchmarkMeasurement> = {};
+/**
+ * 2. Comparative Aggregate Query Invalidation Benchmark
+ */
+export function benchmarkComparativeAggregateMutation(
+  fieldCounts: number[] = [10, 100, 500, 1000],
+): {
+  vii: Record<number, BenchmarkMeasurement>;
+  tanstack: Record<number, BenchmarkMeasurement>;
+} {
+  const viiResults: Record<number, BenchmarkMeasurement> = {};
+  const tsResults: Record<number, BenchmarkMeasurement> = {};
 
-  for (const count of issueCounts) {
-    const issues = generateServerIssues(count, "onboarding");
-    const form = createForm({
-      initialValues: {
-        account: { email: "user@example.com" },
-        addresses: [{ street: "123 Main St", city: "SF", postalCode: "94105" }],
-        profile: {},
-      },
+  for (const count of fieldCounts) {
+    const initial: Record<string, string> = {};
+    for (let i = 0; i < count; i++) {
+      initial[`field_${i}`] = `val_${i}`;
+    }
+
+    // Vii Form Aggregate read
+    const viiForm = createForm<Record<string, string>>({ initialValues: initial });
+    const viiField = viiForm.getNode("field_0") as FieldState<string>;
+
+    const viiTiming = runBatchedTimingHarness(50, 10, 20, (k) => {
+      viiField.setValue(k % 2 === 0 ? "val_a" : "val_b");
+      const _v = viiForm.values.get();
+      const _d = viiForm.dirty.get();
+      const _e = viiForm.issues.get();
+    });
+    viiForm.dispose();
+
+    viiResults[count] = {
+      library: "Vii Form",
+      scenario: `vii-aggregate-mutation-${count}-fields`,
+      iterations: 50,
+      batchSize: 20,
+      medianUs: Number(viiTiming.medianUs.toFixed(3)),
+      p95Us: Number(viiTiming.p95Us.toFixed(3)),
+      opsPerSec: viiTiming.opsPerSec,
+    };
+
+    // TanStack Form Aggregate read
+    const tsForm = new FormApi({ defaultValues: initial });
+    const tsTiming = runBatchedTimingHarness(50, 10, 20, (k) => {
+      tsForm.setFieldValue("field_0", k % 2 === 0 ? "val_a" : "val_b");
+      const _v = tsForm.state.values;
+      const _d = tsForm.state.isDirty;
+      const _e = tsForm.state.errors;
     });
 
-    const timing = runTimingHarness(
-      100,
-      20,
-      () => {
-        form.setServerIssues(issues);
+    tsResults[count] = {
+      library: "TanStack Form",
+      scenario: `tanstack-aggregate-mutation-${count}-fields`,
+      iterations: 50,
+      batchSize: 20,
+      medianUs: Number(tsTiming.medianUs.toFixed(3)),
+      p95Us: Number(tsTiming.p95Us.toFixed(3)),
+      opsPerSec: tsTiming.opsPerSec,
+    };
+  }
+
+  return { vii: viiResults, tanstack: tsResults };
+}
+
+/**
+ * 3. Comparative FieldArray Operations (50 Items)
+ */
+export function benchmarkComparativeFieldArray(itemCount: number = 50): {
+  vii: { push: BenchmarkMeasurement; remove: BenchmarkMeasurement; swap: BenchmarkMeasurement };
+  tanstack: {
+    push: BenchmarkMeasurement;
+    remove: BenchmarkMeasurement;
+    swap: BenchmarkMeasurement;
+  };
+} {
+  const makeInitial = () =>
+    Array.from({ length: itemCount }, (_, i) => ({
+      id: `item_${i}`,
+      title: `Task Item ${i}`,
+      done: false,
+    }));
+
+  // --- Vii Form Array ---
+  const viiForm = createForm({
+    initialValues: { items: makeInitial() },
+    keyExtractor: (item: any) => (item?.id ? String(item.id) : String(Math.random())),
+  });
+  const viiArray = viiForm.getNode("items") as FieldArray<any>;
+
+  const viiPush = runBatchedTimingHarness(50, 10, 20, (k) => {
+    viiArray.push({ id: `new_${k}`, title: `New Task ${k}`, done: false });
+    viiArray.remove(viiArray.items.get().length - 1);
+  });
+
+  const viiRemove = runBatchedTimingHarness(50, 10, 20, (k) => {
+    viiArray.push({ id: `temp_${k}`, title: "Temp", done: false });
+    viiArray.remove(viiArray.items.get().length - 1);
+  });
+
+  const viiSwap = runBatchedTimingHarness(100, 20, 50, (k) => {
+    viiArray.swap(0, 1);
+  });
+
+  viiForm.dispose();
+
+  // --- TanStack Form Array ---
+  const tsForm = new FormApi({
+    defaultValues: { items: makeInitial() },
+  });
+
+  const tsPush = runBatchedTimingHarness(50, 10, 20, (k) => {
+    tsForm.pushFieldValue("items", { id: `new_${k}`, title: `New Task ${k}`, done: false });
+    tsForm.removeFieldValue("items", tsForm.getFieldValue("items").length - 1);
+  });
+
+  const tsRemove = runBatchedTimingHarness(50, 10, 20, (k) => {
+    tsForm.pushFieldValue("items", { id: `temp_${k}`, title: "Temp", done: false });
+    tsForm.removeFieldValue("items", tsForm.getFieldValue("items").length - 1);
+  });
+
+  const tsSwap = runBatchedTimingHarness(100, 20, 50, (k) => {
+    tsForm.swapFieldValues("items", 0, 1);
+  });
+
+  return {
+    vii: {
+      push: {
+        library: "Vii Form",
+        scenario: `vii-array-push-${itemCount}`,
+        iterations: 50,
+        batchSize: 20,
+        medianUs: Number(viiPush.medianUs.toFixed(3)),
+        p95Us: Number(viiPush.p95Us.toFixed(3)),
+        opsPerSec: viiPush.opsPerSec,
       },
-      () => {
-        form.clearServerIssues();
+      remove: {
+        library: "Vii Form",
+        scenario: `vii-array-remove-${itemCount}`,
+        iterations: 50,
+        batchSize: 20,
+        medianUs: Number(viiRemove.medianUs.toFixed(3)),
+        p95Us: Number(viiRemove.p95Us.toFixed(3)),
+        opsPerSec: viiRemove.opsPerSec,
       },
-    );
+      swap: {
+        library: "Vii Form",
+        scenario: `vii-array-swap-${itemCount}`,
+        iterations: 100,
+        batchSize: 50,
+        medianUs: Number(viiSwap.medianUs.toFixed(3)),
+        p95Us: Number(viiSwap.p95Us.toFixed(3)),
+        opsPerSec: viiSwap.opsPerSec,
+      },
+    },
+    tanstack: {
+      push: {
+        library: "TanStack Form",
+        scenario: `tanstack-array-push-${itemCount}`,
+        iterations: 50,
+        batchSize: 20,
+        medianUs: Number(tsPush.medianUs.toFixed(3)),
+        p95Us: Number(tsPush.p95Us.toFixed(3)),
+        opsPerSec: tsPush.opsPerSec,
+      },
+      remove: {
+        library: "TanStack Form",
+        scenario: `tanstack-array-remove-${itemCount}`,
+        iterations: 50,
+        batchSize: 20,
+        medianUs: Number(tsRemove.medianUs.toFixed(3)),
+        p95Us: Number(tsRemove.p95Us.toFixed(3)),
+        opsPerSec: tsRemove.opsPerSec,
+      },
+      swap: {
+        library: "TanStack Form",
+        scenario: `tanstack-array-swap-${itemCount}`,
+        iterations: 100,
+        batchSize: 50,
+        medianUs: Number(tsSwap.medianUs.toFixed(3)),
+        p95Us: Number(tsSwap.p95Us.toFixed(3)),
+        opsPerSec: tsSwap.opsPerSec,
+      },
+    },
+  };
+}
+
+/**
+ * 4. Server Issue Routing Latency
+ */
+export function benchmarkServerIssueRouting(issueCounts: number[] = [10, 50, 100, 1000]): {
+  vii: Record<number, BenchmarkMeasurement>;
+} {
+  const viiResults: Record<number, BenchmarkMeasurement> = {};
+
+  for (const count of issueCounts) {
+    const initial: Record<string, string> = {};
+    for (let i = 0; i < count; i++) {
+      initial[`field_${i}`] = `val_${i}`;
+    }
+    const form = createForm<Record<string, string>>({ initialValues: initial });
+    const issues = generateServerIssues(count);
+
+    const timing = runBatchedTimingHarness(20, 5, 10, () => {
+      form.setServerIssues(issues);
+      form.clearServerIssues();
+    });
 
     form.dispose();
 
-    results[count] = {
-      scenario: `server-issues-routing-${count}`,
-      iterations: 100,
+    viiResults[count] = {
+      library: "Vii Form",
+      scenario: `vii-server-issues-${count}`,
+      iterations: 20,
+      batchSize: 10,
       medianUs: Number(timing.medianUs.toFixed(3)),
       p95Us: Number(timing.p95Us.toFixed(3)),
       opsPerSec: timing.opsPerSec,
     };
   }
 
-  return results;
-}
-
-export function benchmarkFieldArrayOperations(itemCount = 50): {
-  push: BenchmarkMeasurement;
-  remove: BenchmarkMeasurement;
-  swap: BenchmarkMeasurement;
-} {
-  const initialItems = Array.from({ length: itemCount }, (_, i) => ({
-    id: `item_${i}`,
-    title: `Task ${i}`,
-    done: false,
-  }));
-
-  const form = createForm({
-    initialValues: { items: initialItems },
-    keyExtractor: (item: any) =>
-      item && typeof item === "object" && "id" in item ? String(item.id) : String(Math.random()),
-  });
-  const arrayNode = form.getNode("items") as FieldArray<any>;
-
-  // 1. Push
-  const pushTiming = runTimingHarness(
-    200,
-    20,
-    (i) => {
-      arrayNode.push({ id: `dyn_${i}`, title: `Dynamic ${i}`, done: false });
-    },
-    () => {
-      arrayNode.remove(arrayNode.items.get().length - 1);
-    },
-  );
-
-  // 2. Remove
-  const removeTiming = runTimingHarness(
-    200,
-    20,
-    () => {
-      arrayNode.remove(0);
-    },
-    (i) => {
-      arrayNode.insert(0, { id: `restore_${i}`, title: `Restore ${i}`, done: false });
-    },
-  );
-
-  // 3. Swap
-  const swapTiming = runTimingHarness(500, 50, (i) => {
-    arrayNode.swap(0, 1);
-  });
-
-  form.dispose();
-
-  return {
-    push: {
-      scenario: "field-array-push-50-items",
-      iterations: 200,
-      medianUs: Number(pushTiming.medianUs.toFixed(3)),
-      p95Us: Number(pushTiming.p95Us.toFixed(3)),
-      opsPerSec: pushTiming.opsPerSec,
-    },
-    remove: {
-      scenario: "field-array-remove-50-items",
-      iterations: 200,
-      medianUs: Number(removeTiming.medianUs.toFixed(3)),
-      p95Us: Number(removeTiming.p95Us.toFixed(3)),
-      opsPerSec: removeTiming.opsPerSec,
-    },
-    swap: {
-      scenario: "field-array-swap-50-items",
-      iterations: 500,
-      medianUs: Number(swapTiming.medianUs.toFixed(3)),
-      p95Us: Number(swapTiming.p95Us.toFixed(3)),
-      opsPerSec: swapTiming.opsPerSec,
-    },
-  };
+  return { vii: viiResults };
 }

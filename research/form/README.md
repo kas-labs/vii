@@ -327,3 +327,48 @@ F6 implements the complete submission lifecycle state machine (`idle` -> `valida
 11. **Resource & Diagnostics Privacy**:
     - 100 repeated submit cycles prove zero controller or Scope leak.
     - Form submission diagnostics record structural lifecycle events (`form.submission.started`, `form.submission.submitting`, `form.submission.succeeded`, `form.submission.failed`, `form.submission.cancelled`) without leaking form values, output payloads, credentials, or sensitive error messages.
+
+---
+
+## 8. F7: Framework Adapter Compliance (Vanilla, React, Angular, Vue)
+
+### Overview & Architecture
+F7 investigated whether one unified, framework-neutral Form semantic model (developed through F0–F6) can be consumed idiomatically and efficiently by four disparate UI paradigms:
+1. **Vanilla DOM**: Imperative element binding, event delegation, standard input/select/checkbox synchronization, safe `textContent` issue rendering, and explicit disposal.
+   - Exactly one commit event is bound per control: `"change"` for checkbox, radio, select, and file inputs, `"input"` for everything else. Binding both ran the pipeline twice per edit, since a browser fires `"input"` while typing and `"change"` again on blur. A repeated raw value is additionally ignored, so a re-dispatched event cannot re-fire an async validator.
+   - `bindForm` takes an `onSubmitException` callback. A DOM submit listener has no caller to return a rejection to, so a throwing submit action is reported through that callback and otherwise contained; rethrowing it produced an unhandled rejection that terminates the process under Node's default policy.
+2. **React**: Declarative component hooks (`useField`, `useForm`, `useFieldArray`) backed by `useSyncExternalStore`, referentially stable snapshot memoization, zero whole-form re-renders on keystroke, and SSR safety.
+   - `getSnapshot` reads the store live on every call and returns the previous object only when every field is `Object.is`-equal. Serving a snapshot that only the subscription callback refreshed dropped any change that landed before the subscription was established - a parent effect seeding values, or a sibling field's cross-field rule - and the component stayed stale until an unrelated notification arrived.
+3. **Angular**: Signal-first handles (`createAngularField`, `createAngularForm`, `createAngularFieldArray`, `toAngularField`) backed by `@angular/core` `signal.asReadonly()`, `computed()`, and automatic cleanup via `DestroyRef.onDestroy`.
+4. **Vue**: Reactivity handles (`createVueField`, `createVueForm`, `createVueFieldArray`, `useViiField`, `useViiForm`) backed by `shallowRef` wrapped in `shallowReadonly`, `effectScope`, and `onScopeDispose`.
+
+### Key Architectural Invariants & Findings
+
+1. **Zero Framework-Specific State Forks in Form Core**:
+   - Form Core (`research/form/form-core.ts`) remains 100% agnostic to DOM and UI frameworks.
+   - Core exposes only Vii State, Computed, and Scope primitives.
+   - Adapters act as thin bridges (under 250 lines per adapter) converting framework events to Form Core mutations and subscribing to Form Core state nodes.
+
+2. **No Secondary State Mirrors**:
+   - None of the adapters create independent reactive state stores.
+   - All reactive primitives (`signal`, `shallowRef`, `useSyncExternalStore` snapshots) are projections derived directly from Core signals.
+
+3. **Parser-Backed Raw Input Synchronization**:
+   - When a field has a parser (e.g. `createNumberParser()`), intermediate raw keystrokes (such as `"-"`, `"05"`, `""`) are preserved in the DOM/React/Angular/Vue input control without snapping back or losing user keystrokes.
+   - During parse failures, domain `value` remains pristine, `parseStatus` transitions to `"invalid"`, and downstream validation rules are bypassed.
+   - **Display ownership rule**: on a parsed field the control shows `rawValue`, never `String(value)`. The domain value is only written back to the control when `parseStatus` is `"unparsed"`, which after F5 identifies a field with no parser. Writing the domain value on a successful parse snapped `"05"` back to `"5"` mid-keystroke and raced the `rawValue` subscriber for which write landed last. As documented in F5, a programmatic `setValue` on a parsed field therefore leaves the control showing the previous raw text: raw presentation belongs to the adapter layer.
+
+4. **Terminal Submission Status Consistency (Model A)**:
+   - Preserved across all adapters: after `form.submit()` succeeds (`submissionStatus === "succeeded"`), user edits to form fields mark `dirty === true` while `submissionStatus` remains `"succeeded"`.
+   - Adapters do not reset submission status on field inputs.
+
+5. **Disposal & Lifecycle Invariants**:
+   - Every adapter provides deterministic cleanup:
+     - Vanilla: `disposer.dispose()` detaches DOM listeners and store subscriptions.
+     - React: `useSyncExternalStore` cleanup unsubscribes on unmount (verified under React StrictMode double-mount).
+     - Angular: `DestroyRef.onDestroy` cleans subscriptions when injection context is destroyed.
+     - Vue: `onScopeDispose` cleans subscriptions when `effectScope` stops.
+   - Verified 100 mount/dispose cycles across all adapters with zero retained listeners.
+
+6. **Cross-Framework Equivalence**:
+   - `research/form/form-f7-compliance.test.ts` executes a normalized multi-step lifecycle across Vanilla DOM, React, Angular, and Vue, proving identical semantic behavior, issue attachment, server error clearing, and reset states.

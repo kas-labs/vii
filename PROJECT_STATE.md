@@ -234,8 +234,14 @@ deleted. OIDC Trusted Publisher is configured for stage-only publishing; future 
 and must not intentionally update `latest`.
 
 The durable ecosystem research direction now separates capability ownership from tool ownership.
-Form research targets a small headless module that reuses Vii State, Scope, diagnostics, and thin
-framework adapters. HTTP research targets a small Fetch-first request/response transport and remains
+Form research (F0–F7) targets a small headless module that reuses Vii State, Scope, diagnostics, and thin
+framework adapters. Slices F0–F7 in `research/form/` prototype and verify signal-first field trees,
+nested groups/arrays with stable identity, synchronous and asynchronous validation scheduling with
+`AbortSignal` cancellation and monotonic revision protection, parsing with raw intermediate preservation,
+Standard Schema v1 provider boundary (Zod 4, Valibot, ArkType), submission state machine with Model A
+terminal status preservation across user edits, structured server issue routing, and thin framework adapters
+for Vanilla DOM, React, Angular, and Vue with verified cross-framework semantic equivalence and zero
+framework-specific forks in Form core. HTTP research targets a small Fetch-first request/response transport and remains
 separate from Query cache and server-state semantics. Native template control flow belongs only to
 the future compiler/component program: conditionals, keyed repetition, empty states, and switch-like
 branches should share one Component IR and lifecycle model, while the exact source syntax remains

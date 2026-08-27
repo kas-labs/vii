@@ -37,6 +37,76 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-27 02:00 CEST | Form Research Slice F7: Framework Adapter Compliance (Vanilla, React, Angular, Vue)
+
+Status: completed
+Branch: `feat/form-framework-adapters`
+PR: #163 (Draft)
+
+### Scope
+
+- Implement and verify Slice F7 (Framework Adapter Compliance: Vanilla DOM, React, Angular, Vue) in `research/form/`.
+- Prove that one framework-neutral Form semantic model from F0-F6 can be consumed correctly and idiomatically across four distinct UI paradigms.
+- Vanilla DOM: Imperative element binding, event delegation, standard input/select/checkbox synchronization, safe `textContent` issue rendering, and explicit disposal.
+- React: Declarative component hooks (`useField`, `useForm`, `useFieldArray`) backed by `useSyncExternalStore`, referentially stable snapshot memoization, zero whole-form re-renders, and SSR safety.
+- Angular: Signal handles (`createAngularField`, `createAngularForm`, `createAngularFieldArray`, `toAngularField`) backed by `@angular/core` `signal.asReadonly()`, `computed()`, and automatic cleanup via `DestroyRef.onDestroy`.
+- Vue: Reactivity handles (`createVueField`, `createVueForm`, `createVueFieldArray`, `useViiField`, `useViiForm`) backed by `shallowRef` wrapped in `shallowReadonly`, `effectScope`, and `onScopeDispose`.
+- Shared semantic compliance scenario: verify identical multi-step lifecycle behavior across all four adapters.
+- Preserve Raw vs Value distinction and parser-backed intermediate raw input strings during parse errors.
+- Preserve Model A terminal submission status across ordinary field edits.
+- Bounded slice ONLY. F8 is NOT authorized and NOT started.
+
+### Changes
+
+- Created `research/form/adapters/vanilla.ts`:
+  - `bindField(field, element, options)` and `bindForm(form, element, options)`.
+  - DOM event listener management (`input`, `change`, `blur`, `submit`) with feedback loop prevention and XSS-safe `textContent` rendering.
+  - Headless `createVanillaField(field)` handle with snapshot and subscribe.
+- Created `research/form/adapters/react.ts`:
+  - `useField(field)`, `useForm(form)`, and `useFieldArray(arrayNode)`.
+  - `useSyncExternalStore` integration with memoized snapshots and SSR snapshot reading.
+- Created `research/form/adapters/angular.ts`:
+  - `createAngularField(field)`, `createAngularForm(form)`, `createAngularFieldArray(arrayNode)`.
+  - Readonly Angular Signals (`signal.asReadonly()`), `DestroyRef.onDestroy` lifecycle integration via `toAngularField(field)`.
+- Created `research/form/adapters/vue.ts`:
+  - `createVueField(field)`, `createVueForm(form)`, `createVueFieldArray(arrayNode)`, `useViiField`, `useViiForm`.
+  - `shallowRef` wrapped in `shallowReadonly`, `effectScope`, and `onScopeDispose` cleanup.
+- Created `research/form/adapters/index.ts`:
+  - Unified barrel export for all four adapter prototypes.
+- Created test suites in `research/form/`:
+  - `form-f7-vanilla.test.ts` (10 tests)
+  - `form-f7-react.test.ts` (12 tests)
+  - `form-f7-angular.test.ts` (10 tests)
+  - `form-f7-vue.test.ts` (10 tests)
+  - `form-f7-compliance.test.ts` (4 tests)
+- Updated `vitest.config.ts`:
+  - Added framework package resolve aliases for test execution from repo root.
+- Updated `research/form/tsconfig.json`:
+  - Added precise framework type declarations paths for TypeScript typechecking.
+- Updated documentation:
+  - `docs/roadmap/FORM_RESEARCH.md`: Documented F7 completion, contracts, and set hard gate before F8.
+  - `research/form/README.md`: Added Section 8 documenting F7 design decisions and compliance results.
+  - `PROJECT_STATE.md`: Updated durable Form research summary with F0-F7 completion.
+
+### Validation
+
+- `pnpm exec tsc -p research/form/tsconfig.json --noEmit`: PASS (0 type errors).
+- `pnpm vitest run research/form/`: PASS (10 test files, 275 tests passing, 0 failures).
+- `pnpm validate`: PASS (formatting, linting, typechecking, vitest across all packages, builds across all 10 projects, and package packing validation).
+- `git diff --check`: PASS (clean diff with 0 whitespace or formatting issues).
+
+### Architecture / compatibility
+
+- 100% clean architectural separation: Form Core remains pure Vii State/Scope without DOM or framework dependencies.
+- Zero secondary state mirrors: all framework reactive bindings are pure projections over Form Core signals.
+- Tested framework dependencies: React 19.2.8, Angular 22.1.1, Vue 3.5.41.
+- No public `@vii-labs/form` package created. All code remains strictly within `research/form/`.
+
+### Remaining / recovery
+
+- None for F7.
+- Slice F8 (Accessibility + Security + Privacy Hardening) has NOT started and is NOT authorized.
+
 ## 2026-08-27 01:40 CEST | Form F6 Terminal Submission Status Consistency Correction (Model A)
 
 Status: completed

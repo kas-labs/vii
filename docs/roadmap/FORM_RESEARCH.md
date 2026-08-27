@@ -1,7 +1,7 @@
 # Vii Form Research Roadmap
 
-> **Status**: Active Research Track (F0-F4 Completed)
-> **Current Slice**: F4 Completed / Ready for Review
+> **Status**: Active Research Track (F0-F7 Completed)
+> **Current Slice**: F7 Completed / Ready for Review
 > **Governing Strategy**: Evidence-driven Build-vs-Buy
 > **Prerequisites**: Phase 1 (Core State), Phase 2 (Adapters/CLI), Scope/Lifecycle Foundations, Schema Research (`Wrap + Reduce`)
 
@@ -87,9 +87,9 @@ Vii Form is a research track investigating whether a small, typed, framework-agn
 | **F2** | **Nested Objects + Arrays + Identity** | Research object field nodes and array field nodes (`FieldArray`). Compare hierarchical tree vs flat path registry vs hybrid lookup vs lazy field nodes. Research stable item identity vs index identity across insert, remove, swap, move, and reorder. *(Completed Prototype in `research/form/`)* |
 | **F3** | **Validation Scheduling + Structured Issues** | Prototype synchronous validation engine, trigger modes (`change`, `blur`, `submit`), rule precedence, group validation, and structured issue taxonomy (`FieldIssue`, `FormIssue`). *(Completed Prototype in `research/form/`)* |
 | **F4** | **Async Validation + Cancellation + Revisions** | Research asynchronous validation, debounce scheduling (evidence-backed defaults), `AbortSignal` propagation, generation/revision protection to eliminate stale race conditions, and Scope lifecycle integration. *(Completed Prototype in `research/form/`)* |
-| **F5** | **Parsing / Input-Output Types / Standard Schema Boundary** | Prototype raw input $\rightarrow$ parse $\rightarrow$ field value $\rightarrow$ validate $\rightarrow$ transform $\rightarrow$ output pipeline. Integrate Standard Schema v1 provider boundary and test against verified providers (Zod 4, Valibot, ArkType). |
-| **F6** | **Submission Lifecycle + Server Errors + Reset/Reinitialize** | Prototype submission state machine (`idle`, `validating`, `submitting`, `succeeded`, `failed`, `cancelled`), duplicate prevention (drop vs reject policy), server error attachment/clearing strategies, reset to initial vs new baseline, and external model reinitialization. |
-| **F7** | **Framework Adapter Compliance (Vanilla, React, Angular, Vue)** | Prototype thin adapters for Vanilla DOM, React (`useViiForm` / `useViiField`), Angular (`viiFormSignal`), and Vue (`useViiFormRef`). Verify zero whole-form rerenders and framework-native ergonomics. |
+| **F5** | **Parsing / Input-Output Types / Standard Schema Boundary** | Prototype raw input $\rightarrow$ parse $\rightarrow$ field value $\rightarrow$ validate $\rightarrow$ transform $\rightarrow$ output pipeline. Integrate Standard Schema v1 provider boundary and test against verified providers (Zod 4, Valibot, ArkType). *(Completed Prototype in `research/form/`)* |
+| **F6** | **Submission Lifecycle + Server Errors + Reset/Reinitialize** | Prototype submission state machine (`idle`, `validating`, `submitting`, `succeeded`, `failed`, `cancelled`), duplicate prevention (drop vs reject policy), server error attachment/clearing strategies, reset to initial vs new baseline, and external model reinitialization. *(Completed Prototype in `research/form/`)* |
+| **F7** | **Framework Adapter Compliance (Vanilla, React, Angular, Vue)** | Prototype thin adapters for Vanilla DOM, React (`useForm` / `useField` / `useFieldArray`), Angular (`createAngularForm` / `createAngularField`), and Vue (`createVueForm` / `createVueField`). Verify zero whole-form rerenders, exact cross-framework semantic equivalence, and framework-native ergonomics. *(Completed Prototype in `research/form/adapters/`)* |
 | **F8** | **Accessibility + Security + Privacy Hardening** | Prototype accessible HTML helpers (`aria-invalid`, `aria-describedby`, error focus identification at adapter edge), prototype-pollution defense in field paths, empirical depth/width bounds, and value-free diagnostics redaction. |
 | **F9** | **Runtime / Memory / TypeScript / Bundle Evidence** | Measure bundle footprint (minified, gzip, brotli), field update latency, memory retention across 1,000 mount/dispose cycles (zero retained resources; empirical heap budget), and TypeScript compilation wall time. |
 | **F10** | **Real Consumer Validation + Build-vs-Buy Graduation Gate** | Validate Form prototype on expanded multi-step Vanilla onboarding fixture and React task board. Execute formal Build-vs-Buy comparative benchmarks against TanStack Form, React Hook Form, and Angular Signal Forms. Render graduation decision. |
@@ -387,8 +387,49 @@ To prevent NIH (Not-Invented-Here) bias, Vii Form will be evaluated at Slice F10
 
 ---
 
-## 5. Next Steps & Operating Constraints
+## 5. Slice F7: Framework Adapter Compliance (Vanilla, React, Angular, Vue)
 
-- **Current Status**: **F0, F1, F2, F3, F4, F5, and F6 are complete (Submission Lifecycle, Server Errors & Reset/Reinitialize Verified with 210 passing tests in research/form/).**
-- **Hard Gate**: **Completion of F6 does NOT authorize F7 (DOM & Framework Adapters) or any downstream package graduation.**
-- **Next Required Action**: Review F6 deliverables, verify test suite and benchmarks, and await explicit maintainer authorization before opening Slice F7.
+Slice F7 proved that a single framework-neutral Vii Form semantic model (from F0-F6) can be consumed idiomatically and cleanly across four distinct framework ecosystems without state mirrors, state duplication, or semantic forks:
+
+1. **Vanilla DOM Adapter (`research/form/adapters/vanilla.ts`)**:
+   - Implements `bindField(field, element, options)` and `bindForm(form, element, options)`.
+   - Bidirectional DOM binding without infinite loops (state $\rightarrow$ DOM and DOM `input`/`change`/`blur` $\rightarrow$ Form).
+   - Preserves parser-backed raw intermediate strings (e.g. `"-"`, `"05"`, `""`) in the input element during parse errors while domain state remains pristine.
+   - Prototyped safe issue rendering using `textContent` for XSS defense.
+   - Clean disposal via explicit `disposer.dispose()` detaching DOM event listeners and unsubscribing from store nodes.
+
+2. **React Adapter (`research/form/adapters/react.ts`)**:
+   - Implements `useField(field)`, `useForm(form)`, and `useFieldArray(arrayNode)`.
+   - Backed by React 19's `useSyncExternalStore` with snapshot memoization to ensure referential stability and prevent infinite render loops.
+   - Granular reactivity: field edits re-render only the subscribed field component (zero whole-form re-renders).
+   - Full SSR safety via synchronous `getServerSnapshot` reading without browser globals.
+   - Zero retained subscriptions under React StrictMode mount/unmount lifecycles.
+
+3. **Angular Adapter (`research/form/adapters/angular.ts`)**:
+   - Implements `createAngularField(field)`, `createAngularForm(form)`, and `createAngularFieldArray(arrayNode)`.
+   - Exposes read-only Angular Signals (`signal.asReadonly()`) for all Form state and computed nodes.
+   - Full compatibility with Angular `computed()` and template signals.
+   - Automatic subscription teardown bound to `DestroyRef.onDestroy` when available via `toAngularField(field)`.
+
+4. **Vue Adapter (`research/form/adapters/vue.ts`)**:
+   - Implements `createVueField(field)`, `createVueForm(form)`, `createVueFieldArray(arrayNode)`, `useViiField`, and `useViiForm`.
+   - Exposes `shallowRef` wrapped in `shallowReadonly` for zero-overhead Vue reactivity.
+   - Automatic subscription teardown bound to Vue's `effectScope` and `onScopeDispose`.
+
+5. **Cross-Framework Semantic Compliance**:
+   - Verified through `research/form/form-f7-compliance.test.ts` running a normalized multi-step scenario across Vanilla DOM, React, Angular, and Vue.
+   - Proved identical state transitions across all 4 environments:
+     - Raw vs parsed value preservation.
+     - Model A terminal submission status: `submissionStatus === "succeeded"` is preserved when fields are edited after submission while `dirty` becomes `true`.
+     - Touched on blur transitions.
+     - Server issue attachment and localized clearing on field edits.
+     - Reset restoring pristine state and `submissionStatus === "idle"`.
+     - Array stable key identity preserved across item reordering.
+
+---
+
+## 6. Next Steps & Operating Constraints
+
+- **Current Status**: **F0, F1, F2, F3, F4, F5, F6, and F7 are complete (Framework Adapter Compliance Verified with 275 passing tests in research/form/).**
+- **Hard Gate**: **Completion of F7 does NOT authorize F8 (Accessibility + Security + Privacy Hardening) or any downstream package graduation.**
+- **Next Required Action**: Review F7 deliverables, verify test suite, and await explicit maintainer authorization before opening Slice F8.

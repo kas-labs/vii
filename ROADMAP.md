@@ -119,29 +119,28 @@ Vii Schema may move to Planned only after a real consumer need, an integration-v
 
 See `docs/architecture/SCHEMA_ARCHITECTURE.md` and `docs/quality/SCHEMA_BENCHMARK_PLAN.md`.
 
-### Vii Form
+### Vii Form — Complete (Research Accepted) / Production Phase 1 Active
 
-Vii Form is a strong candidate application module because it can reuse State, Scope, diagnostics, framework adapters, and future Devtools directly.
+Vii Form is the reactive, headless form state and validation engine for the Vii ecosystem, reusing State, Scope, diagnostics, and framework adapters.
 
-Research scope:
+Research track F0–F10 is complete and accepted via PR #166. Production Form Phase 1 is active, initiated with Slice P1a (Production Architecture & Package Contract).
 
-- signal-first typed field tree;
-- granular field state and subscriptions;
-- dirty, touched, pending, validity, and structured errors;
-- nested objects, arrays, dynamic fields, and multi-step forms;
-- sync and async validation;
-- cancellation of stale async validation;
-- schema adapters without a mandatory validation provider, including a possible first-party Vii Schema adapter if Schema graduates;
-- typed parsing and input/output transforms;
-- submission lifecycle and server-field errors;
-- accessible React, Angular, Vue, Vanilla, and future native-Vii bindings;
-- bundle, memory, type-check, and rerender/update evidence.
+Production Phase 1 scope:
 
-Research references include Angular Signal Forms, TanStack Form, React Hook Form, Vue, and VeeValidate. Inspiration does not imply compatibility or copied APIs.
+- `@vii-labs/form` package skeleton and multi-adapter subpath distribution (`/react`, `/vanilla`, `/angular`, `/vue`);
+- signal-first typed field tree (`createField`, `createFieldGroup`, `createFieldArray`, `createForm`);
+- granular leaf reactivity and independent dirty, touched, pending, validity, and issue tracking;
+- presentation Raw vs domain Value parser pipeline with presentation retention during parse errors;
+- synchronous and asynchronous validation with monotonic revision protection and `AbortSignal` cancellation;
+- provider-neutral Standard Schema v1 fail-closed adapter;
+- dynamic `FieldArray` collections with stable logical identity across reorders;
+- Model A submission state machine preserving terminal status across ordinary field edits;
+- structured server issue routing to fields, groups, and array items across in-flight reorders via submission snapshots;
+- thin framework adapters for React 18/19 (`useSyncExternalStore`), Vanilla DOM (`textContent`, ARIA projection), Angular Signals, and Vue `shallowRef`;
+- real browser and WCAG 2.2 AA accessibility acceptance gate;
+- performance and memory validation addressing the 1,000 server issue routing hotspot.
 
-Vii Form may move to Planned only after State and Scope semantics are stable enough to support it and at least one real consumer demonstrates meaningful form complexity.
-
-See `docs/architecture/FORM_ARCHITECTURE.md`.
+See `docs/architecture/FORM_ARCHITECTURE.md` and `docs/roadmap/FORM_RESEARCH.md`.
 
 ### Vii HTTP
 

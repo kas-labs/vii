@@ -37,6 +37,56 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-28 01:25 CEST | Production Form Phase 1 Slice P1a: Production Architecture & Package Contract
+
+Status: completed
+Branch: `docs/form-p1a-production-architecture`
+PR: not opened (Draft PR pending)
+
+### Scope
+
+- Execute FIRST bounded production slice P1a (Production Architecture & Package Contract) for Vii Form Phase 1 on baseline commit `b908a52c48cd43efa6327f9c1b23981bdd5d2416` (PR #166 merged into `main`).
+- Convert accepted F0–F10 research conclusions into an authoritative, normative production architecture contract and package specification in `docs/architecture/FORM_ARCHITECTURE.md`.
+- Define product and package boundaries for `@vii-labs/form` (`packages/form/`) with single-package subpath distribution (`@vii-labs/form`, `/react`, `/vanilla`, `/angular`, `/vue`).
+- Establish internal modular source graph adhering to repository code-quality budgets ($\le 250$ lines per module) and Clean Architecture dependency layering.
+- Classify public API candidates, internal utilities, and deferred features with explicit stability ratings under `docs/governance/API_STABILITY.md`.
+- Document `@vii-labs/core` reactive semantics, push-pull registration-order stale-read caveat, and safe consumer patterns.
+- Specify presentation Raw vs domain Value pipeline, validation engine with Standard Schema v1 fail-closed boundary, FieldArray stable identity across in-flight reorders, Model A submission status lifecycle, prototype pollution security defenses (Data vs Sink principle), framework adapter contracts, WCAG 2.2 AA / real browser acceptance gates, performance budgets, and error ownership.
+- Define the 13-slice Production Form Phase 1 roadmap (P1a through P1m) and F0–F10 research transfer matrix.
+- Synchronize durable project state across `ROADMAP.md`, `PROJECT_STATE.md`, and `docs/roadmap/FORM_RESEARCH.md`.
+- Strictly enforce non-goals: ZERO runtime implementation in `packages/form/`, NO `@vii-labs/form` publication, NO modification to `@vii-labs/core`, NO automatic merge.
+
+### Changes
+
+- Rewrote `docs/architecture/FORM_ARCHITECTURE.md`:
+  - Defined comprehensive 22-section production architecture contract covering product/package boundaries, module decomposition, public API candidate classification, push-pull reactive semantics, raw value retention, validation & Standard Schema fail-closed boundary, FieldArray identity stability, Model A submission lifecycle, security threat model (Data vs Sink principle), snapshot cloning, framework adapters, real browser/a11y acceptance gate, performance budgets & 1,000 server issue hotspot, error ownership, Scope lifecycle disposal, testing strategy, P1a–P1m slice roadmap, research transfer matrix, 10-item decision log, and non-goals.
+- Updated `ROADMAP.md`:
+  - Updated Vii Form section from Research to `Complete (Research Accepted) / Production Phase 1 Active` with full Phase 1 scope description.
+- Updated `PROJECT_STATE.md`:
+  - Recorded Form Research F0–F10 completion, graduation decision, and Production Form Phase 1 ACTIVE status with P1a completion and P1b next step.
+- Updated `docs/roadmap/FORM_RESEARCH.md`:
+  - Updated status header to `Research Concluded & Accepted (F0-F10 Completed via PR #166)` and `Current Phase: Production Form Phase 1 (P1a Active)`.
+- Updated `DUTY_WATCH.md`:
+  - Appended P1a operational handoff record.
+
+### Validation
+
+- `git diff --check`: PASS (0 whitespace/syntax issues).
+- `NX_DAEMON=false pnpm validate`: PASS (formatting, linting, type checking across packages, test suites across packages, builds across all projects, and packed tarball validation).
+- Manual diff inspection: Confirmed documentation-only changes with 0 runtime code added, 0 packages published, 0 core changes.
+
+### Architecture / compatibility
+
+- 100% clean architectural specification: `@vii-labs/core` production semantics preserved without modification; no public `@vii-labs/form` package created or published.
+- Multi-adapter subpath distribution model adopted: `@vii-labs/form` (pure core), `@vii-labs/form/react`, `@vii-labs/form/vanilla`, `@vii-labs/form/angular`, `@vii-labs/form/vue`.
+- Zero runtime dependencies in Form Core; type-only dependency on `@standard-schema/spec`.
+- All framework peers declared optional in package metadata.
+
+### Remaining / recovery
+
+- None for P1a. Slice P1a is complete.
+- Next slice: P1b (Package Skeleton & Governance) — create `packages/form/` skeleton, build configuration, and testing harness. P1b has NOT started.
+
 ## 2026-08-28 01:05 CEST | Form Research Slice F10: Real Consumer Validation + Build-vs-Buy Graduation Gate (Second & Final Bounded Evidence Correction Pass)
 
 Status: completed

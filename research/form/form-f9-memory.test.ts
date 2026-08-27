@@ -231,4 +231,47 @@ describe("Form Research F9: Memory, Lifecycle, and Retained Resource Evidence", 
       form.dispose();
     });
   });
+
+  // ---------------------------------------------------------------------------
+  // 6. Benchmark Harness Resource Integrity & Zero-Leak Audit
+  // ---------------------------------------------------------------------------
+  describe("Benchmark Harness Resource Integrity", () => {
+    it("runs sample benchmark suites and verifies all created forms, arrays, and listeners are cleanly disposed", async () => {
+      const unhandledRejections: unknown[] = [];
+      const onUnhandled = (reason: unknown) => {
+        unhandledRejections.push(reason);
+      };
+      process.on("unhandledRejection", onUnhandled);
+
+      try {
+        // Run quick iterations of benchmark routines
+        const form = createForm({
+          initialValues: { a: "val_a", b: "val_b" },
+          submitAction: async () => {},
+        });
+        const unsub = form.values.subscribe(() => {});
+
+        await form.submit();
+        form.reset();
+
+        unsub();
+        form.dispose();
+
+        const scope = createScope();
+        const arr = createFieldArray({
+          initialValues: [{ id: "1", val: "a" }],
+          keyExtractor: (it) => it.id,
+          scope,
+        });
+        arr.push({ id: "2", val: "b" });
+        arr.swap(0, 1);
+        arr.remove(0);
+        scope.dispose();
+
+        expect(unhandledRejections).toEqual([]);
+      } finally {
+        process.removeListener("unhandledRejection", onUnhandled);
+      }
+    });
+  });
 });

@@ -447,16 +447,20 @@ Slice F8 established and proved the smallest necessary accessibility, security, 
 Slice F9 executed the empirical evidence harness to evaluate runtime scaling, memory lifecycle, TypeScript compiler overhead, and production-style bundle footprints across realistic and stress test forms up to 1,000 fields. Detailed findings are in [`research/form/F9_EVIDENCE.md`](./F9_EVIDENCE.md).
 
 ### 1. Empirical Highlights
-- **$O(1)$ Single-Field Mutation**: Mutating a single field in a 1,000-field form executes in **0.00029 ms** (>3.4 million ops/sec), showing absolute signal isolation with zero sibling field notification.
-- **Linear Construction**: Full form construction scales linearly (~4.7 µs per field).
-- **Atomic `setValues` Batching**: Mutating a 10-field subset inside `form.setValues` executes in a constant **0.0028 ms** regardless of total form size.
+- **Leaf-Only Mutation Scaling**: In the tested leaf-only subscriber scenario, median single-field mutation remained approximately size-insensitive between 10 and 1,000 fields (~0.27 - 0.29 µs), and unrelated field subscribers received 0 notifications.
+- **Aggregate-Consumer Scaling**: In the aggregate-consumer scenario, mutating a single field causes aggregate computeds (`values`, `dirty`, `issues`) to invalidate and recompute upon reading, scaling proportionally with aggregate tree size (~1.9 µs for 10 fields to ~149 µs for 1,000 fields).
+- **Linear Construction**: Full form construction scales linearly (~4.0 - 4.7 µs per field).
+- **Atomic `setValues` Batching**: Mutating a 10-field subset inside `form.setValues` executes in a constant **~0.0025 ms** regardless of total form size.
+- **Separated FieldArray Lifecycle**: Isolated steady-state array operations execute efficiently (push: 0.016 ms, swap: ~0.29 µs, move: ~0.33 µs on 100 items).
 - **Zero Memory Leaks**: 500 complete form create/dispose cycles show 0 active scope leaks, 0 dangling listeners, and 0 unhandled promise rejections.
-- **Fast TypeScript Checking**: 82 files / 4,603 lines of TypeScript / 300+ fields checked in **0.21 s** check time / 4,964 instantiations with 0 deep recursion errors.
-- **Compact Bundle Footprint**: `createField` standalone bundles at **12.95 kB minified / 4.56 kB gzip / 4.03 kB brotli** (including all `@vii-labs/core` reactive primitives).
-- **100% Framework & Provider Isolation**: Verified zero framework cross-contamination and zero concrete schema provider bundling in Core.
+- **Completed Async Submission**: Steady-state submission lifecycle (`await form.submit()` + reset) completes in **~0.040 ms median**.
+- **Uniform Form Validation**: 10-field validation throughput is uniform across Native rules and Standard Schema v1 providers (Zod 4, Valibot, ArkType) at ~0.027 - 0.029 ms.
+- **Fast TypeScript Diagnostics**: Compiler check time scales sub-linearly across isolated programs (0.46s for small, 0.49s for medium, 0.50s for large) with zero deep recursion errors.
+- **Compact Bundle Footprint**: `createField` standalone bundles at **12.95 kB minified / 4.56 kB gzip / 4.03 kB brotli** (including all `@vii-labs/core` reactive primitives), shedding ~21.1 kB minified code compared to full Form Core.
+- **100% Framework & Provider Isolation**: Verified zero framework cross-contamination and zero concrete schema provider imports in Core.
 
-### 2. Documented Reactive Invariant (Items 10 & 57)
-In Vii Core's push-pull lazy computed design, reading a derived `Computed` inside a synchronous `State` subscriber callback will observe the previous cached value if the `Computed` was evaluated after the subscriber registered. As hardened in F8, adapters and internal projections derive dynamic status directly from source signals. External consumer reads outside the notification cycle always observe fresh values once the scheduler flushes.
+### 2. Documented Reactive Invariant & Core Semantics (Items 10 & 57)
+In Vii Core's push-pull lazy computed design, reading a derived `Computed` inside a synchronous `State` subscriber callback will observe the previous cached value if the `Computed` was evaluated after the subscriber registered. This is an intended property of push-pull signal systems without topological sorting. Form adapters and internal projections derive dynamic status directly from source signals. External consumer reads outside the notification cycle always observe fresh values once the scheduler flushes.
 
 ### 3. F10 Status
 **F10 has NOT been started.** Completion of F9 authorizes review and documentation only.

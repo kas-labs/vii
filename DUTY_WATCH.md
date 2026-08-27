@@ -41,7 +41,7 @@ PR: <number or not opened>
 
 Status: completed
 Branch: `feat/form-accessibility-security-privacy`
-PR: not opened (will open Draft PR)
+PR: #164 (Draft)
 
 ### Scope
 

@@ -37,6 +37,68 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-27 02:25 CEST | Form Research Slice F8: Accessibility + Security + Privacy Hardening
+
+Status: completed
+Branch: `feat/form-accessibility-security-privacy`
+PR: #164 (Draft)
+
+### Scope
+
+- Implement and verify Slice F8 (Accessibility + Security + Privacy Hardening) in `research/form/`.
+- Answer research question: What is the smallest accessibility, security, and privacy contract Vii Form must guarantee at the framework-neutral core and adapter boundaries so that F0-F7 semantics can safely graduate without Form becoming a UI component library, security framework, or telemetry system?
+- Accessibility: Prove `aria-invalid` semantics (invalid on validation/parse/server error; pending does NOT imply invalid), `aria-describedby` linkage with safe `textContent` rendering, programmatic labels without wrapper disconnection, native HTML form submit semantics with `preventDefault()`, reset lifecycle updates, and deterministic issue ordering for application Error Summary & first-invalid field focus.
+- Security: DOM XSS hardening across validation, parse, and server issues (`<script>`, `<img>`, `<svg>`, `<iframe>`); prototype pollution defense (`__proto__`, `constructor`, `prototype` in codes and paths); malformed parser/schema/server fail-closed behavior; submission snapshot hardening (hostile getters, proxies, cycles, shared refs, Map, Set, Date, RegExp); detached async promise safety with zero unhandled rejections at process level; scale/abuse resilience (500 rapid changes, 50-level deep paths, 1,000-issue arrays).
+- Privacy: Sensitive field handling (`password`, `token`, `apiKey`, `creditCard`); strictly value-free diagnostics telemetry (sentinel string verification); safe exception classification without error message leakage in telemetry; application UI state vs diagnostics distinction.
+- Bounded slice ONLY. F9 is NOT authorized and NOT started.
+
+### Changes
+
+- Hardened `research/form/form-core.ts`:
+  - Guarded `parser(raw)` result in `setRawValue` against malformed shapes (`null`, non-object, missing/non-boolean `ok`) with structured `TypeError` and safe diagnostic recording (`reason: "TypeError"`).
+- Created `research/form/form-f8-accessibility.test.ts` (13 tests):
+  - Programmatic labels & accessible names in Vanilla and React.
+  - `aria-invalid` accurate projection across unvalidated, valid, invalid, server, and pending states.
+  - `aria-describedby` linkage to issue element rendered via safe `textContent`.
+  - Application Error Summary data sufficiency and deterministic first-invalid field focus navigation.
+  - Native submit event interception with `preventDefault()` and reset lifecycle.
+  - Cross-framework accessibility parity for Angular signals and Vue shallowRefs.
+- Created `research/form/form-f8-security.test.ts` (19 tests):
+  - DOM XSS hardening for hostile validation, parse, and server issue messages.
+  - Prototype pollution blocking in validation issue codes, parse issue codes, and server issue codes.
+  - Safe treatment of `__proto__`, `constructor`, `prototype` in structured issue paths without polluting `Object.prototype`.
+  - Malformed parser and Standard Schema provider fail-closed tests.
+  - Submission snapshot hardening: throwing getters, hostile Proxies with traps, cyclic structures, shared object references, Map, Set, Date, RegExp.
+  - Detached async safety with unhandled rejection tracking (zero unhandled rejections).
+  - Stale async result race condition protection.
+  - Scale & abuse resilience: 500 rapid changes, 1,000-issue arrays, 50-level deep paths.
+- Created `research/form/form-f8-privacy.test.ts` (7 tests):
+  - Sensitive field privacy in diagnostics: raw passwords, parsed tokens, and server issues tested with sentinel strings (`SECRET_PASSWORD_DO_NOT_LOG_12345`, `AUTH_TOKEN_SECRET_987654321`, `4111_2222_3333_4444_SECRET_CARD`).
+  - Safe exception diagnostics: only error name/type recorded without embedding dynamic error messages.
+  - Application UI state vs telemetry boundary: UI holds values for display while diagnostics remains value-free.
+  - Vanilla `onSubmitException` application callback passes Error without duplicating secret in telemetry.
+- Updated documentation:
+  - `docs/roadmap/FORM_RESEARCH.md`: Documented F8 completion, contracts, and hard gate before F9.
+  - `research/form/README.md`: Added Section 9 documenting F8 accessibility responsibility split, security threat model, privacy invariants, and residual risks.
+  - `PROJECT_STATE.md`: Updated durable Form research summary with F0-F8 completion.
+
+### Validation
+
+- `pnpm exec tsc -p research/form/tsconfig.json --noEmit`: PASS (0 type errors).
+- `pnpm exec vitest run research/form/`: PASS (13 test files, 320 tests passing, 0 failures).
+- `pnpm validate`: PASS.
+- `git diff --check`: PASS.
+
+### Architecture / compatibility
+
+- 100% clean architectural separation: Form Core remains pure Vii State/Scope without DOM or framework dependencies.
+- Zero public package changes or release mutations.
+- Framework adapters remain thin projections (under 250-480 lines per adapter) with safe DOM writes.
+
+### Remaining / recovery
+
+- F8 complete. Open Draft PR and await maintainer review. F9 has NOT started.
+
 ## 2026-08-27 02:00 CEST | Form Research Slice F7: Framework Adapter Compliance (Vanilla, React, Angular, Vue)
 
 Status: completed

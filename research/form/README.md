@@ -335,6 +335,8 @@ F6 implements the complete submission lifecycle state machine (`idle` -> `valida
 ### Overview & Architecture
 F7 investigated whether one unified, framework-neutral Form semantic model (developed through F0–F6) can be consumed idiomatically and efficiently by four disparate UI paradigms:
 1. **Vanilla DOM**: Imperative element binding, event delegation, standard input/select/checkbox synchronization, safe `textContent` issue rendering, and explicit disposal.
+   - Projects `aria-invalid` onto the bound control and appends the issue element's id to `aria-describedby`, preserving tokens that were already there and removing only what it added on dispose. Both are opt-out (`ariaInvalid`, `ariaDescribedBy`). The DOM adapter is the only layer that owns element attributes; the React, Angular and Vue adapters expose `invalid` and `issues`, and the template writes the attribute.
+   - The projected state is derived from `issues`, `serverIssues`, `errors` and `parseStatus` directly rather than from the `invalid` computed, because a notification callback can run before a downstream computed has recomputed and would leave the attribute one edit behind. `pending` is deliberately excluded: an in-flight async validation never marks a control invalid.
    - Exactly one commit event is bound per control: `"change"` for checkbox, radio, select, and file inputs, `"input"` for everything else. Binding both ran the pipeline twice per edit, since a browser fires `"input"` while typing and `"change"` again on blur. A repeated raw value is additionally ignored, so a re-dispatched event cannot re-fire an async validator.
    - `bindForm` takes an `onSubmitException` callback. A DOM submit listener has no caller to return a rejection to, so a throwing submit action is reported through that callback and otherwise contained; rethrowing it produced an unhandled rejection that terminates the process under Node's default policy.
 2. **React**: Declarative component hooks (`useField`, `useForm`, `useFieldArray`) backed by `useSyncExternalStore`, referentially stable snapshot memoization, zero whole-form re-renders on keystroke, and SSR safety.
@@ -372,3 +374,67 @@ F7 investigated whether one unified, framework-neutral Form semantic model (deve
 
 6. **Cross-Framework Equivalence**:
    - `research/form/form-f7-compliance.test.ts` executes a normalized multi-step lifecycle across Vanilla DOM, React, Angular, and Vue, proving identical semantic behavior, issue attachment, server error clearing, and reset states.
+
+---
+
+## 9. F8: Accessibility + Security + Privacy Hardening
+
+### Overview & Objectives
+Slice F8 established and proved the smallest necessary accessibility, security, and privacy contracts for Vii Form so that F0–F7 semantics can safely graduate without Form turning into a bloated UI component library, an HTML sanitizer, or a telemetry system.
+
+### 1. Accessibility Responsibility Split
+
+| Layer | Responsibilities | Anti-Patterns (Forbidden) |
+| --- | --- | --- |
+| **Form Core** | • Pure semantic state (`dirty`, `touched`, `pending`, `valid`, `invalid`, `validationStatus`, `parseStatus`)<br>• Structured issue taxonomy (`FieldIssue`, `ParseIssue`, `ServerIssue`)<br>• Plain text issue messages & deterministic issue ordering<br>• Submission state machine & cancellation | 🚫 Emitting HTML markup or ARIA attributes<br>🚫 Injecting DOM event handlers or focus traps<br>🚫 Hardcoding screen-reader announcement copy |
+| **Framework Adapters** | • Projecting `aria-invalid` reflecting actual invalid state<br>• Supporting `aria-describedby` linkage to issue element IDs<br>• Safe DOM writes via `textContent` (NO innerHTML sinks)<br>• Preserving native HTML `<form>` submit events with `preventDefault()` | 🚫 Creating custom wrapper DOM elements that disconnect `<label for>`<br>🚫 Overriding keyboard navigation or trapping focus<br>🚫 Exposing `dangerouslySetInnerHTML` or `v-html` sinks |
+| **Application / UI Components** | • Accessible names & programmatic `<label for>` / `<label htmlFor>`<br>• Live region announcements (`role="alert"`, `aria-live="polite"`)<br>• Error summary rendering and focus management UX (focusing the first invalid field)<br>• Visual styling and layout composition | 🚫 Trusting raw HTML in user-facing issue messages<br>🚫 Silently suppressing unhandled submit rejections |
+| **Diagnostics** | • Value-free structural lifecycle observation (`revision`, `issueCount`, `status`, `reason: Error.name`) | 🚫 Logging raw field values, parsed values, output payloads, or user messages |
+
+### 2. Accessibility Invariants & Evidence
+- **`aria-invalid` Semantics**:
+  - `invalid === false` on unvalidated, pristine, or valid fields.
+  - `invalid === true` on validation errors, parse failures, or server issues.
+  - **Pending Invariant**: Async validation in flight (`pending === true`) does **NOT** mark a field as `aria-invalid="true"`.
+- **`aria-describedby` Association**:
+  - Vanilla DOM adapter binds `options.issueElement` via `textContent` safely linked to `<input aria-describedby="email-error">`.
+  - React/Angular/Vue project signals/refs that drive native HTML attributes without layout restrictions.
+- **Deterministic First-Invalid Field Focus**:
+  - `form.issues.get()` preserves deterministic issue ordering across synchronous, asynchronous, and server issues.
+  - UI focus managers can cleanly inspect the first issue path (e.g. `form.issues.get()[0]?.path`) and focus the matching control without Form Core owning DOM focus.
+- **Native Keyboard & Form Submission**:
+  - Vanilla `bindForm` listens to the native HTML `"submit"` event and invokes `event.preventDefault()`, preserving standard Enter-key submission without custom keyboard hijacking.
+
+### 3. Security Threat Model & Hardening
+
+| Threat | Source / Sink | Defense / Invariant | Verified Fixture | Residual Risk |
+| --- | --- | --- | --- | --- |
+| **DOM XSS** | Hostile messages in validation, parse, or server issues | Vanilla writes only to `textContent`. Framework adapters rely on escaped template interpolation. No `innerHTML` sinks. | `form-f8-security.test.ts` (`<script>`, `<img>`, `<svg>`, `<iframe>`) | None in core/adapters. App developers bypassing escaping via raw HTML own that risk. |
+| **Prototype Pollution** | `__proto__`, `constructor`, `prototype` in issue codes | Blocked with security errors in `sanitizeIssue`, `sanitizeParseIssue`, and `sanitizeServerIssue`. | `form-f8-security.test.ts` (code pollution blocked, `Object.prototype` clean) | None. |
+| **Path Traversal / Object Injection** | `__proto__` in structured issue paths | Structured paths remain immutable data arrays. Routing uses `hasOwnProperty` and safe container lookups without object mutation. | `form-f8-security.test.ts` (path containing `__proto__`) | None. |
+| **Malformed Parsers** | Custom parsers returning `null`, non-objects, or non-boolean `ok` | Fails closed with structured `TypeError` and safe error classification in diagnostics. | `form-f8-security.test.ts` | None. |
+| **Malformed Standard Schema** | Providers returning non-array `issues`, throwing, or rejecting | Standard Schema adapter validates result shape and fails closed on invalid provider output. | `form-f8-security.test.ts` | None. |
+| **Hostile Getters / Proxies** | Output payloads with throwing getters or proxy traps | `deepCloneSnapshot` safely triggers getters, traverses trap-traps, and isolates snapshot data. | `form-f8-security.test.ts` | None. |
+| **Cyclic Output Data** | Output transforms producing self-referential or cyclic objects | `deepCloneSnapshot` tracks visited objects via `Map` and clones cycles without stack overflow. | `form-f8-security.test.ts` | None. |
+| **Detached Async Rejections** | Detached validation, debounce timers, or DOM submit actions | `settleDetachedValidation` catches rejections and records safe diagnostics; `bindForm` routes submit exceptions to `onSubmitException`. Zero unhandled rejections at process level. | `form-f8-security.test.ts` (Unhandled rejection tracker) | None. |
+| **Stale Async Results** | Rapid typing racing slow async validation / schemas | Generation/revision counters discard stale async results before they can mutate newer state. | `form-f8-security.test.ts` | None. |
+| **Resource Abuse** | Rapid edits, deep path nesting, or large issue arrays | Verified resilient under 500 rapid changes, 50-level deep paths, and 1,000-issue arrays without runaway listeners. | `form-f8-security.test.ts` | Benchmark latency deferred to F9. |
+
+### 4. Privacy Invariants & Diagnostics Telemetry
+- **Telemetry Redaction Guarantee**:
+  - Diagnostics collector records structural event types (`field.validation.started`, `field.parse.failed`, `form.submission.started`, `form.submission.failed`) and numeric counts (`revision`, `issueCount`).
+  - Raw field values, parsed values, output payloads, server response bodies, validation messages, and secrets **NEVER** enter diagnostics.
+- **Sentinel Privacy Tests**:
+  - Verified with sentinel strings (`SECRET_PASSWORD_DO_NOT_LOG_12345`, `AUTH_TOKEN_SECRET_987654321`, `4111_2222_3333_4444_SECRET_CARD`) passed through inputs, rules, parse failures, server issues, and exceptions.
+  - Zero occurrences found in serialized diagnostic traces.
+- **Exception Privacy**:
+  - Detached exception handlers record only `reason: Error.name` (e.g. `"TypeError"`, `"Error"`), avoiding leakage of dynamic exception messages that might embed sensitive values.
+- **Application State vs Diagnostics**:
+  - Local component state (React hooks, Angular signals, Vue refs) legitimately holds field values for UI display.
+  - Telemetry and diagnostics remain strictly value-free.
+
+### 5. Known Environment Limitations & Residual Risks
+- **Test Environment**: Headless Node/Vitest environment verifies DOM properties, attributes, and events; it cannot verify visual focus ring contrast or actual screen reader speech synthesis engines.
+- **Residual Risks Deferred to F9 / F10**:
+  - F9 owns quantitative bundle footprint (minified, gzip, brotli), field update latency under heavy load, and 1,000-cycle heap benchmarks.
+  - F10 owns multi-step consumer dogfooding and final build-vs-buy graduation.

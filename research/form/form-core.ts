@@ -622,6 +622,17 @@ export function createField<Value, Raw = Value, Output = Value>(
     let parseResult: ParseResult<Value>;
     try {
       parseResult = parser(raw);
+      if (
+        parseResult === null ||
+        typeof parseResult !== "object" ||
+        typeof (parseResult as any).ok !== "boolean"
+      ) {
+        throw new TypeError(
+          `Field parser returned invalid result shape: expected { ok: boolean }, received ${
+            parseResult === null ? "null" : typeof parseResult
+          }`,
+        );
+      }
     } catch (parseErr) {
       const diag = getActiveDiagnostics();
       if (diag) {

@@ -1,0 +1,139 @@
+---
+import SiteLayout from "../../layouts/SiteLayout.astro";
+import { examples } from "../../data/examples/catalog";
+
+const kindLabels = {
+  snippet: "Snippet",
+  example: "Example",
+  tutorial: "Tutorial",
+  "reference-application": "Reference application",
+} as const;
+---
+
+<SiteLayout
+  title="Examples | Vii"
+  description="Verified Vii examples organized by scope, maturity, and framework integration."
+>
+  <section class="section examples-hero">
+    <div class="shell">
+      <p class="eyebrow">Examples</p>
+      <h1>Start small. Follow real contracts.</h1>
+      <p class="lede">
+        Vii examples are grouped by intent rather than presented as one undifferentiated demo gallery.
+        Every entry below points to behavior that exists in the repository today.
+      </p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="shell">
+      <div class="example-kinds" aria-label="Example type definitions">
+        <article>
+          <h2>Snippet</h2>
+          <p>A minimal code fragment focused on one API or semantic rule.</p>
+        </article>
+        <article>
+          <h2>Example</h2>
+          <p>A focused usage pattern with enough context to explain ownership and integration.</p>
+        </article>
+        <article>
+          <h2>Tutorial</h2>
+          <p>A guided task with multiple steps. Tutorials are added only when the underlying surface is mature enough.</p>
+        </article>
+        <article>
+          <h2>Reference application</h2>
+          <p>A larger end-to-end application proving several Vii surfaces together. None is claimed as public-ready yet.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="catalog-title">
+    <div class="shell">
+      <p class="eyebrow">Verified catalog</p>
+      <h2 id="catalog-title">Current examples</h2>
+      <p class="section-copy">
+        Core and Vanilla entries are based on the current experimental Core contract. React, Angular, and Vue entries
+        describe private experimental adapters and are not registry-install instructions.
+      </p>
+
+      <div class="example-grid">
+        {examples.map((example) => (
+          <article class="example-card">
+            <div class="example-meta">
+              <span>{kindLabels[example.kind]}</span>
+              <span>{example.framework}</span>
+            </div>
+            <h3>{example.title}</h3>
+            <p>{example.summary}</p>
+            <p class="maturity">{example.maturity}</p>
+            <div class="example-actions">
+              <a href={example.href}>Read example</a>
+              {example.sourceHref && <a href={example.sourceHref}>Source</a>}
+            </div>
+          </article>
+        ))}
+      </div>
+    </div>
+  </section>
+</SiteLayout>
+
+<style>
+  .examples-hero {
+    padding-bottom: var(--space-12);
+  }
+
+  .example-kinds,
+  .example-grid {
+    display: grid;
+    gap: var(--space-5);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .example-kinds article,
+  .example-card {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background: var(--color-surface);
+    padding: var(--space-6);
+  }
+
+  .example-kinds h2,
+  .example-card h3 {
+    margin-top: 0;
+  }
+
+  .example-meta,
+  .example-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+  }
+
+  .example-meta {
+    color: var(--color-text-muted);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    margin-bottom: var(--space-4);
+  }
+
+  .maturity {
+    color: var(--color-text-muted);
+    font-size: 0.85rem;
+  }
+
+  .example-actions {
+    margin-top: var(--space-5);
+  }
+
+  .example-actions a {
+    font-weight: 650;
+  }
+
+  @media (max-width: 48rem) {
+    .example-kinds,
+    .example-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

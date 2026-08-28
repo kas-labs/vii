@@ -41,7 +41,7 @@ PR: <number or not opened>
 
 Status: completed
 Branch: `build/form-p1b-package-skeleton`
-PR: not opened
+PR: #168 (Draft)
 
 ### Scope
 

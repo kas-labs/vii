@@ -178,6 +178,13 @@ export function runFormTreeScenario() {
   const resetVal = formInstance.getValue();
   const resetDirty = formInstance.dirty.get();
 
+  let childDisposeRejected = false;
+  try {
+    formInstance.fields.user.fields.name.dispose();
+  } catch (err) {
+    childDisposeRejected = true;
+  }
+
   formInstance.dispose();
 
   let postDisposeError = false;
@@ -200,6 +207,7 @@ export function runFormTreeScenario() {
     postRebaseDirty,
     resetVal,
     resetDirty,
+    childDisposeRejected,
     postDisposeError,
   };
 }
@@ -268,6 +276,7 @@ export function runFormTreeScenario() {
       postRebaseDirty: true,
       resetVal: { user: { name: "Bob" }, settings: { theme: "dark" } },
       resetDirty: false,
+      childDisposeRejected: true,
       postDisposeError: true,
     },
     "clean consumer form tree scenario must execute correctly against packed artifact",

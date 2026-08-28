@@ -95,7 +95,8 @@ tracking, independent `touched` state, batched `reset()`, and deterministic `@vi
 lifecycle integration. Slice P1d implements composable nested object state via `createFieldGroup<TFields>`
 and root form coordination via `createForm<TFields>`, providing typed nested object composition, parent/child
 Scope ownership, aggregate domain/raw values, recursive dirty/touched aggregation, deterministic reset,
-whole-form baseline reinitialization (`form.reinitialize(newBaseline)`), and deterministic root Scope disposal.
+whole-form baseline reinitialization (`form.reinitialize(newBaseline)`), transactional two-phase adoption,
+and deterministic root Scope disposal preventing direct public disposal of tree-adopted children.
 The package remains private (`private: true`). Arrays (`createFieldArray`), validation engine, parsers,
 submission pipeline, server issue routing, and framework adapters are deferred to subsequent slices P1e–P1j.
 `@vii-labs/form` declares `@vii-labs/core` as a required runtime peer (`>=0.1.0-experimental.2`),

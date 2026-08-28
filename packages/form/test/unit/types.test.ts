@@ -4,8 +4,8 @@ import { createForm } from "../../src/core/form.js";
 import { createFieldGroup } from "../../src/core/group.js";
 import type { FieldGroup, FieldState, FormInstance } from "../../src/core/types.js";
 
-describe("Type inference matrix (P1d)", () => {
-  test("infers exact nested types from createForm and createFieldGroup", () => {
+describe("Type inference matrix (P1d corrections)", () => {
+  test("infers exact nested types from createForm and canonical createFieldGroup", () => {
     const nameField = createField({ initialValue: "Vitalii" });
     const ageField = createField({ initialValue: 30 });
     const activeField = createField({ initialValue: true });
@@ -76,5 +76,23 @@ describe("Type inference matrix (P1d)", () => {
 
     // Reinitialize argument typing
     expectTypeOf(form.reinitialize).parameter(0).toEqualTypeOf<ExpectedFormValues>();
+  });
+
+  test("infers strongly typed access for child named 'fields'", () => {
+    const group = createFieldGroup({
+      fields: {
+        fields: createField({ initialValue: "user-value" }),
+        count: createField({ initialValue: 42 }),
+      },
+    });
+
+    type ExpectedGroupValues = {
+      fields: string;
+      count: number;
+    };
+
+    expectTypeOf(group.getValue()).toEqualTypeOf<ExpectedGroupValues>();
+    expectTypeOf(group.fields.fields).toEqualTypeOf<FieldState<string>>();
+    expectTypeOf(group.fields.count).toEqualTypeOf<FieldState<number>>();
   });
 });

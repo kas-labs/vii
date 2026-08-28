@@ -6,6 +6,7 @@ import {
   safeDefineProperty,
   safeHasProperty,
   type FormNodeInternal,
+  type NodeOwnership,
 } from "./internal.js";
 import type { CreateFormOptions, FormFieldsRecord, FormInstance, FormValues } from "./types.js";
 
@@ -22,6 +23,7 @@ export function createForm<TFields extends FormFieldsRecord>(
   const { fields, scope } = options;
   const fieldKeys = Object.keys(fields);
   let disposed = false;
+  let ownership: NodeOwnership = scope ? "external-scope" : "standalone";
 
   const assertActive = (): void => {
     if (disposed) {
@@ -35,18 +37,24 @@ export function createForm<TFields extends FormFieldsRecord>(
 
   let detachFromParent: (() => void) | undefined;
 
-  const dispose = (): void => {
+  const performDisposal = (): void => {
     if (disposed) {
       return;
     }
     disposed = true;
+    ownership = "disposed";
+    internal.ownership = "disposed";
     detachFromParent?.();
     formScope.dispose();
   };
 
+  const dispose = (): void => {
+    performDisposal();
+  };
+
   if (scope) {
     detachFromParent = scope.use(() => {
-      dispose();
+      performDisposal();
     });
   }
 
@@ -158,10 +166,13 @@ export function createForm<TFields extends FormFieldsRecord>(
   const internal: FormNodeInternal<FormValues<TFields>> = {
     kind: "form",
     scope: formScope,
-    isAdopted: false,
+    ownership,
     assertActive,
     reinitialize,
     getDirectChildNodes: () => fieldKeys.map((k) => fields[k]!),
+    disposeFromOwner: () => {
+      performDisposal();
+    },
   };
 
   attachInternalNode(formInstance, internal);

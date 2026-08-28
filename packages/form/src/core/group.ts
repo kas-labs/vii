@@ -1,4 +1,4 @@
-import { batch, computed, createScope, type Scope } from "@vii-labs/core";
+import { batch, computed, createScope } from "@vii-labs/core";
 import {
   adoptChildNodes,
   attachInternalNode,
@@ -6,14 +6,9 @@ import {
   safeDefineProperty,
   safeHasProperty,
   type FormNodeInternal,
+  type NodeOwnership,
 } from "./internal.js";
-import type {
-  CreateFieldGroupOptions,
-  FieldGroup,
-  FormFieldsRecord,
-  FormNode,
-  FormValues,
-} from "./types.js";
+import type { CreateFieldGroupOptions, FieldGroup, FormFieldsRecord, FormValues } from "./types.js";
 
 /**
  * Creates a reactive nested field group aggregating child field and group nodes.
@@ -22,29 +17,12 @@ import type {
  * recursive dirty/touched tracking, batched reset, and deterministic Scope lifecycle ownership.
  */
 export function createFieldGroup<TFields extends FormFieldsRecord>(
-  configOrFields: CreateFieldGroupOptions<TFields> | TFields,
-  options?: { readonly scope?: Scope | undefined },
+  options: CreateFieldGroupOptions<TFields>,
 ): FieldGroup<TFields> {
-  let fields: TFields;
-  let scope: Scope | undefined;
-
-  if (
-    configOrFields !== null &&
-    typeof configOrFields === "object" &&
-    "fields" in configOrFields &&
-    typeof (configOrFields as CreateFieldGroupOptions<TFields>).fields === "object" &&
-    (configOrFields as CreateFieldGroupOptions<TFields>).fields !== null &&
-    (configOrFields as unknown as FormNode).kind === undefined
-  ) {
-    fields = (configOrFields as CreateFieldGroupOptions<TFields>).fields;
-    scope = (configOrFields as CreateFieldGroupOptions<TFields>).scope ?? options?.scope;
-  } else {
-    fields = configOrFields as TFields;
-    scope = options?.scope;
-  }
-
+  const { fields, scope } = options;
   const fieldKeys = Object.keys(fields);
   let disposed = false;
+  let ownership: NodeOwnership = scope ? "external-scope" : "standalone";
 
   const assertActive = (): void => {
     if (disposed) {
@@ -58,18 +36,27 @@ export function createFieldGroup<TFields extends FormFieldsRecord>(
 
   let detachFromParent: (() => void) | undefined;
 
-  const dispose = (): void => {
+  const performDisposal = (): void => {
     if (disposed) {
       return;
     }
     disposed = true;
+    ownership = "disposed";
+    internal.ownership = "disposed";
     detachFromParent?.();
     groupScope.dispose();
   };
 
+  const dispose = (): void => {
+    if (internal.ownership === "tree") {
+      throw new Error("Cannot dispose an adopted group directly; dispose its owning form or group");
+    }
+    performDisposal();
+  };
+
   if (scope) {
     detachFromParent = scope.use(() => {
-      dispose();
+      performDisposal();
     });
   }
 
@@ -180,10 +167,13 @@ export function createFieldGroup<TFields extends FormFieldsRecord>(
   const internal: FormNodeInternal<FormValues<TFields>> = {
     kind: "group",
     scope: groupScope,
-    isAdopted: false,
+    ownership,
     assertActive,
     reinitialize,
     getDirectChildNodes: () => fieldKeys.map((k) => fields[k]!),
+    disposeFromOwner: () => {
+      performDisposal();
+    },
   };
 
   attachInternalNode(groupState, internal);

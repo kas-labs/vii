@@ -5,7 +5,7 @@ import { createForm } from "../../src/core/form.js";
 import { createFieldGroup } from "../../src/core/group.js";
 import type { FormValues } from "../../src/core/types.js";
 
-describe("createForm (P1d)", () => {
+describe("createForm (P1d corrections)", () => {
   test("initializes with aggregate domain and raw presentation values", () => {
     const form = createForm({
       fields: {
@@ -111,7 +111,7 @@ describe("createForm (P1d)", () => {
     expect(form.touched.get()).toBe(false);
   });
 
-  test("form disposal cascades to owned groups and fields", () => {
+  test("form disposal cascades to owned groups and fields and is idempotent", () => {
     const name = createField({ initialValue: "Alice" });
     const city = createField({ initialValue: "Berlin" });
     const address = createFieldGroup({ fields: { city } });
@@ -131,7 +131,7 @@ describe("createForm (P1d)", () => {
     expect(() => city.getValue()).toThrowError("Field is disposed");
   });
 
-  test("owner Scope disposal cascades to form and all descendants", () => {
+  test("owner Scope disposal cascades to root form and all descendants", () => {
     const ownerScope = createScope({ name: "owner" });
     const name = createField({ initialValue: "Alice" });
     const form = createForm({ fields: { name }, scope: ownerScope });
@@ -280,16 +280,133 @@ describe("createForm (P1d)", () => {
     }).toThrowError(/Cannot adopt node at "g2": node is already part of another form or group/);
   });
 
+  test("rejects adoption of an externally Scope-owned field or group", () => {
+    const externalScope = createScope({ name: "external" });
+    const extField = createField({ initialValue: "ext", scope: externalScope });
+    const extGroup = createFieldGroup({
+      fields: { inner: createField({ initialValue: "in" }) },
+      scope: externalScope,
+    });
+
+    expect(() => {
+      createForm({ fields: { field: extField } });
+    }).toThrowError(/Cannot adopt node at "field": node already has an external Scope owner/);
+
+    expect(() => {
+      createForm({ fields: { group: extGroup } });
+    }).toThrowError(/Cannot adopt node at "group": node already has an external Scope owner/);
+
+    // External scope disposal still disposes the standalone nodes cleanly
+    externalScope.dispose();
+    expect(() => extField.getValue()).toThrowError("Field is disposed");
+    expect(() => extGroup.getValue()).toThrowError("Group is disposed");
+  });
+
+  test("rejects adoption of an already disposed field or group", () => {
+    const deadField = createField({ initialValue: "dead" });
+    deadField.dispose();
+
+    expect(() => {
+      createForm({ fields: { dead: deadField } });
+    }).toThrowError(/Cannot adopt node at "dead": node is disposed/);
+
+    const deadGroup = createFieldGroup({
+      fields: { inner: createField({ initialValue: "inner" }) },
+    });
+    deadGroup.dispose();
+
+    expect(() => {
+      createForm({ fields: { deadG: deadGroup } });
+    }).toThrowError(/Cannot adopt node at "deadG": node is disposed/);
+  });
+
+  test("two-phase adoption is transactional: failed adoption leaves valid nodes unmutated and adoptable", () => {
+    const alreadyOwned = createField({ initialValue: "owned" });
+    createForm({ fields: { alreadyOwned } });
+
+    const fresh = createField({ initialValue: "fresh" });
+
+    expect(() =>
+      createForm({
+        fields: {
+          fresh,
+          duplicate: alreadyOwned,
+        },
+      }),
+    ).toThrow();
+
+    // fresh node must remain standalone and usable
+    expect(fresh.getValue()).toBe("fresh");
+
+    // fresh node must be adoptable into a subsequent valid form
+    const validForm = createForm({
+      fields: { fresh },
+    });
+    expect(validForm.getValue()).toEqual({ fresh: "fresh" });
+  });
+
+  test("direct disposal of an adopted field or group is rejected and preserves tree consistency", () => {
+    const leaf = createField({ initialValue: "leaf" });
+    const group = createFieldGroup({ fields: { leaf } });
+    const form = createForm({
+      fields: {
+        title: createField({ initialValue: "My Form" }),
+        group,
+      },
+    });
+
+    expect(() => {
+      form.fields.title.dispose();
+    }).toThrowError("Cannot dispose an adopted field directly; dispose its owning form or group");
+
+    expect(() => {
+      form.fields.group.dispose();
+    }).toThrowError("Cannot dispose an adopted group directly; dispose its owning form or group");
+
+    expect(() => {
+      form.fields.group.fields.leaf.dispose();
+    }).toThrowError("Cannot dispose an adopted field directly; dispose its owning form or group");
+
+    // Form must remain fully valid and functional
+    expect(form.getValue()).toEqual({
+      title: "My Form",
+      group: { leaf: "leaf" },
+    });
+    expect(form.dirty.get()).toBe(false);
+    expect(form.touched.get()).toBe(false);
+
+    form.fields.title.setValue("Updated Form");
+    expect(form.dirty.get()).toBe(true);
+
+    form.reset();
+    expect(form.getValue()).toEqual({
+      title: "My Form",
+      group: { leaf: "leaf" },
+    });
+    expect(form.dirty.get()).toBe(false);
+
+    form.reinitialize({
+      title: "Rebased Form",
+      group: { leaf: "rebased" },
+    });
+    expect(form.getValue()).toEqual({
+      title: "Rebased Form",
+      group: { leaf: "rebased" },
+    });
+  });
+
   test("handles dangerous-looking object keys safely without prototype pollution", () => {
     const protoField = createField({ initialValue: "safe-proto" });
     const constructorField = createField({ initialValue: "safe-constructor" });
     const prototypeField = createField({ initialValue: "safe-prototype" });
+    const fieldsField = createField({ initialValue: "safe-fields" });
 
     const form = createForm({
       fields: {
         ["__proto__"]: protoField,
         constructor: constructorField,
         prototype: prototypeField,
+        fields: fieldsField,
       },
     });
 
@@ -297,9 +414,11 @@ describe("createForm (P1d)", () => {
     expect(Object.hasOwn(val, "__proto__")).toBe(true);
     expect(Object.hasOwn(val, "constructor")).toBe(true);
     expect(Object.hasOwn(val, "prototype")).toBe(true);
+    expect(Object.hasOwn(val, "fields")).toBe(true);
     expect(val["__proto__"]).toBe("safe-proto");
     expect(val["constructor"]).toBe("safe-constructor");
     expect(val["prototype"]).toBe("safe-prototype");
+    expect(val["fields"]).toBe("safe-fields");
 
     expect(Object.prototype.hasOwnProperty.call(Object.prototype, "safeProto")).toBe(false);
     expect(Object.getPrototypeOf(val)).toBe(Object.prototype);
@@ -308,11 +427,13 @@ describe("createForm (P1d)", () => {
       ["__proto__"]: "rebase-proto",
       constructor: "rebase-constructor",
       prototype: "rebase-prototype",
+      fields: "rebase-fields",
     });
 
     expect(form.getValue()["__proto__"]).toBe("rebase-proto");
     expect(form.getValue()["constructor"]).toBe("rebase-constructor");
     expect(form.getValue()["prototype"]).toBe("rebase-prototype");
+    expect(form.getValue()["fields"]).toBe("rebase-fields");
     expect(Object.prototype.hasOwnProperty.call(Object.prototype, "rebaseProto")).toBe(false);
   });
 });

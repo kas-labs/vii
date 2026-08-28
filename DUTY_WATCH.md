@@ -37,44 +37,40 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
-## 2026-08-28 18:15 CEST | Production Form Phase 1 Slice P1d: Form Tree, Groups & Aggregate State
+## 2026-08-28 23:50 CEST | Production Form Phase 1 Slice P1d: Form Tree, Groups & Aggregate State (Ownership & Lifecycle Correction)
 
 Status: completed
 Branch: `feat/form-p1d-tree-groups`
-PR: not opened (Draft PR pending)
+PR: #170 (Draft)
 
 ### Scope
 
-- Execute bounded production slice P1d (Form Tree, Groups & Aggregate State) for Vii Form Phase 1 on baseline commit `51a79b12505cf99d606daf483795364c584a0062` (PR #169 merged into `main`).
-- Implement composable nested object state via `createFieldGroup<TFields>` and root form coordinator via `createForm<TFields>`.
-- Provide typed recursive object composition, parent/child Scope ownership, aggregate domain/raw values, recursive dirty/touched aggregation, deterministic reset, whole-form baseline replacement (`form.reinitialize(newBaseline)`), and deterministic root Scope disposal.
-- Establish strict field ownership and duplicate node adoption detection: adopting an already-adopted node into multiple groups or forms throws `Error("Cannot adopt node: node is already part of another form or group")`.
-- Enforce Data-vs-Sink security principle for object materialization using `Object.defineProperty` to protect against prototype pollution on dangerous data keys (`__proto__`, `constructor`, `prototype`).
-- Maintain absolute non-goals for P1d: ZERO dynamic array collections (`createFieldArray`), NO validation engine (rules, async rules, debounce, AbortSignal, Standard Schema bridge deferred to P1e), NO parsers (parser-backed `TRaw !== TValue` divergence deferred to P1e), NO submission pipeline or server issue routing (deferred to P1g), NO framework adapter implementations, NO `@vii-labs/form` publication (`private: true`), and ZERO modifications to `@vii-labs/core`.
+- Execute bounded P1d ownership, lifecycle, and API correction pass on `feat/form-p1d-tree-groups` (baseline audited head `10812ea60ab76e5dfc0704bb6533a0979e6a21b8`, PR #170).
+- Correction 1: Remove ambiguous `createFieldGroup` dual syntax; enforce canonical options shape `{ fields, scope? }`, and support ordinary user field named `"fields"`.
+- Correction 2: Resolve pre-owned child Scope ambiguity by introducing explicit internal `NodeOwnership` state (`"standalone" | "external-scope" | "tree" | "disposed"`); reject adoption of externally Scope-owned nodes with deterministic errors.
+- Correction 3: Make adoption transactional with two-phase adoption (Phase 1: Validate All, Phase 2: Commit All) so failed adoption causes zero partial mutations to standalone child nodes.
+- Correction 4: Adopted static children must not be manually disposable (`child.dispose()` on adopted node throws `Error` without corrupting tree); introduce internal `disposeFromOwner()` path for parent Scope teardown.
+- Maintain absolute non-goals: ZERO dynamic array collections (`createFieldArray`), NO validation engine (rules, async rules, debounce, AbortSignal, Standard Schema bridge deferred to P1e), NO parsers (parser-backed `TRaw !== TValue` divergence deferred to P1e), NO submission pipeline or server issue routing (deferred to P1g), NO framework adapter implementations, NO `@vii-labs/form` publication (`private: true`), and ZERO modifications to `@vii-labs/core`.
 
 ### Changes
 
-- Created `packages/form/src/core/internal.ts` defining unexported `FORM_NODE_INTERNAL` symbol, `FormNodeInternal<T>` lifecycle contract, `adoptChildNodes`, `safeDefineProperty`, and `safeHasProperty` (103 lines, <= 250 limit).
-- Created `packages/form/src/core/tree-types.ts` defining `FormNode`, `FormFieldsRecord`, `FormValueFor<T>`, `FormValues<T>`, `CreateFieldGroupOptions`, `FieldGroup`, `CreateFormOptions`, and `FormInstance` (174 lines, <= 250 limit).
-- Updated `packages/form/src/core/types.ts` containing leaf field types and re-exporting tree types (109 lines, <= 250 limit).
-- Updated `packages/form/src/core/field.ts` attaching internal lifecycle metadata for adoption tracking and baseline reinitialization (135 lines, <= 250 limit).
-- Created `packages/form/src/core/group.ts` implementing `createFieldGroup` with aggregate `value`, `rawValue`, `dirty`, `touched`, `reset()`, and Scope lifecycle (192 lines, <= 250 limit).
-- Created `packages/form/src/core/form.ts` implementing `createForm` root coordinator with aggregate `value`, `rawValue`, `dirty`, `touched`, `reset()`, `reinitialize(newBaseline)`, and Scope lifecycle (170 lines, <= 250 limit).
-- Updated `packages/form/src/index.ts` exporting `createField`, `createFieldGroup`, `createForm` and public types.
-- Created `packages/form/test/unit/group.test.ts` (13 tests) covering initial nested values, rawValue mirroring, child mutation, sibling isolation, dirty/touched aggregation, reset, multi-level nesting, disposal, dangerous keys, and referential stability.
-- Created `packages/form/test/unit/form.test.ts` (12 tests) covering initial values, dirty/touched aggregation, reset, disposal, owner Scope disposal, sibling isolation, whole-form reinitialize baseline replacement, duplicate adoption rejection, and dangerous keys.
-- Created `packages/form/test/unit/types.test.ts` verifying static compile-time type inference.
-- Updated `packages/form/test/package-boundary.test.ts` verifying root exports `["createField", "createFieldGroup", "createForm"]` while adapter subpaths remain empty.
-- Updated `scripts/package-validation/validate-form.mjs` registering emitted `dist/core/*` files and executing a real runtime clean consumer scenario against the packed `.tgz` artifact.
+- Updated `packages/form/src/core/internal.ts` (126 lines) defining module-local `FORM_NODE_INTERNAL` symbol, `NodeOwnership` state, `FormNodeInternal<T>` lifecycle interface with `disposeFromOwner()`, and transactional two-phase `adoptChildNodes`.
+- Updated `packages/form/src/core/field.ts` (149 lines) tracking explicit ownership, rejecting direct adopted disposal, and implementing `disposeFromOwner()`.
+- Updated `packages/form/src/core/group.ts` (184 lines) enforcing canonical options shape `{ fields, scope? }`, tracking explicit ownership, rejecting direct adopted disposal, and implementing `disposeFromOwner()`.
+- Updated `packages/form/src/core/form.ts` (181 lines) supporting root Scope lifecycle and cascade disposal to adopted descendants.
+- Updated `packages/form/test/unit/group.test.ts` (13 tests) testing canonical options syntax, child key `"fields"`, dangerous keys, and standalone lifecycle.
+- Updated `packages/form/test/unit/form.test.ts` (14 tests) testing complete ownership matrix, duplicate adoption, external scope rejection, disposed node rejection, transactional rollback safety, and adopted child disposal rejection.
+- Updated `packages/form/test/unit/types.test.ts` (2 tests) verifying static type inference with canonical options and child key `"fields"`.
+- Updated `scripts/package-validation/validate-form.mjs` verifying adopted child disposal rejection in packed clean consumer scenario.
 - Updated `packages/form/README.md`, `PROJECT_STATE.md`, and `DUTY_WATCH.md`.
 
 ### Validation
 
-- `pnpm --filter @vii-labs/form lint` (passed cleanly, 0 warnings/errors)
-- `pnpm --filter @vii-labs/form typecheck` (passed cleanly)
-- `pnpm --filter @vii-labs/form test` (53 tests passed across 5 test files)
-- `pnpm --filter @vii-labs/form build` (compiled clean ESM and declaration artifacts)
-- `node scripts/package-validation/validate-form.mjs` (passed, pack inspection and clean consumer runtime scenario verified)
+- `pnpm nx lint form` (passed cleanly, 0 warnings/errors)
+- `pnpm nx typecheck form` (passed cleanly)
+- `pnpm nx test form` (58 tests passed across 5 test suites)
+- `pnpm nx build form` (compiled clean ESM and declaration artifacts)
+- `node scripts/package-validation/validate-form.mjs` (passed, packed tarball and clean consumer runtime scenario verified)
 - `git diff --check` (passed, 0 whitespace/conflict errors)
 - `NX_DAEMON=false pnpm validate` (passed full repository validation)
 

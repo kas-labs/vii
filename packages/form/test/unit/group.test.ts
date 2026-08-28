@@ -3,7 +3,7 @@ import { describe, expect, test, vi } from "vitest";
 import { createField } from "../../src/core/field.js";
 import { createFieldGroup } from "../../src/core/group.js";
 
-describe("createFieldGroup (P1d)", () => {
+describe("createFieldGroup (P1d corrections)", () => {
   test("initializes with nested aggregate value and rawValue mirroring", () => {
     const group = createFieldGroup({
       fields: {
@@ -36,14 +36,26 @@ describe("createFieldGroup (P1d)", () => {
     });
   });
 
-  test("supports direct object fields argument syntax", () => {
-    const street = createField({ initialValue: "123 Main St" });
-    const city = createField({ initialValue: "Berlin" });
-    const group = createFieldGroup({ street, city });
+  test("supports legitimate user field named 'fields' without syntax conflict", () => {
+    const group = createFieldGroup({
+      fields: {
+        fields: createField({ initialValue: "real user value" }),
+        other: createField({ initialValue: "other" }),
+      },
+    });
 
-    expect(group.fields.street.getValue()).toBe("123 Main St");
-    expect(group.fields.city.getValue()).toBe("Berlin");
-    expect(group.getValue()).toEqual({ street: "123 Main St", city: "Berlin" });
+    expect(group.fields.fields.getValue()).toBe("real user value");
+    expect(group.fields.other.getValue()).toBe("other");
+    expect(group.getValue()).toEqual({
+      fields: "real user value",
+      other: "other",
+    });
+
+    group.fields.fields.setValue("updated fields value");
+    expect(group.getValue()).toEqual({
+      fields: "updated fields value",
+      other: "other",
+    });
   });
 
   test("child mutation updates aggregate value and notifies group subscribers", () => {
@@ -198,7 +210,7 @@ describe("createFieldGroup (P1d)", () => {
     expect(group.dirty.get()).toBe(false);
   });
 
-  test("disposal cascades to child nodes and is idempotent", () => {
+  test("standalone group disposal cascades to child nodes and is idempotent", () => {
     const street = createField({ initialValue: "Main St" });
     const city = createField({ initialValue: "Berlin" });
     const group = createFieldGroup({ fields: { street, city } });
@@ -213,7 +225,7 @@ describe("createFieldGroup (P1d)", () => {
     expect(() => city.getValue()).toThrowError("Field is disposed");
   });
 
-  test("parent Scope disposal cascades to group and child nodes", () => {
+  test("parent Scope disposal cascades to standalone group and child nodes", () => {
     const parentScope = createScope({ name: "parent" });
     const street = createField({ initialValue: "Main St" });
     const group = createFieldGroup({ fields: { street }, scope: parentScope });

@@ -76,6 +76,14 @@ try {
     "package/dist/index.d.ts.map",
     "package/dist/index.js",
     "package/dist/index.js.map",
+    "package/dist/core/field.d.ts",
+    "package/dist/core/field.d.ts.map",
+    "package/dist/core/field.js",
+    "package/dist/core/field.js.map",
+    "package/dist/core/types.d.ts",
+    "package/dist/core/types.d.ts.map",
+    "package/dist/core/types.js",
+    "package/dist/core/types.js.map",
     "package/dist/adapters/react/index.d.ts",
     "package/dist/adapters/react/index.d.ts.map",
     "package/dist/adapters/react/index.js",
@@ -99,6 +107,7 @@ try {
   // Create clean consumer fixture source
   const consumerSource = `
 import * as form from "@vii-labs/form";
+import { createField } from "@vii-labs/form";
 import * as formReact from "@vii-labs/form/react";
 import * as formVanilla from "@vii-labs/form/vanilla";
 import * as formAngular from "@vii-labs/form/angular";
@@ -109,6 +118,46 @@ export const reactKeys = Object.keys(formReact);
 export const vanillaKeys = Object.keys(formVanilla);
 export const angularKeys = Object.keys(formAngular);
 export const vueKeys = Object.keys(formVue);
+
+export function runFieldScenario() {
+  const field = createField({ initialValue: "alpha" });
+  const initialVal = field.getValue();
+  const initialDirty = field.dirty.get();
+  const initialTouched = field.touched.get();
+
+  field.setValue("beta");
+  field.markTouched();
+  const mutatedVal = field.getValue();
+  const mutatedDirty = field.dirty.get();
+  const mutatedTouched = field.touched.get();
+
+  field.reset();
+  const resetVal = field.getValue();
+  const resetDirty = field.dirty.get();
+  const resetTouched = field.touched.get();
+
+  field.dispose();
+
+  let postDisposeError = false;
+  try {
+    field.getValue();
+  } catch (err) {
+    postDisposeError = true;
+  }
+
+  return {
+    initialVal,
+    initialDirty,
+    initialTouched,
+    mutatedVal,
+    mutatedDirty,
+    mutatedTouched,
+    resetVal,
+    resetDirty,
+    resetTouched,
+    postDisposeError,
+  };
+}
 `;
 
   await import("node:fs/promises").then((fs) =>
@@ -132,26 +181,48 @@ export const vueKeys = Object.keys(formVue);
   });
 
   const consumer = await import(path.join(consumerDirectory, "dist/main.js"));
-  assert.deepEqual(consumer.rootKeys, [], "clean consumer root export should be empty in P1b");
+  assert.deepEqual(
+    consumer.rootKeys,
+    ["createField"],
+    "clean consumer root export should contain createField in P1c",
+  );
   assert.deepEqual(
     consumer.reactKeys,
     [],
-    "clean consumer react subpath export should be empty in P1b",
+    "clean consumer react subpath export should be empty in P1c",
   );
   assert.deepEqual(
     consumer.vanillaKeys,
     [],
-    "clean consumer vanilla subpath export should be empty in P1b",
+    "clean consumer vanilla subpath export should be empty in P1c",
   );
   assert.deepEqual(
     consumer.angularKeys,
     [],
-    "clean consumer angular subpath export should be empty in P1b",
+    "clean consumer angular subpath export should be empty in P1c",
   );
   assert.deepEqual(
     consumer.vueKeys,
     [],
-    "clean consumer vue subpath export should be empty in P1b",
+    "clean consumer vue subpath export should be empty in P1c",
+  );
+
+  const scenarioResult = consumer.runFieldScenario();
+  assert.deepEqual(
+    scenarioResult,
+    {
+      initialVal: "alpha",
+      initialDirty: false,
+      initialTouched: false,
+      mutatedVal: "beta",
+      mutatedDirty: true,
+      mutatedTouched: true,
+      resetVal: "alpha",
+      resetDirty: false,
+      resetTouched: false,
+      postDisposeError: true,
+    },
+    "clean consumer field scenario must execute correctly against packed artifact",
   );
 
   // Sanity size logging

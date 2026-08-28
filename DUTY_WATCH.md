@@ -37,6 +37,52 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-28 17:35 CEST | Production Form Phase 1 Slice P1c: Field Core (API & Lifecycle Correction)
+
+Status: completed
+Branch: `feat/form-p1c-field-core`
+PR: #169 (Draft)
+
+### Scope
+
+- Execute bounded production slice P1c (Field Core) correction pass for Vii Form Phase 1 on baseline commit `6734821961853a140cd611f93520ddb827c1fa8c` (PR #168 merged into `main`).
+- Implement the first production runtime primitive for `@vii-labs/form`: unparsed `createField<TValue>`.
+- Enforce strict `Raw === Value === TValue` invariant across the entire P1c surface; eliminate premature parser-like TRaw generics and unsafe type casts.
+- Provide fine-grained reactive state for leaf `value`, `rawValue`, baseline-relative `dirty` tracking, independent `touched` state, batched `reset()`, and deterministic `@vii-labs/core` `Scope` lifecycle integration.
+- Document exact lifecycle semantics: field methods (`getValue`, `setValue`, `reset`, etc.) throw `Error("Field is disposed")` after disposal; `dirty` computed throws `Error("Computed is disposed")`; underlying State references remain quiescent snapshots under Core State semantics.
+- Maintain absolute non-goals for P1c: ZERO form tree/groups/arrays (`createForm`, `createFieldGroup`, `createFieldArray`), NO validation engine (rules, async rules, debounce, AbortSignal), NO parsers (parser-aware Raw/Value divergence deferred to P1e), NO Standard Schema bridge, NO submission pipeline, NO server issues, NO framework adapter behavior, NO `@vii-labs/form` publication (`private: true`), and ZERO modifications to `@vii-labs/core`.
+
+### Changes
+
+- Updated `packages/form/src/core/types.ts` defining `FieldEqualityFn<T>`, `CreateFieldOptions<TValue>`, and `FieldState<TValue>` (98 lines, <= 250 limit). Removed public `initialValue`/`initialRawValue` signals, kept baseline tracking internal.
+- Updated `packages/form/src/core/field.ts` implementing `createField` with zero unsafe type casts, using `@vii-labs/core` primitives (`state`, `computed`, `createScope`, `batch`) (114 lines, <= 250 limit).
+- Updated `packages/form/src/index.ts` exporting `createField`, `CreateFieldOptions`, `FieldEqualityFn`, and `FieldState`.
+- Created comprehensive unit tests in `packages/form/test/unit/field.test.ts` (20 test cases / 27 total assertions covering initial state, Raw===Value invariant, mutation, baseline return, touched independence, batched reset, same-value suppression, custom equality, granular subscriptions, exact Scope lifecycle/idempotence/post-dispose assertions, independent fields isolation, `__proto__`/`constructor` data safety, and single-generic type inference).
+- Updated `packages/form/test/package-boundary.test.ts` verifying root exports `["createField"]` while adapter subpaths remain empty.
+- Updated `scripts/package-validation/validate-form.mjs` registering emitted `dist/core/*` files and executing a real runtime clean consumer scenario against the packed `.tgz` artifact.
+- Updated `packages/form/README.md`, `PROJECT_STATE.md`, and `DUTY_WATCH.md`.
+
+### Validation
+
+- `pnpm --filter @vii-labs/form lint` (passed cleanly, 0 warnings)
+- `pnpm --filter @vii-labs/form typecheck` (passed cleanly)
+- `pnpm --filter @vii-labs/form test` (27 tests passed across 2 test files)
+- `pnpm --filter @vii-labs/form build` (compiled clean ESM and declaration artifacts)
+- `node scripts/package-validation/validate-form.mjs` (passed, pack inspection and clean consumer runtime scenario verified)
+- `git diff --check` (passed, 0 whitespace/conflict errors)
+- `NX_DAEMON=false pnpm validate` (passed full repository validation)
+
+### Architecture / compatibility
+
+- Preserves Clean Architecture and downward dependency flow: `@vii-labs/form` depends strictly on `@vii-labs/core`.
+- Zero framework dependencies imported or bundled in form core.
+- Root exports only `createField` and minimum public types; adapter subpaths (`/react`, `/vanilla`, `/angular`, `/vue`) remain clean empty infrastructure entrypoints.
+- Zero modifications to `@vii-labs/core`.
+
+### Remaining / recovery
+
+- None for P1c. Next slice: P1d (Form Tree, Groups & Aggregate State).
+
 ## 2026-08-28 15:45 CEST | Production Form Phase 1 Slice P1b: Package Skeleton & Governance
 
 Status: completed
@@ -812,11 +858,9 @@ PR: not opened (Draft PR pending)
 
 - None for F3. Open Draft PR and await review.
 
-
 Status: completed
 Branch: `chore/package-tail-hardening`
 PR: #153
-
 
 ### Scope
 
@@ -860,11 +904,9 @@ PR: #153
 
 ## 2026-08-25 02:15 CEST | External Binding Cycle Protection & Scope-Graph Fidelity (Audit Finding 18 & Batch 5 Scope Regression)
 
-
 Status: completed
 Branch: `fix/form-external-binding-sync`
 PR: #152
-
 
 ### Scope
 
@@ -909,11 +951,9 @@ PR: #152
 
 ## 2026-08-25 02:00 CEST | Form Data Correctness & Array Lifetime (Audit Findings 10, 11, 12, 13, 14, 15, 16, 17)
 
-
 Status: completed
 Branch: `fix/form-data-correctness`
 PR: #151
-
 
 ### Scope
 
@@ -960,11 +1000,9 @@ PR: #151
 
 ## 2026-08-25 01:45 CEST | Registry Integrity & Installer Safety (Audit Findings 9, 21, 22, 23)
 
-
 Status: completed
 Branch: `security/registry-integrity-containment`
 PR: #150
-
 
 ### Scope
 
@@ -1002,7 +1040,6 @@ PR: #150
 - None. Batch 4 fixes are verified and ready.
 
 ## 2026-08-24 15:30 CEST | Form Research F2 — Re-entrancy Depth Counter Correction (BUG 8 & BUG 9 Remediation)
-
 
 Status: completed
 Branch: `feat/form-nested-arrays-identity`

@@ -123,7 +123,7 @@ See `docs/architecture/SCHEMA_ARCHITECTURE.md` and `docs/quality/SCHEMA_BENCHMAR
 
 Vii Form is the reactive, headless form state and validation engine for the Vii ecosystem, reusing State, Scope, diagnostics, and framework adapters.
 
-Research track F0–F10 is complete and accepted via PR #166. Production Form Phase 1 is active, initiated with Slice P1a (Production Architecture & Package Contract).
+Research track F0–F10 is complete and accepted via PR #166. Production Form Phase 1 is active (P1a architecture and P1b package skeleton complete; Slice P1c Field Core next).
 
 Production Phase 1 scope:
 

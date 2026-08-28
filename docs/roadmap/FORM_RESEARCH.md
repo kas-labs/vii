@@ -1,7 +1,7 @@
 # Vii Form Research Roadmap
 
 > **Status**: Research Concluded & Accepted (F0-F10 Completed via PR #166)
-> **Current Phase**: Production Form Phase 1 (P1a Active)
+> **Current Phase**: Production Form Phase 1 (P1b Completed, P1c Next)
 > **Governing Strategy**: Evidence-driven Build-vs-Buy (Option A: Graduate to Build)
 > **Prerequisites**: Phase 1 (Core State), Phase 2 (Adapters/CLI), Scope/Lifecycle Foundations, Schema Research (`Wrap + Reduce`)
 

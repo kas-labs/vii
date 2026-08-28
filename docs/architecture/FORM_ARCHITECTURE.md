@@ -1,6 +1,6 @@
 # Vii Form Production Architecture & Package Contract
 
-> **Status:** Active Production Architecture Contract (Phase 1 Baseline)
+> **Status:** Planned Production Architecture Contract (Phase 1 Baseline)
 > **Package Target:** `@vii-labs/form` (`packages/form/`)
 > **Prerequisites:** `@vii-labs/core` (Stable Reactive Primitives), Form Research F0–F10 Acceptance (PR #166, SHA `b908a52c`)
 > **Maturity Level:** Experimental / Preview Candidate (under `docs/governance/API_STABILITY.md`)
@@ -10,10 +10,14 @@
 
 ## 1. Executive Summary & Production Charter
 
-Vii Form is the official reactive, headless form state and validation engine for the Vii ecosystem. Building upon the verified empirical evidence of research slices F0 through F10 (documented in [`research/form/F10_CONSUMER_VALIDATION.md`](../../research/form/F10_CONSUMER_VALIDATION.md) and [`research/form/F9_EVIDENCE.md`](../../research/form/F9_EVIDENCE.md)), Vii Form translates the high-performance push-pull reactivity and deterministic `Scope` lifecycle of `@vii-labs/core` into a typed, fine-grained form tree.
+Vii Form is the planned production headless form state and validation engine for the Vii ecosystem. Building upon the verified empirical evidence of research slices F0 through F10 (documented in [`research/form/F10_CONSUMER_VALIDATION.md`](../../research/form/F10_CONSUMER_VALIDATION.md) and [`research/form/F9_EVIDENCE.md`](../../research/form/F9_EVIDENCE.md)), Vii Form translates the push-pull reactivity and deterministic `Scope` lifecycle of `@vii-labs/core` into a typed, fine-grained form tree.
 
 ### Core Mission
-Provide application developers across Vanilla DOM, React, Angular, Vue, and future native Vii runtimes with a high-throughput, leak-free, accessible, and type-safe form interaction layer that achieves sub-microsecond field updates, native async cancellation, standard schema validation, and robust server issue routing without duplicating state or locking into any single UI framework.
+Provide application developers across Vanilla DOM, React, Angular, Vue, and future native Vii runtimes with a responsive, lifecycle-safe, accessible, and type-safe form interaction layer that supports fine-grained field reactivity, native async cancellation, standard schema validation, and structured server issue routing without duplicating state or locking into any single UI framework.
+
+### Performance & Quality Charter
+- **Evidence-Backed Baseline:** F10 research demonstrated sub-microsecond leaf mutations under isolated microbenchmarks. Production Phase 1 is designed to preserve competitive fine-grained reactivity without hardcoding latency promises into the public API contract.
+- **Production Gate:** Exact performance baselines, memory retention budgets, and bundle limits will be measured and enforced during slice P1l on production artifacts.
 
 ---
 
@@ -45,10 +49,10 @@ Provide application developers across Vanilla DOM, React, Angular, Vue, and futu
 - **Location:** `packages/form/`
 - **License:** Apache-2.0
 - **Type:** Pure ESM (`"type": "module"`)
-- **Side Effects:** `false` (100% tree-shakable)
+- **Side Effects:** `false` (intended to enable bundler tree-shaking)
 
 ### 3.2 Packaging & Subpath Strategy: Single Package with Subpath Exports
-Following Vii package conventions and minimizing maintenance overhead while preserving strict tree-shaking and zero framework lock-in, Vii Form distributes its core and framework adapters as subpath exports from one unified package:
+Following Vii package conventions and minimizing maintenance overhead while preserving clean separation and zero framework lock-in, Vii Form distributes its core and framework adapters as subpath exports from one unified package:
 
 ```json
 {
@@ -80,9 +84,17 @@ Following Vii package conventions and minimizing maintenance overhead while pres
 ```
 
 ### 3.3 Dependency & Peer Dependency Governance
-1. **Zero Runtime Dependencies in Core:** `@vii-labs/form` depends strictly on `@vii-labs/core` (via workspace/peer range). It contains **zero** third-party runtime dependencies.
-2. **Standard Schema Dependency:** Standard Schema is consumed strictly at the TypeScript type level via `@standard-schema/spec` as a dev dependency. No schema runtime is bundled.
-3. **Optional Framework Peer Dependencies:**
+1. **Third-Party Runtime Dependencies:** `@vii-labs/form` has **no third-party bundled JavaScript runtime dependencies**. It depends at runtime on required peer `@vii-labs/core`.
+2. **Standard Schema Specification Dependency:** `@standard-schema/spec` is declared in `dependencies` and consumed strictly via `import type`. This guarantees that public `.d.ts` declaration files resolve cleanly in downstream consumer projects without manual type-package installation, while adding zero JavaScript runtime or bundle bytes.
+3. **Required Core Peer Dependency:**
+   ```json
+   {
+     "peerDependencies": {
+       "@vii-labs/core": ">=0.1.0-experimental.2"
+     }
+   }
+   ```
+4. **Optional Framework Peer Dependencies:**
    ```json
    {
      "peerDependencies": {
@@ -98,7 +110,7 @@ Following Vii package conventions and minimizing maintenance overhead while pres
      }
    }
    ```
-4. **Tree-Shaking Guarantee:** Importing `@vii-labs/form` (the root entrypoint) bundles **zero** DOM or framework adapter code. Consumers using `@vii-labs/form/react` bundle only Core + React adapter code, leaving Angular and Vue code completely unreferenced.
+5. **Tree-Shaking Architecture:** Importing `@vii-labs/form` (the root entrypoint) includes no DOM or framework adapter code. Consumers importing `@vii-labs/form/react` import only Core and React adapter code, leaving Angular and Vue code unreferenced. Actual emitted bundle sizes remain dependent on consumer bundler configurations.
 
 ---
 
@@ -117,8 +129,7 @@ packages/form/src/
 │   ├── group.ts              # createFieldGroup object node implementation (<= 250 lines)
 │   ├── array.ts              # createFieldArray collection node implementation (<= 250 lines)
 │   ├── form.ts               # createForm root coordinator (<= 250 lines)
-│   ├── external-binding.ts   # bindFormToExternalState synchronization (<= 220 lines)
-│   ├── snapshot.ts           # deepCloneSnapshot with cycle & prototype safety (<= 180 lines)
+│   ├── snapshot.ts           # Internal deepCloneSnapshot with cycle safety (<= 180 lines)
 │   └── diagnostics.ts        # Structural value-free diagnostics helpers (<= 150 lines)
 ├── validation/
 │   ├── types.ts              # Validation rule, trigger, context interfaces (<= 150 lines)
@@ -178,7 +189,7 @@ packages/form/src/
 ┌─────────────────────────────────────────────────────────────┐
 │                      @vii-labs/core                         │
 │   (state, computed, batch, createScope, diagnostics)        │
-└─────────────────────────────────────────────────────────────┘
+└──────────────────────────────┘
 ```
 
 **Architectural Invariants:**
@@ -202,8 +213,6 @@ packages/form/src/
 | `standardSchema(schema)` | **PUBLIC CANDIDATE** | Experimental | Standard Schema v1 validator bridge. |
 | `createNumberParser(options?)` | **PUBLIC CANDIDATE** | Experimental | Built-in string-to-number parser with raw retention. |
 | `createStringParser(options?)` | **PUBLIC CANDIDATE** | Experimental | Built-in string trimmer/normalizer parser. |
-| `bindFormToExternalState(form, state)` | **PUBLIC CANDIDATE** | Experimental | Bidirectional synchronization bridge to external Vii State. |
-| `deepCloneSnapshot(data)` | **PUBLIC CANDIDATE** | Experimental | Cycle-safe, prototype-hardened immutable snapshot creator. |
 | `useField(field)` | **PUBLIC CANDIDATE** (`/react`) | Experimental | React hook for leaf field state via `useSyncExternalStore`. |
 | `useForm(form)` | **PUBLIC CANDIDATE** (`/react`) | Experimental | React hook for aggregate form status. |
 | `useFieldArray(array)` | **PUBLIC CANDIDATE** (`/react`) | Experimental | React hook for dynamic collection nodes. |
@@ -218,10 +227,12 @@ packages/form/src/
 | `FieldIssue`, `ParseIssue`, `ServerIssue` | **PUBLIC TYPE** | Experimental | Structured issue taxonomy. |
 | `ValidationRule<T>` | **PUBLIC TYPE** | Experimental | Sync/async validation rule signature. |
 | `SubmissionStatus` | **PUBLIC TYPE** | Experimental | `"idle" \| "validating" \| "submitting" \| "succeeded" \| "failed" \| "cancelled"`. |
-| `parsePath`, `sanitizePath` | **INTERNAL** | Internal | Path parsing and prototype-pollution traversal guards. |
+| `deepCloneSnapshot(data)` | **INTERNAL** | Internal | Internal submission snapshot generator; unexported to avoid generic cloning commitment. |
+| `parsePath`, `sanitizePath` | **INTERNAL** | Internal | Path parsing and traversal utilities. |
 | `collectArraySnapshots` | **INTERNAL** | Internal | Submission snapshot generator for in-flight array mapping. |
 | `routeServerIssuesToTree` | **INTERNAL** | Internal | Recursive server issue routing algorithm. |
 | `runValidationScheduler` | **INTERNAL** | Internal | Debounce, revision, and AbortController execution engine. |
+| `bindFormToExternalState(form, state)` | **DEFERRED** | Deferred | Research-only external store synchronization bridge; deferred pending dedicated consumer need. |
 | `visited` field status | **DEFERRED** | Deferred | Focused-at-least-once tracking; deferred until consumer demonstrates real need. |
 | `async` parser pipeline | **DEFERRED** | Deferred | Async parsing rejected in F5 due to presentation race conditions; sync parsing only. |
 | `setErrors(string[])` (legacy F1 API) | **REJECTED / RESEARCH-ONLY** | N/A | Replaced by structured `setValidationIssues` and `setServerIssues`. |
@@ -276,7 +287,9 @@ $$\text{Raw Presentation Input} \xrightarrow{\text{parse}} \text{Domain Value} \
 
 ### 7.2 Rebasing & Reset Contract
 - `form.reset()` restores initial domain baseline and initial raw baseline.
-- On a parser-backed field, calling `field.reset(newDomainValue, newRawValue)` requires **both** values because parsers have no mathematical inverse. Calling single-argument `reset(newDomainValue)` on a parsed field throws a `TypeError`.
+- `form.reinitialize(newBaseline)` is the canonical baseline replacement API that adopts a new baseline and marks the form pristine (`dirty === false`).
+- On parser-backed fields (`Raw !== Value`), parsers have no mathematical inverse. Vii Form does not invent automatic serialization from domain `Value` to `Raw`.
+- The two-argument field rebase overload `field.reset(newDomainValue, newRawValue)` is deferred from public candidate APIs in favor of the canonical whole-form `form.reinitialize(newBaseline)`. On unparsed fields (`Raw = Value`), single-argument reset restores both.
 
 ---
 
@@ -381,26 +394,24 @@ Dynamic array collections (`createFieldArray`) require first-class logical ident
 | Threat Vector | Vulnerability Source | Production Defense Contract |
 | :--- | :--- | :--- |
 | **DOM XSS** | Hostile messages in validation, parse, or server issues | Issue messages are plain text/data. Vanilla adapter writes strictly to `textContent`. Framework adapters rely on template expression escaping. Zero `innerHTML` sinks. |
-| **Prototype Pollution (Codes)** | `__proto__`, `constructor`, `prototype` in issue codes | Blocked with security exceptions in `sanitizeIssue`, `sanitizeParseIssue`, `sanitizeServerIssue`. |
-| **Prototype Pollution (Paths)** | `__proto__` as field/path names in domain models | **Data vs Sink Principle:** `__proto__` is valid data in structured paths. Protection is enforced at object sinks: dictionaries use `Object.create(null)`, `Object.hasOwn`, and explicit own-property traversal. |
+| **Prototype Pollution (Data vs Sink Principle)** | `__proto__`, `constructor`, `prototype` in paths, codes, or domain models | `__proto__`, `constructor`, and `prototype` are legitimate DATA strings. They are NEVER globally rejected. Protection is enforced strictly at unsafe sinks (object materialization, dictionary property assignment, dynamic path navigation) using `Object.create(null)`, `Object.hasOwn`, and own-property checks. |
 | **Malformed Schemas** | Schema providers throwing or returning malformed payloads | Standard Schema adapter validates return contracts and fails closed on invalid provider output. |
-| **Hostile Getters / Proxies** | Output payloads with throwing getters or proxy traps | `deepCloneSnapshot` safely triggers getters, traverses traps, and isolates output data. |
+| **Hostile Getters / Proxies** | Output payloads with throwing getters or proxy traps | Snapshotting is NOT a security sandbox and does not claim to execute hostile user traps safely. `deepCloneSnapshot` operates on a documented structured-data domain and rejects or isolates unsupported object graphs. |
 | **Telemetry Leakage** | Diagnostics capturing passwords, tokens, or form values | Diagnostics events are strictly value-free: record only `revision`, `issueCount`, `status`, and `reason: Error.name`. Zero form values or messages in telemetry. |
 
 ---
 
 ## 12. Snapshot & Deep-Cloning Contract (`deepCloneSnapshot`)
 
-The submission boundary and output pipeline produce an immutable snapshot via `deepCloneSnapshot(data)`.
+The internal submission boundary produces an immutable snapshot via `deepCloneSnapshot(data)`.
 
-### 12.1 Supported Types & Preservation Rules
-- **Plain Objects:** Re-allocated using null-prototype `Object.create(null)` or clean object copies; own-enumerable properties copied.
-- **Arrays:** Cloned into fresh array instances.
-- **Cyclic & Shared References:** Tracked via `Map<object, object>`; cyclic and diamond references clone with identical graph topology without stack overflow.
-- **`Map` & `Set`:** Cloned into fresh `Map` / `Set` instances with cloned entries.
-- **`Date` & `RegExp`:** Cloned into fresh instances preserving timestamps and flags.
+### 12.1 Supported Types & Scope Boundary
+`deepCloneSnapshot` supports the documented structured-data domain only:
+- **Supported:** Primitives (`string`, `number`, `boolean`, `null`, `undefined`, `bigint`, `symbol`), arrays, plain objects, null-prototype records, `Map`, `Set`, `Date`, `RegExp`, cyclic and shared object references.
+- **Preserved by Reference:** Functions, Symbols, Promises.
+- **Unsupported / Rejected:** Proxy objects, accessor-heavy objects (with active getters/setters that throw or mutate external state), arbitrary class instances, `WeakMap`, `WeakSet`, DOM nodes, platform handles.
+- **Security Boundary:** `deepCloneSnapshot` is NOT an execution sandbox. It operates on structured data and will throw if getter traps throw or violate data invariants.
 - **`__proto__` as Own Property:** Copied via `Object.defineProperty` as data without altering prototype chains.
-- **Functions, Symbols, Promises:** Preserved by reference or excluded per transform options.
 
 ---
 
@@ -424,7 +435,7 @@ The submission boundary and output pipeline produce an immutable snapshot via `d
 - **Primitive:** `useSyncExternalStore` for tear-free React 18/19 concurrent rendering.
 - **Snapshot Memoization:** Live store evaluation with referential snapshot memoization to eliminate render cascades.
 - **Pre-Subscription Freshness:** Live store read on mount ensures mutations occurring before subscription are not lost.
-- **StrictMode & Cleanup:** Clean unmount unsubscription verified with zero dangling listeners.
+- **StrictMode & Cleanup:** Clean unmount unsubscription without dangling listeners.
 - **Render Scoping:** Keystrokes in a field trigger re-render **only** in that field's subscribed component (0 sibling re-renders).
 
 ### 13.2 Vanilla DOM Adapter (`@vii-labs/form/vanilla`)
@@ -447,7 +458,7 @@ The submission boundary and output pipeline produce an immutable snapshot via `d
 
 Because F10 research was validated under Mock DOM and `react-test-renderer`, **real browser and accessibility validation is a mandatory acceptance requirement for Production Phase 1.**
 
-### 14.1 Acceptance Criteria
+### 14.1 Acceptance Criteria (Slice P1k)
 1. **Real Chromium / Browser Smoke:** Automated Playwright/CDP suite executing interactive workflows in headless Chromium.
 2. **Focus Management:** Verification of deterministic first-invalid field focus navigation upon submission failure.
 3. **IME Composition Support:** Korean/Japanese/Chinese IME composition events must not trigger premature validation or snap-back on parsed inputs.
@@ -458,18 +469,18 @@ Because F10 research was validated under Mock DOM and `react-test-renderer`, **r
 
 ## 15. Performance, Memory & Bundle Budgets
 
-### 15.1 Baseline Targets (Derived from F9/F10 Evidence)
-- **Leaf Mutation Latency:** $\le 1.0\ \mu\text{s}$ per keystroke on 100-field forms; $\le 0.5\ \mu\text{s}$ on 1,000-field forms.
-- **FieldArray Swap Latency:** $\le 1.0\ \mu\text{s}$ on 50-item collections.
-- **Bundle Budgets (Gzip Level 9):**
-  - `@vii-labs/form` Core: $\le 10.5\ \text{kB}$ gzip.
-  - `@vii-labs/form` Standalone `createField`: $\le 5.0\ \text{kB}$ gzip.
-  - `@vii-labs/form/react` Adapter: $\le 2.0\ \text{kB}$ gzip incremental.
-- **Memory Retention:** 0 active scope leaks, 0 dangling listeners, and $\le 100\ \text{kB}$ heap growth across 1,000 mount/dispose cycles.
+### 15.1 Baseline Targets (To Be Formalized in P1l)
+- **Leaf Mutation Latency:** Production implementation SHOULD preserve sub-microsecond leaf mutations for common form sizes ($\le 100$ fields).
+- **FieldArray Swap Latency:** Production implementation SHOULD preserve sub-microsecond swaps on 50-item collections.
+- **Bundle Budgets (Gzip Level 9):** Target $\le 10.5\ \text{kB}$ gzip for full Form Core, $\le 5.0\ \text{kB}$ gzip for standalone `createField`, and $\le 2.0\ \text{kB}$ gzip for React adapter.
+- **Memory Retention:** Target 0 active scope leaks, 0 dangling listeners, and bounded heap growth across 1,000 mount/dispose cycles.
 
-### 15.2 Known Performance Risk: 1,000 Server Issue Routing Hotspot
-- **Observed Bottleneck:** Routing 1,000 server issues across deeply nested forms required $\approx 51.5\ \text{ms}$ in research benchmarks due to unindexed recursive tree traversal.
-- **Production Requirement (P1g / P1l):** Implement indexed path lookup (`Map<string, FieldNode>`) to achieve sub-5ms routing for 1,000 server issues.
+### 15.2 Performance Hotspot Investigation: 1,000 Server Issue Routing
+- **Research Observation:** In F10 research benchmarks, unindexed deep recursive tree traversal required $\approx 51.5\ \text{ms}$ for 1,000 server issues.
+- **Production Investigation Requirement:**
+  - Slice P1g SHOULD investigate indexed path/node lookups as the primary candidate optimization.
+  - Slice P1l MUST benchmark the production implementation and establish an empirical performance budget.
+  - A sub-5ms latency target is an aspirational investigation goal, NOT a guaranteed acceptance threshold before implementation profiling.
 
 ---
 
@@ -522,12 +533,12 @@ P1a (Architecture Contract) ➔ P1b (Package Skeleton) ➔ P1c (Field Core) ➔ 
 | **P1d** | **Form Tree, Groups & Aggregate State** | Implement `createFieldGroup`, `createForm`, path resolution, and aggregate computeds. | P1c | Tree aggregation tests pass; line limits verified; NO publication. |
 | **P1e** | **Validation, Parsers & Standard Schema** | Implement sync/async scheduler, debounce, AbortSignal, parsers, and Standard Schema bridge. | P1d | Validation & parser tests pass; fail-closed verified; NO publication. |
 | **P1f** | **FieldArray & Stable Identity** | Implement `createFieldArray`, key derivation, stable identity across reorders, child scope detachment. | P1e | Array mutation & identity tests pass; NO publication. |
-| **P1g** | **Submission & Server Issues** | Implement Model A submission state machine, server issue routing, and snapshot identity mapping. | P1f | Submission & server issue tests pass; hotspot addressed; NO publication. |
+| **P1g** | **Submission & Server Issues** | Implement Model A submission state machine, server issue routing, and snapshot identity mapping. | P1f | Submission & server issue tests pass; hotspot investigated; NO publication. |
 | **P1h** | **React Adapter** | Implement `useField`, `useForm`, `useFieldArray` via `useSyncExternalStore` in `@vii-labs/form/react`. | P1g | React 19 test-renderer & render isolation tests pass; NO publication. |
 | **P1i** | **Vanilla DOM Adapter** | Implement `bindField`, `bindForm`, ARIA projection, and safe textContent sinks in `@vii-labs/form/vanilla`. | P1g | DOM binding & event deduplication tests pass; NO publication. |
 | **P1j** | **Angular & Vue Adapters** | Implement Angular signals handle (`/angular`) and Vue shallowRef handle (`/vue`). | P1g | Cross-framework compliance suite passes; NO publication. |
 | **P1k** | **Browser / A11y / Historical Regressions** | Real Playwright browser smoke, IME composition, focus navigation, and all historical F1-F10 regressions. | P1h, P1i, P1j | Headless Chromium tests & 100% regressions pass; NO publication. |
-| **P1l** | **Performance, Bundle & Memory Gate** | Execute standalone bundle builds, leak detection (1,000 cycles), and 1,000 server issue benchmarks. | P1k | All numeric release budgets satisfied; NO publication. |
+| **P1l** | **Performance, Bundle & Memory Gate** | Execute standalone bundle builds, leak detection (1,000 cycles), and performance benchmarks. | P1k | All empirical release budgets established; NO publication. |
 | **P1m** | **Production Graduation & Public API Review** | Public API review, Changeset creation, documentation sync, and formal graduation to candidate. | P1l | Final review approval; package publication ONLY upon explicit release gate. |
 
 ---
@@ -539,18 +550,18 @@ P1a (Architecture Contract) ➔ P1b (Package Skeleton) ➔ P1c (Field Core) ➔ 
 | **Raw vs Domain Value Separation** | P1e | `parsers/builtins.ts` | Non-numeric string preserves raw presentation text while domain value stays pristine. |
 | **Monotonic Async Validation Cancellation** | P1e | `validation/revision.ts` | 200 rapid keystrokes abort 199 requests with 0 stale commits and 0 unhandled rejections. |
 | **Standard Schema Fail-Closed** | P1e | `validation/standard-schema.ts` | Non-array `issues` payload throws structured `TypeError` and never marks value valid. |
-| **Data vs Sink Prototype Safety** | P1d / P1g | `core/path.ts`, `submission/server-issues.ts` | `__proto__` preserved as data in paths; object sinks remain unpolluted. |
+| **Data vs Sink Prototype Safety** | P1d / P1g | `core/path.ts`, `submission/server-issues.ts` | `__proto__`, `constructor`, `prototype` are valid data; object materialization sinks remain unpolluted. |
 | **FieldArray Stable Key Identity** | P1f | `core/array.ts` | Swapping array items preserves child Scope, focus, and error states. |
 | **In-Flight Reorder Server Routing** | P1g | `submission/array-snapshot.ts` | Submitting array swap routes server response to logical item by submitted identity snapshot. |
 | **Vanilla Single Commit Event** | P1i | `adapters/vanilla/bind-field.ts` | Keystroke fires validation pipeline exactly once per edit (no duplicate input+change). |
 | **React Snapshot Freshness** | P1h | `adapters/react/use-field.ts` | Pre-subscription mutation does not lose snapshot freshness in `useSyncExternalStore`. |
-| **React StrictMode Double-Mount** | P1h | `adapters/react/use-field.ts` | Double mount/unmount cycle retains active subscriptions with zero memory leaks. |
+| **React StrictMode Double-Mount** | P1h | `adapters/react/use-field.ts` | Double mount/unmount cycle retains active subscriptions without memory leaks. |
 | **Model A Terminal Submission Status** | P1g | `submission/state-machine.ts` | Editing field after successful submission keeps `submissionStatus: "succeeded"` and `dirty: true`. |
 | **Core Push-Pull Computed Caveat** | P1c / P1d | `core/field.ts`, `core/group.ts` | Status evaluators read source signals directly rather than derived computeds inside callbacks. |
 | **DOM XSS Safe textContent Sinks** | P1i | `adapters/vanilla/a11y.ts` | Hostile HTML in server issue renders safely as text without script execution. |
 | **Diagnostics Value-Free Privacy** | P1c / P1g | `core/diagnostics.ts` | Sentinel password/token strings verified absent from all emitted diagnostic events. |
 | **Residual Browser Gap** | P1k | `test/browser/` | Real Chromium smoke verifying IME composition and focus management. |
-| **1,000 Server Issue Scaling Hotspot** | P1g / P1l | `submission/server-issues.ts` | Indexed routing executes 1,000 server issues in $< 5\ \text{ms}$ (vs 51.5 ms unindexed). |
+| **1,000 Server Issue Scaling Hotspot** | P1g / P1l | `submission/server-issues.ts` | Indexed routing investigated to optimize 1,000 server issues during Phase 1. |
 
 ---
 
@@ -560,11 +571,11 @@ P1a (Architecture Contract) ➔ P1b (Package Skeleton) ➔ P1c (Field Core) ➔ 
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **1** | **Packaging & Subpaths** | Single `@vii-labs/form` package with subpath exports (`/react`, `/vanilla`, `/angular`, `/vue`). | Minimizes maintenance overhead, aligns versioning, provides tree-shaking, and avoids package sprawl. | Separate packages (`@vii-labs/form-react`, etc.) for every adapter. | If framework peer incompatibilities force divergent release cadences. |
 | **2** | **Framework Peer Dependencies** | Optional peer dependencies with `peerDependenciesMeta`. | Prevents unnecessary peer dependency installation warnings for users who only use one framework. | Mandatory peer dependencies or bundled framework code. | If package managers fail to resolve optional peers correctly. |
-| **3** | **Public vs Internal API Surface** | Expose only `createForm`, `createField`, `createFieldGroup`, `createFieldArray`, `standardSchema`, parsers, and adapter hooks. | Keeps public surface small, understandable, and maintainable. | Exporting all internal helpers and scheduler utilities. | If external plugin developers require lower-level extension hooks. |
-| **4** | **Reset vs Reinitialize Semantics** | `reset()` restores initial baseline; `reinitialize(newBaseline)` adopts new baseline and clears dirty state. On parsed fields, both domain and raw baselines are required. | Unambiguous baseline semantics; avoids presentation corruption on parsed fields. | Single-value reset guessing raw string representation. | If bidirectional invertible codecs are introduced in Vii Schema. |
+| **3** | **Public vs Internal API Surface** | Expose only `createForm`, `createField`, `createFieldGroup`, `createFieldArray`, `standardSchema`, parsers, and adapter hooks. Internalize `deepCloneSnapshot` and defer `bindFormToExternalState`. | Keeps public surface minimal and avoids accidental generic infrastructure commitments. | Exporting all internal helpers and snapshot utilities. | If external plugin developers demonstrate concrete extension requirements. |
+| **4** | **Reset vs Reinitialize Semantics** | `form.reset()` restores initial baseline; `form.reinitialize(newBaseline)` adopts new baseline and clears dirty state. On parsed fields, domain value cannot synthesize raw text. | Unambiguous baseline semantics; avoids presentation corruption on parsed fields. | Automatic serialization guessing raw string representation. | If bidirectional invertible codecs are introduced in Vii Schema. |
 | **5** | **Diagnostics Privacy Baseline** | Value-free structural telemetry by default (sentinel-tested). | Prevents credential/PII leaks into logging and debugging traces. | Full payload logging with redaction filters. | Explicit opt-in development tracing RFC. |
-| **6** | **Standard Schema Dependency** | Type-only dependency on `@standard-schema/spec`; zero runtime validator dependencies. | Zero-dependency core; universal interop with Zod 4, Valibot, ArkType. | Bundling specific validator libraries or building a proprietary validator monolith. | Standard Schema spec breaking changes. |
-| **7** | **Snapshot Support Boundary** | `deepCloneSnapshot` supports cycles, shared refs, Map, Set, Date, RegExp, plain objects, arrays, and own `__proto__`. | Prevents crashes on rich domain models without leaking attacker prototype members. | Native `structuredClone` (fails on functions/symbols) or naive JSON parse/stringify. | If Web Workers require transferable object streams. |
+| **6** | **Standard Schema Dependency** | Declare `@standard-schema/spec` in `dependencies` consumed strictly via `import type`. | Guarantees public `.d.ts` declaration resolution in clean consumer projects with zero JS runtime/bundle overhead. | DevDependency only (breaks `.d.ts` consumer resolution) or bundling concrete validator runtimes. | Standard Schema spec breaking changes. |
+| **7** | **Snapshot Support Boundary** | `deepCloneSnapshot` supports documented structured domain (primitives, arrays, plain objects, Map, Set, Date, RegExp, cycles, own `__proto__`). Rejects/isolates proxy and class instances. | Operates reliably on structured data; explicitly avoids claiming to make arbitrary hostile code/accessors safe. | Unbounded generic deep clone or native `structuredClone` (fails on functions/symbols). | If Web Workers require transferable object streams. |
 | **8** | **FieldArray Identity Model** | Explicit key extractor with automatic internal ID fallback; identity-strict dirty tracking. | Eliminates collision bugs across unkeyed collections; guarantees UI state preservation. | Positional-only index tracking. | If immutable persistent vector structures are adopted. |
 | **9** | **Submission State Model** | Model A: Terminal status preserved across user edits; dirty tracks value freshness independently. | Semantic clarity; editing after submit does not pretend the prior submit never happened. | Model B: Value edits immediately reset status to `"idle"`. | Strong consumer UX request for auto-idle reset. |
 | **10** | **Publication Timing** | Zero publication before final Production Graduation Gate (P1m). | Enforces rigorous verification before public release. | Publishing intermediate pre-alpha packages during P1c–P1l. | Explicit maintainer release approval. |

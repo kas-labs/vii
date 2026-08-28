@@ -1,0 +1,95 @@
+---
+const nav = [
+  { href: "/docs/", label: "Docs" },
+  { href: "/#ecosystem", label: "Ecosystem" },
+  { href: "/#status", label: "Status" },
+  { href: "https://github.com/kas-labs/vii", label: "GitHub" },
+];
+---
+
+<header class="site-header">
+  <div class="shell header-inner">
+    <a class="brand" href="/" aria-label="Vii home">
+      <span class="brand-mark" aria-hidden="true">Vii</span>
+      <span class="brand-by">by Kas Labs</span>
+    </a>
+    <nav aria-label="Primary navigation">
+      <ul>
+        {nav.map((item) => <li><a href={item.href}>{item.label}</a></li>)}
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<style>
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    border-bottom: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-bg) 88%, transparent);
+    backdrop-filter: blur(14px);
+  }
+
+  .header-inner {
+    display: flex;
+    min-height: 4.5rem;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-6);
+  }
+
+  .brand {
+    display: inline-flex;
+    align-items: baseline;
+    gap: var(--space-2);
+    text-decoration: none;
+  }
+
+  .brand-mark {
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: -0.04em;
+  }
+
+  .brand-by {
+    color: var(--color-text-muted);
+    font-size: 0.75rem;
+  }
+
+  ul {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--space-2) var(--space-5);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  nav a {
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+    font-weight: 550;
+    text-decoration: none;
+    transition: color var(--transition-fast);
+  }
+
+  nav a:hover {
+    color: var(--color-text);
+  }
+
+  @media (max-width: 38rem) {
+    .header-inner {
+      align-items: flex-start;
+      flex-direction: column;
+      gap: var(--space-3);
+      padding-block: var(--space-4);
+    }
+
+    ul {
+      justify-content: flex-start;
+    }
+  }
+</style>

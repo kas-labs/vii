@@ -7,6 +7,14 @@ export default defineConfig({
   integrations: [
     starlight({
       title: "Vii",
+      customCss: ["./src/styles/starlight.css"],
+      social: [
+        {
+          icon: "github",
+          label: "GitHub",
+          href: "https://github.com/kas-labs/vii",
+        },
+      ],
       sidebar: [
         {
           label: "Documentation",

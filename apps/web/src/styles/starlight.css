@@ -1,0 +1,51 @@
+@import "./tokens.css";
+
+:root {
+  --sl-font: var(--font-sans);
+  --sl-font-mono: var(--font-mono);
+  --sl-color-accent-low: var(--color-accent-soft);
+  --sl-color-accent: var(--color-accent);
+  --sl-color-accent-high: var(--color-accent-strong);
+}
+
+:root[data-theme="light"] {
+  --sl-color-bg: var(--color-bg);
+  --sl-color-bg-nav: color-mix(in srgb, var(--color-bg) 92%, transparent);
+  --sl-color-bg-sidebar: var(--color-bg);
+  --sl-color-hairline: var(--color-border);
+  --sl-color-hairline-light: var(--color-border);
+  --sl-color-text: var(--color-text-muted);
+  --sl-color-text-accent: var(--color-accent-strong);
+}
+
+:root[data-theme="dark"] {
+  --sl-color-bg: #111116;
+  --sl-color-bg-nav: rgb(17 17 22 / 92%);
+  --sl-color-bg-sidebar: #111116;
+  --sl-color-hairline: #2d2d37;
+  --sl-color-hairline-light: #2d2d37;
+  --sl-color-text: #a5a5b0;
+  --sl-color-text-accent: #a0a0ff;
+}
+
+.site-title {
+  font-weight: 700;
+  letter-spacing: -0.04em;
+}
+
+header.header {
+  backdrop-filter: blur(14px);
+}
+
+.sl-markdown-content :is(h1, h2, h3) {
+  letter-spacing: -0.025em;
+}
+
+.sl-markdown-content code:not(:where(.not-content *)) {
+  border-radius: var(--radius-sm);
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 3px;
+}

@@ -37,6 +37,59 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-28 01:25 CEST | Production Form Phase 1 Slice P1a: Production Architecture & Package Contract (Bounded Correction Pass)
+
+Status: completed
+Branch: `docs/form-p1a-production-architecture`
+PR: #167 (Draft)
+
+### Scope
+
+- Execute FIRST bounded production slice P1a (Production Architecture & Package Contract) for Vii Form Phase 1 on baseline commit `b908a52c48cd43efa6327f9c1b23981bdd5d2416` (PR #166 merged into `main`).
+- Convert accepted F0–F10 research conclusions into an authoritative, normative production architecture contract and package specification in `docs/architecture/FORM_ARCHITECTURE.md`.
+- Define product and package boundaries for `@vii-labs/form` (`packages/form/`) with single-package subpath distribution (`@vii-labs/form`, `/react`, `/vanilla`, `/angular`, `/vue`).
+- Establish internal modular source graph adhering to repository code-quality budgets ($\le 250$ lines per module) and Clean Architecture dependency layering.
+- Classify minimal public API candidates, internal utilities (internalizing `deepCloneSnapshot`), and deferred features (`bindFormToExternalState`) under `docs/governance/API_STABILITY.md`.
+- Clarify dependency architecture: `@standard-schema/spec` in `dependencies` consumed strictly via `import type` for zero-runtime/clean `.d.ts` resolution; `@vii-labs/core` required runtime peer; optional framework peers.
+- Replace benchmark guarantees with precise architecture language: F10 evidence vs P1l production acceptance gates.
+- Refine Data-vs-Sink security contract: `__proto__`, `constructor`, `prototype` are valid DATA tokens (including in issue codes); protection strictly enforced at unsafe sinks via null-prototype records and own-property checks.
+- Document `deepCloneSnapshot` structured-data boundary (primitives, plain objects, arrays, Map, Set, Date, RegExp, cycles) and explicit rejection/isolation of hostile Proxies and accessors without claiming execution sandboxing.
+- Frame 1,000 server issue routing hotspot as an optimization/investigation target for P1g/P1l rather than an unproven guarantee.
+- Maintain canonical baseline replacement API `form.reinitialize(newBaseline)` and defer parsed field rebase overloads.
+- Synchronize durable project state across `ROADMAP.md`, `PROJECT_STATE.md`, and `docs/roadmap/FORM_RESEARCH.md`.
+- Strictly enforce non-goals: ZERO runtime implementation in `packages/form/`, NO `@vii-labs/form` publication, NO modification to `@vii-labs/core`, NO automatic merge.
+
+### Changes
+
+- Refined `docs/architecture/FORM_ARCHITECTURE.md`:
+  - Defined comprehensive 22-section production architecture contract covering product/package boundaries, module decomposition, minimal public API candidate classification, push-pull reactive semantics, raw value retention, validation & Standard Schema fail-closed boundary with clean type resolution, FieldArray identity stability, Model A submission lifecycle, security threat model (Data vs Sink principle), structured snapshot boundaries, framework adapters, real browser/a11y acceptance gate, performance investigation targets & 1,000 server issue hotspot, error ownership, Scope lifecycle disposal, testing strategy, P1a–P1m slice roadmap, research transfer matrix, 10-item decision log, and non-goals.
+- Updated `ROADMAP.md`:
+  - Updated Vii Form section from Research to `Complete (Research Accepted) / Production Phase 1 Active` with full Phase 1 scope description.
+- Updated `PROJECT_STATE.md`:
+  - Recorded Form Research F0–F10 completion, graduation decision, and Production Form Phase 1 initiation with P1a proposed on Draft PR #167 and P1b next step.
+- Updated `docs/roadmap/FORM_RESEARCH.md`:
+  - Updated status header to `Research Concluded & Accepted (F0-F10 Completed via PR #166)` and `Current Phase: Production Form Phase 1 (P1a Active)`.
+- Updated `DUTY_WATCH.md`:
+  - Appended P1a operational handoff record and correction pass details.
+
+### Validation
+
+- `git diff --check`: PASS (0 whitespace/syntax issues).
+- `NX_DAEMON=false pnpm validate`: PASS (formatting, linting, type checking across packages, test suites across packages, builds across all projects, and packed tarball validation).
+- Manual diff inspection: Confirmed documentation-only changes with 0 runtime code added, 0 packages published, 0 core changes.
+
+### Architecture / compatibility
+
+- 100% clean architectural specification: `@vii-labs/core` production semantics preserved without modification; no public `@vii-labs/form` package created or published.
+- Multi-adapter subpath distribution model adopted: `@vii-labs/form` (pure core), `@vii-labs/form/react`, `@vii-labs/form/vanilla`, `@vii-labs/form/angular`, `@vii-labs/form/vue`.
+- Zero third-party bundled JS runtime dependencies beyond required Vii Core peer; type-only dependency on `@standard-schema/spec`.
+- All framework peers declared optional in package metadata.
+
+### Remaining / recovery
+
+- None for P1a. Slice P1a is complete and submitted on PR #167 (Draft).
+- Next slice: P1b (Package Skeleton & Governance) — create `packages/form/` skeleton, build configuration, and testing harness. P1b has NOT started.
+
 ## 2026-08-28 01:05 CEST | Form Research Slice F10: Real Consumer Validation + Build-vs-Buy Graduation Gate (Second & Final Bounded Evidence Correction Pass)
 
 Status: completed

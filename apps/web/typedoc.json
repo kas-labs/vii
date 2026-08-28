@@ -1,0 +1,15 @@
+{
+  "$schema": "../../node_modules/typedoc-plugin-markdown/typedoc-plugin-markdown.schema.json",
+  "entryPoints": ["../../packages/core/src/index.ts"],
+  "tsconfig": "../../packages/core/tsconfig.json",
+  "plugin": ["typedoc-plugin-markdown"],
+  "out": "./src/content/docs/api",
+  "name": "@vii-labs/core API",
+  "readme": "none",
+  "excludePrivate": true,
+  "excludeProtected": true,
+  "excludeExternals": true,
+  "githubPages": false,
+  "hideGenerator": true,
+  "sanitizeComments": true
+}

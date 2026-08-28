@@ -1,4 +1,6 @@
 ---
+import ThemeControl from "./ThemeControl.astro";
+
 const nav = [
   { href: "/docs/", label: "Docs" },
   { href: "/#ecosystem", label: "Ecosystem" },
@@ -13,11 +15,14 @@ const nav = [
       <span class="brand-mark" aria-hidden="true">Vii</span>
       <span class="brand-by">by Kas Labs</span>
     </a>
-    <nav aria-label="Primary navigation">
-      <ul>
-        {nav.map((item) => <li><a href={item.href}>{item.label}</a></li>)}
-      </ul>
-    </nav>
+    <div class="header-actions">
+      <nav aria-label="Primary navigation">
+        <ul>
+          {nav.map((item) => <li><a href={item.href}>{item.label}</a></li>)}
+        </ul>
+      </nav>
+      <ThemeControl />
+    </div>
   </div>
 </header>
 
@@ -31,12 +36,21 @@ const nav = [
     backdrop-filter: blur(14px);
   }
 
-  .header-inner {
+  .header-inner,
+  .header-actions {
     display: flex;
-    min-height: 4.5rem;
     align-items: center;
+  }
+
+  .header-inner {
+    min-height: 4.5rem;
     justify-content: space-between;
     gap: var(--space-6);
+  }
+
+  .header-actions {
+    justify-content: flex-end;
+    gap: var(--space-5);
   }
 
   .brand {
@@ -80,12 +94,20 @@ const nav = [
     color: var(--color-text);
   }
 
-  @media (max-width: 38rem) {
-    .header-inner {
+  @media (max-width: 52rem) {
+    .header-inner,
+    .header-actions {
       align-items: flex-start;
       flex-direction: column;
+    }
+
+    .header-inner {
       gap: var(--space-3);
       padding-block: var(--space-4);
+    }
+
+    .header-actions {
+      gap: var(--space-3);
     }
 
     ul {

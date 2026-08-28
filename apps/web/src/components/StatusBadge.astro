@@ -1,0 +1,67 @@
+---
+type Status =
+  | "Stable"
+  | "Experimental"
+  | "In Development"
+  | "Research Accepted"
+  | "Research"
+  | "Planned"
+  | "Vision"
+  | "Deprecated";
+
+interface Props {
+  status: Status;
+}
+
+const { status } = Astro.props;
+const slug = status.toLowerCase().replaceAll(" ", "-");
+---
+
+<span class:list={["status", `status-${slug}`]}>{status}</span>
+
+<style>
+  .status {
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    border: 1px solid currentColor;
+    border-radius: var(--radius-pill);
+    padding: 0.18rem 0.48rem;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    font-weight: 650;
+    line-height: 1.35;
+  }
+
+  .status-stable {
+    color: var(--status-stable);
+  }
+
+  .status-experimental {
+    color: var(--status-experimental);
+  }
+
+  .status-in-development {
+    color: var(--status-development);
+  }
+
+  .status-research-accepted {
+    color: var(--status-research-accepted);
+  }
+
+  .status-research {
+    color: var(--status-research);
+  }
+
+  .status-planned {
+    color: var(--status-planned);
+  }
+
+  .status-vision {
+    color: var(--status-vision);
+  }
+
+  .status-deprecated {
+    color: var(--status-deprecated);
+  }
+</style>

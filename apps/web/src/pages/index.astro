@@ -1,24 +1,176 @@
 ---
-const docsHref = '/docs/';
+import SiteLayout from "../layouts/SiteLayout.astro";
+import StatusBadge from "../components/StatusBadge.astro";
+
+const primitives = [
+  ["State", "Explicit reads, writes, and subscriptions."],
+  ["Computed", "Lazy derived state with explicit dependency behavior."],
+  ["Batch", "Group related updates into one propagation boundary."],
+  ["Scope", "Own subscriptions and resources with deterministic disposal."],
+  ["Diagnostics", "Bounded, opt-in runtime evidence without hidden telemetry."],
+];
+
+const capabilities = [
+  { name: "Core", status: "Experimental" as const, note: "Public-configured, publication remains separately gated." },
+  { name: "Form", status: "In Development" as const, note: "Production Phase 1 is active; the package remains private." },
+  { name: "Query", status: "Research Accepted" as const, note: "Research graduated; no production package is implied." },
+  { name: "HTTP", status: "Research Accepted" as const, note: "Research graduated; production implementation is deferred." },
+  { name: "Schema", status: "Research" as const, note: "Architecture and research exist; production is not assumed." },
+  { name: "Flow", status: "Research" as const, note: "Research track only." },
+];
+
+const code = `import { batch, computed, createScope, state } from "@vii-labs/core";
+
+const count = state(0);
+const doubled = computed(() => count.get() * 2);
+const scope = createScope({ name: "counter" });
+
+scope.run(() => {
+  count.subscribe((value) => console.log(value));
+});
+
+batch(() => {
+  count.set(1);
+  count.set(2);
+});
+
+console.log(doubled.get());
+scope.dispose();
+doubled.dispose();`;
 ---
 
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width" />
-    <meta
-      name="description"
-      content="Vii is a framework-neutral TypeScript ecosystem for reactive state, lifecycle ownership, diagnostics, and application primitives."
-    />
-    <link rel="canonical" href="https://viijs.org/" />
-    <title>Vii</title>
-  </head>
-  <body>
-    <main>
-      <h1>Vii</h1>
-      <p>Framework-neutral TypeScript primitives.</p>
-      <p><a href={docsHref}>Documentation</a></p>
-    </main>
-  </body>
-</html>
+<SiteLayout
+  title="Vii — Framework-neutral TypeScript primitives"
+  description="Vii is a lightweight TypeScript ecosystem for explicit reactive state, lifecycle ownership, diagnostics, and framework-neutral application primitives."
+>
+  <section class="shell hero" aria-labelledby="hero-title">
+    <div class="hero-copy">
+      <p class="eyebrow">TypeScript ecosystem · experimental</p>
+      <h1 id="hero-title">Reactive primitives with explicit ownership.</h1>
+      <p class="lede">
+        Vii is a lightweight TypeScript ecosystem for explicit reactive state, lifecycle ownership,
+        diagnostics, and framework-neutral application primitives.
+      </p>
+      <div class="actions">
+        <a class="button button-primary" href="/docs/">Read the docs</a>
+        <a class="button" href="https://github.com/kas-labs/vii">View on GitHub</a>
+      </div>
+    </div>
+
+    <div class="code-surface" aria-label="Vii Core example">
+      <div class="code-toolbar">
+        <span>core.ts</span>
+        <StatusBadge status="Experimental" />
+      </div>
+      <pre><code>{code}</code></pre>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="what-title">
+    <div class="shell">
+      <p class="eyebrow">What Vii is</p>
+      <h2 id="what-title">Small core. Explicit lifecycle. Framework-neutral by design.</h2>
+      <p class="section-copy">
+        Vii starts with reactive primitives rather than a full application framework. The core is
+        designed to stay useful independently of React, Angular, Vue, a server runtime, or an AI
+        provider.
+      </p>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="primitives-title">
+    <div class="shell">
+      <p class="eyebrow">Core primitives</p>
+      <h2 id="primitives-title">A compact runtime surface.</h2>
+      <div class="grid grid-3">
+        {primitives.map(([name, description]) => (
+          <article class="card">
+            <h3>{name}</h3>
+            <p>{description}</p>
+          </article>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="ownership-title">
+    <div class="shell">
+      <p class="eyebrow">Lifecycle</p>
+      <h2 id="ownership-title">Resources should have an owner.</h2>
+      <p class="section-copy">
+        Scope makes disposal part of the mental model. Subscriptions and owned work can be tied to a
+        lifecycle boundary and released deterministically instead of relying on hidden framework
+        behavior.
+      </p>
+      <div class="architecture-flow" aria-label="Vii lifecycle architecture">
+        <div class="flow-node"><strong>State</strong><div class="meta">source</div></div>
+        <div class="flow-node"><strong>Computed</strong><div class="meta">derived</div></div>
+        <div class="flow-node"><strong>Scope</strong><div class="meta">ownership</div></div>
+        <div class="flow-node"><strong>Diagnostics</strong><div class="meta">evidence</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="ecosystem" aria-labelledby="ecosystem-title">
+    <div class="shell">
+      <p class="eyebrow">Ecosystem</p>
+      <h2 id="ecosystem-title">Current capability status, without pretending the roadmap is shipped.</h2>
+      <p class="section-copy">
+        Research completion, implementation maturity, and package availability are different things.
+        Vii publishes those states separately rather than presenting future work as finished product.
+      </p>
+      <div class="grid grid-3" id="status">
+        {capabilities.map((capability) => (
+          <article class="card">
+            <div class="capability-head">
+              <h3>{capability.name}</h3>
+              <StatusBadge status={capability.status} />
+            </div>
+            <p>{capability.note}</p>
+          </article>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="integrations-title">
+    <div class="shell">
+      <p class="eyebrow">Integrations</p>
+      <h2 id="integrations-title">One core, thin framework boundaries.</h2>
+      <p class="section-copy">
+        Private experimental adapters currently validate React, Angular, and Vue integration while
+        Vanilla consumers exercise Core directly. They are evidence surfaces, not a claim that every
+        adapter is already publicly installable.
+      </p>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="next-title">
+    <div class="shell">
+      <p class="eyebrow">Explore</p>
+      <h2 id="next-title">Follow the implementation, not the hype.</h2>
+      <p class="section-copy">
+        The public documentation grows from repository-backed behavior. Architecture and research stay
+        available for contributors without becoming prerequisites for using Vii.
+      </p>
+      <div class="actions">
+        <a class="button button-primary" href="/docs/">Documentation</a>
+        <a class="button" href="https://github.com/kas-labs/vii">Source repository</a>
+      </div>
+    </div>
+  </section>
+</SiteLayout>
+
+<style>
+  .capability-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
+  }
+
+  .capability-head h3 {
+    margin-bottom: 0;
+  }
+</style>

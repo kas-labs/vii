@@ -1,6 +1,7 @@
 ---
 import SiteLayout from "../layouts/SiteLayout.astro";
 import StatusBadge from "../components/StatusBadge.astro";
+import { capability } from "../data/status/capabilities";
 
 const primitives = [
   ["State", "Explicit reads, writes, and subscriptions."],
@@ -10,14 +11,7 @@ const primitives = [
   ["Diagnostics", "Bounded, opt-in runtime evidence without hidden telemetry."],
 ];
 
-const capabilities = [
-  { name: "Core", status: "Experimental" as const, note: "Public-configured, publication remains separately gated." },
-  { name: "Form", status: "In Development" as const, note: "Production Phase 1 is active; the package remains private." },
-  { name: "Query", status: "Research Accepted" as const, note: "Research graduated; no production package is implied." },
-  { name: "HTTP", status: "Research Accepted" as const, note: "Research graduated; production implementation is deferred." },
-  { name: "Schema", status: "Research" as const, note: "Architecture and research exist; production is not assumed." },
-  { name: "Flow", status: "Research" as const, note: "Research track only." },
-];
+const capabilities = ["core", "form", "query", "http", "schema", "flow"].map(capability);
 
 const code = `import { batch, computed, createScope, state } from "@vii-labs/core";
 
@@ -120,13 +114,13 @@ doubled.dispose();`;
         Vii publishes those states separately rather than presenting future work as finished product.
       </p>
       <div class="grid grid-3" id="status">
-        {capabilities.map((capability) => (
+        {capabilities.map((entry) => (
           <article class="card">
             <div class="capability-head">
-              <h3>{capability.name}</h3>
-              <StatusBadge status={capability.status} />
+              <h3>{entry.name}</h3>
+              <StatusBadge status={entry.maturity} />
             </div>
-            <p>{capability.note}</p>
+            <p>{entry.summary}</p>
           </article>
         ))}
       </div>

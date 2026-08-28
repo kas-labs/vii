@@ -4,8 +4,9 @@ import ThemeControl from "./ThemeControl.astro";
 const nav = [
   { href: "/docs/", label: "Docs" },
   { href: "/examples/", label: "Examples" },
-  { href: "/#ecosystem", label: "Ecosystem" },
-  { href: "/#status", label: "Status" },
+  { href: "/ecosystem/", label: "Ecosystem" },
+  { href: "/status/", label: "Status" },
+  { href: "/roadmap/", label: "Roadmap" },
   { href: "https://github.com/kas-labs/vii", label: "GitHub" },
 ];
 ---
@@ -95,7 +96,7 @@ const nav = [
     color: var(--color-text);
   }
 
-  @media (max-width: 52rem) {
+  @media (max-width: 64rem) {
     .header-inner,
     .header-actions {
       align-items: flex-start;

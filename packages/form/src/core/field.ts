@@ -1,4 +1,5 @@
 import { batch, computed, createScope, state } from "@vii-labs/core";
+import { attachInternalNode, type FormNodeInternal, type NodeOwnership } from "./internal.js";
 import type { CreateFieldOptions, FieldEqualityFn, FieldState } from "./types.js";
 
 const defaultEquality: FieldEqualityFn<unknown> = (a, b) => Object.is(a, b);
@@ -7,8 +8,8 @@ const defaultEquality: FieldEqualityFn<unknown> = (a, b) => Object.is(a, b);
  * Creates a standalone reactive leaf field instance.
  *
  * Provides fine-grained reactive state for unparsed value, raw presentation value
- * (guaranteed Raw === Value in P1c), baseline tracking, dirty/touched flags,
- * reset semantics, and deterministic Scope lifecycle management.
+ * (guaranteed Raw === Value in P1c/P1d), baseline tracking, dirty/touched flags,
+ * reset semantics, internal reinitialize baseline replacement, and deterministic Scope lifecycle management.
  */
 export function createField<TValue>(options: CreateFieldOptions<TValue>): FieldState<TValue> {
   const { initialValue, scope } = options;
@@ -18,6 +19,7 @@ export function createField<TValue>(options: CreateFieldOptions<TValue>): FieldS
     (defaultEquality as FieldEqualityFn<TValue>);
 
   let disposed = false;
+  let ownership: NodeOwnership = scope ? "external-scope" : "standalone";
 
   const assertActive = (): void => {
     if (disposed) {
@@ -38,18 +40,27 @@ export function createField<TValue>(options: CreateFieldOptions<TValue>): FieldS
 
   let detachFromParent: (() => void) | undefined;
 
-  const dispose = (): void => {
+  const performDisposal = (): void => {
     if (disposed) {
       return;
     }
     disposed = true;
+    ownership = "disposed";
+    internal.ownership = "disposed";
     detachFromParent?.();
     fieldScope.dispose();
   };
 
+  const dispose = (): void => {
+    if (internal.ownership === "tree") {
+      throw new Error("Cannot dispose an adopted field directly; dispose its owning form or group");
+    }
+    performDisposal();
+  };
+
   if (scope) {
     detachFromParent = scope.use(() => {
-      dispose();
+      performDisposal();
     });
   }
 
@@ -88,7 +99,7 @@ export function createField<TValue>(options: CreateFieldOptions<TValue>): FieldS
     });
   };
 
-  return {
+  const fieldState: FieldState<TValue> = {
     kind: "field",
     value: valueState,
     rawValue: rawValueState,
@@ -109,4 +120,28 @@ export function createField<TValue>(options: CreateFieldOptions<TValue>): FieldS
     reset,
     dispose,
   };
+
+  const internal: FormNodeInternal<TValue> = {
+    kind: "field",
+    scope: fieldScope,
+    ownership,
+    assertActive,
+    reinitialize: (nextBaseline: TValue) => {
+      assertActive();
+      batch(() => {
+        initialValueState.set(nextBaseline);
+        valueState.set(nextBaseline);
+        rawValueState.set(nextBaseline);
+        touchedState.set(false);
+      });
+    },
+    getDirectChildNodes: () => [],
+    disposeFromOwner: () => {
+      performDisposal();
+    },
+  };
+
+  attachInternalNode(fieldState, internal);
+
+  return fieldState;
 }

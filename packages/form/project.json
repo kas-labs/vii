@@ -1,0 +1,42 @@
+{
+  "name": "form",
+  "projectType": "library",
+  "sourceRoot": "packages/form/src",
+  "targets": {
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm lint",
+        "cwd": "packages/form"
+      }
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm typecheck",
+        "cwd": "packages/form"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm test",
+        "cwd": "packages/form"
+      }
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm build",
+        "cwd": "packages/form"
+      }
+    },
+    "validate-package": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm validate-package",
+        "cwd": "packages/form"
+      }
+    }
+  }
+}

@@ -37,6 +37,54 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-28 15:45 CEST | Production Form Phase 1 Slice P1b: Package Skeleton & Governance
+
+Status: completed
+Branch: `build/form-p1b-package-skeleton`
+PR: #168 (Draft)
+
+### Scope
+
+- Execute bounded production slice P1b (Package Skeleton & Governance) for Vii Form Phase 1 on baseline commit `2134887e537877503d5dff76ec7a5d82cd6a4a20` (PR #167 merged into `main`).
+- Establish the production package skeleton for `@vii-labs/form` in `packages/form/`.
+- Establish package identity, metadata, export map (`@vii-labs/form`, `/react`, `/vanilla`, `/angular`, `/vue`), TypeScript build configuration, lint target, test target, and packaging validation.
+- Register `@vii-labs/core` (`>=0.1.0-experimental.2`) as required runtime peer, `@standard-schema/spec` (`^1.1.0`) as type-consumed dependency, and `react` (`>=18.0.0`), `@angular/core` (`>=17.0.0`), and `vue` (`>=3.3.0`) as optional peer dependencies.
+- Verify package builds, typechecks, lints, tests, packs into a clean tarball, and resolves cleanly in a clean consumer fixture without framework dependencies installed.
+- Maintain absolute non-goals: ZERO Form runtime implementation (no `createField`, `createForm`, validation, parsers, `FieldArray`, submission, server issues, or framework adapters), NO `@vii-labs/form` publication (`private: true`), NO modifications to `@vii-labs/core`, and ZERO runtime dependency on `research/form/`.
+
+### Changes
+
+- Created `packages/form/` directory with `package.json`, `project.json`, `tsconfig.json`, `tsconfig.build.json`, `tsconfig.test.json`, `README.md`.
+- Created minimal zero-runtime entrypoints in `packages/form/src/index.ts`, `src/adapters/react/index.ts`, `src/adapters/vanilla/index.ts`, `src/adapters/angular/index.ts`, `src/adapters/vue/index.ts`.
+- Created package boundary tests in `packages/form/test/package-boundary.test.ts`.
+- Created tarball inspection and clean consumer validation in `scripts/package-validation/validate-form.mjs` and hooked into root `package.json`'s `pack:check`.
+- Updated `pnpm-lock.yaml` registering `@vii-labs/form` workspace project with zero unrelated lockfile churn.
+- Updated durable project state across `ROADMAP.md`, `PROJECT_STATE.md`, and `docs/roadmap/FORM_RESEARCH.md`.
+
+### Validation
+
+- `pnpm nx build form`: passed (emitted declarations and source maps for root and all 4 adapter subpaths).
+- `pnpm nx typecheck form`: passed.
+- `pnpm nx lint form`: passed.
+- `pnpm nx test form`: passed (5/5 unit tests verifying entrypoints, manifest, peer governance, framework neutrality, and research-import isolation).
+- `pnpm nx validate-package form`: passed (packed tarball, validated tarball contents, prepared clean consumer without frameworks, verified zero-runtime exports, logged artifact sanity sizes).
+- `pnpm pack:check`: passed (validated all 3 packages: core, cli-core, form).
+- `git diff --check`: passed (no whitespace or git diff errors).
+- `NX_DAEMON=false pnpm validate`: passed.
+
+### Architecture / compatibility
+
+- Single `@vii-labs/form` package architecture with subpath exports (`.`, `./react`, `./vanilla`, `./angular`, `./vue`).
+- Strict dependency governance: `@standard-schema/spec` declared in dependencies for declaration typing with zero runtime bytes; `@vii-labs/core` required runtime peer; `react`, `@angular/core`, and `vue` optional peers.
+- Root entrypoint is strictly framework-neutral with zero framework imports.
+- Zero runtime dependency on `research/form/`.
+- Zero modifications to `@vii-labs/core`.
+- Package marked `private: true` to prevent accidental public release prior to Phase 1 graduation gate (P1m).
+
+### Remaining / recovery
+
+- None for P1b. Next slice: P1c — Field Core (`createField`, leaf state signals, dirty/touched tracking, and Scope integration).
+
 ## 2026-08-28 01:25 CEST | Production Form Phase 1 Slice P1a: Production Architecture & Package Contract (Bounded Correction Pass)
 
 Status: completed

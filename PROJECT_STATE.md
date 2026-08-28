@@ -84,13 +84,25 @@ it adds no enforcement, transport, telemetry, or stable schema. RFC 0004 remains
 remains Proposed. `recordSecurity`, `security.event`, and the `vii.trace` protocol remain
 experimental and may change under governance.
 
+Form research track F0–F10 is complete and accepted via PR #166. Production Form Phase 1 baseline
+architecture and package contract were accepted in Slice P1a (PR #167). Slice P1b establishes the
+production `@vii-labs/form` package skeleton (`packages/form/`), multi-adapter subpath distribution
+(`@vii-labs/form`, `/react`, `/vanilla`, `/angular`, `/vue`), TypeScript build configuration, linting,
+package-boundary tests, tarball validation, and clean consumer validation. The package remains
+private and contains no production Form engine runtime implementation yet (createField, createForm,
+validation, parsers, FieldArray, submission, server issue routing, and framework adapters are
+deferred to subsequent slices P1c–P1j). `@vii-labs/form` declares `@vii-labs/core` as a required
+runtime peer (`>=0.1.0-experimental.2`), `@standard-schema/spec` as a type-consumed dependency, and
+`react`, `@angular/core`, and `vue` as optional peer dependencies. It has zero runtime dependency on
+`research/form/` and makes zero modifications to `@vii-labs/core`.
+
 The repository is licensed under Apache-2.0. The accepted first public release target is a
 Core-only `@vii-labs/core@0.1.0-experimental.2` npm `next` candidate; `@vii` is owned by an
 unrelated npm user, while `@vii-labs` is owned by `vitalii.kas`. The candidate remains preparation-only until
 the reference consumer, changeset, package metadata, release-security, and explicit publication
 approval gates in `docs/governance/EXPERIMENTAL_CORE_RELEASE.md` are satisfied. All packages remain
-unpublished until that separate release approval; Core alone is public-configured while adapters and CLI
-Core remain private.
+unpublished until that separate release approval; Core alone is public-configured while adapters, CLI
+Core, and Form remain private.
 The `examples/core-reference` checkout flow is the first real packed-Core reference consumer: it
 uses only public State, Computed, and Scope APIs and is copied into a clean temporary project by
 package validation, where it installs the packed Core artifact without a workspace alias.

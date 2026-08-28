@@ -8,16 +8,11 @@ export type FieldEqualityFn<T> = (a: T, b: T) => boolean;
 /**
  * Configuration options for creating a standalone leaf field.
  */
-export interface CreateFieldOptions<TValue, TRaw = TValue> {
+export interface CreateFieldOptions<TValue> {
   /**
-   * Initial domain value of the field.
+   * Initial domain value of the field, also used as the initial unparsed raw presentation value.
    */
   readonly initialValue: TValue;
-
-  /**
-   * Optional initial raw presentation value. Defaults to `initialValue` when unparsed.
-   */
-  readonly initialRawValue?: TRaw | undefined;
 
   /**
    * Optional equality function for baseline-relative dirty calculation.
@@ -34,7 +29,7 @@ export interface CreateFieldOptions<TValue, TRaw = TValue> {
 /**
  * Reactive state and interaction contract for a standalone leaf field.
  */
-export interface FieldState<TValue, TRaw = TValue> {
+export interface FieldState<TValue> {
   /**
    * Node kind discriminator.
    */
@@ -47,18 +42,9 @@ export interface FieldState<TValue, TRaw = TValue> {
 
   /**
    * Reactive signal holding current raw presentation value.
+   * For unparsed P1c fields, rawValue always has the same type and value as domain value.
    */
-  readonly rawValue: ReadableState<TRaw>;
-
-  /**
-   * Reactive signal holding initial baseline domain value.
-   */
-  readonly initialValue: ReadableState<TValue>;
-
-  /**
-   * Reactive signal holding initial baseline raw presentation value.
-   */
-  readonly initialRawValue: ReadableState<TRaw>;
+  readonly rawValue: ReadableState<TValue>;
 
   /**
    * Reactive signal indicating whether the field has been touched by user interaction.
@@ -78,20 +64,20 @@ export interface FieldState<TValue, TRaw = TValue> {
   /**
    * Returns the current raw presentation value synchronously.
    */
-  getRawValue(): TRaw;
+  getRawValue(): TValue;
 
   /**
-   * Updates the domain value (and corresponding raw presentation value for unparsed fields).
+   * Updates the domain value and raw presentation value.
    */
   setValue(next: TValue): void;
 
   /**
-   * Updates the raw presentation value (and corresponding domain value for unparsed fields).
+   * Updates the raw presentation value and domain value.
    */
-  setRawValue(raw: TRaw): void;
+  setRawValue(raw: TValue): void;
 
   /**
-   * Sets or toggles the touched state of the field.
+   * Sets the touched state of the field.
    */
   setTouched(touched?: boolean): void;
 

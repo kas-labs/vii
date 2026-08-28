@@ -1,10 +1,10 @@
 import { createScope } from "@vii-labs/core";
 import { describe, expect, test, vi } from "vitest";
-import { createField } from "../../src/index.js";
+import { createField, type CreateFieldOptions, type FieldState } from "../../src/index.js";
 
 describe("createField — Field Core (P1c)", () => {
-  describe("A. Initial State", () => {
-    test("initializes with provided value and clean baseline state", () => {
+  describe("A. Initial State & Raw === Value Invariant", () => {
+    test("initializes with provided value and clean baseline state where Raw === Value", () => {
       const field = createField({ initialValue: "hello" });
 
       expect(field.kind).toBe("field");
@@ -12,29 +12,35 @@ describe("createField — Field Core (P1c)", () => {
       expect(field.getRawValue()).toBe("hello");
       expect(field.value.get()).toBe("hello");
       expect(field.rawValue.get()).toBe("hello");
-      expect(field.initialValue.get()).toBe("hello");
-      expect(field.initialRawValue.get()).toBe("hello");
       expect(field.dirty.get()).toBe(false);
       expect(field.touched.get()).toBe(false);
     });
 
-    test("supports explicit initialRawValue differing from initialValue", () => {
-      const field = createField<number, string>({
-        initialValue: 42,
-        initialRawValue: "42",
-      });
+    test("enforces Raw === Value across setValue, setRawValue, and reset", () => {
+      const field = createField({ initialValue: 42 });
 
       expect(field.getValue()).toBe(42);
-      expect(field.getRawValue()).toBe("42");
-      expect(field.initialValue.get()).toBe(42);
-      expect(field.initialRawValue.get()).toBe("42");
+      expect(field.getRawValue()).toBe(42);
+
+      field.setValue(43);
+      expect(field.getValue()).toBe(43);
+      expect(field.getRawValue()).toBe(43);
+      expect(field.dirty.get()).toBe(true);
+
+      field.setRawValue(44);
+      expect(field.getValue()).toBe(44);
+      expect(field.getRawValue()).toBe(44);
+      expect(field.dirty.get()).toBe(true);
+
+      field.reset();
+      expect(field.getValue()).toBe(42);
+      expect(field.getRawValue()).toBe(42);
       expect(field.dirty.get()).toBe(false);
-      expect(field.touched.get()).toBe(false);
     });
   });
 
   describe("B. Value Mutation", () => {
-    test("setValue updates value, rawValue, and sets dirty to true", () => {
+    test("setValue updates value and rawValue, setting dirty to true", () => {
       const field = createField({ initialValue: "initial" });
 
       field.setValue("updated");
@@ -43,7 +49,6 @@ describe("createField — Field Core (P1c)", () => {
       expect(field.getRawValue()).toBe("updated");
       expect(field.value.get()).toBe("updated");
       expect(field.rawValue.get()).toBe("updated");
-      expect(field.initialValue.get()).toBe("initial");
       expect(field.dirty.get()).toBe(true);
     });
 
@@ -86,7 +91,7 @@ describe("createField — Field Core (P1c)", () => {
       expect(field.dirty.get()).toBe(false);
     });
 
-    test("setTouched allows explicit boolean toggling", () => {
+    test("setTouched allows explicit boolean setting", () => {
       const field = createField({ initialValue: "pristine" });
 
       field.setTouched(true);
@@ -108,10 +113,7 @@ describe("createField — Field Core (P1c)", () => {
 
   describe("E. Reset Contract", () => {
     test("reset restores baseline value, raw value, dirty=false, and touched=false", () => {
-      const field = createField<number, string>({
-        initialValue: 100,
-        initialRawValue: "100",
-      });
+      const field = createField({ initialValue: 100 });
 
       field.setValue(200);
       field.markTouched();
@@ -123,7 +125,7 @@ describe("createField — Field Core (P1c)", () => {
       field.reset();
 
       expect(field.getValue()).toBe(100);
-      expect(field.getRawValue()).toBe("100");
+      expect(field.getRawValue()).toBe(100);
       expect(field.dirty.get()).toBe(false);
       expect(field.touched.get()).toBe(false);
     });
@@ -135,7 +137,6 @@ describe("createField — Field Core (P1c)", () => {
 
       const observations: Array<{ value: string; touched: boolean; dirty: boolean }> = [];
 
-      // Subscribe to value and record observed combined state
       field.value.subscribe((val) => {
         observations.push({
           value: val,
@@ -146,7 +147,6 @@ describe("createField — Field Core (P1c)", () => {
 
       field.reset();
 
-      // Subscriber observes consistent final reset state
       expect(observations.length).toBe(1);
       expect(observations[0]).toEqual({
         value: "baseline",
@@ -169,7 +169,6 @@ describe("createField — Field Core (P1c)", () => {
     });
 
     test("supports custom equality comparator for dirty calculation", () => {
-      // Case-insensitive comparator
       const field = createField({
         initialValue: "abc",
         equality: (a, b) => a.toLowerCase() === b.toLowerCase(),
@@ -178,7 +177,6 @@ describe("createField — Field Core (P1c)", () => {
       expect(field.dirty.get()).toBe(false);
 
       field.setValue("ABC");
-      // Value updated, but considered equal by comparator
       expect(field.getValue()).toBe("ABC");
       expect(field.dirty.get()).toBe(false);
 
@@ -199,7 +197,7 @@ describe("createField — Field Core (P1c)", () => {
       const unsubscribe = field.value.subscribe((v) => valueUpdates.push(v));
 
       field.setValue(2);
-      field.markTouched(); // should not notify value subscriber
+      field.markTouched();
       field.setValue(3);
 
       expect(valueUpdates).toEqual([2, 3]);
@@ -217,7 +215,7 @@ describe("createField — Field Core (P1c)", () => {
 
       field.markTouched();
       field.setTouched(false);
-      field.setValue("new value"); // untouched mutation, no notification
+      field.setValue("new value");
 
       expect(touchedUpdates).toEqual([true, false]);
 
@@ -233,8 +231,8 @@ describe("createField — Field Core (P1c)", () => {
       const unsubscribe = field.dirty.subscribe((d) => dirtyUpdates.push(d));
 
       field.setValue("dirty");
-      field.setValue("still dirty"); // dirty remains true, no change
-      field.setValue("start"); // dirty transitions to false
+      field.setValue("still dirty");
+      field.setValue("start");
 
       expect(dirtyUpdates).toEqual([true, false]);
 
@@ -242,7 +240,7 @@ describe("createField — Field Core (P1c)", () => {
     });
   });
 
-  describe("H. Scope Ownership & Lifecycle", () => {
+  describe("H. Scope Ownership & Lifecycle Matrix", () => {
     test("field attached to owner Scope is disposed when owner Scope disposes", () => {
       const ownerScope = createScope({ name: "owner" });
       const field = createField({
@@ -270,10 +268,14 @@ describe("createField — Field Core (P1c)", () => {
       expect(() => field.getValue()).toThrow("Field is disposed");
     });
 
-    test("methods throw deterministic error after disposal", () => {
-      const field = createField({ initialValue: "test" });
+    test("exact post-disposal method and signal access behavior", () => {
+      const field = createField({ initialValue: "active-value" });
+      field.markTouched();
+      field.setValue("mutated-value");
+
       field.dispose();
 
+      // Field methods enforce disposal check and throw deterministic error
       expect(() => field.getValue()).toThrow("Field is disposed");
       expect(() => field.getRawValue()).toThrow("Field is disposed");
       expect(() => field.setValue("foo")).toThrow("Field is disposed");
@@ -281,7 +283,32 @@ describe("createField — Field Core (P1c)", () => {
       expect(() => field.setTouched(true)).toThrow("Field is disposed");
       expect(() => field.markTouched()).toThrow("Field is disposed");
       expect(() => field.reset()).toThrow("Field is disposed");
+
+      // Scope-owned dirty computed is disposed and throws upon evaluation
       expect(() => field.dirty.get()).toThrow("Computed is disposed");
+
+      // State references remain readable snapshots under Core State semantics
+      expect(field.value.get()).toBe("mutated-value");
+      expect(field.rawValue.get()).toBe("mutated-value");
+      expect(field.touched.get()).toBe(true);
+    });
+
+    test("subscription behavior before and after disposal", () => {
+      const field = createField({ initialValue: "before" });
+      const preListener = vi.fn();
+      field.value.subscribe(preListener);
+
+      field.dispose();
+
+      // Attempting mutation after dispose throws, ensuring no listener notifications occur
+      expect(() => field.setValue("after")).toThrow("Field is disposed");
+      expect(preListener).not.toHaveBeenCalled();
+
+      // Subscribing after dispose attaches to quiescent state without error, but no mutations can happen
+      const postListener = vi.fn();
+      const unsub = field.value.subscribe(postListener);
+      expect(typeof unsub).toBe("function");
+      expect(postListener).not.toHaveBeenCalled();
     });
   });
 
@@ -326,18 +353,17 @@ describe("createField — Field Core (P1c)", () => {
         expect(field.getValue()).toBe(val);
       }
 
-      // Verify Object prototype was not polluted
       expect(Object.prototype.hasOwnProperty.call(Object.prototype, "dirty")).toBe(false);
       expect(Object.prototype.hasOwnProperty.call(Object.prototype, "value")).toBe(false);
     });
   });
 
   describe("K. Type Inference Checks", () => {
-    test("infers value type from initialValue correctly", () => {
-      const strField = createField({ initialValue: "test" });
-      const numField = createField({ initialValue: 42 });
-      const boolField = createField({ initialValue: true });
-      const objField = createField({ initialValue: { foo: "bar" } });
+    test("infers value type from initialValue correctly with single generic", () => {
+      const strField: FieldState<string> = createField({ initialValue: "test" });
+      const numField: FieldState<number> = createField({ initialValue: 42 });
+      const boolField: FieldState<boolean> = createField({ initialValue: true });
+      const objField: FieldState<{ foo: string }> = createField({ initialValue: { foo: "bar" } });
 
       const _strVal: string = strField.getValue();
       const _numVal: number = numField.getValue();
@@ -348,6 +374,10 @@ describe("createField — Field Core (P1c)", () => {
       expect(typeof _numVal).toBe("number");
       expect(typeof _boolVal).toBe("boolean");
       expect(typeof _objVal).toBe("object");
+
+      const options: CreateFieldOptions<number> = { initialValue: 123 };
+      const explicitField = createField<number>(options);
+      expect(explicitField.getValue()).toBe(123);
     });
   });
 });

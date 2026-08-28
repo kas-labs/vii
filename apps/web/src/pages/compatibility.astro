@@ -1,0 +1,37 @@
+---
+import SiteLayout from "../layouts/SiteLayout.astro";
+import { capabilities } from "../data/status/capabilities";
+
+const withCompatibility = capabilities.filter((item) => item.compatibility?.length);
+---
+
+<SiteLayout title="Compatibility | Vii" description="Evidence-bounded compatibility facts for Vii packages and adapters.">
+  <section class="section">
+    <div class="shell">
+      <p class="eyebrow">Compatibility</p>
+      <h1>Only tested or declared ranges are listed.</h1>
+      <p class="lede">Compatibility is independent from maturity. Experimental software can still have a precise peer range, while unverified browser or runtime claims stay omitted.</p>
+      <div class="status-grid">
+        {withCompatibility.map((item) => (
+          <article class="card">
+            <h2>{item.name}</h2>
+            {item.compatibility?.map((fact) => (
+              <div class="fact">
+                <div><strong>{fact.label}</strong></div>
+                <code>{fact.value}</code>
+                <a href={fact.evidence}>Evidence</a>
+              </div>
+            ))}
+          </article>
+        ))}
+      </div>
+      <p class="section-copy">No broad Node, TypeScript, browser, SSR, or package-manager support matrix is published here until the repository has explicit support evidence for those claims.</p>
+    </div>
+  </section>
+</SiteLayout>
+
+<style>
+  .status-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-5); }
+  .fact { display: grid; grid-template-columns: 1fr auto auto; gap: var(--space-4); align-items: center; border-top: 1px solid var(--color-border); padding-block: var(--space-3); }
+  @media (max-width: 48rem) { .status-grid { grid-template-columns: 1fr; } .fact { grid-template-columns: 1fr; } }
+</style>

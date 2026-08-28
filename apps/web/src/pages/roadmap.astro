@@ -1,0 +1,64 @@
+---
+import SiteLayout from "../layouts/SiteLayout.astro";
+
+const completed = [
+  "D0 Audit, Truth Model & IA",
+  "D1 Documentation Platform Architecture",
+  "D2 Platform Skeleton",
+  "D3 Brand, Design Contract & Homepage",
+  "D4 Getting Started",
+  "D5 Core User Documentation",
+  "D6 Lifecycle & Scope Deep Documentation",
+  "D7 Diagnostics Documentation",
+  "D8 Framework Integrations",
+  "D9 Examples System",
+];
+
+const current = "D10 Public Status, Compatibility & Roadmap";
+const next = [
+  "D11 Generated API Reference",
+  "D12 CLI Documentation, when entry conditions are met",
+  "D13 Form Documentation, when runtime maturity permits",
+  "D14 Research-Accepted & Emerging Ecosystem",
+  "D15 Learn",
+  "D16 Blog & Releases",
+  "D17 Search, SEO, Accessibility & Performance Gate",
+  "D18 Production Graduation",
+];
+---
+
+<SiteLayout title="Roadmap | Vii" description="Public documentation and ecosystem direction for Vii.">
+  <section class="section">
+    <div class="shell">
+      <p class="eyebrow">Roadmap</p>
+      <h1>Direction, not release promises.</h1>
+      <p class="lede">The roadmap describes intended work. Current product truth belongs on the Status page, and roadmap placement never means a capability is already available.</p>
+
+      <div class="roadmap-grid">
+        <section class="card">
+          <p class="eyebrow">Completed</p>
+          <ul>{completed.map((item) => <li>{item}</li>)}</ul>
+        </section>
+        <section class="card current">
+          <p class="eyebrow">Current</p>
+          <h2>{current}</h2>
+          <p>Centralize status truth, compatibility evidence, ecosystem visibility, and the public roadmap itself.</p>
+        </section>
+        <section class="card">
+          <p class="eyebrow">Next</p>
+          <ul>{next.map((item) => <li>{item}</li>)}</ul>
+        </section>
+      </div>
+
+      <p class="section-copy">Runtime tracks such as Core, Form, Query, HTTP, Schema, Flow, adapters, CLI, and future UI work continue independently. Their public status changes only when repository evidence supports the transition.</p>
+    </div>
+  </section>
+</SiteLayout>
+
+<style>
+  .roadmap-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-5); }
+  .roadmap-grid ul { margin: 0; padding-left: 1.2rem; }
+  .roadmap-grid li + li { margin-top: var(--space-2); }
+  .current { border-color: var(--color-accent); }
+  @media (max-width: 60rem) { .roadmap-grid { grid-template-columns: 1fr; } }
+</style>

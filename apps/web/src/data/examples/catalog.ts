@@ -1,12 +1,11 @@
 export type ExampleKind = "snippet" | "example" | "tutorial" | "reference-application";
-export type ExampleMaturity = "Experimental" | "Private Experimental";
 
 export interface ExampleEntry {
   readonly id: string;
   readonly title: string;
   readonly summary: string;
   readonly kind: ExampleKind;
-  readonly maturity: ExampleMaturity;
+  readonly capabilityId: string;
   readonly href: string;
   readonly sourceHref?: string;
   readonly framework: "Core" | "Vanilla" | "React" | "Angular" | "Vue";
@@ -18,7 +17,7 @@ export const examples: readonly ExampleEntry[] = [
     title: "State counter",
     summary: "Create mutable reactive state and update it synchronously.",
     kind: "snippet",
-    maturity: "Experimental",
+    capabilityId: "core",
     href: "/docs/core/state/",
     framework: "Core",
   },
@@ -27,7 +26,7 @@ export const examples: readonly ExampleEntry[] = [
     title: "Computed value",
     summary: "Derive a cached value from reactive dependencies.",
     kind: "snippet",
-    maturity: "Experimental",
+    capabilityId: "core",
     href: "/docs/core/computed/",
     framework: "Core",
   },
@@ -36,7 +35,7 @@ export const examples: readonly ExampleEntry[] = [
     title: "Batched updates",
     summary: "Group synchronous writes behind one propagation boundary.",
     kind: "snippet",
-    maturity: "Experimental",
+    capabilityId: "core",
     href: "/docs/core/batch/",
     framework: "Core",
   },
@@ -45,7 +44,7 @@ export const examples: readonly ExampleEntry[] = [
     title: "Scope lifecycle",
     summary: "Own subscriptions and disposable resources with deterministic cleanup.",
     kind: "example",
-    maturity: "Experimental",
+    capabilityId: "core",
     href: "/docs/lifecycle/",
     framework: "Core",
   },
@@ -54,7 +53,7 @@ export const examples: readonly ExampleEntry[] = [
     title: "Diagnostics trace",
     summary: "Capture bounded runtime events and export a vii.trace snapshot.",
     kind: "example",
-    maturity: "Experimental",
+    capabilityId: "core",
     href: "/docs/diagnostics/traces/",
     framework: "Core",
   },
@@ -63,7 +62,7 @@ export const examples: readonly ExampleEntry[] = [
     title: "Vanilla integration",
     summary: "Use Vii Core directly without a framework adapter.",
     kind: "example",
-    maturity: "Experimental",
+    capabilityId: "vanilla",
     href: "/docs/integrations/vanilla/",
     framework: "Vanilla",
   },
@@ -72,7 +71,7 @@ export const examples: readonly ExampleEntry[] = [
     title: "React integration",
     summary: "Bridge ReadableState into React through the private experimental adapter.",
     kind: "example",
-    maturity: "Private Experimental",
+    capabilityId: "react",
     href: "/docs/integrations/react/",
     sourceHref: "https://github.com/kas-labs/vii/tree/main/packages/react",
     framework: "React",
@@ -82,7 +81,7 @@ export const examples: readonly ExampleEntry[] = [
     title: "Angular integration",
     summary: "Bridge ReadableState into Angular Signals with lifecycle ownership.",
     kind: "example",
-    maturity: "Private Experimental",
+    capabilityId: "angular",
     href: "/docs/integrations/angular/",
     sourceHref: "https://github.com/kas-labs/vii/tree/main/packages/angular",
     framework: "Angular",
@@ -92,7 +91,7 @@ export const examples: readonly ExampleEntry[] = [
     title: "Vue integration",
     summary: "Expose Vii state as a readonly shallow ref with effect-scope cleanup.",
     kind: "example",
-    maturity: "Private Experimental",
+    capabilityId: "vue",
     href: "/docs/integrations/vue/",
     sourceHref: "https://github.com/kas-labs/vii/tree/main/packages/vue",
     framework: "Vue",

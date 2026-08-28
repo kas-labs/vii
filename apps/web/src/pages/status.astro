@@ -1,0 +1,48 @@
+---
+import SiteLayout from "../layouts/SiteLayout.astro";
+import StatusBadge from "../components/StatusBadge.astro";
+import { capabilities } from "../data/status/capabilities";
+---
+
+<SiteLayout title="Status | Vii" description="Current maturity and availability of Vii capabilities.">
+  <section class="section">
+    <div class="shell">
+      <p class="eyebrow">Status</p>
+      <h1>What exists now.</h1>
+      <p class="lede">Maturity and availability are separate. A capability can be implemented but private, or architecturally accepted without a production package.</p>
+      <div class="status-grid">
+        {capabilities.map((item) => (
+          <article class="card">
+            <div class="status-head">
+              <h2>{item.name}</h2>
+              <StatusBadge status={item.maturity} />
+            </div>
+            <p>{item.summary}</p>
+            <dl>
+              <div><dt>Availability</dt><dd>{item.availability}</dd></div>
+              {item.package && <div><dt>Package</dt><dd><code>{item.package}</code></dd></div>}
+              {item.version && <div><dt>Repository version</dt><dd><code>{item.version}</code></dd></div>}
+              <div><dt>Documentation</dt><dd>{item.documentation}</dd></div>
+              <div><dt>Last verified</dt><dd>{item.lastVerified}</dd></div>
+            </dl>
+            <div class="evidence">
+              {item.evidence.map((href, index) => <a href={href}>Evidence {index + 1}</a>)}
+            </div>
+          </article>
+        ))}
+      </div>
+    </div>
+  </section>
+</SiteLayout>
+
+<style>
+  .status-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-5); }
+  .status-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-3); }
+  .status-head h2 { margin-top: 0; }
+  dl { margin: var(--space-5) 0 0; }
+  dl div { display: grid; grid-template-columns: 9rem 1fr; gap: var(--space-3); padding-block: var(--space-2); border-top: 1px solid var(--color-border); }
+  dt { color: var(--color-text-muted); }
+  dd { margin: 0; }
+  .evidence { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-5); }
+  @media (max-width: 48rem) { .status-grid { grid-template-columns: 1fr; } dl div { grid-template-columns: 1fr; gap: 0; } }
+</style>

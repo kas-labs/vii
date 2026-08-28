@@ -1,0 +1,33 @@
+---
+import SiteLayout from "../layouts/SiteLayout.astro";
+import StatusBadge from "../components/StatusBadge.astro";
+import { capabilities } from "../data/status/capabilities";
+---
+
+<SiteLayout title="Ecosystem | Vii" description="The Vii ecosystem by current maturity and availability.">
+  <section class="section">
+    <div class="shell">
+      <p class="eyebrow">Ecosystem</p>
+      <h1>One ecosystem, different maturity levels.</h1>
+      <p class="lede">This view is a product map, not a promise that every capability is shipped or publicly installable.</p>
+      <div class="grid grid-3">
+        {capabilities.map((item) => (
+          <article class="card">
+            <div class="capability-head">
+              <h2>{item.name}</h2>
+              <StatusBadge status={item.maturity} />
+            </div>
+            <p>{item.summary}</p>
+            <p class="meta">Availability: {item.availability}</p>
+          </article>
+        ))}
+      </div>
+    </div>
+  </section>
+</SiteLayout>
+
+<style>
+  .capability-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-3); }
+  .capability-head h2 { margin-top: 0; font-size: 1.05rem; }
+  .meta { color: var(--color-text-muted); font-family: var(--font-mono); font-size: .8rem; }
+</style>

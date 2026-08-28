@@ -80,6 +80,22 @@ try {
     "package/dist/core/field.d.ts.map",
     "package/dist/core/field.js",
     "package/dist/core/field.js.map",
+    "package/dist/core/form.d.ts",
+    "package/dist/core/form.d.ts.map",
+    "package/dist/core/form.js",
+    "package/dist/core/form.js.map",
+    "package/dist/core/group.d.ts",
+    "package/dist/core/group.d.ts.map",
+    "package/dist/core/group.js",
+    "package/dist/core/group.js.map",
+    "package/dist/core/internal.d.ts",
+    "package/dist/core/internal.d.ts.map",
+    "package/dist/core/internal.js",
+    "package/dist/core/internal.js.map",
+    "package/dist/core/tree-types.d.ts",
+    "package/dist/core/tree-types.d.ts.map",
+    "package/dist/core/tree-types.js",
+    "package/dist/core/tree-types.js.map",
     "package/dist/core/types.d.ts",
     "package/dist/core/types.d.ts.map",
     "package/dist/core/types.js",
@@ -107,40 +123,66 @@ try {
   // Create clean consumer fixture source
   const consumerSource = `
 import * as form from "@vii-labs/form";
-import { createField } from "@vii-labs/form";
+import { createField, createFieldGroup, createForm } from "@vii-labs/form";
 import * as formReact from "@vii-labs/form/react";
 import * as formVanilla from "@vii-labs/form/vanilla";
 import * as formAngular from "@vii-labs/form/angular";
 import * as formVue from "@vii-labs/form/vue";
 
-export const rootKeys = Object.keys(form);
+export const rootKeys = Object.keys(form).sort();
 export const reactKeys = Object.keys(formReact);
 export const vanillaKeys = Object.keys(formVanilla);
 export const angularKeys = Object.keys(formAngular);
 export const vueKeys = Object.keys(formVue);
 
-export function runFieldScenario() {
-  const field = createField({ initialValue: "alpha" });
-  const initialVal = field.getValue();
-  const initialDirty = field.dirty.get();
-  const initialTouched = field.touched.get();
+export function runFormTreeScenario() {
+  const formInstance = createForm({
+    fields: {
+      user: createFieldGroup({
+        fields: {
+          name: createField({ initialValue: "Vitalii" }),
+        },
+      }),
+      settings: createFieldGroup({
+        fields: {
+          theme: createField({ initialValue: "light" }),
+        },
+      }),
+    },
+  });
 
-  field.setValue("beta");
-  field.markTouched();
-  const mutatedVal = field.getValue();
-  const mutatedDirty = field.dirty.get();
-  const mutatedTouched = field.touched.get();
+  const initialVal = formInstance.getValue();
+  const initialDirty = formInstance.dirty.get();
+  const initialTouched = formInstance.touched.get();
 
-  field.reset();
-  const resetVal = field.getValue();
-  const resetDirty = field.dirty.get();
-  const resetTouched = field.touched.get();
+  formInstance.fields.user.fields.name.setValue("Alice");
+  formInstance.fields.user.fields.name.markTouched();
 
-  field.dispose();
+  const mutatedVal = formInstance.getValue();
+  const mutatedDirty = formInstance.dirty.get();
+  const mutatedTouched = formInstance.touched.get();
+
+  formInstance.reinitialize({
+    user: { name: "Bob" },
+    settings: { theme: "dark" },
+  });
+
+  const reinitializedVal = formInstance.getValue();
+  const reinitializedDirty = formInstance.dirty.get();
+  const reinitializedTouched = formInstance.touched.get();
+
+  formInstance.fields.settings.fields.theme.setValue("system");
+  const postRebaseDirty = formInstance.dirty.get();
+
+  formInstance.reset();
+  const resetVal = formInstance.getValue();
+  const resetDirty = formInstance.dirty.get();
+
+  formInstance.dispose();
 
   let postDisposeError = false;
   try {
-    field.getValue();
+    formInstance.getValue();
   } catch (err) {
     postDisposeError = true;
   }
@@ -152,9 +194,12 @@ export function runFieldScenario() {
     mutatedVal,
     mutatedDirty,
     mutatedTouched,
+    reinitializedVal,
+    reinitializedDirty,
+    reinitializedTouched,
+    postRebaseDirty,
     resetVal,
     resetDirty,
-    resetTouched,
     postDisposeError,
   };
 }
@@ -183,46 +228,49 @@ export function runFieldScenario() {
   const consumer = await import(path.join(consumerDirectory, "dist/main.js"));
   assert.deepEqual(
     consumer.rootKeys,
-    ["createField"],
-    "clean consumer root export should contain createField in P1c",
+    ["createField", "createFieldGroup", "createForm"].sort(),
+    "clean consumer root export should contain createField, createFieldGroup, createForm in P1d",
   );
   assert.deepEqual(
     consumer.reactKeys,
     [],
-    "clean consumer react subpath export should be empty in P1c",
+    "clean consumer react subpath export should be empty in P1d",
   );
   assert.deepEqual(
     consumer.vanillaKeys,
     [],
-    "clean consumer vanilla subpath export should be empty in P1c",
+    "clean consumer vanilla subpath export should be empty in P1d",
   );
   assert.deepEqual(
     consumer.angularKeys,
     [],
-    "clean consumer angular subpath export should be empty in P1c",
+    "clean consumer angular subpath export should be empty in P1d",
   );
   assert.deepEqual(
     consumer.vueKeys,
     [],
-    "clean consumer vue subpath export should be empty in P1c",
+    "clean consumer vue subpath export should be empty in P1d",
   );
 
-  const scenarioResult = consumer.runFieldScenario();
+  const scenarioResult = consumer.runFormTreeScenario();
   assert.deepEqual(
     scenarioResult,
     {
-      initialVal: "alpha",
+      initialVal: { user: { name: "Vitalii" }, settings: { theme: "light" } },
       initialDirty: false,
       initialTouched: false,
-      mutatedVal: "beta",
+      mutatedVal: { user: { name: "Alice" }, settings: { theme: "light" } },
       mutatedDirty: true,
       mutatedTouched: true,
-      resetVal: "alpha",
+      reinitializedVal: { user: { name: "Bob" }, settings: { theme: "dark" } },
+      reinitializedDirty: false,
+      reinitializedTouched: false,
+      postRebaseDirty: true,
+      resetVal: { user: { name: "Bob" }, settings: { theme: "dark" } },
       resetDirty: false,
-      resetTouched: false,
       postDisposeError: true,
     },
-    "clean consumer field scenario must execute correctly against packed artifact",
+    "clean consumer form tree scenario must execute correctly against packed artifact",
   );
 
   // Sanity size logging

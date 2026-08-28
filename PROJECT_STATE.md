@@ -88,16 +88,19 @@ Form research track F0–F10 is complete and accepted via PR #166. Production Fo
 architecture and package contract were accepted in Slice P1a (PR #167). Slice P1b established the
 production `@vii-labs/form` package skeleton (`packages/form/`), multi-adapter subpath distribution
 (`@vii-labs/form`, `/react`, `/vanilla`, `/angular`, `/vue`), TypeScript build configuration, linting,
-package-boundary tests, tarball validation, and clean consumer validation. Slice P1c implements the
+package-boundary tests, tarball validation, and clean consumer validation. Slice P1c implemented the
 first production runtime primitive: unparsed `createField<TValue>`, providing fine-grained reactive
 `value`, `rawValue` (enforcing invariant `Raw === Value === TValue`), baseline-relative `dirty`
 tracking, independent `touched` state, batched `reset()`, and deterministic `@vii-labs/core` `Scope`
-lifecycle integration. The package remains private (`private: true`). Tree/groups, arrays,
-validation, parsers, submission, server issue routing, and framework adapters are deferred to
-subsequent slices P1d–P1j. `@vii-labs/form` declares `@vii-labs/core` as a required runtime peer
-(`>=0.1.0-experimental.2`), `@standard-schema/spec` as a type-consumed dependency, and `react`,
-`@angular/core`, and `vue` as optional peer dependencies. It has zero runtime dependency on
-`research/form/` and makes zero modifications to `@vii-labs/core`.
+lifecycle integration. Slice P1d implements composable nested object state via `createFieldGroup<TFields>`
+and root form coordination via `createForm<TFields>`, providing typed nested object composition, parent/child
+Scope ownership, aggregate domain/raw values, recursive dirty/touched aggregation, deterministic reset,
+whole-form baseline reinitialization (`form.reinitialize(newBaseline)`), and deterministic root Scope disposal.
+The package remains private (`private: true`). Arrays (`createFieldArray`), validation engine, parsers,
+submission pipeline, server issue routing, and framework adapters are deferred to subsequent slices P1e–P1j.
+`@vii-labs/form` declares `@vii-labs/core` as a required runtime peer (`>=0.1.0-experimental.2`),
+`@standard-schema/spec` as a type-consumed dependency, and `react`, `@angular/core`, and `vue` as optional
+peer dependencies. It has zero runtime dependency on `research/form/` and makes zero modifications to `@vii-labs/core`.
 
 The repository is licensed under Apache-2.0. The accepted first public release target is a
 Core-only `@vii-labs/core@0.1.0-experimental.2` npm `next` candidate; `@vii` is owned by an

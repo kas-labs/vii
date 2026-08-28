@@ -1,5 +1,16 @@
 import type { Computed, ReadableState, Scope } from "@vii-labs/core";
 
+export type {
+  CreateFieldGroupOptions,
+  CreateFormOptions,
+  FieldGroup,
+  FormFieldsRecord,
+  FormInstance,
+  FormNode,
+  FormValueFor,
+  FormValues,
+} from "./tree-types.js";
+
 /**
  * Equality comparison function used for baseline dirty comparison.
  */
@@ -42,7 +53,7 @@ export interface FieldState<TValue> {
 
   /**
    * Reactive signal holding current raw presentation value.
-   * For unparsed P1c fields, rawValue always has the same type and value as domain value.
+   * For unparsed P1c/P1d fields, rawValue always has the same type and value as domain value.
    */
   readonly rawValue: ReadableState<TValue>;
 

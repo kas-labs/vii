@@ -85,15 +85,17 @@ remains Proposed. `recordSecurity`, `security.event`, and the `vii.trace` protoc
 experimental and may change under governance.
 
 Form research track F0–F10 is complete and accepted via PR #166. Production Form Phase 1 baseline
-architecture and package contract were accepted in Slice P1a (PR #167). Slice P1b establishes the
+architecture and package contract were accepted in Slice P1a (PR #167). Slice P1b established the
 production `@vii-labs/form` package skeleton (`packages/form/`), multi-adapter subpath distribution
 (`@vii-labs/form`, `/react`, `/vanilla`, `/angular`, `/vue`), TypeScript build configuration, linting,
-package-boundary tests, tarball validation, and clean consumer validation. The package remains
-private and contains no production Form engine runtime implementation yet (createField, createForm,
-validation, parsers, FieldArray, submission, server issue routing, and framework adapters are
-deferred to subsequent slices P1c–P1j). `@vii-labs/form` declares `@vii-labs/core` as a required
-runtime peer (`>=0.1.0-experimental.2`), `@standard-schema/spec` as a type-consumed dependency, and
-`react`, `@angular/core`, and `vue` as optional peer dependencies. It has zero runtime dependency on
+package-boundary tests, tarball validation, and clean consumer validation. Slice P1c implements the
+first production runtime primitive: `createField`, providing fine-grained reactive `value`, `rawValue`,
+baseline-relative `dirty` tracking, independent `touched` state, batched `reset()`, and deterministic
+`@vii-labs/core` `Scope` lifecycle integration. The package remains private (`private: true`). Tree/groups,
+arrays, validation, parsers, submission, server issue routing, and framework adapters are deferred to
+subsequent slices P1d–P1j. `@vii-labs/form` declares `@vii-labs/core` as a required runtime peer
+(`>=0.1.0-experimental.2`), `@standard-schema/spec` as a type-consumed dependency, and `react`,
+`@angular/core`, and `vue` as optional peer dependencies. It has zero runtime dependency on
 `research/form/` and makes zero modifications to `@vii-labs/core`.
 
 The repository is licensed under Apache-2.0. The accepted first public release target is a

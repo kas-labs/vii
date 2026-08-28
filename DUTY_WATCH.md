@@ -37,6 +37,50 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-28 16:45 CEST | Production Form Phase 1 Slice P1c: Field Core
+
+Status: completed
+Branch: `feat/form-p1c-field-core`
+PR: #169 (Draft)
+
+### Scope
+
+- Execute bounded production slice P1c (Field Core) for Vii Form Phase 1 on baseline commit `6734821961853a140cd611f93520ddb827c1fa8c` (PR #168 merged into `main`).
+- Implement the first production runtime primitive for `@vii-labs/form`: `createField`.
+- Provide fine-grained reactive state for leaf `value`, `rawValue`, baseline-relative `dirty` tracking, independent `touched` state, batched `reset()`, and deterministic `@vii-labs/core` `Scope` lifecycle integration.
+- Maintain absolute non-goals for P1c: ZERO form tree/groups/arrays (`createForm`, `createFieldGroup`, `createFieldArray`), NO validation engine (rules, async rules, debounce, AbortSignal), NO parsers (TRaw/TValue unparsed baseline only), NO Standard Schema bridge, NO submission pipeline, NO server issues, NO framework adapter behavior, NO `@vii-labs/form` publication (`private: true`), and ZERO modifications to `@vii-labs/core`.
+
+### Changes
+
+- Created `packages/form/src/core/types.ts` defining `FieldEqualityFn`, `CreateFieldOptions`, and `FieldState` (112 lines, <= 250 limit).
+- Created `packages/form/src/core/field.ts` implementing `createField` using `@vii-labs/core` primitives (`state`, `computed`, `createScope`, `batch`) (122 lines, <= 250 limit).
+- Updated `packages/form/src/index.ts` exporting `createField`, `CreateFieldOptions`, `FieldEqualityFn`, and `FieldState`.
+- Created comprehensive unit tests in `packages/form/test/unit/field.test.ts` (19 test cases covering initial state, mutation, baseline return, touched independence, batched reset, same-value suppression, custom equality, granular subscriptions, Scope lifecycle/idempotence/post-dispose errors, independent fields isolation, `__proto__`/`constructor` data safety, and type inference).
+- Updated `packages/form/test/package-boundary.test.ts` verifying root exports `["createField"]` while adapter subpaths remain empty.
+- Updated `scripts/package-validation/validate-form.mjs` registering emitted `dist/core/*` files and executing a real runtime clean consumer scenario against the packed `.tgz` artifact.
+- Updated `packages/form/README.md`, `PROJECT_STATE.md`, and `DUTY_WATCH.md`.
+
+### Validation
+
+- `pnpm --filter @vii-labs/form lint` (passed cleanly, 0 warnings)
+- `pnpm --filter @vii-labs/form typecheck` (passed cleanly)
+- `pnpm --filter @vii-labs/form test` (26 tests passed across 2 test files)
+- `pnpm --filter @vii-labs/form build` (compiled clean ESM and declaration artifacts)
+- `node scripts/package-validation/validate-form.mjs` (passed, pack inspection and clean consumer runtime scenario verified)
+- `git diff --check` (passed, 0 whitespace/conflict errors)
+- `NX_DAEMON=false pnpm validate` (passed full repository validation)
+
+### Architecture / compatibility
+
+- Preserves Clean Architecture and downward dependency flow: `@vii-labs/form` depends strictly on `@vii-labs/core`.
+- Zero framework dependencies imported or bundled in form core.
+- Root exports only `createField` and minimum public types; adapter subpaths (`/react`, `/vanilla`, `/angular`, `/vue`) remain clean empty infrastructure entrypoints.
+- Zero modifications to `@vii-labs/core`.
+
+### Remaining / recovery
+
+- None for P1c. Next slice: P1d (Form Tree, Groups & Aggregate State).
+
 ## 2026-08-28 15:45 CEST | Production Form Phase 1 Slice P1b: Package Skeleton & Governance
 
 Status: completed

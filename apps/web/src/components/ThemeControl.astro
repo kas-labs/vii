@@ -1,0 +1,66 @@
+---
+const themes = ["system", "light", "dark"] as const;
+---
+
+<div class="theme-control" aria-label="Theme">
+  <label for="vii-theme">Theme</label>
+  <select id="vii-theme" name="theme">
+    {themes.map((theme) => <option value={theme}>{theme[0].toUpperCase() + theme.slice(1)}</option>)}
+  </select>
+</div>
+
+<script is:inline>
+  const root = document.documentElement;
+  const select = document.getElementById("vii-theme");
+  const storageKey = "vii-theme";
+  const saved = localStorage.getItem(storageKey) || "system";
+
+  function applyTheme(theme) {
+    if (theme === "light" || theme === "dark") {
+      root.dataset.theme = theme;
+    } else {
+      delete root.dataset.theme;
+    }
+
+    if (select instanceof HTMLSelectElement) {
+      select.value = theme;
+    }
+  }
+
+  applyTheme(saved);
+
+  select?.addEventListener("change", (event) => {
+    const target = event.currentTarget;
+    if (!(target instanceof HTMLSelectElement)) return;
+    localStorage.setItem(storageKey, target.value);
+    applyTheme(target.value);
+  });
+</script>
+
+<style>
+  .theme-control {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  label {
+    color: var(--color-text-muted);
+    font-size: 0.8rem;
+  }
+
+  select {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-pill);
+    background: var(--color-surface);
+    color: var(--color-text);
+    font: inherit;
+    font-size: 0.8rem;
+    padding: 0.35rem 0.65rem;
+  }
+
+  select:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+</style>

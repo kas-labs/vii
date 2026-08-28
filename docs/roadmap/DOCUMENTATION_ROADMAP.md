@@ -79,7 +79,7 @@ Accepted direction sufficient to author D1 architecture contracts.
 
 ## 5. D1 — Website & Documentation Architecture Contract
 
-Status: Active
+Status: Complete
 
 ### Goal
 
@@ -127,7 +127,7 @@ All D1 documents agree with one another and contain no unresolved platform-level
 
 ## 6. D2 — Platform Skeleton
 
-Status: Planned
+Status: Complete
 
 ### Goal
 
@@ -142,7 +142,7 @@ Create the smallest functioning `apps/web` project that proves the selected plat
 - minimal global layout;
 - minimal docs route;
 - minimal homepage placeholder;
-- local design-token foundation;
+- minimal shared styling hook, with brand/token implementation owned by D3;
 - build/test/lint integration;
 - CI-safe static build;
 - no production DNS change yet.
@@ -160,7 +160,7 @@ Create the smallest functioning `apps/web` project that proves the selected plat
 
 ## 7. D3 — Brand, Design Contract & Homepage
 
-Status: Planned
+Status: Complete
 
 ### Goal
 
@@ -197,7 +197,7 @@ Homepage is visually coherent, responsive, accessible at baseline, and factually
 
 ## 8. D4 — Getting Started
 
-Status: Planned
+Status: Complete
 
 ### Goal
 
@@ -221,7 +221,7 @@ If the public package is not actually published, the documentation must not show
 
 ## 9. D5 — Core User Documentation
 
-Status: Planned
+Status: Complete
 
 ### Scope
 
@@ -242,7 +242,7 @@ A user can understand the current Core model without reading internal architectu
 
 ## 10. D6 — Lifecycle & Scope Deep Documentation
 
-Status: Planned
+Status: Complete
 
 ### Goal
 
@@ -257,7 +257,7 @@ Document ownership, cleanup, disposal, resource lifetime, and lifecycle reasonin
 
 ## 11. D7 — Diagnostics Documentation
 
-Status: Planned
+Status: Complete
 
 ### Goal
 
@@ -274,7 +274,7 @@ Explain diagnostics as a developer tool and product differentiator without overc
 
 ## 12. D8 — Framework Integrations
 
-Status: Planned
+Status: Complete
 
 ### Scope
 
@@ -292,7 +292,7 @@ Status: Planned
 
 ## 13. D9 — Examples System
 
-Status: Planned
+Status: Complete
 
 ### Goal
 
@@ -316,7 +316,7 @@ Each listed example has a clear maturity/compatibility context and source link.
 
 ## 14. D10 — Public Status, Compatibility & Roadmap
 
-Status: Planned
+Status: Complete
 
 ### Goal
 
@@ -329,7 +329,8 @@ Implement factual ecosystem visibility.
 - `/ecosystem` truth-oriented cards;
 - compatibility model/pages;
 - `/roadmap` public projection;
-- last-verified/evidence traceability where useful.
+- last-verified/evidence traceability where useful;
+- homepage and examples consume the central status source instead of maintaining independent maturity facts.
 
 ### Rule
 
@@ -608,8 +609,8 @@ Some content slices may proceed in parallel after D2/D3 when their required runt
 
 ## 28. Current next slice
 
-After D1 is accepted, the next implementation slice is:
+D0 through D10 are complete. The next implementation slice is:
 
-> D2 — Platform Skeleton
+> D11 — Generated API Reference
 
-D2 must create only the minimal `apps/web` foundation necessary to prove Astro + Starlight inside the monorepo. It must not absorb homepage design, full documentation authoring, API generation, domain deployment, or later roadmap work.
+D11 must generate public API documentation from actual TypeScript exports, preserve public/private package boundaries, and make the generation pipeline reproducible in CI without treating internal or research-only surfaces as public API.

@@ -10,6 +10,7 @@
  */
 export { createField } from "./core/field.js";
 export { createFieldGroup } from "./core/group.js";
+export { createFieldArray } from "./core/array.js";
 export { createForm } from "./core/form.js";
 
 export { createNumberParser, createStringParser } from "./parsers/builtins.js";
@@ -19,9 +20,12 @@ export { standardSchema } from "./validation/standard-schema.js";
 export type {
   AnyValidationRule,
   AsyncValidationRule,
+  CreateFieldArrayOptions,
   CreateFieldGroupOptions,
   CreateFieldOptions,
   CreateFormOptions,
+  FieldArray,
+  FieldArrayItem,
   FieldEqualityFn,
   FieldGroup,
   FieldIssue,

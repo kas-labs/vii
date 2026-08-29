@@ -6,7 +6,17 @@ Experimental reactive headless form state and validation engine for the Vii ecos
 
 Internal development / experimental candidate (Phase 1 Baseline).
 
-- **Current Implementation (P1e — Validation, Parsers & Standard Schema):**
+- **Current Implementation (P1f — FieldArray & Stable Identity):**
+  - **Dynamic Repeatable Collections (`createFieldArray`):**
+    - Stable logical item identity (`FieldArrayItem<TNode>` with stable `id` and `node`) independent of array positional indices; reordering (`move`, `swap`), insertion, and removal preserve item identity, child Scope, focus state, and client issues.
+    - Opaque internal ID generation (`vii_item_${counter}`) or custom `keyExtractor` without ID collisions; IDs never leak into domain `value` or presentation `rawValue`.
+    - Batch-safe array mutations: `append`, `prepend`, `insert`, `remove`, `move`, `swap`, `clear`.
+    - Reactive collection aggregation: `value`, `rawValue`, `touched`, `dirty`, `pending`, `valid`, `invalid`, and `issues` (with dynamically updated numeric index prefix paths `[i, ...]`).
+    - Identity-strict dirty tracking: an array is pristine (`dirty === false`) if and only if its length matches baseline, its exact key identity sequence matches baseline, and all child nodes are pristine.
+    - Deterministic child Scope lifecycle and transactional adoption: removed items are cleanly disposed; parent disposal cascades to all child items; direct disposal of adopted items is rejected.
+    - Cancellation & race safety: removing an item while async validation is in flight immediately aborts its controller; moving an item dynamically updates its issue prefix upon resolution.
+    - Array baseline reset (`reset()`): restores baseline items in baseline order, discards non-baseline items, and resets remaining baseline items.
+    - Whole-form reinitialization (`form.reinitialize`) integration: recursive two-phase prevalidation across nested array collections with zero partial mutation on failure.
   - **Leaf Field Primitive (`createField`):**
     - Raw vs Value separation: supports synchronous parsers (`FieldParser<TRaw, TValue>`) where raw presentation input (`"05"`) is preserved in `rawValue` without mutating domain `value` (e.g. `5`), and parse failures retain raw presentation input while preserving the last good domain value. `setRawValue` commits all observable field states atomically in a single batch.
     - Synchronous validation rules (`SyncValidationRule<TValue>`) and asynchronous validation rules (`AsyncValidationRule<TValue>`). Automatic validation (on change, blur, debounce) contains unexpected synchronous exceptions and asynchronous rejections into structured execution issues (`validation.execution_error`) with `validationStatus: "invalid"`, while manual `validate()` propagates errors directly to the caller.
@@ -25,6 +35,6 @@ Internal development / experimental candidate (Phase 1 Baseline).
     - Whole-form baseline reinitialization (`form.reinitialize`) using explicit separate `value` and `rawValue` trees (`FormReinitializeInput`); recursive two-phase prevalidation with zero mutation on malformed input; successful commit is batched for observer atomicity.
     - Transactional node adoption and deterministic Scope lifecycle ownership.
 - **Subpaths (`/react`, `/vanilla`, `/angular`, `/vue`):** Skeleton infrastructure entrypoints (adapters deferred to P1h–P1j).
-- **Deferred / Non-Goals for P1e:** No dynamic array collections (`createFieldArray` deferred to P1f), no submission pipeline or server issue routing (deferred to P1g), and no framework adapter implementations.
+- **Deferred / Non-Goals for P1f:** No submission pipeline or server issue routing (deferred to P1g), and no framework adapter implementations (deferred to P1h–P1j).
 
 See `docs/architecture/FORM_ARCHITECTURE.md` and `docs/roadmap/FORM_RESEARCH.md` for architecture and roadmap details.

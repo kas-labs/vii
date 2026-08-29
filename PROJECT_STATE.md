@@ -97,7 +97,7 @@ and root form coordination via `createForm<TFields>`, providing typed nested obj
 Scope ownership, aggregate domain/raw values, recursive dirty/touched aggregation, deterministic reset,
 whole-form baseline reinitialization (`form.reinitialize(newBaseline)`), transactional two-phase adoption,
 and deterministic root Scope disposal preventing direct public disposal of tree-adopted children.
-Slice P1e introduces Raw vs Value separation, synchronous parsers (`FieldParser<TRaw, TValue>`), trusted canonical baselines (`initialValue` + required `initialRawValue` when `TRaw !== TValue` without automatic baseline parsing), raw presentation
+Slice P1e introduced Raw vs Value separation, synchronous parsers (`FieldParser<TRaw, TValue>`), trusted canonical baselines (`initialValue` + required `initialRawValue` when `TRaw !== TValue` without automatic baseline parsing), raw presentation
 retention on parse failure (e.g. `"05"` retained as `"05"` while `value` is `5`), single-batch atomic `setRawValue` commit, structured `ParseIssue`,
 synchronous validation rules (`SyncValidationRule<TValue>`), asynchronous validation rules (`AsyncValidationRule<TValue>`),
 automatic validation error containment (unexpected sync throws and async rejections commit structured `validation.execution_error` issues while manual `validate()` propagates throws),
@@ -106,8 +106,9 @@ fail-closed Standard Schema v1 validation bridge (`standardSchema`, validation-o
 public built-in parsers (`createNumberParser`, `createStringParser` only), whole-form reinitialization via explicit separate `value` / `rawValue` trees (`FormReinitializeInput`) with recursive two-phase prevalidation (zero mutation on malformed input),
 domain-only dirty semantics, parsed-field `setValue` updating domain value while preserving raw presentation, parameterless `field.reset()`, internal-only baseline storage and internal-only issue mutation (no public `setIssues` or baseline signals),
 and aggregate validation state across groups and root forms. Reserved strings (`__proto__`, `constructor`, `prototype`) are treated as legitimate issue/path data; protection applies at object materialization sinks only.
-The package remains private (`private: true`). Arrays (`createFieldArray`), submission pipeline, server issue routing,
-and framework adapters are deferred to subsequent slices P1f–P1j.
+Slice P1f implements dynamic repeatable collections via `createFieldArray<TItemNode>`, providing stable logical item identity (`FieldArrayItem<TNode>` with stable `id` and `node`) independent of array positional indices, opaque unique token generation (`vii_item_${counter}`) or custom `keyExtractor` without ID collisions, batch-safe array mutations (`append`, `prepend`, `insert`, `remove`, `move`, `swap`, `clear`), reactive collection aggregation (`value`, `rawValue`, `touched`, `dirty`, `pending`, `valid`, `invalid`, and `issues` with dynamically updated numeric index prefix paths `[i, ...]`), identity-strict dirty tracking (requiring exact baseline length, exact key sequence, and pristine child nodes), deterministic child Scope lifecycle and transactional adoption, async validation race protection (immediate cancellation on removal, dynamic path prefix updating on reorder), array baseline reset, and whole-form two-phase `form.reinitialize` integration.
+The package remains private (`private: true`). Submission pipeline, server issue routing,
+and framework adapters are deferred to subsequent slices P1g–P1j.
 `@vii-labs/form` declares `@vii-labs/core` as a required runtime peer (`>=0.1.0-experimental.2`),
 `@standard-schema/spec` as a type-consumed dependency, and `react`, `@angular/core`, and `vue` as optional
 peer dependencies. It has zero runtime dependency on `research/form/` and makes zero modifications to `@vii-labs/core`.

@@ -76,6 +76,18 @@ try {
     "package/dist/index.d.ts.map",
     "package/dist/index.js",
     "package/dist/index.js.map",
+    "package/dist/core/array-operations.d.ts",
+    "package/dist/core/array-operations.d.ts.map",
+    "package/dist/core/array-operations.js",
+    "package/dist/core/array-operations.js.map",
+    "package/dist/core/array-types.d.ts",
+    "package/dist/core/array-types.d.ts.map",
+    "package/dist/core/array-types.js",
+    "package/dist/core/array-types.js.map",
+    "package/dist/core/array.d.ts",
+    "package/dist/core/array.d.ts.map",
+    "package/dist/core/array.js",
+    "package/dist/core/array.js.map",
     "package/dist/core/baseline-types.d.ts",
     "package/dist/core/baseline-types.d.ts.map",
     "package/dist/core/baseline-types.js",
@@ -169,6 +181,7 @@ try {
 import * as form from "@vii-labs/form";
 import {
   createField,
+  createFieldArray,
   createFieldGroup,
   createForm,
   createNumberParser,
@@ -202,6 +215,9 @@ export async function runFormTreeScenario() {
           }),
         },
       }),
+      tags: createFieldArray({
+        items: [createField({ initialValue: "typescript" }), createField({ initialValue: "react" })],
+      }),
       settings: createFieldGroup({
         fields: {
           theme: createField({ initialValue: "light" }),
@@ -229,6 +245,14 @@ export async function runFormTreeScenario() {
   // Restore age to valid
   formInstance.fields.user.fields.age.setRawValue("35");
 
+  // Exercise array mutation & stable identity
+  const initialTagId0 = formInstance.fields.tags.items.get()[0]!.id;
+  const initialTagId1 = formInstance.fields.tags.items.get()[1]!.id;
+  formInstance.fields.tags.move(0, 1);
+  const tagMovedVal = formInstance.fields.tags.getValue();
+  const tagMovedId0 = formInstance.fields.tags.items.get()[0]!.id;
+  const tagMovedId1 = formInstance.fields.tags.items.get()[1]!.id;
+
   // Reinitialize
   formInstance.reinitialize({
     value: {
@@ -236,6 +260,7 @@ export async function runFormTreeScenario() {
         name: "Bob",
         age: 40,
       },
+      tags: ["frontend", "signals"],
       settings: { theme: "dark" },
     },
     rawValue: {
@@ -243,6 +268,7 @@ export async function runFormTreeScenario() {
         name: "Bob",
         age: "40",
       },
+      tags: ["frontend", "signals"],
       settings: { theme: "dark" },
     },
   });
@@ -321,9 +347,12 @@ export async function runFormTreeScenario() {
     parseFailedVal,
     parseFailedValid,
     parseIssuesCount,
-      reinitializedVal,
-      reinitializedRawVal,
-      reinitializedDirty,
+    tagMovedVal,
+    tagMovedId0MatchesOld1: tagMovedId0 === initialTagId1,
+    tagMovedId1MatchesOld0: tagMovedId1 === initialTagId0,
+    reinitializedVal,
+    reinitializedRawVal,
+    reinitializedDirty,
     moneyReinitialized,
     moneyDirty,
     schemaInitialValid,
@@ -359,41 +388,50 @@ export async function runFormTreeScenario() {
     consumer.rootKeys,
     [
       "createField",
+      "createFieldArray",
       "createFieldGroup",
       "createForm",
       "createNumberParser",
       "createStringParser",
       "standardSchema",
     ].sort(),
-    "clean consumer root export should contain P1e symbols",
+    "clean consumer root export should contain P1f symbols",
   );
   assert.deepEqual(
     consumer.reactKeys,
     [],
-    "clean consumer react subpath export should be empty in P1e",
+    "clean consumer react subpath export should be empty in P1f",
   );
   assert.deepEqual(
     consumer.vanillaKeys,
     [],
-    "clean consumer vanilla subpath export should be empty in P1e",
+    "clean consumer vanilla subpath export should be empty in P1f",
   );
   assert.deepEqual(
     consumer.angularKeys,
     [],
-    "clean consumer angular subpath export should be empty in P1e",
+    "clean consumer angular subpath export should be empty in P1f",
   );
   assert.deepEqual(
     consumer.vueKeys,
     [],
-    "clean consumer vue subpath export should be empty in P1e",
+    "clean consumer vue subpath export should be empty in P1f",
   );
 
   const scenarioResult = await consumer.runFormTreeScenario();
   assert.deepEqual(
     scenarioResult,
     {
-      initialVal: { user: { name: "Vitalii", age: 30 }, settings: { theme: "light" } },
-      initialRawVal: { user: { name: "Vitalii", age: "30" }, settings: { theme: "light" } },
+      initialVal: {
+        user: { name: "Vitalii", age: 30 },
+        tags: ["typescript", "react"],
+        settings: { theme: "light" },
+      },
+      initialRawVal: {
+        user: { name: "Vitalii", age: "30" },
+        tags: ["typescript", "react"],
+        settings: { theme: "light" },
+      },
       initialValid: true,
       ageRaw: "05",
       ageVal: 5,
@@ -401,8 +439,19 @@ export async function runFormTreeScenario() {
       parseFailedVal: 5,
       parseFailedValid: false,
       parseIssuesCount: 1,
-      reinitializedVal: { user: { name: "Bob", age: 40 }, settings: { theme: "dark" } },
-      reinitializedRawVal: { user: { name: "Bob", age: "40" }, settings: { theme: "dark" } },
+      tagMovedVal: ["react", "typescript"],
+      tagMovedId0MatchesOld1: true,
+      tagMovedId1MatchesOld0: true,
+      reinitializedVal: {
+        user: { name: "Bob", age: 40 },
+        tags: ["frontend", "signals"],
+        settings: { theme: "dark" },
+      },
+      reinitializedRawVal: {
+        user: { name: "Bob", age: "40" },
+        tags: ["frontend", "signals"],
+        settings: { theme: "dark" },
+      },
       reinitializedDirty: false,
       moneyReinitialized: { value: 2, rawValue: "€2" },
       moneyDirty: false,

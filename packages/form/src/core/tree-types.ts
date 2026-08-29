@@ -1,13 +1,16 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Computed, ReadableState, Scope } from "@vii-labs/core";
+import type { CreateFieldArrayOptions, FieldArray, FieldArrayItem } from "./array-types.js";
 import type { FormReinitializeInput } from "./baseline-types.js";
 import type { FieldState } from "./types.js";
 import type { FieldIssue } from "../validation/types.js";
 
+export type { CreateFieldArrayOptions, FieldArray, FieldArrayItem };
+
 /**
  * Union of supported node types in a composable form tree.
  */
-export type FormNode = FieldState<any, any> | FieldGroup<any>;
+export type FormNode = FieldState<any, any> | FieldGroup<any> | FieldArray<any>;
 
 /**
  * Record of child form nodes keyed by property names.
@@ -21,7 +24,9 @@ export type FormValueFor<T> = T extends { readonly kind: "field"; getValue(): in
   ? V
   : T extends { readonly kind: "group"; fields: infer F }
     ? { [K in keyof F]: FormValueFor<F[K]> }
-    : never;
+    : T extends { readonly kind: "array"; getValue(): infer A }
+      ? A
+      : never;
 
 /**
  * Recursively maps a form node type to its corresponding materialized raw presentation value type.
@@ -30,7 +35,9 @@ export type FormRawValueFor<T> = T extends { readonly kind: "field"; getRawValue
   ? R
   : T extends { readonly kind: "group"; fields: infer F }
     ? { [K in keyof F]: FormRawValueFor<F[K]> }
-    : never;
+    : T extends { readonly kind: "array"; getRawValue(): infer A }
+      ? A
+      : never;
 
 /**
  * Materialized domain object value shape for a collection of form fields.

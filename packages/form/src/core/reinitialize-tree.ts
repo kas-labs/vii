@@ -1,7 +1,7 @@
 import type { InternalFieldBaseline } from "./baseline-types.js";
 import type { FormReinitializeInput } from "./baseline-types.js";
 import { getInternalNode, safeHasProperty, type FormNodeInternal } from "./internal.js";
-import type { FieldGroup, FormFieldsRecord, FormNode } from "./types.js";
+import type { FieldArray, FieldGroup, FormFieldsRecord, FormNode } from "./types.js";
 
 function assertObjectTree(
   label: "value" | "rawValue",
@@ -54,6 +54,11 @@ export type PreparedNodeReinitialize =
   | {
       readonly kind: "group";
       readonly children: readonly PreparedNodeReinitialize[];
+    }
+  | {
+      readonly kind: "array";
+      readonly internal: FormNodeInternal<unknown>;
+      readonly children: readonly PreparedNodeReinitialize[];
     };
 
 function prevalidateChildNode(
@@ -73,6 +78,44 @@ function prevalidateChildNode(
       internal: internal as FormNodeInternal<InternalFieldBaseline<unknown, unknown>>,
       baseline: { value: valueSlice, rawValue: rawSlice },
     };
+  }
+
+  if (node.kind === "array") {
+    const arrayNode = node as FieldArray<FormNode>;
+    if (!Array.isArray(valueSlice)) {
+      throw new TypeError(
+        `Invalid reinitialize baseline at "${path}": expected value tree array, received ${
+          valueSlice === null ? "null" : typeof valueSlice
+        }`,
+      );
+    }
+    if (!Array.isArray(rawSlice)) {
+      throw new TypeError(
+        `Invalid reinitialize baseline at "${path}": expected rawValue tree array, received ${
+          rawSlice === null ? "null" : typeof rawSlice
+        }`,
+      );
+    }
+    const currentItems = arrayNode.items.get();
+    if (valueSlice.length !== rawSlice.length) {
+      throw new TypeError(
+        `Invalid reinitialize baseline at "${path}": value array length (${valueSlice.length}) does not match rawValue array length (${rawSlice.length})`,
+      );
+    }
+    if (valueSlice.length !== currentItems.length) {
+      throw new TypeError(
+        `Invalid reinitialize baseline at "${path}": array length (${valueSlice.length}) does not match active items count (${currentItems.length})`,
+      );
+    }
+
+    const children: PreparedNodeReinitialize[] = [];
+    for (let i = 0; i < currentItems.length; i++) {
+      const childPath = `${path}[${i}]`;
+      children.push(
+        prevalidateChildNode(currentItems[i]!.node, valueSlice[i], rawSlice[i], childPath),
+      );
+    }
+    return { kind: "array", internal, children };
   }
 
   const group = node as FieldGroup<FormFieldsRecord>;
@@ -148,6 +191,10 @@ function commitPreparedNode(plan: PreparedNodeReinitialize): void {
 
   for (let i = 0; i < plan.children.length; i++) {
     commitPreparedNode(plan.children[i]!);
+  }
+
+  if (plan.kind === "array") {
+    plan.internal.reinitialize(undefined);
   }
 }
 

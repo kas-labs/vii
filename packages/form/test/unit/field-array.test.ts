@@ -1,0 +1,775 @@
+import { createScope } from "@vii-labs/core";
+import { describe, expect, test, vi } from "vitest";
+import {
+  createField,
+  createFieldArray,
+  createFieldGroup,
+  createForm,
+  createNumberParser,
+  type AsyncValidationRule,
+  type FieldIssue,
+  type SyncValidationRule,
+} from "../../src/index.js";
+
+describe("FieldArray — dynamic collection with stable identity (P1f)", () => {
+  describe("Creation & Initial Aggregation", () => {
+    test("creates an empty field array with correct initial state", () => {
+      const array = createFieldArray();
+
+      expect(array.kind).toBe("array");
+      expect(array.items.get()).toEqual([]);
+      expect(array.getValue()).toEqual([]);
+      expect(array.getRawValue()).toEqual([]);
+      expect(array.value.get()).toEqual([]);
+      expect(array.rawValue.get()).toEqual([]);
+      expect(array.touched.get()).toBe(false);
+      expect(array.dirty.get()).toBe(false);
+      expect(array.pending.get()).toBe(false);
+      expect(array.valid.get()).toBe(true);
+      expect(array.invalid.get()).toBe(false);
+      expect(array.issues.get()).toEqual([]);
+
+      array.dispose();
+    });
+
+    test("creates field array with initial items and aggregates values/rawValues", () => {
+      const field1 = createField({ initialValue: "apple" });
+      const field2 = createField<number, string>({
+        initialValue: 42,
+        initialRawValue: "042",
+        parser: createNumberParser(),
+      });
+
+      const array = createFieldArray({
+        items: [field1, field2],
+      });
+
+      expect(array.items.get().length).toBe(2);
+      expect(array.items.get()[0]!.node).toBe(field1);
+      expect(array.items.get()[1]!.node).toBe(field2);
+
+      expect(array.getValue()).toEqual(["apple", 42]);
+      expect(array.getRawValue()).toEqual(["apple", "042"]);
+      expect(array.value.get()).toEqual(["apple", 42]);
+      expect(array.rawValue.get()).toEqual(["apple", "042"]);
+      expect(array.dirty.get()).toBe(false);
+      expect(array.touched.get()).toBe(false);
+      expect(array.valid.get()).toBe(true);
+
+      array.dispose();
+    });
+
+    test("supports custom keyExtractor when provided", () => {
+      const field1 = createField({ initialValue: "one" });
+      const field2 = createField({ initialValue: "two" });
+
+      let keyCount = 0;
+      const array = createFieldArray({
+        items: [field1, field2],
+        keyExtractor: () => `custom_key_${++keyCount}`,
+      });
+
+      const items = array.items.get();
+      expect(items[0]!.id).toBe("custom_key_1");
+      expect(items[1]!.id).toBe("custom_key_2");
+
+      array.dispose();
+    });
+  });
+
+  describe("Stable Item Identity", () => {
+    test("append preserves existing IDs and assigns a fresh stable ID to new item", () => {
+      const f1 = createField({ initialValue: "first" });
+      const array = createFieldArray({ items: [f1] });
+
+      const initialId = array.items.get()[0]!.id;
+      expect(initialId).toBeDefined();
+
+      const f2 = createField({ initialValue: "second" });
+      const item2 = array.append(f2);
+
+      const itemsAfter = array.items.get();
+      expect(itemsAfter.length).toBe(2);
+      expect(itemsAfter[0]!.id).toBe(initialId);
+      expect(itemsAfter[0]!.node).toBe(f1);
+      expect(itemsAfter[1]!.id).toBe(item2.id);
+      expect(itemsAfter[1]!.node).toBe(f2);
+      expect(itemsAfter[0]!.id).not.toBe(itemsAfter[1]!.id);
+
+      array.dispose();
+    });
+
+    test("insert preserves existing sibling IDs", () => {
+      const f1 = createField({ initialValue: "first" });
+      const f2 = createField({ initialValue: "second" });
+      const array = createFieldArray({ items: [f1, f2] });
+
+      const id1 = array.items.get()[0]!.id;
+      const id2 = array.items.get()[1]!.id;
+
+      const fMiddle = createField({ initialValue: "middle" });
+      const insertedItem = array.insert(1, fMiddle);
+
+      const current = array.items.get();
+      expect(current.length).toBe(3);
+      expect(current[0]!.id).toBe(id1);
+      expect(current[0]!.node).toBe(f1);
+      expect(current[1]!.id).toBe(insertedItem.id);
+      expect(current[1]!.node).toBe(fMiddle);
+      expect(current[2]!.id).toBe(id2);
+      expect(current[2]!.node).toBe(f2);
+
+      array.dispose();
+    });
+
+    test("prepend inserts at index 0 preserving sibling IDs", () => {
+      const f1 = createField({ initialValue: "original" });
+      const array = createFieldArray({ items: [f1] });
+      const id1 = array.items.get()[0]!.id;
+
+      const fPre = createField({ initialValue: "prefixed" });
+      const preItem = array.prepend(fPre);
+
+      const current = array.items.get();
+      expect(current.length).toBe(2);
+      expect(current[0]!.id).toBe(preItem.id);
+      expect(current[0]!.node).toBe(fPre);
+      expect(current[1]!.id).toBe(id1);
+      expect(current[1]!.node).toBe(f1);
+
+      array.dispose();
+    });
+
+    test("remove preserves remaining sibling IDs and returns removed node", () => {
+      const f1 = createField({ initialValue: "a" });
+      const f2 = createField({ initialValue: "b" });
+      const f3 = createField({ initialValue: "c" });
+      const array = createFieldArray({ items: [f1, f2, f3] });
+
+      const id1 = array.items.get()[0]!.id;
+      const id3 = array.items.get()[2]!.id;
+
+      const removed = array.remove(1);
+      expect(removed).toBe(f2);
+
+      const current = array.items.get();
+      expect(current.length).toBe(2);
+      expect(current[0]!.id).toBe(id1);
+      expect(current[0]!.node).toBe(f1);
+      expect(current[1]!.id).toBe(id3);
+      expect(current[1]!.node).toBe(f3);
+
+      array.dispose();
+    });
+
+    test("move preserves logical item identities and child node instances across reordering", () => {
+      const f0 = createField({ initialValue: "item-0" });
+      const f1 = createField({ initialValue: "item-1" });
+      const f2 = createField({ initialValue: "item-2" });
+      const array = createFieldArray({ items: [f0, f1, f2] });
+
+      const id0 = array.items.get()[0]!.id;
+      const id1 = array.items.get()[1]!.id;
+      const id2 = array.items.get()[2]!.id;
+
+      // Move item 2 to index 0: [item-2, item-0, item-1]
+      array.move(2, 0);
+
+      const current = array.items.get();
+      expect(current.length).toBe(3);
+      expect(current[0]!.id).toBe(id2);
+      expect(current[0]!.node).toBe(f2);
+      expect(current[1]!.id).toBe(id0);
+      expect(current[1]!.node).toBe(f0);
+      expect(current[2]!.id).toBe(id1);
+      expect(current[2]!.node).toBe(f1);
+
+      expect(array.getValue()).toEqual(["item-2", "item-0", "item-1"]);
+
+      array.dispose();
+    });
+
+    test("swap exchanges positions while preserving item IDs and nodes", () => {
+      const f0 = createField({ initialValue: "zero" });
+      const f1 = createField({ initialValue: "one" });
+      const array = createFieldArray({ items: [f0, f1] });
+
+      const id0 = array.items.get()[0]!.id;
+      const id1 = array.items.get()[1]!.id;
+
+      array.swap(0, 1);
+
+      const current = array.items.get();
+      expect(current[0]!.id).toBe(id1);
+      expect(current[0]!.node).toBe(f1);
+      expect(current[1]!.id).toBe(id0);
+      expect(current[1]!.node).toBe(f0);
+
+      expect(array.getValue()).toEqual(["one", "zero"]);
+
+      array.dispose();
+    });
+
+    test("move and swap are safe no-ops when source equals target index", () => {
+      const f0 = createField({ initialValue: "zero" });
+      const array = createFieldArray({ items: [f0] });
+
+      const id0 = array.items.get()[0]!.id;
+      array.move(0, 0);
+      array.swap(0, 0);
+
+      expect(array.items.get()[0]!.id).toBe(id0);
+      expect(array.items.get()[0]!.node).toBe(f0);
+
+      array.dispose();
+    });
+
+    test("out of bounds indices throw deterministic RangeErrors", () => {
+      const f0 = createField({ initialValue: "a" });
+      const array = createFieldArray({ items: [f0] });
+
+      expect(() => array.insert(-1, createField({ initialValue: "x" }))).toThrow(RangeError);
+      expect(() => array.insert(5, createField({ initialValue: "x" }))).toThrow(RangeError);
+      expect(() => array.remove(-1)).toThrow(RangeError);
+      expect(() => array.remove(1)).toThrow(RangeError);
+      expect(() => array.move(0, 5)).toThrow(RangeError);
+      expect(() => array.move(5, 0)).toThrow(RangeError);
+      expect(() => array.swap(0, 2)).toThrow(RangeError);
+      expect(() => array.swap(-1, 0)).toThrow(RangeError);
+
+      array.dispose();
+    });
+  });
+
+  describe("Lifecycle & Ownership Model", () => {
+    test("adopted child node cannot be directly disposed publicly", () => {
+      const field = createField({ initialValue: "hello" });
+      const array = createFieldArray({ items: [field] });
+
+      expect(() => field.dispose()).toThrow(
+        "Cannot dispose an adopted field directly; dispose its owning form or group",
+      );
+
+      array.dispose();
+    });
+
+    test("removed item is cleanly disposed and cannot influence array", () => {
+      const field1 = createField({ initialValue: "keep" });
+      const field2 = createField({
+        initialValue: "remove-me",
+        rules: [(v: string) => (v === "bad" ? { code: "invalid_str" } : null)],
+      });
+
+      const array = createFieldArray({ items: [field1, field2] });
+      expect(array.valid.get()).toBe(true);
+
+      // Remove field2
+      array.remove(1);
+
+      // Mutating field2 should throw because it is disposed
+      expect(() => field2.setValue("bad")).toThrow("Field is disposed");
+      expect(array.items.get().length).toBe(1);
+      expect(array.valid.get()).toBe(true);
+      expect(array.issues.get()).toEqual([]);
+
+      array.dispose();
+    });
+
+    test("clear() disposes all items and empties array", () => {
+      const f1 = createField({ initialValue: "1" });
+      const f2 = createField({ initialValue: "2" });
+      const array = createFieldArray({ items: [f1, f2] });
+
+      array.clear();
+      expect(array.items.get()).toEqual([]);
+      expect(array.getValue()).toEqual([]);
+
+      expect(() => f1.setValue("x")).toThrow("Field is disposed");
+      expect(() => f2.setValue("y")).toThrow("Field is disposed");
+
+      // clear on empty array is safe no-op
+      expect(() => array.clear()).not.toThrow();
+
+      array.dispose();
+    });
+
+    test("array disposal cascades and disposes all child item scopes", () => {
+      const f1 = createField({ initialValue: "1" });
+      const f2 = createField({ initialValue: "2" });
+      const array = createFieldArray({ items: [f1, f2] });
+
+      array.dispose();
+
+      expect(() => array.getValue()).toThrow("Array is disposed");
+      expect(() => array.append(createField({ initialValue: "3" }))).toThrow("Array is disposed");
+      expect(() => f1.setValue("new")).toThrow("Field is disposed");
+      expect(() => f2.setValue("new")).toThrow("Field is disposed");
+
+      // Idempotent disposal
+      expect(() => array.dispose()).not.toThrow();
+    });
+
+    test("root Form and FieldGroup disposal cascades through FieldArray", () => {
+      const f = createField({ initialValue: "nested" });
+      const array = createFieldArray({ items: [f] });
+      const group = createFieldGroup({ fields: { list: array } });
+      const form = createForm({ fields: { grp: group } });
+
+      form.dispose();
+
+      expect(() => form.getValue()).toThrow("Form is disposed");
+      expect(() => group.getValue()).toThrow("Group is disposed");
+      expect(() => array.getValue()).toThrow("Array is disposed");
+      expect(() => f.getValue()).toThrow("Field is disposed");
+    });
+
+    test("cannot adopt an already disposed or tree-owned node (transactional adoption)", () => {
+      const fDisposed = createField({ initialValue: "dead" });
+      fDisposed.dispose();
+
+      expect(() => createFieldArray({ items: [fDisposed] })).toThrow(
+        'Cannot adopt node at "array item": node is disposed',
+      );
+
+      const fInTree = createField({ initialValue: "in-tree" });
+      const arr1 = createFieldArray({ items: [fInTree] });
+
+      expect(() => createFieldArray({ items: [fInTree] })).toThrow(
+        'Cannot adopt node at "array item": node is already part of another form or group',
+      );
+
+      // Appending invalid node is also rejected
+      const arr2 = createFieldArray();
+      expect(() => arr2.append(fInTree)).toThrow(
+        'Cannot adopt node at "array item": node is already part of another form or group',
+      );
+      expect(arr2.items.get().length).toBe(0);
+
+      // External scope rejection
+      const externalScope = createScope({ name: "external" });
+      const fScoped = createField({ initialValue: "scoped", scope: externalScope });
+      expect(() => arr2.append(fScoped)).toThrow(
+        'Cannot adopt node at "array item": node already has an external Scope owner',
+      );
+      expect(arr2.items.get().length).toBe(0);
+
+      externalScope.dispose();
+      arr1.dispose();
+      arr2.dispose();
+    });
+  });
+
+  describe("Reactivity & Aggregation (Dirty, Touched, Pending, Valid, Issues)", () => {
+    test("dirty tracks item value changes and structural modifications strictly", () => {
+      const f1 = createField({ initialValue: "a" });
+      const f2 = createField({ initialValue: "b" });
+      const array = createFieldArray({ items: [f1, f2] });
+
+      expect(array.dirty.get()).toBe(false);
+
+      // Leaf edit -> dirty
+      f1.setValue("a-modified");
+      expect(array.dirty.get()).toBe(true);
+
+      // Revert leaf edit -> pristine
+      f1.setValue("a");
+      expect(array.dirty.get()).toBe(false);
+
+      // Append -> dirty
+      const f3 = createField({ initialValue: "c" });
+      array.append(f3);
+      expect(array.dirty.get()).toBe(true);
+
+      // Remove appended -> pristine
+      array.remove(2);
+      expect(array.dirty.get()).toBe(false);
+
+      // Reorder items -> dirty
+      array.swap(0, 1);
+      expect(array.dirty.get()).toBe(true);
+
+      // Swap back -> pristine
+      array.swap(0, 1);
+      expect(array.dirty.get()).toBe(false);
+
+      array.dispose();
+    });
+
+    test("touched aggregates across items", () => {
+      const f1 = createField({ initialValue: "a" });
+      const f2 = createField({ initialValue: "b" });
+      const array = createFieldArray({ items: [f1, f2] });
+
+      expect(array.touched.get()).toBe(false);
+
+      f2.markTouched();
+      expect(array.touched.get()).toBe(true);
+
+      f2.setTouched(false);
+      expect(array.touched.get()).toBe(false);
+
+      array.dispose();
+    });
+
+    test("issues aggregates child issues with current array index prefix", () => {
+      const rule: SyncValidationRule<string> = (val) =>
+        val.length < 3 ? { code: "min_len", message: "Too short" } : null;
+
+      const f0 = createField({ initialValue: "valid", rules: [rule] });
+      const f1 = createField({ initialValue: "valid-str", rules: [rule] });
+      const array = createFieldArray({ items: [f0, f1] });
+
+      expect(array.valid.get()).toBe(true);
+
+      // Mutate f0 to trigger validation
+      f0.setValue("ab");
+
+      expect(array.valid.get()).toBe(false);
+      expect(array.invalid.get()).toBe(true);
+      expect(array.issues.get()).toEqual([
+        {
+          code: "min_len",
+          message: "Too short",
+          source: "validation",
+          path: [0],
+        },
+      ]);
+
+      // Move item 0 to index 1: issue path dynamically reflects new index [1]
+      array.move(0, 1);
+      expect(array.issues.get()).toEqual([
+        {
+          code: "min_len",
+          message: "Too short",
+          source: "validation",
+          path: [1],
+        },
+      ]);
+
+      // Fix issue
+      f0.setValue("now-valid");
+      expect(array.valid.get()).toBe(true);
+      expect(array.invalid.get()).toBe(false);
+      expect(array.issues.get()).toEqual([]);
+
+      array.dispose();
+    });
+
+    test("nested group issues receive [arrayIndex, fieldName, ...path]", () => {
+      const rule: SyncValidationRule<number> = (v) => (v < 0 ? { code: "positive" } : null);
+
+      const array = createFieldArray({
+        items: [
+          createFieldGroup({
+            fields: {
+              name: createField({ initialValue: "John" }),
+              age: createField({ initialValue: 10, rules: [rule] }),
+            },
+          }),
+        ],
+      });
+
+      expect(array.valid.get()).toBe(true);
+
+      // Mutate age to invalid
+      array.items.get()[0]!.node.fields.age.setValue(-5);
+
+      expect(array.valid.get()).toBe(false);
+      expect(array.issues.get()).toEqual([
+        {
+          code: "positive",
+          source: "validation",
+          path: [0, "age"],
+        },
+      ]);
+
+      array.dispose();
+    });
+  });
+
+  describe("Async Validation & Remove/Move Race Conditions", () => {
+    test("removing an item while async validation is pending disposes controller and clears pending", async () => {
+      let resolveAsync: ((val: FieldIssue | null) => void) | undefined;
+      const asyncRule: AsyncValidationRule<string> = () =>
+        new Promise((resolve) => {
+          resolveAsync = resolve;
+        });
+
+      const f0 = createField({ initialValue: "valid" });
+      const f1 = createField({ initialValue: "async-test", rules: [asyncRule] });
+      const array = createFieldArray({ items: [f0, f1] });
+
+      // Trigger async validation on f1
+      f1.setValue("trigger-async");
+      expect(f1.pending.get()).toBe(true);
+      expect(array.pending.get()).toBe(true);
+
+      // Remove f1 while validation is pending
+      array.remove(1);
+      expect(array.pending.get()).toBe(false);
+      expect(array.items.get().length).toBe(1);
+
+      // Late resolution occurs after removal
+      resolveAsync?.({ code: "late_error", message: "Stale", source: "validation" });
+      await new Promise((r) => setTimeout(r, 10));
+
+      // Array remains pristine and valid with zero stale issue leakage
+      expect(array.pending.get()).toBe(false);
+      expect(array.valid.get()).toBe(true);
+      expect(array.issues.get()).toEqual([]);
+
+      array.dispose();
+    });
+
+    test("moving an item while async validation is pending updates issue path upon resolution", async () => {
+      let resolveAsync: ((val: FieldIssue | null) => void) | undefined;
+      const asyncRule: AsyncValidationRule<string> = () =>
+        new Promise((resolve) => {
+          resolveAsync = resolve;
+        });
+
+      const f0 = createField({ initialValue: "zero" });
+      const f1 = createField({ initialValue: "one", rules: [asyncRule] });
+      const array = createFieldArray({ items: [f0, f1] });
+
+      // Start validation on item at index 1
+      f1.setValue("validating");
+      expect(array.pending.get()).toBe(true);
+
+      // Move item from index 1 to index 0
+      array.move(1, 0);
+      expect(array.items.get()[0]!.node).toBe(f1);
+
+      // Resolve async validation with an issue
+      resolveAsync?.({ code: "async_err", message: "Async failed", source: "validation" });
+      await new Promise((r) => setTimeout(r, 20));
+
+      expect(array.pending.get()).toBe(false);
+      expect(array.valid.get()).toBe(false);
+      expect(array.issues.get()).toEqual([
+        {
+          code: "async_err",
+          message: "Async failed",
+          source: "validation",
+          path: [0],
+        },
+      ]);
+
+      array.dispose();
+    });
+  });
+
+  describe("Reset Semantics", () => {
+    test("reset restores baseline order, discards appended items, and resets remaining baseline items", () => {
+      const f0 = createField({ initialValue: "base-0" });
+      const f1 = createField({ initialValue: "base-1" });
+      const array = createFieldArray({ items: [f0, f1] });
+
+      const id0 = array.items.get()[0]!.id;
+      const id1 = array.items.get()[1]!.id;
+
+      // 1. Mutate field values
+      f0.setValue("mutated-0");
+      // 2. Append new item
+      const fAdded = createField({ initialValue: "added" });
+      array.append(fAdded);
+      // 3. Move items
+      array.move(0, 1);
+
+      expect(array.getValue()).toEqual(["base-1", "mutated-0", "added"]);
+      expect(array.dirty.get()).toBe(true);
+
+      // Reset
+      array.reset();
+
+      expect(array.getValue()).toEqual(["base-0", "base-1"]);
+      expect(array.items.get().length).toBe(2);
+      expect(array.items.get()[0]!.id).toBe(id0);
+      expect(array.items.get()[0]!.node).toBe(f0);
+      expect(array.items.get()[1]!.id).toBe(id1);
+      expect(array.items.get()[1]!.node).toBe(f1);
+      expect(array.dirty.get()).toBe(false);
+      expect(array.touched.get()).toBe(false);
+
+      // Appended node was disposed by reset
+      expect(() => fAdded.setValue("should fail")).toThrow("Field is disposed");
+
+      array.dispose();
+    });
+  });
+
+  describe("Whole-Form Reinitialize Integration", () => {
+    test("reinitialize updates array item baselines and resets dirty state", () => {
+      const form = createForm({
+        fields: {
+          contacts: createFieldArray({
+            items: [
+              createFieldGroup({
+                fields: {
+                  name: createField({ initialValue: "Alice" }),
+                  age: createField<number, string>({
+                    initialValue: 25,
+                    initialRawValue: "25",
+                    parser: createNumberParser(),
+                  }),
+                },
+              }),
+            ],
+          }),
+        },
+      });
+
+      const initialId = form.fields.contacts.items.get()[0]!.id;
+
+      // Mutate leaf field
+      form.fields.contacts.items.get()[0]!.node.fields.name.setValue("Alice Modified");
+      expect(form.dirty.get()).toBe(true);
+
+      // Reinitialize with new baseline
+      form.reinitialize({
+        value: {
+          contacts: [{ name: "Bob", age: 30 }],
+        },
+        rawValue: {
+          contacts: [{ name: "Bob", age: "30" }],
+        },
+      });
+
+      expect(form.getValue()).toEqual({
+        contacts: [{ name: "Bob", age: 30 }],
+      });
+      expect(form.getRawValue()).toEqual({
+        contacts: [{ name: "Bob", age: "30" }],
+      });
+      expect(form.dirty.get()).toBe(false);
+      expect(form.touched.get()).toBe(false);
+
+      // Preserves existing item stable ID
+      expect(form.fields.contacts.items.get()[0]!.id).toBe(initialId);
+
+      // Reset after reinitialize restores new baseline
+      form.fields.contacts.items.get()[0]!.node.fields.name.setValue("Bob Modified");
+      expect(form.dirty.get()).toBe(true);
+      form.reset();
+      expect(form.getValue()).toEqual({
+        contacts: [{ name: "Bob", age: 30 }],
+      });
+      expect(form.dirty.get()).toBe(false);
+
+      form.dispose();
+    });
+
+    test("reinitialize fails cleanly with zero mutations on malformed input or length mismatch", () => {
+      const form = createForm({
+        fields: {
+          items: createFieldArray({
+            items: [createField({ initialValue: "original" })],
+          }),
+        },
+      });
+
+      // Length mismatch: expected 1, passed 2
+      expect(() =>
+        form.reinitialize({
+          value: { items: ["a", "b"] },
+          rawValue: { items: ["a", "b"] },
+        }),
+      ).toThrow(TypeError);
+
+      // Non-array input
+      expect(() =>
+        form.reinitialize({
+          value: { items: "not-an-array" as never },
+          rawValue: { items: "not-an-array" as never },
+        }),
+      ).toThrow(TypeError);
+
+      // Form remains pristine and unmutated
+      expect(form.getValue()).toEqual({ items: ["original"] });
+      expect(form.dirty.get()).toBe(false);
+
+      form.dispose();
+    });
+  });
+
+  describe("Security: Data vs Sink Prototype Invariants", () => {
+    test("item values with property names like __proto__, constructor, prototype remain valid data", () => {
+      type DangerousRecord = { __proto__: string; constructor: string; prototype: string };
+
+      const array = createFieldArray({
+        items: [
+          createField<DangerousRecord>({
+            initialValue: {
+              __proto__: "data-proto",
+              constructor: "data-constructor",
+              prototype: "data-prototype",
+            },
+          }),
+        ],
+      });
+
+      expect(array.getValue()).toEqual([
+        {
+          __proto__: "data-proto",
+          constructor: "data-constructor",
+          prototype: "data-prototype",
+        },
+      ]);
+      expect(array.valid.get()).toBe(true);
+
+      array.dispose();
+    });
+  });
+
+  describe("Recursive Nesting: Nested FieldArray & Form Integration", () => {
+    test("nested FieldArray inside FieldArray aggregates values and paths", () => {
+      const innerArray = createFieldArray({
+        items: [
+          createField({
+            initialValue: "nested-value",
+            rules: [(v: string) => (v === "bad" ? { code: "invalid_nested" } : null)],
+          }),
+        ],
+      });
+
+      const outerArray = createFieldArray({
+        items: [innerArray],
+      });
+
+      expect(outerArray.getValue()).toEqual([["nested-value"]]);
+      expect(outerArray.valid.get()).toBe(true);
+
+      // Invalidate inner field
+      innerArray.items.get()[0]!.node.setValue("bad");
+      expect(outerArray.valid.get()).toBe(false);
+      expect(outerArray.issues.get()).toEqual([
+        {
+          code: "invalid_nested",
+          source: "validation",
+          path: [0, 0],
+        },
+      ]);
+
+      outerArray.dispose();
+    });
+  });
+
+  describe("Explicit validate() on FieldArray", () => {
+    test("validate() executes on all child nodes and returns aggregate issues", async () => {
+      const syncRule = vi.fn<SyncValidationRule<string>>((v) =>
+        v === "" ? { code: "required", message: "Required" } : null,
+      );
+
+      const f1 = createField({ initialValue: "", rules: [syncRule], validateOn: "manual" });
+      const f2 = createField({ initialValue: "valid", rules: [syncRule], validateOn: "manual" });
+      const array = createFieldArray({ items: [f1, f2] });
+
+      const issues = await array.validate();
+      expect(issues).toHaveLength(1);
+      expect(issues[0]!.code).toBe("required");
+      expect(issues[0]!.path).toEqual([0]);
+
+      array.dispose();
+    });
+  });
+});

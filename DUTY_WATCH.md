@@ -37,6 +37,61 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-30 01:40 CEST | Production Form Phase 1 Slice P1f: FieldArray & Stable Identity
+
+Status: completed
+Branch: `feat/form-p1f-field-array`
+PR: not opened
+
+### Scope
+
+- Implement dynamic repeatable collection support via `createFieldArray(...)` with stable item identity in `@vii-labs/form` (Phase 1 Slice P1f).
+- Implement stable logical item identity independent of array positional indices (`FieldArrayItem<TNode>` with stable opaque `id` and `node`).
+- Support collection mutations: `append`, `prepend`, `insert`, `remove`, `move`, `swap`, `clear`.
+- Provide full reactive collection state aggregation: `items`, `value`, `rawValue`, `touched`, `dirty`, `pending`, `valid`, `invalid`, `issues` (with dynamically updated numeric index prefix paths `[i, ...]`).
+- Enforce identity-strict dirty tracking: array is pristine (`dirty === false`) if and only if its length matches baseline, its exact key sequence matches baseline, and all child nodes are pristine.
+- Implement child Scope lifecycle management, transactional adoption, and cascade disposal.
+- Protect against async validation race conditions during item removal and reordering.
+- Support baseline reset (`reset()`) and two-phase recursive whole-form reinitialization (`form.reinitialize`).
+- Verify package boundary, export maps, tree-shaking, line budgets, and clean consumer packed validation.
+
+### Changes
+
+- Created `packages/form/src/core/array-types.ts` defining `FieldArrayItem`, `CreateFieldArrayOptions`, and `FieldArray`.
+- Created `packages/form/src/core/array-operations.ts` providing index bounds validation, duplicate key checking, and recursive node validation helpers.
+- Created `packages/form/src/core/array.ts` implementing `createFieldArray` with stable IDs, child Scopes, reactive aggregation computeds, batch-safe mutations, reset, and disposal.
+- Updated `packages/form/src/core/tree-types.ts` extending `FormNode` union with `FieldArray<any>`, and updating `FormValueFor` / `FormRawValueFor`.
+- Updated `packages/form/src/core/internal.ts` adding `"array"` node kind, single-node `adoptChildNode()`, and updating `adoptChildNodes()`.
+- Updated `packages/form/src/core/reinitialize-tree.ts` adding recursive two-phase array prevalidation and atomic commit plan execution.
+- Updated `packages/form/src/core/types.ts` and `packages/form/src/index.ts` re-exporting `createFieldArray` and array types.
+- Created unit tests in `packages/form/test/unit/field-array.test.ts` covering creation, stable identity across reorders/moves/swaps, dirty tracking, touched, pending, valid/invalid, issues path prefixing, async validation races on remove/move, reset, and reinitialize.
+- Updated `packages/form/test/unit/types.test.ts` with type inference coverage for `FieldArray` and nested arrays in forms.
+- Updated `packages/form/test/package-boundary.test.ts` and `scripts/package-validation/validate-form.mjs` verifying exports, package entries, and clean consumer packed execution.
+- Updated `packages/form/README.md` and `PROJECT_STATE.md`.
+
+### Validation
+
+- `pnpm nx lint form`: PASSED (0 errors, 0 warnings).
+- `pnpm nx typecheck form`: PASSED (clean TypeScript compilation across src and test).
+- `pnpm nx test form`: PASSED (13 test files, 182 passed tests).
+- `pnpm nx build form`: PASSED (clean d.ts and ESM build).
+- `pnpm nx validate-package form`: PASSED (tarball packaging and clean consumer execution).
+- Line budget check: all production files in `packages/form/src/` strictly satisfy line standards ($\le 361$ lines, below 400 hard limit; most $\le 250$).
+- `git diff --check`: PASSED (zero whitespace or conflict markers).
+- `NX_DAEMON=false pnpm validate`: will be verified prior to push.
+
+### Architecture / compatibility
+
+- Zero modifications to `@vii-labs/core` runtime or contracts.
+- `@vii-labs/form` remains private (`private: true`) and framework-neutral.
+- Stable item IDs are opaque internal tokens that never leak into domain `value` or presentation `rawValue`.
+- Zero runtime dependencies added; pure reactive integration with `@vii-labs/core`.
+
+### Remaining / recovery
+
+- None for P1f.
+- Next slice is P1g: Submission Lifecycle, Submission In-Flight Locking & Server Issue Routing.
+
 ## 2026-08-30 01:25 CEST | Production Form Phase 1 Slice P1e post-merge corrections
 
 Status: completed

@@ -1,5 +1,4 @@
 import type { FieldIssue, ValidationTriggerMode } from "../validation/types.js";
-import type { FieldArrayItem } from "./array-types.js";
 import type { FormFieldsRecord, FormNode } from "./tree-types.js";
 
 /**
@@ -14,22 +13,6 @@ export function assertIntegerIndex(index: number, max: number, inclusive: boolea
   const upper = inclusive ? max : max - 1;
   if (index < 0 || index > upper) {
     throw new RangeError(`Index ${index} is out of bounds for FieldArray of length ${max}`);
-  }
-}
-
-/**
- * Asserts that all item IDs in an array are unique.
- */
-export function assertUniqueKeys<TNode extends FormNode>(
-  items: readonly FieldArrayItem<TNode>[],
-): void {
-  const seen = new Set<string>();
-  for (let i = 0; i < items.length; i++) {
-    const item = items[i]!;
-    if (seen.has(item.id)) {
-      throw new Error(`Duplicate key "${item.id}" detected in FieldArray`);
-    }
-    seen.add(item.id);
   }
 }
 

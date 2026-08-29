@@ -71,13 +71,9 @@ export function safeHasProperty(target: unknown, propertyKey: string): boolean {
 }
 
 /**
- * Validates and attaches a single child node to a parent scope.
+ * Validates that a candidate child node is adoptable without mutating its ownership.
  */
-export function adoptChildNode(
-  parentScope: Scope,
-  child: unknown,
-  label = "node",
-): FormNodeInternal {
+export function validateAdoptableChild(child: unknown, label = "node"): FormNodeInternal {
   if (
     child === null ||
     typeof child !== "object" ||
@@ -110,10 +106,32 @@ export function adoptChildNode(
     throw new Error(`Cannot adopt node at "${label}": node already has an external Scope owner`);
   }
 
+  return childInternal;
+}
+
+/**
+ * Commits adoption of a pre-validated child node to a parent scope.
+ */
+export function commitChildAdoption(
+  parentScope: Scope,
+  childInternal: FormNodeInternal,
+): () => void {
   childInternal.ownership = "tree";
-  parentScope.use(() => {
+  return parentScope.use(() => {
     childInternal.disposeFromOwner();
   });
+}
+
+/**
+ * Validates and attaches a single child node to a parent scope transactionally.
+ */
+export function adoptChildNode(
+  parentScope: Scope,
+  child: unknown,
+  label = "node",
+): FormNodeInternal {
+  const childInternal = validateAdoptableChild(child, label);
+  commitChildAdoption(parentScope, childInternal);
   return childInternal;
 }
 
@@ -131,48 +149,11 @@ export function adoptChildNodes<TFields extends FormFieldsRecord>(
   for (let i = 0; i < fieldKeys.length; i++) {
     const key = fieldKeys[i]!;
     const child = fields[key] as unknown;
-
-    if (
-      child === null ||
-      typeof child !== "object" ||
-      !("kind" in (child as Record<string, unknown>)) ||
-      ((child as Record<string, unknown>)["kind"] !== "field" &&
-        (child as Record<string, unknown>)["kind"] !== "group" &&
-        (child as Record<string, unknown>)["kind"] !== "array")
-    ) {
-      throw new TypeError(
-        `Invalid form node at "${key}": expected a FieldState, FieldGroup, or FieldArray`,
-      );
-    }
-
-    const childInternal = getInternalNode(child);
-    if (!childInternal) {
-      throw new TypeError(`Invalid form node at "${key}": missing internal lifecycle metadata`);
-    }
-
-    if (childInternal.ownership === "disposed") {
-      throw new Error(`Cannot adopt node at "${key}": node is disposed`);
-    }
-
-    if (childInternal.ownership === "tree") {
-      throw new Error(
-        `Cannot adopt node at "${key}": node is already part of another form or group`,
-      );
-    }
-
-    if (childInternal.ownership === "external-scope") {
-      throw new Error(`Cannot adopt node at "${key}": node already has an external Scope owner`);
-    }
-
-    childInternals.push(childInternal);
+    childInternals.push(validateAdoptableChild(child, key));
   }
 
   // Phase 2: Commit all adoptions transactionally
   for (let i = 0; i < childInternals.length; i++) {
-    const childInternal = childInternals[i]!;
-    childInternal.ownership = "tree";
-    parentScope.use(() => {
-      childInternal.disposeFromOwner();
-    });
+    commitChildAdoption(parentScope, childInternals[i]!);
   }
 }

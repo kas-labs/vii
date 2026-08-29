@@ -1,16 +1,14 @@
 import { batch, computed, createScope, state, type Scope } from "@vii-labs/core";
 import type { FieldIssue, ValidationTriggerMode } from "../validation/types.js";
-import { assertIntegerIndex, assertUniqueKeys, validateNode } from "./array-operations.js";
-import type { CreateFieldArrayOptions, FieldArray, FieldArrayItem } from "./array-types.js";
 import {
-  adoptChildNode,
-  attachInternalNode,
-  type FormNodeInternal,
-  type NodeOwnership,
-} from "./internal.js";
+  commitArrayItemsAdoption,
+  commitItemAdoption,
+  preflightArrayItems,
+} from "./array-adoption.js";
+import { assertIntegerIndex, validateNode } from "./array-operations.js";
+import type { CreateFieldArrayOptions, FieldArray, FieldArrayItem } from "./array-types.js";
+import { attachInternalNode, type FormNodeInternal, type NodeOwnership } from "./internal.js";
 import type { FormNode, FormRawValueFor, FormValueFor } from "./tree-types.js";
-
-let idCounter = 0;
 
 /**
  * Creates a reactive repeatable collection node with stable item identity.
@@ -32,42 +30,18 @@ export function createFieldArray<TItemNode extends FormNode = FormNode>(
   const arrayScope = scope ? scope.createChild({ name: "array" }) : createScope({ name: "array" });
   const scopesMap = new Map<string, Scope>();
 
-  const createItemEntry = (node: TItemNode): FieldArrayItem<TItemNode> => {
-    const itemScope = arrayScope.createChild({ name: "array-item" });
-    try {
-      adoptChildNode(itemScope, node, "array item");
-      let id: string;
-      if (keyExtractor) {
-        const extracted = keyExtractor(node);
-        id =
-          typeof extracted === "string" && extracted.length > 0
-            ? extracted
-            : `vii_item_${++idCounter}`;
-      } else {
-        id = `vii_item_${++idCounter}`;
-      }
-      scopesMap.set(id, itemScope);
-      return { id, node };
-    } catch (err) {
-      itemScope.dispose();
-      throw err;
-    }
-  };
-
+  // Phase 1: Preflight entire initial items list without mutating any candidate node
   const rawItems = options?.items ?? [];
-  const initialItems: FieldArrayItem<TItemNode>[] = [];
-  try {
-    for (let i = 0; i < rawItems.length; i++) {
-      initialItems.push(createItemEntry(rawItems[i]!));
-    }
-    assertUniqueKeys(initialItems);
-  } catch (err) {
-    for (let i = 0; i < initialItems.length; i++) {
-      const item = initialItems[i]!;
-      scopesMap.get(item.id)?.dispose();
-      scopesMap.delete(item.id);
-    }
-    throw err;
+  const preparedInitial = preflightArrayItems(rawItems, new Set(), keyExtractor);
+
+  // Phase 2: Commit adoption for all pre-validated items
+  const { items: initialItems, scopes: initialScopes } = commitArrayItemsAdoption(
+    arrayScope,
+    preparedInitial,
+  );
+  for (let i = 0; i < initialScopes.length; i++) {
+    const [id, itemScope] = initialScopes[i]!;
+    scopesMap.set(id, itemScope);
   }
 
   let baselineItems: readonly FieldArrayItem<TItemNode>[] = Object.freeze([...initialItems]);
@@ -191,36 +165,40 @@ export function createFieldArray<TItemNode extends FormNode = FormNode>(
     assertActive();
     const current = itemsState.get();
     assertIntegerIndex(index, current.length, true);
-    const item = createItemEntry(node);
-    try {
-      batch(() => {
-        const next = [...itemsState.get()];
-        next.splice(index, 0, item);
-        assertUniqueKeys(next);
-        itemsState.set(Object.freeze(next));
-      });
-      return item;
-    } catch (err) {
-      scopesMap.get(item.id)?.dispose();
-      scopesMap.delete(item.id);
-      throw err;
-    }
+
+    // Phase 1: Preflight single candidate against active keys without mutation
+    const existingKeys = new Set(scopesMap.keys());
+    const [prepared] = preflightArrayItems([node], existingKeys, keyExtractor);
+
+    // Phase 2: Commit adoption
+    const { item, itemScope } = commitItemAdoption(arrayScope, prepared!);
+    scopesMap.set(item.id, itemScope);
+
+    batch(() => {
+      const next = [...itemsState.get()];
+      next.splice(index, 0, item);
+      itemsState.set(Object.freeze(next));
+    });
+
+    return item;
   };
 
   const remove = (index: number): TItemNode => {
     assertActive();
     const current = itemsState.get();
     assertIntegerIndex(index, current.length, false);
-    let removedNode!: TItemNode;
+    const item = current[index]!;
+    const itemScope = scopesMap.get(item.id);
+    scopesMap.delete(item.id);
+
     batch(() => {
       const next = [...itemsState.get()];
-      const removed = next.splice(index, 1)[0]!;
-      removedNode = removed.node;
-      scopesMap.get(removed.id)?.dispose();
-      scopesMap.delete(removed.id);
+      next.splice(index, 1);
       itemsState.set(Object.freeze(next));
+      itemScope?.dispose();
     });
-    return removedNode;
+
+    return item.node;
   };
 
   const move = (fromIndex: number, toIndex: number): void => {
@@ -254,15 +232,22 @@ export function createFieldArray<TItemNode extends FormNode = FormNode>(
 
   const clear = (): void => {
     assertActive();
-    if (itemsState.get().length === 0) return;
-    batch(() => {
-      const current = itemsState.get();
-      for (let i = 0; i < current.length; i++) {
-        const item = current[i]!;
-        scopesMap.get(item.id)?.dispose();
-        scopesMap.delete(item.id);
+    const current = itemsState.get();
+    if (current.length === 0) return;
+    const scopesToDispose: Scope[] = [];
+    for (let i = 0; i < current.length; i++) {
+      const id = current[i]!.id;
+      const s = scopesMap.get(id);
+      if (s) {
+        scopesToDispose.push(s);
+        scopesMap.delete(id);
       }
+    }
+    batch(() => {
       itemsState.set(Object.freeze([]));
+      for (let i = 0; i < scopesToDispose.length; i++) {
+        scopesToDispose[i]!.dispose();
+      }
     });
   };
 
@@ -286,25 +271,34 @@ export function createFieldArray<TItemNode extends FormNode = FormNode>(
 
   const reset = (): void => {
     assertActive();
-    batch(() => {
-      const current = itemsState.get();
-      const baselineIdSet = new Set(baselineIds);
-      for (let i = 0; i < current.length; i++) {
-        const item = current[i]!;
-        if (!baselineIdSet.has(item.id)) {
-          scopesMap.get(item.id)?.dispose();
+    const current = itemsState.get();
+    const baselineIdSet = new Set(baselineIds);
+    const scopesToDispose: Scope[] = [];
+    for (let i = 0; i < current.length; i++) {
+      const item = current[i]!;
+      if (!baselineIdSet.has(item.id)) {
+        const itemScope = scopesMap.get(item.id);
+        if (itemScope) {
+          scopesToDispose.push(itemScope);
           scopesMap.delete(item.id);
         }
       }
-      const restoredItems: FieldArrayItem<TItemNode>[] = [];
-      for (let i = 0; i < baselineItems.length; i++) {
-        const baseItem = baselineItems[i]!;
-        if (scopesMap.has(baseItem.id)) {
-          restoredItems.push(baseItem);
-          baseItem.node.reset();
-        }
+    }
+    const restoredItems: FieldArrayItem<TItemNode>[] = [];
+    for (let i = 0; i < baselineItems.length; i++) {
+      const baseItem = baselineItems[i]!;
+      if (scopesMap.has(baseItem.id)) {
+        restoredItems.push(baseItem);
       }
+    }
+    batch(() => {
       itemsState.set(Object.freeze(restoredItems));
+      for (let i = 0; i < restoredItems.length; i++) {
+        restoredItems[i]!.node.reset();
+      }
+      for (let i = 0; i < scopesToDispose.length; i++) {
+        scopesToDispose[i]!.dispose();
+      }
     });
   };
 

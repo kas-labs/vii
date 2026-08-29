@@ -323,39 +323,174 @@ describe("FieldArray — dynamic collection with stable identity (P1f)", () => {
       expect(() => f.getValue()).toThrow("Field is disposed");
     });
 
-    test("cannot adopt an already disposed or tree-owned node (transactional adoption)", () => {
+    test("initial duplicate key failure throws, leaves all candidate nodes standalone, usable, and not disposed", () => {
+      const f1 = createField({ initialValue: "apple" });
+      const f2 = createField({ initialValue: "banana" });
+
+      expect(() =>
+        createFieldArray({
+          items: [f1, f2],
+          keyExtractor: () => "duplicate_key",
+        }),
+      ).toThrow('Duplicate key "duplicate_key" detected in FieldArray');
+
+      // Both nodes remain standalone, usable, and not disposed
+      expect(() => f1.setValue("apple-modified")).not.toThrow();
+      expect(f1.getValue()).toBe("apple-modified");
+      expect(() => f2.setValue("banana-modified")).not.toThrow();
+      expect(f2.getValue()).toBe("banana-modified");
+
+      f1.dispose();
+      f2.dispose();
+    });
+
+    test("initial invalid/adoption-ineligible later item leaves earlier valid nodes standalone with zero partial adoption", () => {
+      const f1 = createField({ initialValue: "valid-1" });
+      const f2 = createField({ initialValue: "valid-2" });
       const fDisposed = createField({ initialValue: "dead" });
       fDisposed.dispose();
 
-      expect(() => createFieldArray({ items: [fDisposed] })).toThrow(
-        'Cannot adopt node at "array item": node is disposed',
+      expect(() =>
+        createFieldArray({
+          items: [f1, f2, fDisposed],
+        }),
+      ).toThrow('Cannot adopt node at "array item at index 2": node is disposed');
+
+      // Earlier valid nodes were not adopted and not disposed
+      expect(() => f1.setValue("f1-alive")).not.toThrow();
+      expect(f1.getValue()).toBe("f1-alive");
+      expect(() => f2.setValue("f2-alive")).not.toThrow();
+      expect(f2.getValue()).toBe("f2-alive");
+
+      // f1 and f2 can be adopted by another array cleanly
+      const newArray = createFieldArray({ items: [f1, f2] });
+      expect(newArray.getValue()).toEqual(["f1-alive", "f2-alive"]);
+
+      newArray.dispose();
+    });
+
+    test("insert duplicate key leaves candidate standalone and existing item healthy", () => {
+      const f1 = createField({ initialValue: "existing" });
+      const array = createFieldArray({
+        items: [f1],
+        keyExtractor: (node) => (node.getValue() === "existing" ? "fixed_key" : "fixed_key"),
+      });
+
+      const candidate = createField({ initialValue: "candidate" });
+      expect(() => array.insert(0, candidate)).toThrow(
+        'Duplicate key "fixed_key" detected in FieldArray',
       );
 
-      const fInTree = createField({ initialValue: "in-tree" });
-      const arr1 = createFieldArray({ items: [fInTree] });
+      // Array state unchanged
+      expect(array.items.get().length).toBe(1);
+      expect(array.items.get()[0]!.node).toBe(f1);
+      expect(array.getValue()).toEqual(["existing"]);
 
-      expect(() => createFieldArray({ items: [fInTree] })).toThrow(
-        'Cannot adopt node at "array item": node is already part of another form or group',
+      // Candidate remains standalone and usable
+      expect(() => candidate.setValue("candidate-still-works")).not.toThrow();
+      expect(candidate.getValue()).toBe("candidate-still-works");
+
+      // Existing item and array still work normally
+      f1.setValue("existing-modified");
+      expect(array.getValue()).toEqual(["existing-modified"]);
+
+      candidate.dispose();
+      array.dispose();
+    });
+
+    test("insert adoption-ineligible node (disposed, tree-owned, external-scope) leaves array and candidate unchanged", () => {
+      const f1 = createField({ initialValue: "orig" });
+      const array = createFieldArray({ items: [f1] });
+
+      const fDisposed = createField({ initialValue: "dead" });
+      fDisposed.dispose();
+
+      expect(() => array.insert(0, fDisposed)).toThrow(
+        'Cannot adopt node at "array item at index 0": node is disposed',
       );
+      expect(array.items.get().length).toBe(1);
 
-      // Appending invalid node is also rejected
-      const arr2 = createFieldArray();
-      expect(() => arr2.append(fInTree)).toThrow(
-        'Cannot adopt node at "array item": node is already part of another form or group',
-      );
-      expect(arr2.items.get().length).toBe(0);
-
-      // External scope rejection
-      const externalScope = createScope({ name: "external" });
+      const externalScope = createScope({ name: "ext" });
       const fScoped = createField({ initialValue: "scoped", scope: externalScope });
-      expect(() => arr2.append(fScoped)).toThrow(
-        'Cannot adopt node at "array item": node already has an external Scope owner',
+      expect(() => array.append(fScoped)).toThrow(
+        'Cannot adopt node at "array item at index 0": node already has an external Scope owner',
       );
-      expect(arr2.items.get().length).toBe(0);
+      expect(array.items.get().length).toBe(1);
+
+      // Candidate fScoped was not mutated
+      expect(() => fScoped.setValue("scoped-edit")).not.toThrow();
+      expect(fScoped.getValue()).toBe("scoped-edit");
 
       externalScope.dispose();
-      arr1.dispose();
-      arr2.dispose();
+      array.dispose();
+    });
+
+    test("failed append and prepend provide same zero-mutation guarantee", () => {
+      const f1 = createField({ initialValue: "only" });
+      const array = createFieldArray({ items: [f1] });
+
+      const fTree = createField({ initialValue: "in-other-tree" });
+      const otherArr = createFieldArray({ items: [fTree] });
+
+      expect(() => array.append(fTree)).toThrow(
+        'Cannot adopt node at "array item at index 0": node is already part of another form or group',
+      );
+      expect(array.items.get().length).toBe(1);
+
+      expect(() => array.prepend(fTree)).toThrow(
+        'Cannot adopt node at "array item at index 0": node is already part of another form or group',
+      );
+      expect(array.items.get().length).toBe(1);
+
+      array.dispose();
+      otherArr.dispose();
+    });
+
+    test("successful operation after a rejected collision still works", () => {
+      const keyGen = (v: string) => v;
+      const f1 = createField({ initialValue: "item-1" });
+      const array = createFieldArray({
+        items: [f1],
+        keyExtractor: (n) => keyGen(n.getValue()),
+      });
+
+      // Attempt insert with duplicate key "item-1"
+      const fDup = createField({ initialValue: "item-1" });
+      expect(() => array.append(fDup)).toThrow('Duplicate key "item-1" detected in FieldArray');
+      expect(array.items.get().length).toBe(1);
+
+      // Subsequent valid append succeeds
+      const fValid = createField({ initialValue: "item-2" });
+      const appended = array.append(fValid);
+      expect(appended.id).toBe("item-2");
+      expect(array.items.get().length).toBe(2);
+      expect(array.getValue()).toEqual(["item-1", "item-2"]);
+
+      fDup.dispose();
+      array.dispose();
+    });
+
+    test("array disposal after rejected collision disposes every legitimately owned item exactly once", () => {
+      const f1 = createField({ initialValue: "item-1" });
+      const array = createFieldArray({
+        items: [f1],
+        keyExtractor: (n) => n.getValue(),
+      });
+
+      const fDup = createField({ initialValue: "item-1" });
+      expect(() => array.append(fDup)).toThrow('Duplicate key "item-1" detected in FieldArray');
+
+      // Dispose array
+      array.dispose();
+
+      // Legitimate child f1 is disposed
+      expect(() => f1.setValue("new")).toThrow("Field is disposed");
+
+      // Rejected candidate fDup is NOT disposed by array disposal
+      expect(() => fDup.setValue("candidate-works")).not.toThrow();
+      expect(fDup.getValue()).toBe("candidate-works");
+
+      fDup.dispose();
     });
   });
 

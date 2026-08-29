@@ -102,7 +102,7 @@ retention on parse failure (e.g. `"05"` retained as `"05"` while `value` is `5`)
 synchronous validation rules (`SyncValidationRule<TValue>`), asynchronous validation rules (`AsyncValidationRule<TValue>`),
 validation `pending` state, monotonic validation revision tracking, `AbortSignal` cancellation, stale-result protection,
 fail-closed Standard Schema v1 validation bridge (`standardSchema`, validation-only — transformed schema output is not adopted as field `TValue`),
-public built-in parsers (`createNumberParser`, `createStringParser` only), whole-form reinitialization via explicit separate `value` / `rawValue` trees (`FormReinitializeInput`) with no reserved application object-shape heuristics,
+public built-in parsers (`createNumberParser`, `createStringParser` only), whole-form reinitialization via explicit separate `value` / `rawValue` trees (`FormReinitializeInput`) with recursive two-phase prevalidation (zero mutation on malformed input),
 domain-only dirty semantics, parsed-field `setValue` updating domain value while preserving raw presentation, parameterless `field.reset()`, internal-only baseline storage (no public `initialValue` / `initialRawValue` signals),
 and aggregate validation state across groups and root forms. Reserved strings (`__proto__`, `constructor`, `prototype`) are treated as legitimate issue/path data; protection applies at object materialization sinks only.
 The package remains private (`private: true`). Arrays (`createFieldArray`), submission pipeline, server issue routing,

@@ -1,28 +1,25 @@
-import type { FormFieldsRecord } from "./tree-types.js";
-import { getInternalNode, safeHasProperty } from "./internal.js";
+import type { InternalFieldBaseline } from "./baseline-types.js";
 import type { FormReinitializeInput } from "./baseline-types.js";
+import { getInternalNode, safeHasProperty, type FormNodeInternal } from "./internal.js";
+import type { FieldGroup, FormFieldsRecord, FormNode } from "./types.js";
 
 function assertObjectTree(
   label: "value" | "rawValue",
   tree: unknown,
+  path: string,
 ): asserts tree is Record<string, unknown> {
   if (tree === null || typeof tree !== "object") {
     throw new TypeError(
-      `Invalid reinitialize baseline: expected ${label} tree object, received ${
+      `Invalid reinitialize baseline at "${path}": expected ${label} tree object, received ${
         tree === null ? "null" : typeof tree
       }`,
     );
   }
 }
 
-/**
- * Validates reinitialize input shape and dispatches explicit value/raw slices to child internals.
- */
-export function reinitializeChildNodes<TFields extends FormFieldsRecord>(
-  fields: TFields,
-  fieldKeys: readonly string[],
+function assertTopLevelInput<TFields extends FormFieldsRecord>(
   nextBaseline: FormReinitializeInput<TFields>,
-): void {
+): { valueTree: Record<string, unknown>; rawTree: Record<string, unknown> } {
   if (nextBaseline === null || typeof nextBaseline !== "object") {
     throw new TypeError(
       `Invalid reinitialize baseline: expected { value, rawValue }, received ${
@@ -37,10 +34,91 @@ export function reinitializeChildNodes<TFields extends FormFieldsRecord>(
     );
   }
 
-  const valueTree = nextBaseline.value;
-  const rawTree = nextBaseline.rawValue;
-  assertObjectTree("value", valueTree);
-  assertObjectTree("rawValue", rawTree);
+  const valueTree = nextBaseline.value as unknown;
+  const rawTree = nextBaseline.rawValue as unknown;
+  assertObjectTree("value", valueTree, "value");
+  assertObjectTree("rawValue", rawTree, "rawValue");
+  return { valueTree, rawTree };
+}
+
+/**
+ * Immutable prepared reinitialize plan for one tree node.
+ * Built during prevalidation without mutating form state.
+ */
+export type PreparedNodeReinitialize =
+  | {
+      readonly kind: "field";
+      readonly internal: FormNodeInternal<InternalFieldBaseline<unknown, unknown>>;
+      readonly baseline: InternalFieldBaseline<unknown, unknown>;
+    }
+  | {
+      readonly kind: "group";
+      readonly children: readonly PreparedNodeReinitialize[];
+    };
+
+function prevalidateChildNode(
+  node: FormNode,
+  valueSlice: unknown,
+  rawSlice: unknown,
+  path: string,
+): PreparedNodeReinitialize {
+  const internal = getInternalNode(node);
+  if (!internal) {
+    throw new Error(`Child node "${path}" is missing internal node metadata`);
+  }
+
+  if (node.kind === "field") {
+    return {
+      kind: "field",
+      internal: internal as FormNodeInternal<InternalFieldBaseline<unknown, unknown>>,
+      baseline: { value: valueSlice, rawValue: rawSlice },
+    };
+  }
+
+  const group = node as FieldGroup<FormFieldsRecord>;
+  const fieldKeys = Object.keys(group.fields);
+  assertObjectTree("value", valueSlice, path);
+  assertObjectTree("rawValue", rawSlice, path);
+  const valueTree = valueSlice as Record<string, unknown>;
+  const rawTree = rawSlice as Record<string, unknown>;
+
+  for (let i = 0; i < fieldKeys.length; i++) {
+    const key = fieldKeys[i]!;
+    const childPath = path === "" ? key : `${path}.${key}`;
+    if (!safeHasProperty(valueTree, key)) {
+      throw new TypeError(
+        `Invalid reinitialize baseline: missing property "${key}" in value tree at "${childPath}"`,
+      );
+    }
+    if (!safeHasProperty(rawTree, key)) {
+      throw new TypeError(
+        `Invalid reinitialize baseline: missing property "${key}" in rawValue tree at "${childPath}"`,
+      );
+    }
+  }
+
+  const children: PreparedNodeReinitialize[] = [];
+  for (let i = 0; i < fieldKeys.length; i++) {
+    const key = fieldKeys[i]!;
+    const childPath = path === "" ? key : `${path}.${key}`;
+    children.push(
+      prevalidateChildNode(group.fields[key]!, valueTree[key], rawTree[key], childPath),
+    );
+  }
+
+  return { kind: "group", children };
+}
+
+/**
+ * Phase 1: recursively prevalidate baseline trees and build an immutable commit plan.
+ * Performs zero field/group state mutation.
+ */
+export function prepareReinitializePlan<TFields extends FormFieldsRecord>(
+  fields: TFields,
+  fieldKeys: readonly string[],
+  nextBaseline: FormReinitializeInput<TFields>,
+): readonly PreparedNodeReinitialize[] {
+  const { valueTree, rawTree } = assertTopLevelInput(nextBaseline);
 
   for (let i = 0; i < fieldKeys.length; i++) {
     const key = fieldKeys[i]!;
@@ -54,16 +132,42 @@ export function reinitializeChildNodes<TFields extends FormFieldsRecord>(
     }
   }
 
+  const plan: PreparedNodeReinitialize[] = [];
   for (let i = 0; i < fieldKeys.length; i++) {
     const key = fieldKeys[i]!;
-    const child = fields[key]!;
-    const childInternal = getInternalNode(child);
-    if (!childInternal) {
-      throw new Error(`Child node "${key}" is missing internal node metadata`);
-    }
-    childInternal.reinitialize({
-      value: valueTree[key],
-      rawValue: rawTree[key],
-    });
+    plan.push(prevalidateChildNode(fields[key]!, valueTree[key], rawTree[key], key));
   }
+  return plan;
+}
+
+function commitPreparedNode(plan: PreparedNodeReinitialize): void {
+  if (plan.kind === "field") {
+    plan.internal.reinitialize(plan.baseline);
+    return;
+  }
+
+  for (let i = 0; i < plan.children.length; i++) {
+    commitPreparedNode(plan.children[i]!);
+  }
+}
+
+/**
+ * Phase 2: apply a prepared reinitialize plan. Structural validation must have completed in phase 1.
+ */
+export function commitReinitializePlan(plan: readonly PreparedNodeReinitialize[]): void {
+  for (let i = 0; i < plan.length; i++) {
+    commitPreparedNode(plan[i]!);
+  }
+}
+
+/**
+ * Recursively prevalidates and atomically commits a whole subtree baseline replacement.
+ */
+export function reinitializeChildNodes<TFields extends FormFieldsRecord>(
+  fields: TFields,
+  fieldKeys: readonly string[],
+  nextBaseline: FormReinitializeInput<TFields>,
+): void {
+  const plan = prepareReinitializePlan(fields, fieldKeys, nextBaseline);
+  commitReinitializePlan(plan);
 }

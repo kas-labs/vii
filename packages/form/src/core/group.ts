@@ -8,7 +8,7 @@ import {
   type FormNodeInternal,
   type NodeOwnership,
 } from "./internal.js";
-import { reinitializeChildNodes } from "./reinitialize-tree.js";
+import { commitReinitializePlan, prepareReinitializePlan } from "./reinitialize-tree.js";
 import type {
   CreateFieldGroupOptions,
   FieldGroup,
@@ -166,8 +166,9 @@ export function createFieldGroup<TFields extends FormFieldsRecord>(
 
   const reinitialize = (nextBaseline: InternalGroupReinitializeInput<TFields>): void => {
     assertActive();
+    const plan = prepareReinitializePlan(fields, fieldKeys, nextBaseline);
     batch(() => {
-      reinitializeChildNodes(fields, fieldKeys, nextBaseline);
+      commitReinitializePlan(plan);
     });
   };
 

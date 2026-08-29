@@ -7,6 +7,214 @@ import {
   type AsyncValidationRule,
 } from "../../src/index.js";
 
+describe("P1e: Reinitialize transactional atomicity", () => {
+  it("throws on deep missing raw key with zero mutation", () => {
+    const name = createField({ initialValue: "Alice" });
+    const city = createField({ initialValue: "Berlin" });
+    const form = createForm({
+      fields: {
+        name,
+        address: createFieldGroup({ fields: { city } }),
+      },
+    });
+
+    expect(form.getValue()).toEqual({ name: "Alice", address: { city: "Berlin" } });
+    expect(form.dirty.get()).toBe(false);
+
+    expect(() =>
+      form.reinitialize({
+        value: { name: "Bob", address: { city: "Paris" } },
+        rawValue: { name: "Bob", address: {} },
+      } as never),
+    ).toThrow(TypeError);
+
+    expect(form.fields.name.getValue()).toBe("Alice");
+    expect(form.fields.name.getRawValue()).toBe("Alice");
+    expect(form.fields.address.fields.city.getValue()).toBe("Berlin");
+    expect(form.fields.address.fields.city.getRawValue()).toBe("Berlin");
+    expect(form.getValue()).toEqual({ name: "Alice", address: { city: "Berlin" } });
+    expect(form.getRawValue()).toEqual({ name: "Alice", address: { city: "Berlin" } });
+    expect(form.dirty.get()).toBe(false);
+    expect(form.touched.get()).toBe(false);
+    expect(form.pending.get()).toBe(false);
+  });
+
+  it("throws on deep missing value key with zero mutation", () => {
+    const name = createField({ initialValue: "Alice" });
+    const city = createField({ initialValue: "Berlin" });
+    const form = createForm({
+      fields: {
+        name,
+        address: createFieldGroup({ fields: { city } }),
+      },
+    });
+
+    expect(() =>
+      form.reinitialize({
+        value: { name: "Bob", address: {} },
+        rawValue: { name: "Bob", address: { city: "Paris" } },
+      } as never),
+    ).toThrow(TypeError);
+
+    expect(form.fields.name.getValue()).toBe("Alice");
+    expect(form.fields.address.fields.city.getValue()).toBe("Berlin");
+    expect(form.dirty.get()).toBe(false);
+  });
+
+  it("preserves dirty mutated state when malformed reinitialize fails", () => {
+    const name = createField({ initialValue: "Alice" });
+    const city = createField({ initialValue: "Berlin" });
+    const form = createForm({
+      fields: {
+        name,
+        address: createFieldGroup({ fields: { city } }),
+      },
+    });
+
+    form.fields.name.setValue("Changed");
+    form.fields.address.fields.city.setValue("Munich");
+    expect(form.dirty.get()).toBe(true);
+
+    expect(() =>
+      form.reinitialize({
+        value: { name: "Bob", address: { city: "Paris" } },
+        rawValue: { name: "Bob", address: {} },
+      } as never),
+    ).toThrow(TypeError);
+
+    expect(form.fields.name.getValue()).toBe("Changed");
+    expect(form.fields.address.fields.city.getValue()).toBe("Munich");
+    expect(form.dirty.get()).toBe(true);
+
+    form.reset();
+    expect(form.getValue()).toEqual({ name: "Alice", address: { city: "Berlin" } });
+    expect(form.dirty.get()).toBe(false);
+  });
+
+  it("succeeds with valid reinitialize after a failed attempt", () => {
+    const form = createForm({
+      fields: {
+        name: createField({ initialValue: "Alice" }),
+        address: createFieldGroup({
+          fields: { city: createField({ initialValue: "Berlin" }) },
+        }),
+      },
+    });
+
+    expect(() =>
+      form.reinitialize({
+        value: { name: "Bob", address: { city: "Paris" } },
+        rawValue: { name: "Bob", address: {} },
+      } as never),
+    ).toThrow(TypeError);
+
+    form.reinitialize({
+      value: { name: "Bob", address: { city: "Paris" } },
+      rawValue: { name: "Bob", address: { city: "Paris" } },
+    });
+
+    expect(form.getValue()).toEqual({ name: "Bob", address: { city: "Paris" } });
+    expect(form.dirty.get()).toBe(false);
+
+    form.fields.name.setValue("Mutated");
+    form.reset();
+    expect(form.getValue()).toEqual({ name: "Bob", address: { city: "Paris" } });
+  });
+
+  it("does not cancel pending validation when prevalidation fails", async () => {
+    let resolveAsync!: (value: null) => void;
+    const asyncPromise = new Promise<null>((resolve) => {
+      resolveAsync = resolve;
+    });
+    const asyncRule: AsyncValidationRule<string> = async () => asyncPromise;
+
+    const form = createForm({
+      fields: {
+        name: createField({ initialValue: "Alice", rules: [asyncRule], validateOn: "change" }),
+        address: createFieldGroup({
+          fields: { city: createField({ initialValue: "Berlin" }) },
+        }),
+      },
+    });
+
+    form.fields.name.setValue("pending");
+    expect(form.pending.get()).toBe(true);
+
+    expect(() =>
+      form.reinitialize({
+        value: { name: "Bob", address: { city: "Paris" } },
+        rawValue: { name: "Bob", address: {} },
+      } as never),
+    ).toThrow(TypeError);
+
+    expect(form.pending.get()).toBe(true);
+    expect(form.fields.name.getValue()).toBe("pending");
+
+    resolveAsync(null);
+    await asyncPromise;
+    await new Promise((r) => setTimeout(r, 10));
+  });
+
+  it("preserves parsed sibling parse issue when nested reinitialize prevalidation fails", () => {
+    const age = createField<number, string>({
+      initialValue: 5,
+      initialRawValue: "05",
+      parser: createNumberParser(),
+    });
+    const form = createForm({
+      fields: {
+        age,
+        address: createFieldGroup({
+          fields: { city: createField({ initialValue: "Berlin" }) },
+        }),
+      },
+    });
+
+    form.fields.age.setRawValue("abc");
+    expect(form.fields.age.parseStatus.get()).toBe("invalid");
+    expect(form.fields.age.rawValue.get()).toBe("abc");
+    expect(form.fields.age.value.get()).toBe(5);
+
+    expect(() =>
+      form.reinitialize({
+        value: { age: 10, address: { city: "Paris" } },
+        rawValue: { age: "10", address: {} },
+      } as never),
+    ).toThrow(TypeError);
+
+    expect(form.fields.age.parseStatus.get()).toBe("invalid");
+    expect(form.fields.age.rawValue.get()).toBe("abc");
+    expect(form.fields.age.value.get()).toBe(5);
+    expect(form.fields.age.parseIssue.get()).not.toBeNull();
+  });
+
+  it("supports reserved nested field names during prevalidation", () => {
+    const form = createForm({
+      fields: {
+        ["__proto__"]: createField({ initialValue: "a" }),
+        nested: createFieldGroup({
+          fields: {
+            value: createField({ initialValue: "v" }),
+            rawValue: createField({ initialValue: "r" }),
+          },
+        }),
+      },
+    });
+
+    expect(() =>
+      form.reinitialize({
+        value: { ["__proto__"]: "b", nested: { value: "v2" } },
+        rawValue: { ["__proto__"]: "b", nested: { rawValue: "r2" } },
+      } as never),
+    ).toThrow(TypeError);
+
+    expect(form.getValue()).toEqual({
+      ["__proto__"]: "a",
+      nested: { value: "v", rawValue: "r" },
+    });
+  });
+});
+
 describe("P1e: Reinitialize baseline contract", () => {
   it("parserless scalar reinitialize via separate value/raw trees", () => {
     const form = createForm({

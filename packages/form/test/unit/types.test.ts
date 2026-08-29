@@ -1,10 +1,17 @@
-import { describe, expectTypeOf, test } from "vitest";
+import { describe, expect, expectTypeOf, test } from "vitest";
 import { createField } from "../../src/core/field.js";
 import { createForm } from "../../src/core/form.js";
 import { createFieldGroup } from "../../src/core/group.js";
-import type { FieldGroup, FieldState, FormInstance } from "../../src/core/types.js";
+import { createNumberParser } from "../../src/index.js";
+import type {
+  FieldGroup,
+  FieldState,
+  FormInstance,
+  FormReinitializeBaseline,
+  ParsedCreateFieldOptions,
+} from "../../src/core/types.js";
 
-describe("Type inference matrix (P1d corrections)", () => {
+describe("Type inference matrix (P1e corrections)", () => {
   test("infers exact nested types from createForm and canonical createFieldGroup", () => {
     const nameField = createField({ initialValue: "Vitalii" });
     const ageField = createField({ initialValue: 30 });
@@ -27,7 +34,6 @@ describe("Type inference matrix (P1d corrections)", () => {
       },
     });
 
-    // Form value type
     type ExpectedFormValues = {
       name: string;
       age: number;
@@ -44,14 +50,12 @@ describe("Type inference matrix (P1d corrections)", () => {
     expectTypeOf(form.value.get()).toEqualTypeOf<ExpectedFormValues>();
     expectTypeOf(form.rawValue.get()).toEqualTypeOf<ExpectedFormValues>();
 
-    // Field access typing
     expectTypeOf(form.fields.name).toEqualTypeOf<FieldState<string>>();
     expectTypeOf(form.fields.age).toEqualTypeOf<FieldState<number>>();
     expectTypeOf(form.fields.active).toEqualTypeOf<FieldState<boolean>>();
     expectTypeOf(form.fields.address.fields.city).toEqualTypeOf<FieldState<string>>();
     expectTypeOf(form.fields.address.fields.zip).toEqualTypeOf<FieldState<number>>();
 
-    // Group typing
     expectTypeOf(addressGroup).toEqualTypeOf<
       FieldGroup<{
         street: FieldState<string>;
@@ -60,7 +64,6 @@ describe("Type inference matrix (P1d corrections)", () => {
       }>
     >();
 
-    // Form typing
     expectTypeOf(form).toEqualTypeOf<
       FormInstance<{
         name: FieldState<string>;
@@ -74,8 +77,72 @@ describe("Type inference matrix (P1d corrections)", () => {
       }>
     >();
 
-    // Reinitialize argument typing
-    expectTypeOf(form.reinitialize).parameter(0).toEqualTypeOf<ExpectedFormValues>();
+    expectTypeOf(form.reinitialize).parameter(0).toEqualTypeOf<
+      FormReinitializeBaseline<{
+        name: FieldState<string>;
+        age: FieldState<number>;
+        active: FieldState<boolean>;
+        address: FieldGroup<{
+          street: FieldState<string>;
+          city: FieldState<string>;
+          zip: FieldState<number>;
+        }>;
+      }>
+    >();
+  });
+
+  test("parserless string field works without initialRawValue", () => {
+    const field = createField({ initialValue: "hello" });
+    expectTypeOf(field).toEqualTypeOf<FieldState<string>>();
+    expectTypeOf(field.setRawValue).parameter(0).toEqualTypeOf<string>();
+    expectTypeOf(field.setValue).parameter(0).toEqualTypeOf<string>();
+  });
+
+  test("parsed string -> number requires initialRawValue", () => {
+    const options: ParsedCreateFieldOptions<string, number> = {
+      initialValue: 5,
+      initialRawValue: "05",
+      parser: createNumberParser(),
+    };
+    const field = createField<number, string>(options);
+    expectTypeOf(field).toEqualTypeOf<FieldState<number, string>>();
+    expectTypeOf(field.setRawValue).parameter(0).toEqualTypeOf<string>();
+    expectTypeOf(field.setValue).parameter(0).toEqualTypeOf<number>();
+  });
+
+  test("parsed field missing initialRawValue is rejected at compile time", () => {
+    // @ts-expect-error parsed fields require explicit initialRawValue
+    createField<number, string>({
+      initialValue: 5,
+      parser: createNumberParser(),
+    });
+  });
+
+  test("mixed nested form raw/value aggregate types differ correctly", () => {
+    const form = createForm({
+      fields: {
+        name: createField({ initialValue: "Alice" }),
+        age: createField<number, string>({
+          initialValue: 5,
+          initialRawValue: "05",
+          parser: createNumberParser(),
+        }),
+      },
+    });
+
+    expectTypeOf(form.getValue()).toEqualTypeOf<{ name: string; age: number }>();
+    expectTypeOf(form.getRawValue()).toEqualTypeOf<{ name: string; age: string }>();
+  });
+
+  test("reset() accepts zero arguments only", () => {
+    const field = createField({ initialValue: "x" });
+    expectTypeOf(field.reset).parameters.toEqualTypeOf<[]>();
+  });
+
+  test("initial baselines are NOT public FieldState properties", () => {
+    const field = createField({ initialValue: "x" });
+    expect("initialValue" in field).toBe(false);
+    expect("initialRawValue" in field).toBe(false);
   });
 
   test("infers strongly typed access for child named 'fields'", () => {

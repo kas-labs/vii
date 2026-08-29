@@ -36,13 +36,7 @@ export function normalizeStandardSchemaIssue(raw: StandardSchemaV1.Issue): Valid
   let code = "schema.validation";
 
   if (typeof rawObj["code"] === "string" && rawObj["code"].trim() !== "") {
-    const rawCode = rawObj["code"];
-    if (rawCode === "__proto__" || rawCode === "constructor" || rawCode === "prototype") {
-      throw new Error(
-        `Security error: Prototype pollution attempt blocked on issue code "${rawCode}"`,
-      );
-    }
-    code = rawCode;
+    code = rawObj["code"];
   }
 
   let sanitizedPath: readonly FieldPathSegment[] | undefined = undefined;

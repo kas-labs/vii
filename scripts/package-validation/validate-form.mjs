@@ -76,6 +76,22 @@ try {
     "package/dist/index.d.ts.map",
     "package/dist/index.js",
     "package/dist/index.js.map",
+    "package/dist/core/baseline-types.d.ts",
+    "package/dist/core/baseline-types.d.ts.map",
+    "package/dist/core/baseline-types.js",
+    "package/dist/core/baseline-types.js.map",
+    "package/dist/core/field-parserless.d.ts",
+    "package/dist/core/field-parserless.d.ts.map",
+    "package/dist/core/field-parserless.js",
+    "package/dist/core/field-parserless.js.map",
+    "package/dist/core/field-parsed.d.ts",
+    "package/dist/core/field-parsed.d.ts.map",
+    "package/dist/core/field-parsed.js",
+    "package/dist/core/field-parsed.js.map",
+    "package/dist/core/field-validation-runtime.d.ts",
+    "package/dist/core/field-validation-runtime.d.ts.map",
+    "package/dist/core/field-validation-runtime.js",
+    "package/dist/core/field-validation-runtime.js.map",
     "package/dist/core/field.d.ts",
     "package/dist/core/field.d.ts.map",
     "package/dist/core/field.js",
@@ -211,11 +227,15 @@ export async function runFormTreeScenario() {
 
   // Reinitialize
   formInstance.reinitialize({
-    user: { name: "Bob", age: 40 },
+    user: {
+      name: "Bob",
+      age: { value: 40, rawValue: "40" },
+    },
     settings: { theme: "dark" },
   });
 
   const reinitializedVal = formInstance.getValue();
+  const reinitializedRawVal = formInstance.getRawValue();
   const reinitializedDirty = formInstance.dirty.get();
 
   // Standard Schema bridge test
@@ -253,8 +273,9 @@ export async function runFormTreeScenario() {
     parseFailedVal,
     parseFailedValid,
     parseIssuesCount,
-    reinitializedVal,
-    reinitializedDirty,
+      reinitializedVal,
+      reinitializedRawVal,
+      reinitializedDirty,
     schemaInitialValid,
     schemaInvalidValid,
     postDisposeError,
@@ -286,16 +307,12 @@ export async function runFormTreeScenario() {
   assert.deepEqual(
     consumer.rootKeys,
     [
-      "createBooleanParser",
       "createField",
       "createFieldGroup",
       "createForm",
       "createNumberParser",
-      "createOptionalStringParser",
       "createStringParser",
       "isStandardSchema",
-      "normalizeStandardSchemaIssue",
-      "sanitizeParseIssue",
       "standardSchema",
     ].sort(),
     "clean consumer root export should contain P1e symbols",
@@ -335,6 +352,7 @@ export async function runFormTreeScenario() {
       parseFailedValid: false,
       parseIssuesCount: 1,
       reinitializedVal: { user: { name: "Bob", age: 40 }, settings: { theme: "dark" } },
+      reinitializedRawVal: { user: { name: "Bob", age: "40" }, settings: { theme: "dark" } },
       reinitializedDirty: false,
       schemaInitialValid: true,
       schemaInvalidValid: false,

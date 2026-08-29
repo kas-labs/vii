@@ -23,12 +23,6 @@ export function sanitizeValidationIssue(
     throw new TypeError(`Validation issue "code" must be a non-empty string`);
   }
 
-  if (rawCode === "__proto__" || rawCode === "constructor" || rawCode === "prototype") {
-    throw new Error(
-      `Security error: Prototype pollution attempt blocked on validation issue code "${rawCode}"`,
-    );
-  }
-
   let sanitizedPath: readonly FieldPathSegment[] | undefined = defaultPath;
   if (rawObj["path"] !== undefined && rawObj["path"] !== null) {
     if (!Array.isArray(rawObj["path"])) {

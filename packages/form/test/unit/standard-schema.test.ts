@@ -2,11 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   createField,
   isStandardSchema,
-  normalizeStandardSchemaIssue,
   standardSchema,
   type FieldIssue,
   type StandardSchemaV1,
 } from "../../src/index.js";
+import { normalizeStandardSchemaIssue } from "../../src/validation/standard-schema.js";
 
 describe("P1e: Standard Schema v1 Validation Bridge", () => {
   const createMockSchema = <TInput>(
@@ -131,21 +131,19 @@ describe("P1e: Standard Schema v1 Validation Bridge", () => {
     });
   });
 
-  describe("Security & Prototype Pollution Defenses", () => {
-    it("blocks prototype pollution on issue code", () => {
-      expect(() =>
-        normalizeStandardSchemaIssue({
-          message: "Hostile issue",
-          code: "__proto__",
-        } as unknown as StandardSchemaV1.Issue),
-      ).toThrow(/Prototype pollution/);
+  describe("Security & reserved issue codes as data", () => {
+    it("accepts reserved strings as legitimate issue codes", () => {
+      const protoIssue = normalizeStandardSchemaIssue({
+        message: "Hostile issue",
+        code: "__proto__",
+      } as unknown as StandardSchemaV1.Issue);
+      expect(protoIssue.code).toBe("__proto__");
 
-      expect(() =>
-        normalizeStandardSchemaIssue({
-          message: "Hostile issue",
-          code: "constructor",
-        } as unknown as StandardSchemaV1.Issue),
-      ).toThrow(/Prototype pollution/);
+      const ctorIssue = normalizeStandardSchemaIssue({
+        message: "Hostile issue",
+        code: "constructor",
+      } as unknown as StandardSchemaV1.Issue);
+      expect(ctorIssue.code).toBe("constructor");
     });
 
     it("accepts reserved property names in issue paths as pure data", () => {

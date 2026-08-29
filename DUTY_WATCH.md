@@ -37,6 +37,46 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-29 17:00 UTC | Production Form Phase 1 Slice P1e correction pass (RAW/VALUE baseline & public API)
+
+Status: completed
+Branch: `feat/form-p1e-validation-parsers`
+PR: #183 (Draft)
+
+### Scope
+
+- Bounded P1e correction pass on audited head `5696a1f5daa17a36705dbfdb3c145ddc0690e8c9` (same PR #183, no new slice).
+- Remove unsafe `TRaw`/`TValue` casts; enforce parser-aware baselines; parser-aware `form.reinitialize`; remove public baseline signals and field-level baseline rebasing via `reset`; document domain dirty and parsed `setValue` semantics; remove reserved-string issue-code blacklists; re-verify async validation and Standard Schema; trim public exports.
+
+### Changes
+
+- Added `packages/form/src/core/baseline-types.ts` (`FieldBaseline`, `FormReinitializeBaseline`, normalization helpers).
+- Split field implementation into `field.ts`, `field-parserless.ts`, `field-parsed.ts`, `field-validation-runtime.ts`.
+- Discriminated `CreateFieldOptions`: parserless vs parsed (`initialRawValue` required for parsed fields).
+- Removed public `initialValue` / `initialRawValue`; `reset()` is parameterless; internal reinitialize is parser-aware.
+- `form.reinitialize(FormReinitializeBaseline)` requires `{ value, rawValue }` for cross-type parsed fields.
+- Parsed `setValue` preserves raw; domain dirty compares baseline domain value only.
+- Removed global reserved-string rejection from issue sanitizers; auto-trigger validation commits execution errors.
+- Trimmed public root exports to P1e minimum (`createNumberParser`, `createStringParser` only among built-ins).
+
+### Validation
+
+- `pnpm nx lint form` — passed.
+- `pnpm nx typecheck form` — passed.
+- `pnpm nx test form` — passed (10 files, 114 tests).
+- `pnpm nx build form` — passed.
+- `pnpm nx validate-package form` — passed.
+- `git diff --check` — passed.
+- `NX_DAEMON=false pnpm validate` — passed.
+
+### Architecture / compatibility
+
+- No `@vii-labs/core` changes. Package remains private. P1f/P1g not started.
+
+### Remaining / recovery
+
+- None. Await maintainer review of Draft PR #183.
+
 ## 2026-08-29 02:15 CEST | Production Form Phase 1 Slice P1e: Validation, Parsers & Standard Schema
 
 Status: completed

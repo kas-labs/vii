@@ -97,12 +97,14 @@ and root form coordination via `createForm<TFields>`, providing typed nested obj
 Scope ownership, aggregate domain/raw values, recursive dirty/touched aggregation, deterministic reset,
 whole-form baseline reinitialization (`form.reinitialize(newBaseline)`), transactional two-phase adoption,
 and deterministic root Scope disposal preventing direct public disposal of tree-adopted children.
-Slice P1e introduces Raw vs Value separation, synchronous parsers (`FieldParser<TRaw, TValue>`), raw presentation
+Slice P1e introduces Raw vs Value separation, synchronous parsers (`FieldParser<TRaw, TValue>`), explicit parser-aware baselines (`initialValue` + required `initialRawValue` when `TRaw !== TValue`), raw presentation
 retention on parse failure (e.g. `"05"` retained as `"05"` while `value` is `5`), structured `ParseIssue`,
 synchronous validation rules (`SyncValidationRule<TValue>`), asynchronous validation rules (`AsyncValidationRule<TValue>`),
 validation `pending` state, monotonic validation revision tracking, `AbortSignal` cancellation, stale-result protection,
-fail-closed Standard Schema v1 validation bridge (`standardSchema`), built-in parsers (`createNumberParser`, `createStringParser`,
-`createOptionalStringParser`, `createBooleanParser`), and aggregate validation state across groups and root forms.
+fail-closed Standard Schema v1 validation bridge (`standardSchema`, validation-only — transformed schema output is not adopted as field `TValue`),
+public built-in parsers (`createNumberParser`, `createStringParser` only), parser-aware whole-form reinitialization via `FormReinitializeBaseline` (cross-type parsed fields require `{ value, rawValue }`),
+domain-only dirty semantics, parsed-field `setValue` updating domain value while preserving raw presentation, parameterless `field.reset()`, internal-only baseline storage (no public `initialValue` / `initialRawValue` signals),
+and aggregate validation state across groups and root forms. Reserved strings (`__proto__`, `constructor`, `prototype`) are treated as legitimate issue/path data; protection applies at object materialization sinks only.
 The package remains private (`private: true`). Arrays (`createFieldArray`), submission pipeline, server issue routing,
 and framework adapters are deferred to subsequent slices P1f–P1j.
 `@vii-labs/form` declares `@vii-labs/core` as a required runtime peer (`>=0.1.0-experimental.2`),

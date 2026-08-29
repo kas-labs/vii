@@ -25,17 +25,7 @@ export function sanitizeParseIssue(
   } else if (raw !== null && typeof raw === "object") {
     const rawObj = raw as Record<string, unknown>;
     if (typeof rawObj["code"] === "string" && rawObj["code"].trim() !== "") {
-      const candidateCode = rawObj["code"];
-      if (
-        candidateCode === "__proto__" ||
-        candidateCode === "constructor" ||
-        candidateCode === "prototype"
-      ) {
-        throw new Error(
-          `Security error: Prototype pollution attempt blocked on parse issue code "${candidateCode}"`,
-        );
-      }
-      code = candidateCode;
+      code = rawObj["code"];
     }
     if (typeof rawObj["message"] === "string") {
       message = rawObj["message"];

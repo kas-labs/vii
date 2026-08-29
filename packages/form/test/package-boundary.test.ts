@@ -18,16 +18,12 @@ describe("@vii-labs/form package boundary (P1e)", () => {
     expect(formRoot).toBeDefined();
     expect(Object.keys(formRoot).sort()).toEqual(
       [
-        "createBooleanParser",
         "createField",
         "createFieldGroup",
         "createForm",
         "createNumberParser",
-        "createOptionalStringParser",
         "createStringParser",
         "isStandardSchema",
-        "normalizeStandardSchemaIssue",
-        "sanitizeParseIssue",
         "standardSchema",
       ].sort(),
     );

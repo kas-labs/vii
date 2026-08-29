@@ -3,7 +3,7 @@ import { describe, expect, test, vi } from "vitest";
 import { createField } from "../../src/core/field.js";
 import { createForm } from "../../src/core/form.js";
 import { createFieldGroup } from "../../src/core/group.js";
-import type { FormValues } from "../../src/core/types.js";
+import type { FormReinitializeBaseline } from "../../src/core/types.js";
 
 describe("createForm (P1d corrections)", () => {
   test("initializes with aggregate domain and raw presentation values", () => {
@@ -239,17 +239,19 @@ describe("createForm (P1d corrections)", () => {
     };
     const form = createForm({ fields });
 
-    expect(() => form.reinitialize(null as unknown as FormValues<typeof fields>)).toThrowError(
-      TypeError,
-    );
-    expect(() => form.reinitialize(undefined as unknown as FormValues<typeof fields>)).toThrowError(
-      TypeError,
-    );
     expect(() =>
-      form.reinitialize({ name: "C" } as unknown as FormValues<typeof fields>),
+      form.reinitialize(null as unknown as FormReinitializeBaseline<typeof fields>),
     ).toThrowError(TypeError);
     expect(() =>
-      form.reinitialize({ name: "C", address: null } as unknown as FormValues<typeof fields>),
+      form.reinitialize(undefined as unknown as FormReinitializeBaseline<typeof fields>),
+    ).toThrowError(TypeError);
+    expect(() =>
+      form.reinitialize({ name: "C" } as unknown as FormReinitializeBaseline<typeof fields>),
+    ).toThrowError(TypeError);
+    expect(() =>
+      form.reinitialize({ name: "C", address: null } as unknown as FormReinitializeBaseline<
+        typeof fields
+      >),
     ).toThrowError(TypeError);
   });
 

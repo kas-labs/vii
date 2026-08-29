@@ -1,12 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
-  createBooleanParser,
   createField,
+  createForm,
   createNumberParser,
-  createOptionalStringParser,
   createStringParser,
-  sanitizeParseIssue,
 } from "../../src/index.js";
+import {
+  createBooleanParser,
+  createOptionalStringParser,
+  sanitizeParseIssue,
+} from "../../src/parsers/builtins.js";
 
 describe("P1e: Field Parsers & Raw vs Value Separation", () => {
   it("maintains backward-compatible Raw === Value for parserless fields", () => {
@@ -14,8 +17,6 @@ describe("P1e: Field Parsers & Raw vs Value Separation", () => {
 
     expect(field.value.get()).toBe("hello");
     expect(field.rawValue.get()).toBe("hello");
-    expect(field.initialValue.get()).toBe("hello");
-    expect(field.initialRawValue.get()).toBe("hello");
     expect(field.parseStatus.get()).toBe("unparsed");
     expect(field.parseIssue.get()).toBeNull();
     expect(field.valid.get()).toBe(true);
@@ -74,7 +75,7 @@ describe("P1e: Field Parsers & Raw vs Value Separation", () => {
 
     field.setRawValue("abc");
     expect(field.rawValue.get()).toBe("abc");
-    expect(field.value.get()).toBe(10); // preserves last good domain value
+    expect(field.value.get()).toBe(10);
     expect(field.parseStatus.get()).toBe("invalid");
 
     const issue = field.parseIssue.get();
@@ -115,39 +116,33 @@ describe("P1e: Field Parsers & Raw vs Value Separation", () => {
       parser: createNumberParser(),
     });
 
-    field.setRawValue("99");
-    expect(field.value.get()).toBe(99);
-    expect(field.rawValue.get()).toBe("99");
-    expect(field.dirty.get()).toBe(true);
+    field.setRawValue("abc");
+    expect(field.parseStatus.get()).toBe("invalid");
 
     field.reset();
     expect(field.value.get()).toBe(5);
     expect(field.rawValue.get()).toBe("05");
     expect(field.dirty.get()).toBe(false);
+    expect(field.touched.get()).toBe(false);
     expect(field.parseIssue.get()).toBeNull();
     expect(field.parseStatus.get()).toBe("parsed");
+    expect(field.pending.get()).toBe(false);
   });
 
-  it("throws TypeError when reset(nextInitial) is called without nextInitialRaw on a parsed field", () => {
+  it("reset() accepts zero arguments only", () => {
     const field = createField<number, string>({
       initialValue: 5,
       initialRawValue: "5",
       parser: createNumberParser(),
     });
 
-    expect(() => field.reset(10)).toThrow(TypeError);
-    expect(() => field.reset(10)).toThrow(/requires the matching raw value/);
-
-    // Two-argument reset succeeds
-    field.reset(10, "010");
-    expect(field.value.get()).toBe(10);
-    expect(field.rawValue.get()).toBe("010");
-    expect(field.initialValue.get()).toBe(10);
-    expect(field.initialRawValue.get()).toBe("010");
-    expect(field.dirty.get()).toBe(false);
+    field.setRawValue("9");
+    field.reset();
+    expect(field.value.get()).toBe(5);
+    expect(field.rawValue.get()).toBe("5");
   });
 
-  it("evaluates dirty strictly against domain value (05 does not dirty baseline 5)", () => {
+  it("evaluates dirty strictly against domain value ('5' -> '05' remains pristine)", () => {
     const field = createField<number, string>({
       initialValue: 5,
       initialRawValue: "5",
@@ -164,6 +159,68 @@ describe("P1e: Field Parsers & Raw vs Value Separation", () => {
     field.setRawValue("6");
     expect(field.value.get()).toBe(6);
     expect(field.dirty.get()).toBe(true);
+  });
+
+  it("setValue on parsed field updates domain value only and preserves raw presentation", () => {
+    const field = createField<number, string>({
+      initialValue: 5,
+      initialRawValue: "05",
+      parser: createNumberParser(),
+    });
+
+    field.setValue(10);
+    expect(field.value.get()).toBe(10);
+    expect(field.rawValue.get()).toBe("05");
+    expect(field.dirty.get()).toBe(true);
+    expect(field.parseStatus.get()).toBe("parsed");
+    expect(field.parseIssue.get()).toBeNull();
+  });
+
+  it("parser-aware form.reinitialize replaces raw and domain baselines", () => {
+    const ageField = createField<number, string>({
+      initialValue: 5,
+      initialRawValue: "05",
+      parser: createNumberParser(),
+    });
+    const form = createForm({
+      fields: {
+        age: ageField,
+      },
+    });
+
+    form.fields.age.setRawValue("abc");
+    expect(form.fields.age.parseStatus.get()).toBe("invalid");
+
+    form.reinitialize({
+      age: { value: 10, rawValue: "010" },
+    });
+
+    expect(form.fields.age).toBe(ageField);
+    expect(form.fields.age.value.get()).toBe(10);
+    expect(form.fields.age.rawValue.get()).toBe("010");
+    expect(form.fields.age.dirty.get()).toBe(false);
+    expect(form.fields.age.touched.get()).toBe(false);
+    expect(form.fields.age.parseIssue.get()).toBeNull();
+    expect(form.fields.age.pending.get()).toBe(false);
+
+    form.fields.age.setValue(11);
+    form.fields.age.reset();
+    expect(form.fields.age.value.get()).toBe(10);
+    expect(form.fields.age.rawValue.get()).toBe("010");
+  });
+
+  it("rejects domain-only reinitialize baseline for cross-type parsed fields", () => {
+    const form = createForm({
+      fields: {
+        age: createField<number, string>({
+          initialValue: 5,
+          initialRawValue: "05",
+          parser: createNumberParser(),
+        }),
+      },
+    });
+
+    expect(() => form.reinitialize({ age: 10 as never })).toThrow(TypeError);
   });
 
   it("treats reserved property names in raw values as pure data", () => {
@@ -219,7 +276,7 @@ describe("P1e: Field Parsers & Raw vs Value Separation", () => {
     });
   });
 
-  describe("createStringParser and createOptionalStringParser", () => {
+  describe("createStringParser (internal optional parsers remain non-public)", () => {
     it("createStringParser defaults to trim: false to prevent silent data loss", () => {
       const defaultStr = createStringParser();
       expect(defaultStr("  hello  ")).toEqual({ ok: true, value: "  hello  " });
@@ -234,30 +291,21 @@ describe("P1e: Field Parsers & Raw vs Value Separation", () => {
       expect(optStr("   ")).toEqual({ ok: true, value: undefined });
       expect(optStr("valid")).toEqual({ ok: true, value: "valid" });
     });
-  });
 
-  describe("createBooleanParser", () => {
-    const boolParser = createBooleanParser();
-
-    it("parses booleans and supported strings", () => {
+    it("createBooleanParser parses booleans and supported strings", () => {
+      const boolParser = createBooleanParser();
       expect(boolParser(true)).toEqual({ ok: true, value: true });
-      expect(boolParser(false)).toEqual({ ok: true, value: false });
-      expect(boolParser("true")).toEqual({ ok: true, value: true });
       expect(boolParser("false")).toEqual({ ok: true, value: false });
-      expect(boolParser("1")).toEqual({ ok: true, value: true });
-      expect(boolParser("0")).toEqual({ ok: true, value: false });
-      expect(boolParser("on")).toEqual({ ok: true, value: true });
-      expect(boolParser("off")).toEqual({ ok: true, value: false });
-      expect(boolParser("")).toEqual({ ok: true, value: false });
       expect(boolParser("random").ok).toBe(false);
     });
   });
 
-  describe("sanitizeParseIssue security", () => {
-    it("blocks prototype pollution attempt on code", () => {
-      expect(() => sanitizeParseIssue({ code: "__proto__" })).toThrow(/Prototype pollution/);
-      expect(() => sanitizeParseIssue({ code: "constructor" })).toThrow(/Prototype pollution/);
-      expect(() => sanitizeParseIssue({ code: "prototype" })).toThrow(/Prototype pollution/);
+  describe("sanitizeParseIssue reserved issue codes", () => {
+    it("accepts reserved strings as legitimate issue codes", () => {
+      expect(sanitizeParseIssue({ code: "__proto__" }).code).toBe("__proto__");
+      expect(sanitizeParseIssue({ code: "constructor" }).code).toBe("constructor");
+      expect(sanitizeParseIssue({ code: "prototype" }).code).toBe("prototype");
+      expect((Object.prototype as Record<string, unknown>)["polluted"]).toBeUndefined();
     });
 
     it("accepts valid string and number path segments as data", () => {

@@ -6,25 +6,15 @@
  * - createFieldGroup (nested object state aggregating validation, dirty, and touched)
  * - createForm (root form coordinator managing tree lifecycle and reinitialization)
  * - standardSchema (provider-neutral Standard Schema v1 validation bridge)
- * - built-in parsers (createNumberParser, createStringParser, createOptionalStringParser, createBooleanParser)
+ * - built-in parsers (createNumberParser, createStringParser)
  */
 export { createField } from "./core/field.js";
 export { createFieldGroup } from "./core/group.js";
 export { createForm } from "./core/form.js";
 
-export {
-  createBooleanParser,
-  createNumberParser,
-  createOptionalStringParser,
-  createStringParser,
-  sanitizeParseIssue,
-} from "./parsers/builtins.js";
+export { createNumberParser, createStringParser } from "./parsers/builtins.js";
 
-export {
-  isStandardSchema,
-  normalizeStandardSchemaIssue,
-  standardSchema,
-} from "./validation/standard-schema.js";
+export { isStandardSchema, standardSchema } from "./validation/standard-schema.js";
 
 export type {
   AnyValidationRule,
@@ -32,11 +22,13 @@ export type {
   CreateFieldGroupOptions,
   CreateFieldOptions,
   CreateFormOptions,
+  FieldBaseline,
   FieldEqualityFn,
   FieldGroup,
   FieldIssue,
   FieldParser,
   FieldPathSegment,
+  FieldReinitializeInput,
   FieldState,
   FormFieldsRecord,
   FormInstance,
@@ -44,10 +36,14 @@ export type {
   FormNode,
   FormRawValueFor,
   FormRawValues,
+  FormReinitializeBaseline,
+  FormReinitializeBaselineFor,
   FormValueFor,
   FormValues,
   IssueSource,
   NumberParserOptions,
+  ParsedCreateFieldOptions,
+  ParserlessCreateFieldOptions,
   ParseIssue,
   ParseResult,
   ParseStatus,

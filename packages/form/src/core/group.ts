@@ -1,5 +1,6 @@
 import { batch, computed, createScope } from "@vii-labs/core";
 import type { FieldIssue } from "../validation/types.js";
+import type { FormReinitializeBaseline } from "./baseline-types.js";
 import {
   adoptChildNodes,
   attachInternalNode,
@@ -164,7 +165,7 @@ export function createFieldGroup<TFields extends FormFieldsRecord>(
     });
   };
 
-  const reinitialize = (nextBaseline: FormValues<TFields>): void => {
+  const reinitialize = (nextBaseline: FormReinitializeBaseline<TFields>): void => {
     assertActive();
     if (nextBaseline === null || typeof nextBaseline !== "object") {
       throw new TypeError(
@@ -215,7 +216,7 @@ export function createFieldGroup<TFields extends FormFieldsRecord>(
     dispose,
   };
 
-  const internal: FormNodeInternal<FormValues<TFields>> = {
+  const internal: FormNodeInternal<FormReinitializeBaseline<TFields>> = {
     kind: "group",
     scope: groupScope,
     ownership,

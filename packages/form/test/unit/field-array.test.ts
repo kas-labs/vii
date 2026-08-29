@@ -253,20 +253,23 @@ describe("FieldArray — dynamic collection with stable identity (P1f)", () => {
       array.dispose();
     });
 
-    test("removed item is cleanly disposed and cannot influence array", () => {
+    test("removed non-baseline item is cleanly disposed while baseline item is retained for reset", () => {
       const field1 = createField({ initialValue: "keep" });
+      const array = createFieldArray({ items: [field1] });
+
       const field2 = createField({
         initialValue: "remove-me",
         rules: [(v: string) => (v === "bad" ? { code: "invalid_str" } : null)],
       });
+      array.append(field2);
 
-      const array = createFieldArray({ items: [field1, field2] });
+      expect(array.items.get().length).toBe(2);
       expect(array.valid.get()).toBe(true);
 
-      // Remove field2
+      // Remove non-baseline field2
       array.remove(1);
 
-      // Mutating field2 should throw because it is disposed
+      // Mutating non-baseline field2 throws because it was disposed
       expect(() => field2.setValue("bad")).toThrow("Field is disposed");
       expect(array.items.get().length).toBe(1);
       expect(array.valid.get()).toBe(true);
@@ -275,16 +278,18 @@ describe("FieldArray — dynamic collection with stable identity (P1f)", () => {
       array.dispose();
     });
 
-    test("clear() disposes all items and empties array", () => {
+    test("clear() disposes non-baseline items, retains baseline items for reset, and empties array", () => {
       const f1 = createField({ initialValue: "1" });
+      const array = createFieldArray({ items: [f1] });
+
       const f2 = createField({ initialValue: "2" });
-      const array = createFieldArray({ items: [f1, f2] });
+      array.append(f2);
 
       array.clear();
       expect(array.items.get()).toEqual([]);
       expect(array.getValue()).toEqual([]);
 
-      expect(() => f1.setValue("x")).toThrow("Field is disposed");
+      // Non-baseline f2 is disposed
       expect(() => f2.setValue("y")).toThrow("Field is disposed");
 
       // clear on empty array is safe no-op
@@ -730,6 +735,271 @@ describe("FieldArray — dynamic collection with stable identity (P1f)", () => {
       expect(() => fAdded.setValue("should fail")).toThrow("Field is disposed");
 
       array.dispose();
+    });
+
+    test("removing a baseline item and calling reset restores original item, stable id, and node instance", () => {
+      const a = createField({ initialValue: "a" });
+      const b = createField({ initialValue: "b" });
+      const array = createFieldArray({ items: [a, b] });
+
+      const idA = array.items.get()[0]!.id;
+      const idB = array.items.get()[1]!.id;
+
+      // Remove baseline item 0 ("a")
+      const removed = array.remove(0);
+      expect(removed).toBe(a);
+      expect(array.getValue()).toEqual(["b"]);
+      expect(array.dirty.get()).toBe(true);
+
+      // Reset restores "a" and "b" in original baseline order with exact node identities
+      array.reset();
+      expect(array.getValue()).toEqual(["a", "b"]);
+      expect(array.items.get()[0]!.id).toBe(idA);
+      expect(array.items.get()[0]!.node).toBe(a);
+      expect(array.items.get()[1]!.id).toBe(idB);
+      expect(array.items.get()[1]!.node).toBe(b);
+      expect(array.dirty.get()).toBe(false);
+
+      // Restored node is active and usable
+      a.setValue("a-updated");
+      expect(array.getValue()).toEqual(["a-updated", "b"]);
+
+      array.dispose();
+    });
+
+    test("removing multiple baseline items then calling reset restores all items in canonical order", () => {
+      const a = createField({ initialValue: "1" });
+      const b = createField({ initialValue: "2" });
+      const c = createField({ initialValue: "3" });
+      const array = createFieldArray({ items: [a, b, c] });
+
+      const [idA, idB, idC] = array.items.get().map((it) => it.id);
+
+      array.remove(1); // remove "2" -> [1, 3]
+      array.remove(0); // remove "1" -> [3]
+      expect(array.getValue()).toEqual(["3"]);
+      expect(array.dirty.get()).toBe(true);
+
+      array.reset();
+      expect(array.getValue()).toEqual(["1", "2", "3"]);
+      expect(array.items.get().map((it) => it.id)).toEqual([idA, idB, idC]);
+      expect(array.items.get().map((it) => it.node)).toEqual([a, b, c]);
+      expect(array.dirty.get()).toBe(false);
+
+      array.dispose();
+    });
+
+    test("clear() on baseline array then reset() restores all baseline items and pristine dirty state", () => {
+      const a = createField({ initialValue: "x" });
+      const b = createField({ initialValue: "y" });
+      const array = createFieldArray({ items: [a, b] });
+
+      const [idA, idB] = array.items.get().map((it) => it.id);
+
+      array.clear();
+      expect(array.items.get()).toEqual([]);
+      expect(array.getValue()).toEqual([]);
+      expect(array.dirty.get()).toBe(true);
+
+      array.reset();
+      expect(array.getValue()).toEqual(["x", "y"]);
+      expect(array.items.get()[0]!.id).toBe(idA);
+      expect(array.items.get()[0]!.node).toBe(a);
+      expect(array.items.get()[1]!.id).toBe(idB);
+      expect(array.items.get()[1]!.node).toBe(b);
+      expect(array.dirty.get()).toBe(false);
+
+      array.dispose();
+    });
+
+    test("baseline item moved then removed then reset restores original canonical baseline position", () => {
+      const a = createField({ initialValue: "a" });
+      const b = createField({ initialValue: "b" });
+      const c = createField({ initialValue: "c" });
+      const array = createFieldArray({ items: [a, b, c] });
+
+      // Move c to start: [c, a, b]
+      array.move(2, 0);
+      expect(array.getValue()).toEqual(["c", "a", "b"]);
+
+      // Remove a (now at index 1): [c, b]
+      array.remove(1);
+      expect(array.getValue()).toEqual(["c", "b"]);
+
+      // Reset restores [a, b, c]
+      array.reset();
+      expect(array.getValue()).toEqual(["a", "b", "c"]);
+      expect(array.items.get()[0]!.node).toBe(a);
+      expect(array.items.get()[1]!.node).toBe(b);
+      expect(array.items.get()[2]!.node).toBe(c);
+      expect(array.dirty.get()).toBe(false);
+
+      array.dispose();
+    });
+
+    test("appended non-baseline item is disposed on remove or clear and not restored on reset", () => {
+      const a = createField({ initialValue: "base" });
+      const array = createFieldArray({ items: [a] });
+
+      const extra1 = createField({ initialValue: "extra-1" });
+      const extra2 = createField({ initialValue: "extra-2" });
+      array.append(extra1);
+      array.append(extra2);
+
+      // Remove extra1 -> extra1 is disposed immediately because it's not in baseline
+      array.remove(1);
+      expect(() => extra1.setValue("mut")).toThrow("Field is disposed");
+
+      // Clear remaining items ([base, extra2])
+      array.clear();
+      expect(() => extra2.setValue("mut")).toThrow("Field is disposed");
+
+      // Reset restores only baseline "base"
+      array.reset();
+      expect(array.getValue()).toEqual(["base"]);
+      expect(array.items.get()[0]!.node).toBe(a);
+      expect(() => a.setValue("base-updated")).not.toThrow();
+
+      array.dispose();
+    });
+
+    test("baseline child state mutated then removed then reset restores canonical baseline values", () => {
+      const a = createField({ initialValue: "a-init" });
+      const array = createFieldArray({ items: [a] });
+
+      // Mutate child
+      a.setValue("a-mutated");
+      a.markTouched();
+      expect(array.dirty.get()).toBe(true);
+      expect(array.touched.get()).toBe(true);
+
+      // Remove child
+      array.remove(0);
+      expect(array.getValue()).toEqual([]);
+
+      // Reset restores child with pristine baseline value and untouched
+      array.reset();
+      expect(array.getValue()).toEqual(["a-init"]);
+      expect(a.getValue()).toBe("a-init");
+      expect(a.touched.get()).toBe(false);
+      expect(a.dirty.get()).toBe(false);
+      expect(array.dirty.get()).toBe(false);
+      expect(array.touched.get()).toBe(false);
+
+      array.dispose();
+    });
+
+    test("parsed field baseline Raw/Value presentation is restored on reset after removal", () => {
+      const f = createField<number, string>({
+        initialValue: 5,
+        initialRawValue: "05",
+        parser: createNumberParser(),
+      });
+      const array = createFieldArray({ items: [f] });
+
+      f.setRawValue("099");
+      expect(array.getValue()).toEqual([99]);
+      expect(array.getRawValue()).toEqual(["099"]);
+
+      array.remove(0);
+      expect(array.getValue()).toEqual([]);
+
+      array.reset();
+      expect(array.getValue()).toEqual([5]);
+      expect(array.getRawValue()).toEqual(["05"]);
+      expect(f.getValue()).toBe(5);
+      expect(f.getRawValue()).toBe("05");
+
+      array.dispose();
+    });
+
+    test("repeated remove and reset cycles do not leak or double-dispose", () => {
+      const a = createField({ initialValue: "a" });
+      const b = createField({ initialValue: "b" });
+      const array = createFieldArray({ items: [a, b] });
+
+      for (let i = 0; i < 5; i++) {
+        array.remove(0);
+        expect(array.getValue()).toEqual(["b"]);
+        array.reset();
+        expect(array.getValue()).toEqual(["a", "b"]);
+        expect(array.items.get()[0]!.node).toBe(a);
+        expect(array.items.get()[1]!.node).toBe(b);
+      }
+
+      array.dispose();
+    });
+
+    test("remove baseline item with pending async validation aborts work, causes no stale leak, and reset restores clean state", async () => {
+      let resolveAsync: ((val: FieldIssue | null) => void) | undefined;
+      const asyncRule: AsyncValidationRule<string> = () =>
+        new Promise((resolve) => {
+          resolveAsync = resolve;
+        });
+
+      const f0 = createField({ initialValue: "zero" });
+      const f1 = createField({ initialValue: "one", rules: [asyncRule] });
+      const array = createFieldArray({ items: [f0, f1] });
+
+      // Start validation on baseline item f1
+      f1.setValue("validating");
+      expect(f1.pending.get()).toBe(true);
+      expect(array.pending.get()).toBe(true);
+
+      // Remove baseline item f1 -> aborts pending validation
+      array.remove(1);
+      expect(array.pending.get()).toBe(false);
+      expect(f1.pending.get()).toBe(false);
+
+      // Late resolution occurs while f1 is baseline-retained
+      resolveAsync?.({ code: "stale_err", message: "Stale error", source: "validation" });
+      await new Promise((r) => setTimeout(r, 20));
+
+      // Active array is clean
+      expect(array.pending.get()).toBe(false);
+      expect(array.valid.get()).toBe(true);
+      expect(array.issues.get()).toEqual([]);
+
+      // Reset restores f1 in pristine, valid state
+      array.reset();
+      expect(array.getValue()).toEqual(["zero", "one"]);
+      expect(array.pending.get()).toBe(false);
+      expect(array.valid.get()).toBe(true);
+      expect(array.issues.get()).toEqual([]);
+
+      array.dispose();
+    });
+
+    test("reinitialize establishes new baseline and disposes obsolete retained baseline items", () => {
+      const a = createField({ initialValue: "a" });
+      const b = createField({ initialValue: "b" });
+      const array = createFieldArray({ items: [a, b] });
+      const form = createForm({ fields: { list: array } });
+
+      // Remove baseline item "a" -> active list is [b], "a" is baseline-retained
+      array.remove(0);
+      expect(form.getValue()).toEqual({ list: ["b"] });
+
+      // Reinitialize form with new baseline for active structure
+      form.reinitialize({
+        value: { list: ["b-reinit"] },
+        rawValue: { list: ["b-reinit"] },
+      });
+
+      expect(form.getValue()).toEqual({ list: ["b-reinit"] });
+      expect(form.dirty.get()).toBe(false);
+
+      // "a" was obsolete and was disposed during reinitialize
+      expect(() => a.setValue("should fail")).toThrow("Field is disposed");
+
+      // Reset restores new baseline only
+      form.fields.list.items.get()[0]!.node.setValue("b-modified");
+      expect(form.dirty.get()).toBe(true);
+      form.reset();
+      expect(form.getValue()).toEqual({ list: ["b-reinit"] });
+      expect(form.dirty.get()).toBe(false);
+
+      form.dispose();
     });
   });
 

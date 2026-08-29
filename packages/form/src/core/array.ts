@@ -5,6 +5,7 @@ import {
   commitItemAdoption,
   preflightArrayItems,
 } from "./array-adoption.js";
+import { ArrayBaselineTracker } from "./array-baseline.js";
 import { assertIntegerIndex, validateNode } from "./array-operations.js";
 import type { CreateFieldArrayOptions, FieldArray, FieldArrayItem } from "./array-types.js";
 import { attachInternalNode, type FormNodeInternal, type NodeOwnership } from "./internal.js";
@@ -44,10 +45,7 @@ export function createFieldArray<TItemNode extends FormNode = FormNode>(
     scopesMap.set(id, itemScope);
   }
 
-  let baselineItems: readonly FieldArrayItem<TItemNode>[] = Object.freeze([...initialItems]);
-  let baselineIds: readonly string[] = Object.freeze(initialItems.map((it) => it.id));
-  let baselineLength = initialItems.length;
-
+  const baselineTracker = new ArrayBaselineTracker<TItemNode>(initialItems);
   const itemsState = state<readonly FieldArrayItem<TItemNode>[]>(Object.freeze(initialItems));
   let detachFromParent: (() => void) | undefined;
 
@@ -100,24 +98,14 @@ export function createFieldArray<TItemNode extends FormNode = FormNode>(
   );
 
   const dirtyComputed = arrayScope.run(() =>
-    computed(() => {
-      const current = itemsState.get();
-      if (current.length !== baselineLength) return true;
-      for (let i = 0; i < current.length; i++) {
-        if (current[i]!.id !== baselineIds[i]) return true;
-      }
-      for (let i = 0; i < current.length; i++) {
-        if (current[i]!.node.dirty.get()) return true;
-      }
-      return false;
-    }),
+    computed(() => baselineTracker.isDirty(itemsState.get())),
   );
 
   const touchedComputed = arrayScope.run(() =>
     computed(() => {
-      const current = itemsState.get();
-      for (let i = 0; i < current.length; i++) {
-        if (current[i]!.node.touched.get()) return true;
+      const items = itemsState.get();
+      for (let i = 0; i < items.length; i++) {
+        if (items[i]!.node.touched.get()) return true;
       }
       return false;
     }),
@@ -125,9 +113,9 @@ export function createFieldArray<TItemNode extends FormNode = FormNode>(
 
   const pendingComputed = arrayScope.run(() =>
     computed(() => {
-      const current = itemsState.get();
-      for (let i = 0; i < current.length; i++) {
-        if (current[i]!.node.pending.get()) return true;
+      const items = itemsState.get();
+      for (let i = 0; i < items.length; i++) {
+        if (items[i]!.node.pending.get()) return true;
       }
       return false;
     }),
@@ -135,9 +123,9 @@ export function createFieldArray<TItemNode extends FormNode = FormNode>(
 
   const validComputed = arrayScope.run(() =>
     computed(() => {
-      const current = itemsState.get();
-      for (let i = 0; i < current.length; i++) {
-        if (!current[i]!.node.valid.get()) return false;
+      const items = itemsState.get();
+      for (let i = 0; i < items.length; i++) {
+        if (!items[i]!.node.valid.get()) return false;
       }
       return true;
     }),
@@ -148,9 +136,9 @@ export function createFieldArray<TItemNode extends FormNode = FormNode>(
   const issuesComputed = arrayScope.run(() =>
     computed(() => {
       const collected: FieldIssue[] = [];
-      const current = itemsState.get();
-      for (let i = 0; i < current.length; i++) {
-        const childIssues = current[i]!.node.issues.get();
+      const items = itemsState.get();
+      for (let i = 0; i < items.length; i++) {
+        const childIssues = items[i]!.node.issues.get();
         for (let j = 0; j < childIssues.length; j++) {
           const iss = childIssues[j]!;
           const prefix = [i, ...(iss.path ?? [])];
@@ -166,7 +154,7 @@ export function createFieldArray<TItemNode extends FormNode = FormNode>(
     const current = itemsState.get();
     assertIntegerIndex(index, current.length, true);
 
-    // Phase 1: Preflight single candidate against active keys without mutation
+    // Phase 1: Preflight single candidate against active/retained keys without mutation
     const existingKeys = new Set(scopesMap.keys());
     const [prepared] = preflightArrayItems([node], existingKeys, keyExtractor);
 
@@ -189,13 +177,12 @@ export function createFieldArray<TItemNode extends FormNode = FormNode>(
     assertIntegerIndex(index, current.length, false);
     const item = current[index]!;
     const itemScope = scopesMap.get(item.id);
-    scopesMap.delete(item.id);
 
     batch(() => {
       const next = [...itemsState.get()];
       next.splice(index, 1);
       itemsState.set(Object.freeze(next));
-      itemScope?.dispose();
+      baselineTracker.handleItemRemoval(item, itemScope, scopesMap);
     });
 
     return item.node;
@@ -234,19 +221,12 @@ export function createFieldArray<TItemNode extends FormNode = FormNode>(
     assertActive();
     const current = itemsState.get();
     if (current.length === 0) return;
-    const scopesToDispose: Scope[] = [];
-    for (let i = 0; i < current.length; i++) {
-      const id = current[i]!.id;
-      const s = scopesMap.get(id);
-      if (s) {
-        scopesToDispose.push(s);
-        scopesMap.delete(id);
-      }
-    }
     batch(() => {
       itemsState.set(Object.freeze([]));
-      for (let i = 0; i < scopesToDispose.length; i++) {
-        scopesToDispose[i]!.dispose();
+      for (let i = 0; i < current.length; i++) {
+        const item = current[i]!;
+        const itemScope = scopesMap.get(item.id);
+        baselineTracker.handleItemRemoval(item, itemScope, scopesMap);
       }
     });
   };
@@ -271,43 +251,17 @@ export function createFieldArray<TItemNode extends FormNode = FormNode>(
 
   const reset = (): void => {
     assertActive();
-    const current = itemsState.get();
-    const baselineIdSet = new Set(baselineIds);
-    const scopesToDispose: Scope[] = [];
-    for (let i = 0; i < current.length; i++) {
-      const item = current[i]!;
-      if (!baselineIdSet.has(item.id)) {
-        const itemScope = scopesMap.get(item.id);
-        if (itemScope) {
-          scopesToDispose.push(itemScope);
-          scopesMap.delete(item.id);
-        }
-      }
-    }
-    const restoredItems: FieldArrayItem<TItemNode>[] = [];
-    for (let i = 0; i < baselineItems.length; i++) {
-      const baseItem = baselineItems[i]!;
-      if (scopesMap.has(baseItem.id)) {
-        restoredItems.push(baseItem);
-      }
-    }
     batch(() => {
-      itemsState.set(Object.freeze(restoredItems));
-      for (let i = 0; i < restoredItems.length; i++) {
-        restoredItems[i]!.node.reset();
-      }
-      for (let i = 0; i < scopesToDispose.length; i++) {
-        scopesToDispose[i]!.dispose();
-      }
+      const current = itemsState.get();
+      const restored = baselineTracker.performReset(current, scopesMap);
+      itemsState.set(restored);
     });
   };
 
   const reinitialize = (): void => {
     assertActive();
     const current = itemsState.get();
-    baselineItems = Object.freeze([...current]);
-    baselineIds = Object.freeze(current.map((it) => it.id));
-    baselineLength = current.length;
+    baselineTracker.performReinitialize(current, scopesMap);
   };
 
   const arrayState: FieldArray<TItemNode> = {

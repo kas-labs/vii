@@ -1,4 +1,11 @@
 import type { Computed, ReadableState, Scope } from "@vii-labs/core";
+import type { FieldParser, ParseIssue, ParseStatus } from "../parsers/types.js";
+import type {
+  AnyValidationRule,
+  FieldIssue,
+  ValidationStatus,
+  ValidationTriggerMode,
+} from "../validation/types.js";
 
 export type {
   CreateFieldGroupOptions,
@@ -7,9 +14,38 @@ export type {
   FormFieldsRecord,
   FormInstance,
   FormNode,
+  FormRawValueFor,
+  FormRawValues,
   FormValueFor,
   FormValues,
 } from "./tree-types.js";
+
+export type { FormReinitializeInput } from "./baseline-types.js";
+
+export type {
+  FieldParser,
+  FormIssueBase,
+  IssueSource,
+  NumberParserOptions,
+  ParseIssue,
+  ParseResult,
+  ParseStatus,
+  StringParserOptions,
+} from "../parsers/types.js";
+
+export type {
+  AnyValidationRule,
+  AsyncValidationRule,
+  FieldIssue,
+  FieldPathSegment,
+  SyncValidationRule,
+  ValidationIssue,
+  ValidationIssueInput,
+  ValidationRule,
+  ValidationRuleContext,
+  ValidationStatus,
+  ValidationTriggerMode,
+} from "../validation/types.js";
 
 /**
  * Equality comparison function used for baseline dirty comparison.
@@ -17,93 +53,63 @@ export type {
 export type FieldEqualityFn<T> = (a: T, b: T) => boolean;
 
 /**
- * Configuration options for creating a standalone leaf field.
+ * Parserless field configuration: Raw === Value with no parser.
  */
-export interface CreateFieldOptions<TValue> {
-  /**
-   * Initial domain value of the field, also used as the initial unparsed raw presentation value.
-   */
+export interface ParserlessCreateFieldOptions<TValue> {
   readonly initialValue: TValue;
-
-  /**
-   * Optional equality function for baseline-relative dirty calculation.
-   * Defaults to `Object.is`.
-   */
+  readonly parser?: undefined;
+  readonly initialRawValue?: undefined;
+  readonly rules?: readonly AnyValidationRule<TValue>[] | undefined;
+  readonly validateOn?: ValidationTriggerMode | readonly ValidationTriggerMode[] | undefined;
+  readonly debounceMs?: number | undefined;
   readonly equality?: FieldEqualityFn<TValue> | undefined;
-
-  /**
-   * Optional parent Scope that deterministically owns the field lifecycle.
-   */
   readonly scope?: Scope | undefined;
 }
 
 /**
+ * Parser-aware field configuration: explicit domain and raw baselines are required.
+ */
+export interface ParsedCreateFieldOptions<TRaw, TValue> {
+  readonly initialValue: TValue;
+  readonly initialRawValue: TRaw;
+  readonly parser: FieldParser<TRaw, TValue>;
+  readonly rules?: readonly AnyValidationRule<TValue>[] | undefined;
+  readonly validateOn?: ValidationTriggerMode | readonly ValidationTriggerMode[] | undefined;
+  readonly debounceMs?: number | undefined;
+  readonly equality?: FieldEqualityFn<TValue> | undefined;
+  readonly scope?: Scope | undefined;
+}
+
+/**
+ * Discriminated union for type-safe parserless vs parser-aware field creation.
+ */
+export type CreateFieldOptions<TValue, TRaw = TValue> =
+  ParserlessCreateFieldOptions<TValue> | ParsedCreateFieldOptions<TRaw, TValue>;
+
+/**
  * Reactive state and interaction contract for a standalone leaf field.
  */
-export interface FieldState<TValue> {
-  /**
-   * Node kind discriminator.
-   */
+export interface FieldState<TValue, TRaw = TValue> {
   readonly kind: "field";
-
-  /**
-   * Reactive signal holding current domain value.
-   */
   readonly value: ReadableState<TValue>;
-
-  /**
-   * Reactive signal holding current raw presentation value.
-   * For unparsed P1c/P1d fields, rawValue always has the same type and value as domain value.
-   */
-  readonly rawValue: ReadableState<TValue>;
-
-  /**
-   * Reactive signal indicating whether the field has been touched by user interaction.
-   */
+  readonly rawValue: ReadableState<TRaw>;
   readonly touched: ReadableState<boolean>;
-
-  /**
-   * Lazy computed signal indicating whether current value differs from baseline.
-   */
   readonly dirty: Computed<boolean>;
-
-  /**
-   * Returns the current domain value synchronously.
-   */
+  readonly pending: ReadableState<boolean>;
+  readonly valid: Computed<boolean>;
+  readonly invalid: Computed<boolean>;
+  readonly issues: ReadableState<readonly FieldIssue[]>;
+  readonly parseIssue: ReadableState<ParseIssue | null>;
+  readonly parseStatus: ReadableState<ParseStatus>;
+  readonly validationStatus: ReadableState<ValidationStatus>;
   getValue(): TValue;
-
-  /**
-   * Returns the current raw presentation value synchronously.
-   */
-  getRawValue(): TValue;
-
-  /**
-   * Updates the domain value and raw presentation value.
-   */
+  getRawValue(): TRaw;
   setValue(next: TValue): void;
-
-  /**
-   * Updates the raw presentation value and domain value.
-   */
-  setRawValue(raw: TValue): void;
-
-  /**
-   * Sets the touched state of the field.
-   */
+  setRawValue(raw: TRaw): void;
   setTouched(touched?: boolean): void;
-
-  /**
-   * Convenience method to mark the field as touched.
-   */
   markTouched(): void;
-
-  /**
-   * Atomically restores the field to its initial baseline value, raw value, and untouched state.
-   */
+  setIssues(issues: readonly FieldIssue[]): void;
+  validate(trigger?: ValidationTriggerMode): Promise<readonly FieldIssue[]> | readonly FieldIssue[];
   reset(): void;
-
-  /**
-   * Disposes all internal field subscriptions, computeds, and resources idempotently.
-   */
   dispose(): void;
 }

@@ -3,7 +3,7 @@ import { describe, expect, test, vi } from "vitest";
 import { createField } from "../../src/core/field.js";
 import { createForm } from "../../src/core/form.js";
 import { createFieldGroup } from "../../src/core/group.js";
-import type { FormValues } from "../../src/core/types.js";
+import type { FormReinitializeInput } from "../../src/core/types.js";
 
 describe("createForm (P1d corrections)", () => {
   test("initializes with aggregate domain and raw presentation values", () => {
@@ -123,9 +123,12 @@ describe("createForm (P1d corrections)", () => {
     expect(() => form.getValue()).toThrowError("Form is disposed");
     expect(() => form.getRawValue()).toThrowError("Form is disposed");
     expect(() => form.reset()).toThrowError("Form is disposed");
-    expect(() => form.reinitialize({ name: "X", address: { city: "Y" } })).toThrowError(
-      "Form is disposed",
-    );
+    expect(() =>
+      form.reinitialize({
+        value: { name: "X", address: { city: "Y" } },
+        rawValue: { name: "X", address: { city: "Y" } },
+      }),
+    ).toThrowError("Form is disposed");
     expect(() => name.getValue()).toThrowError("Field is disposed");
     expect(() => address.getValue()).toThrowError("Group is disposed");
     expect(() => city.getValue()).toThrowError("Field is disposed");
@@ -191,8 +194,8 @@ describe("createForm (P1d corrections)", () => {
 
     // 2. Reinitialize with new baseline
     form.reinitialize({
-      name: "C",
-      address: { city: "Z" },
+      value: { name: "C", address: { city: "Z" } },
+      rawValue: { name: "C", address: { city: "Z" } },
     });
 
     // Node identities must be preserved
@@ -239,17 +242,22 @@ describe("createForm (P1d corrections)", () => {
     };
     const form = createForm({ fields });
 
-    expect(() => form.reinitialize(null as unknown as FormValues<typeof fields>)).toThrowError(
-      TypeError,
-    );
-    expect(() => form.reinitialize(undefined as unknown as FormValues<typeof fields>)).toThrowError(
-      TypeError,
-    );
     expect(() =>
-      form.reinitialize({ name: "C" } as unknown as FormValues<typeof fields>),
+      form.reinitialize(null as unknown as FormReinitializeInput<typeof fields>),
     ).toThrowError(TypeError);
     expect(() =>
-      form.reinitialize({ name: "C", address: null } as unknown as FormValues<typeof fields>),
+      form.reinitialize(undefined as unknown as FormReinitializeInput<typeof fields>),
+    ).toThrowError(TypeError);
+    expect(() =>
+      form.reinitialize({ value: { name: "C" } } as unknown as FormReinitializeInput<
+        typeof fields
+      >),
+    ).toThrowError(TypeError);
+    expect(() =>
+      form.reinitialize({
+        value: { name: "C", address: { city: "Y" } },
+        rawValue: { name: "C", address: null },
+      } as unknown as FormReinitializeInput<typeof fields>),
     ).toThrowError(TypeError);
   });
 
@@ -386,8 +394,14 @@ describe("createForm (P1d corrections)", () => {
     expect(form.dirty.get()).toBe(false);
 
     form.reinitialize({
-      title: "Rebased Form",
-      group: { leaf: "rebased" },
+      value: {
+        title: "Rebased Form",
+        group: { leaf: "rebased" },
+      },
+      rawValue: {
+        title: "Rebased Form",
+        group: { leaf: "rebased" },
+      },
     });
     expect(form.getValue()).toEqual({
       title: "Rebased Form",
@@ -424,10 +438,18 @@ describe("createForm (P1d corrections)", () => {
     expect(Object.getPrototypeOf(val)).toBe(Object.prototype);
 
     form.reinitialize({
-      ["__proto__"]: "rebase-proto",
-      constructor: "rebase-constructor",
-      prototype: "rebase-prototype",
-      fields: "rebase-fields",
+      value: {
+        ["__proto__"]: "rebase-proto",
+        constructor: "rebase-constructor",
+        prototype: "rebase-prototype",
+        fields: "rebase-fields",
+      },
+      rawValue: {
+        ["__proto__"]: "rebase-proto",
+        constructor: "rebase-constructor",
+        prototype: "rebase-prototype",
+        fields: "rebase-fields",
+      },
     });
 
     expect(form.getValue()["__proto__"]).toBe("rebase-proto");

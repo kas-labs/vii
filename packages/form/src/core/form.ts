@@ -1,21 +1,28 @@
 import { batch, computed, createScope } from "@vii-labs/core";
+import type { FieldIssue } from "../validation/types.js";
+import type { FormReinitializeInput } from "./baseline-types.js";
 import {
   adoptChildNodes,
   attachInternalNode,
-  getInternalNode,
   safeDefineProperty,
-  safeHasProperty,
   type FormNodeInternal,
   type NodeOwnership,
 } from "./internal.js";
-import type { CreateFormOptions, FormFieldsRecord, FormInstance, FormValues } from "./types.js";
+import { commitReinitializePlan, prepareReinitializePlan } from "./reinitialize-tree.js";
+import type {
+  CreateFormOptions,
+  FormFieldsRecord,
+  FormInstance,
+  FormRawValues,
+  FormValues,
+} from "./types.js";
 
 /**
  * Creates a root reactive form coordinator managing an object-shaped field tree.
  *
  * Exposes typed child access, aggregate domain and raw presentation values,
- * recursive dirty/touched tracking, batched reset, whole-form baseline reinitialization,
- * and deterministic root Scope lifecycle ownership.
+ * recursive dirty/touched tracking, aggregate validation validity/pending/issues,
+ * batched reset, whole-form baseline reinitialization, and deterministic root Scope lifecycle ownership.
  */
 export function createForm<TFields extends FormFieldsRecord>(
   options: CreateFormOptions<TFields>,
@@ -76,33 +83,72 @@ export function createForm<TFields extends FormFieldsRecord>(
         const key = fieldKeys[i]!;
         safeDefineProperty(result, key, fields[key]!.rawValue.get());
       }
-      return result as FormValues<TFields>;
+      return result as FormRawValues<TFields>;
     }),
   );
 
   const dirtyComputed = formScope.run(() =>
     computed(() => {
-      let isDirty = false;
       for (let i = 0; i < fieldKeys.length; i++) {
-        const childDirty = fields[fieldKeys[i]!]!.dirty.get();
-        if (childDirty) {
-          isDirty = true;
+        if (fields[fieldKeys[i]!]!.dirty.get()) {
+          return true;
         }
       }
-      return isDirty;
+      return false;
     }),
   );
 
   const touchedComputed = formScope.run(() =>
     computed(() => {
-      let isTouched = false;
       for (let i = 0; i < fieldKeys.length; i++) {
-        const childTouched = fields[fieldKeys[i]!]!.touched.get();
-        if (childTouched) {
-          isTouched = true;
+        if (fields[fieldKeys[i]!]!.touched.get()) {
+          return true;
         }
       }
-      return isTouched;
+      return false;
+    }),
+  );
+
+  const pendingComputed = formScope.run(() =>
+    computed(() => {
+      for (let i = 0; i < fieldKeys.length; i++) {
+        if (fields[fieldKeys[i]!]!.pending.get()) {
+          return true;
+        }
+      }
+      return false;
+    }),
+  );
+
+  const validComputed = formScope.run(() =>
+    computed(() => {
+      for (let i = 0; i < fieldKeys.length; i++) {
+        if (!fields[fieldKeys[i]!]!.valid.get()) {
+          return false;
+        }
+      }
+      return true;
+    }),
+  );
+
+  const invalidComputed = formScope.run(() => computed(() => !validComputed.get()));
+
+  const issuesComputed = formScope.run(() =>
+    computed(() => {
+      const collected: FieldIssue[] = [];
+      for (let i = 0; i < fieldKeys.length; i++) {
+        const key = fieldKeys[i]!;
+        const childIssues = fields[key]!.issues.get();
+        for (let j = 0; j < childIssues.length; j++) {
+          const iss = childIssues[j]!;
+          const prefix = [key, ...(iss.path ?? [])];
+          collected.push({
+            ...iss,
+            path: Object.freeze(prefix),
+          });
+        }
+      }
+      return Object.freeze(collected);
     }),
   );
 
@@ -115,31 +161,11 @@ export function createForm<TFields extends FormFieldsRecord>(
     });
   };
 
-  const reinitialize = (nextBaseline: FormValues<TFields>): void => {
+  const reinitialize = (nextBaseline: FormReinitializeInput<TFields>): void => {
     assertActive();
-    if (nextBaseline === null || typeof nextBaseline !== "object") {
-      throw new TypeError(
-        `Invalid reinitialize baseline: expected an object, received ${
-          nextBaseline === null ? "null" : typeof nextBaseline
-        }`,
-      );
-    }
-    for (let i = 0; i < fieldKeys.length; i++) {
-      const key = fieldKeys[i]!;
-      if (!safeHasProperty(nextBaseline, key)) {
-        throw new TypeError(`Invalid reinitialize baseline: missing property "${key}"`);
-      }
-    }
+    const plan = prepareReinitializePlan(fields, fieldKeys, nextBaseline);
     batch(() => {
-      for (let i = 0; i < fieldKeys.length; i++) {
-        const key = fieldKeys[i]!;
-        const child = fields[key]!;
-        const childInternal = getInternalNode(child);
-        if (!childInternal) {
-          throw new Error(`Child node "${key}" is missing internal node metadata`);
-        }
-        childInternal.reinitialize((nextBaseline as Record<string, unknown>)[key]);
-      }
+      commitReinitializePlan(plan);
     });
   };
 
@@ -150,6 +176,10 @@ export function createForm<TFields extends FormFieldsRecord>(
     rawValue: rawValueComputed,
     touched: touchedComputed,
     dirty: dirtyComputed,
+    pending: pendingComputed,
+    valid: validComputed,
+    invalid: invalidComputed,
+    issues: issuesComputed,
     getValue: () => {
       assertActive();
       return valueComputed.get();
@@ -163,7 +193,7 @@ export function createForm<TFields extends FormFieldsRecord>(
     dispose,
   };
 
-  const internal: FormNodeInternal<FormValues<TFields>> = {
+  const internal: FormNodeInternal<FormReinitializeInput<TFields>> = {
     kind: "form",
     scope: formScope,
     ownership,

@@ -83,12 +83,14 @@ export function adoptChildNodes<TFields extends FormFieldsRecord>(
   const childInternals: FormNodeInternal[] = [];
   for (let i = 0; i < fieldKeys.length; i++) {
     const key = fieldKeys[i]!;
-    const child = fields[key];
+    const child = fields[key] as unknown;
 
     if (
       child === null ||
       typeof child !== "object" ||
-      (child.kind !== "field" && child.kind !== "group")
+      !("kind" in (child as Record<string, unknown>)) ||
+      ((child as Record<string, unknown>)["kind"] !== "field" &&
+        (child as Record<string, unknown>)["kind"] !== "group")
     ) {
       throw new TypeError(`Invalid form node at "${key}": expected a FieldState or FieldGroup`);
     }

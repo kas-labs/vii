@@ -37,6 +37,135 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-29 17:45 UTC | Production Form Phase 1 Slice P1e final correction pass (unambiguous reinitialize & fail-closed Standard Schema)
+
+Status: completed
+Branch: `feat/form-p1e-validation-parsers`
+PR: #183 (Draft)
+
+### Scope
+
+- Final bounded P1e correction on audited head `1879b2d200c9cb9b153826110060bdee76582375` (same PR #183).
+- Remove reinitialize baseline-shape ambiguity; make Standard Schema fully fail-closed; eliminate cross-generic baseline casts; document mixed sync/async rule semantics; align PR body with implementation.
+
+### Changes
+
+- Replaced per-field `FieldBaseline` heuristics with `FormReinitializeInput<TFields>` (`{ value: FormValues, rawValue: FormRawValues }`).
+- Added `packages/form/src/core/reinitialize-tree.ts` for explicit child baseline dispatch.
+- Internal field reinitialize receives `{ value, rawValue }` from parent traversal only (never inferred from TValue).
+- Standard Schema adapter accepts only `{ value }` success or `{ issues }` failure per spec v1; `{}` fails closed; required issue `message` enforced.
+- Documented mixed-rule semantics in validation executor (sync issues aggregate; async commit short-circuited).
+- Removed public `isStandardSchema`, `FieldBaseline`, `FormReinitializeBaseline*`, `FieldReinitializeInput`.
+- Added reinitialize, mixed-validation, and expanded Standard Schema regression tests (132 total).
+
+### Validation
+
+- `pnpm nx lint form` — passed.
+- `pnpm nx typecheck form` — passed.
+- `pnpm nx test form` — passed (12 files, 132 tests).
+- `pnpm nx build form` — passed.
+- `pnpm nx validate-package form` — passed.
+- `git diff --check` — passed.
+- `NX_DAEMON=false pnpm validate` — passed.
+
+### Architecture / compatibility
+
+- No `@vii-labs/core` changes. Package remains private. P1f/P1g not started.
+
+### Remaining / recovery
+
+- None. Await maintainer review of Draft PR #183 final correction head.
+
+## 2026-08-29 17:00 UTC | Production Form Phase 1 Slice P1e correction pass (RAW/VALUE baseline & public API)
+
+Status: completed
+Branch: `feat/form-p1e-validation-parsers`
+PR: #183 (Draft)
+
+### Scope
+
+- Bounded P1e correction pass on audited head `5696a1f5daa17a36705dbfdb3c145ddc0690e8c9` (same PR #183, no new slice).
+- Remove unsafe `TRaw`/`TValue` casts; enforce parser-aware baselines; parser-aware `form.reinitialize`; remove public baseline signals and field-level baseline rebasing via `reset`; document domain dirty and parsed `setValue` semantics; remove reserved-string issue-code blacklists; re-verify async validation and Standard Schema; trim public exports.
+
+### Changes
+
+- Added `packages/form/src/core/baseline-types.ts` (`FieldBaseline`, `FormReinitializeBaseline`, normalization helpers).
+- Split field implementation into `field.ts`, `field-parserless.ts`, `field-parsed.ts`, `field-validation-runtime.ts`.
+- Discriminated `CreateFieldOptions`: parserless vs parsed (`initialRawValue` required for parsed fields).
+- Removed public `initialValue` / `initialRawValue`; `reset()` is parameterless; internal reinitialize is parser-aware.
+- `form.reinitialize(FormReinitializeBaseline)` requires `{ value, rawValue }` for cross-type parsed fields.
+- Parsed `setValue` preserves raw; domain dirty compares baseline domain value only.
+- Removed global reserved-string rejection from issue sanitizers; auto-trigger validation commits execution errors.
+- Trimmed public root exports to P1e minimum (`createNumberParser`, `createStringParser` only among built-ins).
+
+### Validation
+
+- `pnpm nx lint form` — passed.
+- `pnpm nx typecheck form` — passed.
+- `pnpm nx test form` — passed (10 files, 114 tests).
+- `pnpm nx build form` — passed.
+- `pnpm nx validate-package form` — passed.
+- `git diff --check` — passed.
+- `NX_DAEMON=false pnpm validate` — passed.
+
+### Architecture / compatibility
+
+- No `@vii-labs/core` changes. Package remains private. P1f/P1g not started.
+
+### Remaining / recovery
+
+- None. Await maintainer review of Draft PR #183.
+
+## 2026-08-29 02:15 CEST | Production Form Phase 1 Slice P1e: Validation, Parsers & Standard Schema
+
+Status: completed
+Branch: `feat/form-p1e-validation-parsers`
+PR: not opened (Draft PR creation queued)
+
+### Scope
+
+- Implement Production Form Phase 1 Slice P1e (Validation, Parsers & Standard Schema) in `@vii-labs/form`.
+- Introduce: Raw vs Value separation, synchronous parsing (`FieldParser<TRaw, TValue>`), raw presentation retention on parse failure (e.g. `"05"` retained as `"05"` while `value` is `5`), structured `ParseIssue` taxonomy, synchronous validation rules (`SyncValidationRule<TValue>`), asynchronous validation rules (`AsyncValidationRule<TValue>`), validation `pending` state, monotonic validation revision tracking, `AbortSignal` cancellation, stale-result protection, fail-closed Standard Schema v1 validation bridge (`standardSchema`), built-in parsers (`createNumberParser`, `createStringParser`, `createOptionalStringParser`, `createBooleanParser`), and aggregate validation state across groups and root forms (`pending`, `valid`, `invalid`, `issues` with path prefixing).
+- Maintain absolute non-goals: ZERO dynamic array collections (`createFieldArray` deferred to P1f), NO submission pipeline (`handleSubmit` deferred to P1g), NO server issue routing (`ServerIssue` deferred to P1g), NO framework adapters (`/react`, `/vanilla`, `/angular`, `/vue` deferred to P1h–P1j), NO HTTP/Query, NO Vii Schema, NO `@vii-labs/form` publication (`private: true`), ZERO modifications to `@vii-labs/core`, and ZERO runtime dependencies on validator libraries.
+
+### Changes
+
+- Created `packages/form/src/parsers/types.ts` defining `IssueSource`, `FormIssueBase`, `ParseIssue`, `ParseStatus`, `ParseResult<TValue>`, `FieldParser<TRaw, TValue>`, `NumberParserOptions`, `StringParserOptions`.
+- Created `packages/form/src/parsers/builtins.ts` implementing `sanitizeParseIssue` (prototype pollution defense), `createNumberParser` (strict decimal grammar validation, empty/trim options, raw presentation retention), `createStringParser`, `createOptionalStringParser`, `createBooleanParser`.
+- Created `packages/form/src/validation/types.ts` defining `FieldPathSegment`, `ValidationTriggerMode`, `ValidationStatus`, `ValidationIssue`, `FieldIssue`, `ValidationRuleContext`, `SyncValidationRule`, `AsyncValidationRule`, `ValidationRule`, `AnyValidationRule`.
+- Created `packages/form/src/validation/revision.ts` implementing `sanitizeValidationIssue` (prototype pollution defense) and `ValidationRevisionController` (monotonic revisions, AbortController lifecycle, debounce timers).
+- Created `packages/form/src/validation/executor.ts` implementing `executeFieldValidation` handling sync/async rule execution, monotonic revision verification, AbortSignal propagation, and host state synchronization.
+- Created `packages/form/src/validation/standard-schema.ts` implementing `isStandardSchema`, `normalizeStandardSchemaIssue`, and `standardSchema` (v1 bridge with sync/async fail-closed validation).
+- Updated `packages/form/src/core/field.ts` with parser integration, raw retention, async cancellation, monotonic revisions, debounce support, sync/async validation execution, `pending`, `valid`, `invalid`, `issues`, `parseIssue`, `parseStatus`, `validationStatus`, `setRawValue`, `setValue`, `setTouched`, `setIssues`, `validate`, `reset(nextInitial, nextInitialRaw)`.
+- Updated `packages/form/src/core/group.ts` and `form.ts` aggregating child `pending`, `valid`, `invalid`, `issues` (with recursive path prefixing), and `rawValue`.
+- Updated `packages/form/src/core/tree-types.ts` and `types.ts` defining `FormRawValueFor`, `FormRawValues`, and updated `FieldGroup` / `FormInstance` / `FieldState` interfaces.
+- Updated `packages/form/src/index.ts` exporting all public P1e primitives and types.
+- Created comprehensive unit tests: `test/unit/parser.test.ts` (18 tests), `test/unit/validation.test.ts` (9 tests), `test/unit/async-validation.test.ts` (8 tests), `test/unit/standard-schema.test.ts` (9 tests), `test/unit/aggregate-validation.test.ts` (4 tests).
+- Updated `test/package-boundary.test.ts`, `packages/form/README.md`, `scripts/package-validation/validate-form.mjs`, and `PROJECT_STATE.md`.
+
+### Validation
+
+- `pnpm nx lint form` — passed (0 errors, 0 warnings).
+- `pnpm nx typecheck form` — passed (0 errors).
+- `pnpm nx test form` — passed (10 test files, 105 tests passed, 0 failures).
+- `pnpm nx build form` — passed (clean TypeScript compilation).
+- `node scripts/package-validation/validate-form.mjs` — passed (packed tarball assertion and clean consumer scenario execution against packed `@vii-labs/form` artifact).
+- `git diff --check` — passed (0 whitespace/conflict issues).
+- `NX_DAEMON=false pnpm validate` — passed (complete repository validation: format:check, lint, typecheck, test, build, pack:check).
+
+### Architecture / compatibility
+
+- Package remains private (`private: true`) with Apache-2.0 license and sideEffects: false.
+- Zero modifications to `@vii-labs/core`.
+- Zero runtime dependencies on third-party validator libraries (Zod, Valibot, ArkType, TypeBox). Type-only integration with `@standard-schema/spec`.
+- All production code strictly follows file limit guidelines (all files $\le 320$ lines, zero files exceeding 400 lines).
+
+### Remaining / recovery
+
+- None for P1e.
+- Next scheduled slice: P1f (Dynamic Collections & FieldArray).
+```
+
 ## 2026-08-28 23:50 CEST | Production Form Phase 1 Slice P1d: Form Tree, Groups & Aggregate State (Ownership & Lifecycle Correction)
 
 Status: completed

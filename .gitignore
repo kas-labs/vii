@@ -12,6 +12,7 @@ coverage/
 
 # Local tooling and operating-system files
 .idea/
+.serena/
 .DS_Store
 *.swp
 

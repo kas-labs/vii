@@ -92,13 +92,19 @@ package-boundary tests, tarball validation, and clean consumer validation. Slice
 first production runtime primitive: unparsed `createField<TValue>`, providing fine-grained reactive
 `value`, `rawValue` (enforcing invariant `Raw === Value === TValue`), baseline-relative `dirty`
 tracking, independent `touched` state, batched `reset()`, and deterministic `@vii-labs/core` `Scope`
-lifecycle integration. Slice P1d implements composable nested object state via `createFieldGroup<TFields>`
+lifecycle integration. Slice P1d implemented composable nested object state via `createFieldGroup<TFields>`
 and root form coordination via `createForm<TFields>`, providing typed nested object composition, parent/child
 Scope ownership, aggregate domain/raw values, recursive dirty/touched aggregation, deterministic reset,
 whole-form baseline reinitialization (`form.reinitialize(newBaseline)`), transactional two-phase adoption,
 and deterministic root Scope disposal preventing direct public disposal of tree-adopted children.
-The package remains private (`private: true`). Arrays (`createFieldArray`), validation engine, parsers,
-submission pipeline, server issue routing, and framework adapters are deferred to subsequent slices P1e–P1j.
+Slice P1e introduces Raw vs Value separation, synchronous parsers (`FieldParser<TRaw, TValue>`), raw presentation
+retention on parse failure (e.g. `"05"` retained as `"05"` while `value` is `5`), structured `ParseIssue`,
+synchronous validation rules (`SyncValidationRule<TValue>`), asynchronous validation rules (`AsyncValidationRule<TValue>`),
+validation `pending` state, monotonic validation revision tracking, `AbortSignal` cancellation, stale-result protection,
+fail-closed Standard Schema v1 validation bridge (`standardSchema`), built-in parsers (`createNumberParser`, `createStringParser`,
+`createOptionalStringParser`, `createBooleanParser`), and aggregate validation state across groups and root forms.
+The package remains private (`private: true`). Arrays (`createFieldArray`), submission pipeline, server issue routing,
+and framework adapters are deferred to subsequent slices P1f–P1j.
 `@vii-labs/form` declares `@vii-labs/core` as a required runtime peer (`>=0.1.0-experimental.2`),
 `@standard-schema/spec` as a type-consumed dependency, and `react`, `@angular/core`, and `vue` as optional
 peer dependencies. It has zero runtime dependency on `research/form/` and makes zero modifications to `@vii-labs/core`.

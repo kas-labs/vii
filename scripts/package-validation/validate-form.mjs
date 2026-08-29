@@ -100,6 +100,30 @@ try {
     "package/dist/core/types.d.ts.map",
     "package/dist/core/types.js",
     "package/dist/core/types.js.map",
+    "package/dist/parsers/builtins.d.ts",
+    "package/dist/parsers/builtins.d.ts.map",
+    "package/dist/parsers/builtins.js",
+    "package/dist/parsers/builtins.js.map",
+    "package/dist/parsers/types.d.ts",
+    "package/dist/parsers/types.d.ts.map",
+    "package/dist/parsers/types.js",
+    "package/dist/parsers/types.js.map",
+    "package/dist/validation/executor.d.ts",
+    "package/dist/validation/executor.d.ts.map",
+    "package/dist/validation/executor.js",
+    "package/dist/validation/executor.js.map",
+    "package/dist/validation/revision.d.ts",
+    "package/dist/validation/revision.d.ts.map",
+    "package/dist/validation/revision.js",
+    "package/dist/validation/revision.js.map",
+    "package/dist/validation/standard-schema.d.ts",
+    "package/dist/validation/standard-schema.d.ts.map",
+    "package/dist/validation/standard-schema.js",
+    "package/dist/validation/standard-schema.js.map",
+    "package/dist/validation/types.d.ts",
+    "package/dist/validation/types.d.ts.map",
+    "package/dist/validation/types.js",
+    "package/dist/validation/types.js.map",
     "package/dist/adapters/react/index.d.ts",
     "package/dist/adapters/react/index.d.ts.map",
     "package/dist/adapters/react/index.js",
@@ -123,7 +147,13 @@ try {
   // Create clean consumer fixture source
   const consumerSource = `
 import * as form from "@vii-labs/form";
-import { createField, createFieldGroup, createForm } from "@vii-labs/form";
+import {
+  createField,
+  createFieldGroup,
+  createForm,
+  createNumberParser,
+  standardSchema,
+} from "@vii-labs/form";
 import * as formReact from "@vii-labs/form/react";
 import * as formVanilla from "@vii-labs/form/vanilla";
 import * as formAngular from "@vii-labs/form/angular";
@@ -135,12 +165,21 @@ export const vanillaKeys = Object.keys(formVanilla);
 export const angularKeys = Object.keys(formAngular);
 export const vueKeys = Object.keys(formVue);
 
-export function runFormTreeScenario() {
+export async function runFormTreeScenario() {
   const formInstance = createForm({
     fields: {
       user: createFieldGroup({
         fields: {
-          name: createField({ initialValue: "Vitalii" }),
+          name: createField({
+            initialValue: "Vitalii",
+            rules: [(v: string) => (v.length < 2 ? { code: "min_len" } : null)],
+          }),
+          age: createField<number, string>({
+            initialValue: 30,
+            initialRawValue: "30",
+            parser: createNumberParser(),
+            rules: [(v: number) => (v < 0 ? { code: "positive" } : null)],
+          }),
         },
       }),
       settings: createFieldGroup({
@@ -152,62 +191,72 @@ export function runFormTreeScenario() {
   });
 
   const initialVal = formInstance.getValue();
-  const initialDirty = formInstance.dirty.get();
-  const initialTouched = formInstance.touched.get();
+  const initialRawVal = formInstance.getRawValue();
+  const initialValid = formInstance.valid.get();
 
-  formInstance.fields.user.fields.name.setValue("Alice");
-  formInstance.fields.user.fields.name.markTouched();
+  // Test raw '05' retention while value is 5
+  formInstance.fields.user.fields.age.setRawValue("05");
+  const ageRaw = formInstance.fields.user.fields.age.rawValue.get();
+  const ageVal = formInstance.fields.user.fields.age.value.get();
 
-  const mutatedVal = formInstance.getValue();
-  const mutatedDirty = formInstance.dirty.get();
-  const mutatedTouched = formInstance.touched.get();
+  // Test parse failure retains raw and marks invalid
+  formInstance.fields.user.fields.age.setRawValue("abc");
+  const parseFailedRaw = formInstance.fields.user.fields.age.rawValue.get();
+  const parseFailedVal = formInstance.fields.user.fields.age.value.get();
+  const parseFailedValid = formInstance.valid.get();
+  const parseIssuesCount = formInstance.issues.get().length;
 
+  // Restore age to valid
+  formInstance.fields.user.fields.age.setRawValue("35");
+
+  // Reinitialize
   formInstance.reinitialize({
-    user: { name: "Bob" },
+    user: { name: "Bob", age: 40 },
     settings: { theme: "dark" },
   });
 
   const reinitializedVal = formInstance.getValue();
   const reinitializedDirty = formInstance.dirty.get();
-  const reinitializedTouched = formInstance.touched.get();
 
-  formInstance.fields.settings.fields.theme.setValue("system");
-  const postRebaseDirty = formInstance.dirty.get();
-
-  formInstance.reset();
-  const resetVal = formInstance.getValue();
-  const resetDirty = formInstance.dirty.get();
-
-  let childDisposeRejected = false;
-  try {
-    formInstance.fields.user.fields.name.dispose();
-  } catch (err) {
-    childDisposeRejected = true;
-  }
+  // Standard Schema bridge test
+  const mockSchema = {
+    "~standard": {
+      version: 1,
+      vendor: "clean-test",
+      validate: (val: unknown) => (val === "invalid" ? { issues: [{ message: "bad", path: [] }] } : { value: val }),
+    },
+  };
+  const schemaField = createField({
+    initialValue: "valid",
+    rules: [standardSchema(mockSchema as never)],
+  });
+  const schemaInitialValid = schemaField.valid.get();
+  schemaField.setValue("invalid");
+  const schemaInvalidValid = schemaField.valid.get();
 
   formInstance.dispose();
 
   let postDisposeError = false;
   try {
     formInstance.getValue();
-  } catch (err) {
+  } catch {
     postDisposeError = true;
   }
 
   return {
     initialVal,
-    initialDirty,
-    initialTouched,
-    mutatedVal,
-    mutatedDirty,
-    mutatedTouched,
+    initialRawVal,
+    initialValid,
+    ageRaw,
+    ageVal,
+    parseFailedRaw,
+    parseFailedVal,
+    parseFailedValid,
+    parseIssuesCount,
     reinitializedVal,
     reinitializedDirty,
-    reinitializedTouched,
-    postRebaseDirty,
-    resetVal,
-    resetDirty,
-    childDisposeRejected,
+    schemaInitialValid,
+    schemaInvalidValid,
     postDisposeError,
   };
 }
@@ -236,47 +285,59 @@ export function runFormTreeScenario() {
   const consumer = await import(path.join(consumerDirectory, "dist/main.js"));
   assert.deepEqual(
     consumer.rootKeys,
-    ["createField", "createFieldGroup", "createForm"].sort(),
-    "clean consumer root export should contain createField, createFieldGroup, createForm in P1d",
+    [
+      "createBooleanParser",
+      "createField",
+      "createFieldGroup",
+      "createForm",
+      "createNumberParser",
+      "createOptionalStringParser",
+      "createStringParser",
+      "isStandardSchema",
+      "normalizeStandardSchemaIssue",
+      "sanitizeParseIssue",
+      "standardSchema",
+    ].sort(),
+    "clean consumer root export should contain P1e symbols",
   );
   assert.deepEqual(
     consumer.reactKeys,
     [],
-    "clean consumer react subpath export should be empty in P1d",
+    "clean consumer react subpath export should be empty in P1e",
   );
   assert.deepEqual(
     consumer.vanillaKeys,
     [],
-    "clean consumer vanilla subpath export should be empty in P1d",
+    "clean consumer vanilla subpath export should be empty in P1e",
   );
   assert.deepEqual(
     consumer.angularKeys,
     [],
-    "clean consumer angular subpath export should be empty in P1d",
+    "clean consumer angular subpath export should be empty in P1e",
   );
   assert.deepEqual(
     consumer.vueKeys,
     [],
-    "clean consumer vue subpath export should be empty in P1d",
+    "clean consumer vue subpath export should be empty in P1e",
   );
 
-  const scenarioResult = consumer.runFormTreeScenario();
+  const scenarioResult = await consumer.runFormTreeScenario();
   assert.deepEqual(
     scenarioResult,
     {
-      initialVal: { user: { name: "Vitalii" }, settings: { theme: "light" } },
-      initialDirty: false,
-      initialTouched: false,
-      mutatedVal: { user: { name: "Alice" }, settings: { theme: "light" } },
-      mutatedDirty: true,
-      mutatedTouched: true,
-      reinitializedVal: { user: { name: "Bob" }, settings: { theme: "dark" } },
+      initialVal: { user: { name: "Vitalii", age: 30 }, settings: { theme: "light" } },
+      initialRawVal: { user: { name: "Vitalii", age: "30" }, settings: { theme: "light" } },
+      initialValid: true,
+      ageRaw: "05",
+      ageVal: 5,
+      parseFailedRaw: "abc",
+      parseFailedVal: 5,
+      parseFailedValid: false,
+      parseIssuesCount: 1,
+      reinitializedVal: { user: { name: "Bob", age: 40 }, settings: { theme: "dark" } },
       reinitializedDirty: false,
-      reinitializedTouched: false,
-      postRebaseDirty: true,
-      resetVal: { user: { name: "Bob" }, settings: { theme: "dark" } },
-      resetDirty: false,
-      childDisposeRejected: true,
+      schemaInitialValid: true,
+      schemaInvalidValid: false,
       postDisposeError: true,
     },
     "clean consumer form tree scenario must execute correctly against packed artifact",

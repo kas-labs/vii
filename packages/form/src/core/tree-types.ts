@@ -1,33 +1,56 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Computed, ReadableState, Scope } from "@vii-labs/core";
 import type { FieldState } from "./types.js";
-
-/**
- * Record of child form nodes keyed by property names.
- */
-export type FormFieldsRecord = Record<string, FormNode>;
+import type { FieldIssue } from "../validation/types.js";
 
 /**
  * Union of supported node types in a composable form tree.
  */
-export type FormNode = FieldState<unknown> | FieldGroup<FormFieldsRecord>;
+export type FormNode = FieldState<any, any> | FieldGroup<any>;
 
 /**
- * Recursively maps a form node type to its corresponding materialized domain/raw value type.
+ * Record of child form nodes keyed by property names.
  */
-export type FormValueFor<T> =
-  T extends FieldState<infer V> ? V : T extends FieldGroup<infer F> ? FormValues<F> : never;
+export type FormFieldsRecord = Record<string, any>;
 
 /**
- * Materialized object value shape for a collection of form fields.
+ * Recursively maps a form node type to its corresponding materialized domain value type.
+ */
+export type FormValueFor<T> = T extends { readonly kind: "field"; getValue(): infer V }
+  ? V
+  : T extends { readonly kind: "group"; fields: infer F }
+    ? { [K in keyof F]: FormValueFor<F[K]> }
+    : never;
+
+/**
+ * Recursively maps a form node type to its corresponding materialized raw presentation value type.
+ */
+export type FormRawValueFor<T> = T extends { readonly kind: "field"; getRawValue(): infer R }
+  ? R
+  : T extends { readonly kind: "group"; fields: infer F }
+    ? { [K in keyof F]: FormRawValueFor<F[K]> }
+    : never;
+
+/**
+ * Materialized domain object value shape for a collection of form fields.
  */
 export type FormValues<TFields extends FormFieldsRecord> = {
   [K in keyof TFields]: FormValueFor<TFields[K]>;
 };
 
 /**
+ * Materialized raw presentation object value shape for a collection of form fields.
+ */
+export type FormRawValues<TFields extends FormFieldsRecord> = {
+  [K in keyof TFields]: FormRawValueFor<TFields[K]>;
+};
+
+/**
  * Configuration options for creating a nested field group.
  */
-export interface CreateFieldGroupOptions<TFields extends FormFieldsRecord = FormFieldsRecord> {
+export interface CreateFieldGroupOptions<
+  TFields extends Record<string, any> = Record<string, any>,
+> {
   /**
    * Child field or group nodes that comprise this group.
    */
@@ -42,7 +65,7 @@ export interface CreateFieldGroupOptions<TFields extends FormFieldsRecord = Form
 /**
  * Reactive state and interaction contract for a nested field group.
  */
-export interface FieldGroup<TFields extends FormFieldsRecord = FormFieldsRecord> {
+export interface FieldGroup<TFields extends Record<string, any> = Record<string, any>> {
   /**
    * Node kind discriminator.
    */
@@ -61,7 +84,7 @@ export interface FieldGroup<TFields extends FormFieldsRecord = FormFieldsRecord>
   /**
    * Lazy computed signal returning aggregate raw presentation values object.
    */
-  readonly rawValue: ReadableState<FormValues<TFields>>;
+  readonly rawValue: ReadableState<FormRawValues<TFields>>;
 
   /**
    * Lazy computed signal indicating whether any descendant field has been touched.
@@ -74,6 +97,26 @@ export interface FieldGroup<TFields extends FormFieldsRecord = FormFieldsRecord>
   readonly dirty: Computed<boolean>;
 
   /**
+   * Lazy computed signal indicating whether any descendant field is currently validating asynchronously.
+   */
+  readonly pending: Computed<boolean>;
+
+  /**
+   * Lazy computed signal indicating whether all descendant fields are valid.
+   */
+  readonly valid: Computed<boolean>;
+
+  /**
+   * Lazy computed signal indicating whether any descendant field is invalid.
+   */
+  readonly invalid: Computed<boolean>;
+
+  /**
+   * Lazy computed signal returning aggregate issues from all descendant nodes with prefixed paths.
+   */
+  readonly issues: Computed<readonly FieldIssue[]>;
+
+  /**
    * Returns current aggregate domain values synchronously.
    */
   getValue(): FormValues<TFields>;
@@ -81,7 +124,7 @@ export interface FieldGroup<TFields extends FormFieldsRecord = FormFieldsRecord>
   /**
    * Returns current aggregate raw presentation values synchronously.
    */
-  getRawValue(): FormValues<TFields>;
+  getRawValue(): FormRawValues<TFields>;
 
   /**
    * Atomically resets all descendant fields and groups to their original baseline.
@@ -97,7 +140,7 @@ export interface FieldGroup<TFields extends FormFieldsRecord = FormFieldsRecord>
 /**
  * Configuration options for creating a root form instance.
  */
-export interface CreateFormOptions<TFields extends FormFieldsRecord = FormFieldsRecord> {
+export interface CreateFormOptions<TFields extends Record<string, any> = Record<string, any>> {
   /**
    * Child field or group nodes that comprise this form.
    */
@@ -112,7 +155,7 @@ export interface CreateFormOptions<TFields extends FormFieldsRecord = FormFields
 /**
  * Root form coordinator managing tree composition, aggregate signals, reset, and whole-form baseline replacement.
  */
-export interface FormInstance<TFields extends FormFieldsRecord = FormFieldsRecord> {
+export interface FormInstance<TFields extends Record<string, any> = Record<string, any>> {
   /**
    * Node kind discriminator.
    */
@@ -131,7 +174,7 @@ export interface FormInstance<TFields extends FormFieldsRecord = FormFieldsRecor
   /**
    * Lazy computed signal returning aggregate raw presentation values object.
    */
-  readonly rawValue: ReadableState<FormValues<TFields>>;
+  readonly rawValue: ReadableState<FormRawValues<TFields>>;
 
   /**
    * Lazy computed signal indicating whether any descendant field has been touched.
@@ -144,6 +187,26 @@ export interface FormInstance<TFields extends FormFieldsRecord = FormFieldsRecor
   readonly dirty: Computed<boolean>;
 
   /**
+   * Lazy computed signal indicating whether any descendant field is currently validating asynchronously.
+   */
+  readonly pending: Computed<boolean>;
+
+  /**
+   * Lazy computed signal indicating whether all descendant fields are valid.
+   */
+  readonly valid: Computed<boolean>;
+
+  /**
+   * Lazy computed signal indicating whether any descendant field is invalid.
+   */
+  readonly invalid: Computed<boolean>;
+
+  /**
+   * Lazy computed signal returning aggregate issues from all descendant nodes with prefixed paths.
+   */
+  readonly issues: Computed<readonly FieldIssue[]>;
+
+  /**
    * Returns current aggregate domain values synchronously.
    */
   getValue(): FormValues<TFields>;
@@ -151,7 +214,7 @@ export interface FormInstance<TFields extends FormFieldsRecord = FormFieldsRecor
   /**
    * Returns current aggregate raw presentation values synchronously.
    */
-  getRawValue(): FormValues<TFields>;
+  getRawValue(): FormRawValues<TFields>;
 
   /**
    * Atomically resets all descendant fields and groups to their current baseline.

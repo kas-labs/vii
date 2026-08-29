@@ -13,11 +13,23 @@ const packageRoot = path.resolve(currentDirectory, "..");
 const manifestPath = path.join(packageRoot, "package.json");
 const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
 
-describe("@vii-labs/form package boundary (P1d)", () => {
-  test("root exports createField, createFieldGroup, createForm and adapter entrypoints resolve cleanly as zero-runtime ESM modules", () => {
+describe("@vii-labs/form package boundary (P1e)", () => {
+  test("root exports createField, createFieldGroup, createForm, standardSchema, and parsers; adapter entrypoints resolve cleanly as zero-runtime ESM modules", () => {
     expect(formRoot).toBeDefined();
     expect(Object.keys(formRoot).sort()).toEqual(
-      ["createField", "createFieldGroup", "createForm"].sort(),
+      [
+        "createBooleanParser",
+        "createField",
+        "createFieldGroup",
+        "createForm",
+        "createNumberParser",
+        "createOptionalStringParser",
+        "createStringParser",
+        "isStandardSchema",
+        "normalizeStandardSchemaIssue",
+        "sanitizeParseIssue",
+        "standardSchema",
+      ].sort(),
     );
 
     expect(formReact).toBeDefined();
@@ -106,9 +118,10 @@ describe("@vii-labs/form package boundary (P1d)", () => {
     const vueSource = readFileSync(path.join(packageRoot, "src/adapters/vue/index.ts"), "utf8");
 
     const allSources = [rootSource, reactSource, vanillaSource, angularSource, vueSource];
-    for (const src of allSources) {
-      expect(src).not.toContain("research/form");
-      expect(src).not.toContain("../../research");
+    for (const source of allSources) {
+      expect(source).not.toContain("research/form");
+      expect(source).not.toContain("../research");
+      expect(source).not.toContain("../../research");
     }
   });
 });

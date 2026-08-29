@@ -1,4 +1,5 @@
 import { batch, computed, createScope } from "@vii-labs/core";
+import type { FieldIssue } from "../validation/types.js";
 import {
   adoptChildNodes,
   attachInternalNode,
@@ -8,13 +9,20 @@ import {
   type FormNodeInternal,
   type NodeOwnership,
 } from "./internal.js";
-import type { CreateFieldGroupOptions, FieldGroup, FormFieldsRecord, FormValues } from "./types.js";
+import type {
+  CreateFieldGroupOptions,
+  FieldGroup,
+  FormFieldsRecord,
+  FormRawValues,
+  FormValues,
+} from "./types.js";
 
 /**
  * Creates a reactive nested field group aggregating child field and group nodes.
  *
  * Exposes typed child access, aggregate domain and raw presentation values,
- * recursive dirty/touched tracking, batched reset, and deterministic Scope lifecycle ownership.
+ * recursive dirty/touched tracking, aggregate validation validity/pending/issues,
+ * batched reset, and deterministic Scope lifecycle ownership.
  */
 export function createFieldGroup<TFields extends FormFieldsRecord>(
   options: CreateFieldGroupOptions<TFields>,
@@ -78,33 +86,72 @@ export function createFieldGroup<TFields extends FormFieldsRecord>(
         const key = fieldKeys[i]!;
         safeDefineProperty(result, key, fields[key]!.rawValue.get());
       }
-      return result as FormValues<TFields>;
+      return result as FormRawValues<TFields>;
     }),
   );
 
   const dirtyComputed = groupScope.run(() =>
     computed(() => {
-      let isDirty = false;
       for (let i = 0; i < fieldKeys.length; i++) {
-        const childDirty = fields[fieldKeys[i]!]!.dirty.get();
-        if (childDirty) {
-          isDirty = true;
+        if (fields[fieldKeys[i]!]!.dirty.get()) {
+          return true;
         }
       }
-      return isDirty;
+      return false;
     }),
   );
 
   const touchedComputed = groupScope.run(() =>
     computed(() => {
-      let isTouched = false;
       for (let i = 0; i < fieldKeys.length; i++) {
-        const childTouched = fields[fieldKeys[i]!]!.touched.get();
-        if (childTouched) {
-          isTouched = true;
+        if (fields[fieldKeys[i]!]!.touched.get()) {
+          return true;
         }
       }
-      return isTouched;
+      return false;
+    }),
+  );
+
+  const pendingComputed = groupScope.run(() =>
+    computed(() => {
+      for (let i = 0; i < fieldKeys.length; i++) {
+        if (fields[fieldKeys[i]!]!.pending.get()) {
+          return true;
+        }
+      }
+      return false;
+    }),
+  );
+
+  const validComputed = groupScope.run(() =>
+    computed(() => {
+      for (let i = 0; i < fieldKeys.length; i++) {
+        if (!fields[fieldKeys[i]!]!.valid.get()) {
+          return false;
+        }
+      }
+      return true;
+    }),
+  );
+
+  const invalidComputed = groupScope.run(() => computed(() => !validComputed.get()));
+
+  const issuesComputed = groupScope.run(() =>
+    computed(() => {
+      const collected: FieldIssue[] = [];
+      for (let i = 0; i < fieldKeys.length; i++) {
+        const key = fieldKeys[i]!;
+        const childIssues = fields[key]!.issues.get();
+        for (let j = 0; j < childIssues.length; j++) {
+          const iss = childIssues[j]!;
+          const prefix = [key, ...(iss.path ?? [])];
+          collected.push({
+            ...iss,
+            path: Object.freeze(prefix),
+          });
+        }
+      }
+      return Object.freeze(collected);
     }),
   );
 
@@ -152,6 +199,10 @@ export function createFieldGroup<TFields extends FormFieldsRecord>(
     rawValue: rawValueComputed,
     touched: touchedComputed,
     dirty: dirtyComputed,
+    pending: pendingComputed,
+    valid: validComputed,
+    invalid: invalidComputed,
+    issues: issuesComputed,
     getValue: () => {
       assertActive();
       return valueComputed.get();

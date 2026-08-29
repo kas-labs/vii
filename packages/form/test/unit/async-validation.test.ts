@@ -217,6 +217,24 @@ describe("P1e: Asynchronous Validation, Revisions & Cancellation", () => {
     process.off("unhandledRejection", handler);
     expect(unhandledList).toEqual([]);
     expect(field.pending.get()).toBe(false);
+    expect(field.valid.get()).toBe(false);
+    expect(field.invalid.get()).toBe(true);
+    expect(field.issues.get()[0]?.code).toBe("validation.execution_error");
+    expect(field.issues.get()[0]?.message).toBe("Network timeout during async rule execution");
+  });
+
+  it("propagates promise rejection when calling manual validate() with rejecting async rule", async () => {
+    const failingRule: AsyncValidationRule<string> = async () => {
+      throw new Error("manual async rule failure");
+    };
+
+    const field = createField({
+      initialValue: "init",
+      rules: [failingRule],
+      validateOn: "manual",
+    });
+
+    await expect(field.validate("manual")).rejects.toThrow("manual async rule failure");
   });
 
   it("supports debounceMs on change trigger", async () => {

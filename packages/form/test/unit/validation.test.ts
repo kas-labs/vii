@@ -182,4 +182,98 @@ describe("P1e: Synchronous Field Validation Rules", () => {
     expect(field.validationStatus.get()).toBe("unvalidated");
     expect(field.valid.get()).toBe(true);
   });
+
+  describe("Automatic sync validator throw containment & error semantics", () => {
+    it("contains synchronous validator throws on automatic change validation without escaping setValue", () => {
+      const field = createField({
+        initialValue: "a",
+        rules: [
+          () => {
+            throw new Error("sync validator failed");
+          },
+        ],
+        validateOn: "change",
+      });
+
+      expect(() => field.setValue("b")).not.toThrow();
+
+      expect(field.pending.get()).toBe(false);
+      expect(field.valid.get()).toBe(false);
+      expect(field.invalid.get()).toBe(true);
+      expect(field.validationStatus.get()).toBe("invalid");
+
+      const issues = field.issues.get();
+      expect(issues).toHaveLength(1);
+      expect(issues[0]?.code).toBe("validation.execution_error");
+      expect(issues[0]?.message).toBe("sync validator failed");
+      expect(issues[0]?.source).toBe("validation");
+    });
+
+    it("contains synchronous validator throws on automatic blur validation without escaping setTouched", () => {
+      const field = createField({
+        initialValue: "a",
+        rules: [
+          () => {
+            throw new Error("sync blur validator failed");
+          },
+        ],
+        validateOn: "blur",
+      });
+
+      expect(() => field.setTouched(true)).not.toThrow();
+
+      expect(field.pending.get()).toBe(false);
+      expect(field.valid.get()).toBe(false);
+      expect(field.invalid.get()).toBe(true);
+      expect(field.validationStatus.get()).toBe("invalid");
+
+      const issues = field.issues.get();
+      expect(issues).toHaveLength(1);
+      expect(issues[0]?.code).toBe("validation.execution_error");
+      expect(issues[0]?.message).toBe("sync blur validator failed");
+    });
+
+    it("contains synchronous validator throws on debounced change validation", async () => {
+      const field = createField({
+        initialValue: "a",
+        rules: [
+          () => {
+            throw new Error("sync debounced validator failed");
+          },
+        ],
+        validateOn: "change",
+        debounceMs: 20,
+      });
+
+      expect(() => field.setValue("b")).not.toThrow();
+      expect(field.pending.get()).toBe(false);
+
+      await new Promise((r) => setTimeout(r, 40));
+
+      expect(field.pending.get()).toBe(false);
+      expect(field.valid.get()).toBe(false);
+      expect(field.invalid.get()).toBe(true);
+      expect(field.issues.get()[0]?.code).toBe("validation.execution_error");
+      expect(field.issues.get()[0]?.message).toBe("sync debounced validator failed");
+    });
+
+    it("propagates synchronous validator throws when calling manual validate()", () => {
+      const field = createField({
+        initialValue: "a",
+        rules: [
+          () => {
+            throw new Error("manual sync validator error");
+          },
+        ],
+        validateOn: "manual",
+      });
+
+      expect(() => field.validate("manual")).toThrow("manual sync validator error");
+    });
+
+    it("does not expose public setIssues on FieldState", () => {
+      const field = createField({ initialValue: "test" });
+      expect("setIssues" in field).toBe(false);
+    });
+  });
 });

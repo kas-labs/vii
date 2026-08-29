@@ -8,12 +8,12 @@ Internal development / experimental candidate (Phase 1 Baseline).
 
 - **Current Implementation (P1e — Validation, Parsers & Standard Schema):**
   - **Leaf Field Primitive (`createField`):**
-    - Raw vs Value separation: supports synchronous parsers (`FieldParser<TRaw, TValue>`) where raw presentation input (`"05"`) is preserved in `rawValue` without mutating domain `value` (e.g. `5`), and parse failures retain raw presentation input while preserving the last good domain value.
-    - Synchronous validation rules (`SyncValidationRule<TValue>`) and asynchronous validation rules (`AsyncValidationRule<TValue>`).
+    - Raw vs Value separation: supports synchronous parsers (`FieldParser<TRaw, TValue>`) where raw presentation input (`"05"`) is preserved in `rawValue` without mutating domain `value` (e.g. `5`), and parse failures retain raw presentation input while preserving the last good domain value. `setRawValue` commits all observable field states atomically in a single batch.
+    - Synchronous validation rules (`SyncValidationRule<TValue>`) and asynchronous validation rules (`AsyncValidationRule<TValue>`). Automatic validation (on change, blur, debounce) contains unexpected synchronous exceptions and asynchronous rejections into structured execution issues (`validation.execution_error`) with `validationStatus: "invalid"`, while manual `validate()` propagates errors directly to the caller.
     - Standard Schema v1 validation bridge (`standardSchema`) providing provider-neutral support for any `@standard-schema/spec` schema (e.g., Zod 4, Valibot, ArkType) with fail-closed boundary enforcement and zero vendor runtime dependencies.
     - Validation execution controls: trigger modes (`change`, `blur`, `submit`, `manual`), debounce duration (`debounceMs`), monotonic validation revision counters, AbortSignal cancellation, and stale-result protection.
-    - Reactive state signals: `value`, `rawValue`, `touched`, `dirty`, `pending`, `valid`, `invalid`, `issues`, `parseIssue`, `parseStatus`, `validationStatus`.
-    - Parser-aware baselines: parsed fields require explicit `initialRawValue`; cross-type fields cannot synthesize raw from domain value on `setValue` or `reinitialize`.
+    - Reactive state signals: `value`, `rawValue`, `touched`, `dirty`, `pending`, `valid`, `invalid`, `issues`, `parseIssue`, `parseStatus`, `validationStatus`. Issue state mutation remains strictly internal (no public `setIssues`).
+    - Trusted baseline contract: explicit `initialValue` + `initialRawValue` at creation and `{ value, rawValue }` in `form.reinitialize` establish the canonical domain + presentation pair as a trusted baseline without running the parser; parsers are used for subsequent raw input mutations.
     - `field.reset()` restores the current canonical baseline only; baseline replacement belongs to `form.reinitialize`.
     - Domain dirty semantics: `dirty` compares parsed domain `value` to baseline domain value (presentation-only raw edits with equivalent value stay pristine).
   - **Built-in Parsers (public):**

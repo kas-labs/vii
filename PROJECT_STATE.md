@@ -97,13 +97,14 @@ and root form coordination via `createForm<TFields>`, providing typed nested obj
 Scope ownership, aggregate domain/raw values, recursive dirty/touched aggregation, deterministic reset,
 whole-form baseline reinitialization (`form.reinitialize(newBaseline)`), transactional two-phase adoption,
 and deterministic root Scope disposal preventing direct public disposal of tree-adopted children.
-Slice P1e introduces Raw vs Value separation, synchronous parsers (`FieldParser<TRaw, TValue>`), explicit parser-aware baselines (`initialValue` + required `initialRawValue` when `TRaw !== TValue`), raw presentation
-retention on parse failure (e.g. `"05"` retained as `"05"` while `value` is `5`), structured `ParseIssue`,
+Slice P1e introduces Raw vs Value separation, synchronous parsers (`FieldParser<TRaw, TValue>`), trusted canonical baselines (`initialValue` + required `initialRawValue` when `TRaw !== TValue` without automatic baseline parsing), raw presentation
+retention on parse failure (e.g. `"05"` retained as `"05"` while `value` is `5`), single-batch atomic `setRawValue` commit, structured `ParseIssue`,
 synchronous validation rules (`SyncValidationRule<TValue>`), asynchronous validation rules (`AsyncValidationRule<TValue>`),
+automatic validation error containment (unexpected sync throws and async rejections commit structured `validation.execution_error` issues while manual `validate()` propagates throws),
 validation `pending` state, monotonic validation revision tracking, `AbortSignal` cancellation, stale-result protection,
 fail-closed Standard Schema v1 validation bridge (`standardSchema`, validation-only — transformed schema output is not adopted as field `TValue`),
 public built-in parsers (`createNumberParser`, `createStringParser` only), whole-form reinitialization via explicit separate `value` / `rawValue` trees (`FormReinitializeInput`) with recursive two-phase prevalidation (zero mutation on malformed input),
-domain-only dirty semantics, parsed-field `setValue` updating domain value while preserving raw presentation, parameterless `field.reset()`, internal-only baseline storage (no public `initialValue` / `initialRawValue` signals),
+domain-only dirty semantics, parsed-field `setValue` updating domain value while preserving raw presentation, parameterless `field.reset()`, internal-only baseline storage and internal-only issue mutation (no public `setIssues` or baseline signals),
 and aggregate validation state across groups and root forms. Reserved strings (`__proto__`, `constructor`, `prototype`) are treated as legitimate issue/path data; protection applies at object materialization sinks only.
 The package remains private (`private: true`). Arrays (`createFieldArray`), submission pipeline, server issue routing,
 and framework adapters are deferred to subsequent slices P1f–P1j.

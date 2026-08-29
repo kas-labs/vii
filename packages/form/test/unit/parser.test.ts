@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   createField,
   createForm,
@@ -224,9 +224,146 @@ describe("P1e: Field Parsers & Raw vs Value Separation", () => {
     expect(() =>
       form.reinitialize({
         value: { age: 10 },
-        rawValue: { age: 10 as unknown as string },
+        rawValue: { age: "010" },
       }),
     ).not.toThrow();
+  });
+
+  describe("setRawValue atomic notification invariants", () => {
+    it("commits setRawValue atomically without intermediate observable state on parse success", () => {
+      const field = createField<number, string>({
+        initialValue: 5,
+        initialRawValue: "5",
+        parser: createNumberParser(),
+      });
+
+      const snapshots: Array<{
+        raw: string;
+        value: number;
+        parseStatus: string;
+        parseIssue: unknown;
+        issuesCount: number;
+      }> = [];
+
+      field.rawValue.subscribe((raw) => {
+        snapshots.push({
+          raw,
+          value: field.value.get(),
+          parseStatus: field.parseStatus.get(),
+          parseIssue: field.parseIssue.get(),
+          issuesCount: field.issues.get().length,
+        });
+      });
+
+      snapshots.length = 0;
+
+      field.setRawValue("42");
+
+      expect(snapshots).toHaveLength(1);
+      expect(snapshots[0]).toEqual({
+        raw: "42",
+        value: 42,
+        parseStatus: "parsed",
+        parseIssue: null,
+        issuesCount: 0,
+      });
+    });
+
+    it("commits setRawValue atomically without intermediate observable state on parse failure", () => {
+      const field = createField<number, string>({
+        initialValue: 5,
+        initialRawValue: "5",
+        parser: createNumberParser(),
+      });
+
+      const snapshots: Array<{
+        raw: string;
+        value: number;
+        parseStatus: string;
+        parseIssueCode: string | undefined;
+        issuesCount: number;
+      }> = [];
+
+      field.rawValue.subscribe((raw) => {
+        snapshots.push({
+          raw,
+          value: field.value.get(),
+          parseStatus: field.parseStatus.get(),
+          parseIssueCode: field.parseIssue.get()?.code,
+          issuesCount: field.issues.get().length,
+        });
+      });
+
+      snapshots.length = 0;
+
+      field.setRawValue("abc");
+
+      expect(snapshots).toHaveLength(1);
+      expect(snapshots[0]).toEqual({
+        raw: "abc",
+        value: 5,
+        parseStatus: "invalid",
+        parseIssueCode: "parse.invalid_number",
+        issuesCount: 1,
+      });
+    });
+  });
+
+  describe("Trusted baseline contract", () => {
+    it("accepts canonical trusted initial value/rawValue pair without automatic parsing", () => {
+      const parserSpy = vi.fn(createNumberParser());
+      const field = createField<number, string>({
+        initialValue: 42,
+        initialRawValue: "custom-presentation",
+        parser: parserSpy,
+      });
+
+      expect(parserSpy).not.toHaveBeenCalled();
+      expect(field.value.get()).toBe(42);
+      expect(field.rawValue.get()).toBe("custom-presentation");
+      expect(field.parseStatus.get()).toBe("parsed");
+      expect(field.parseIssue.get()).toBeNull();
+      expect(field.dirty.get()).toBe(false);
+      expect(field.valid.get()).toBe(true);
+
+      // Parser is used on subsequent setRawValue mutations
+      field.setRawValue("100");
+      expect(parserSpy).toHaveBeenCalledWith("100");
+      expect(field.value.get()).toBe(100);
+      expect(field.rawValue.get()).toBe("100");
+    });
+
+    it("adopts canonical trusted reinitialize baseline without automatic parsing and resets to it", () => {
+      const parserSpy = vi.fn(createNumberParser());
+      const ageField = createField<number, string>({
+        initialValue: 5,
+        initialRawValue: "05",
+        parser: parserSpy,
+      });
+      const form = createForm({ fields: { age: ageField } });
+
+      parserSpy.mockClear();
+
+      form.reinitialize({
+        value: { age: 99 },
+        rawValue: { age: "0099" },
+      });
+
+      expect(parserSpy).not.toHaveBeenCalled();
+      expect(form.fields.age.value.get()).toBe(99);
+      expect(form.fields.age.rawValue.get()).toBe("0099");
+      expect(form.fields.age.parseStatus.get()).toBe("parsed");
+      expect(form.fields.age.dirty.get()).toBe(false);
+
+      // Mutate and reset restores the new canonical baseline
+      form.fields.age.setRawValue("50");
+      expect(form.fields.age.dirty.get()).toBe(true);
+
+      form.reset();
+      expect(form.fields.age.value.get()).toBe(99);
+      expect(form.fields.age.rawValue.get()).toBe("0099");
+      expect(form.fields.age.dirty.get()).toBe(false);
+    });
   });
 
   it("treats reserved property names in raw values as pure data", () => {

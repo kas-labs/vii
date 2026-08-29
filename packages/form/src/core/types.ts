@@ -108,7 +108,6 @@ export interface FieldState<TValue, TRaw = TValue> {
   setRawValue(raw: TRaw): void;
   setTouched(touched?: boolean): void;
   markTouched(): void;
-  setIssues(issues: readonly FieldIssue[]): void;
   validate(trigger?: ValidationTriggerMode): Promise<readonly FieldIssue[]> | readonly FieldIssue[];
   reset(): void;
   dispose(): void;

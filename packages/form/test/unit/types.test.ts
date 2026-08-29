@@ -172,7 +172,7 @@ describe("Type inference matrix (P1e corrections)", () => {
     expectTypeOf(field.getValue()).toEqualTypeOf<MoneyModel>();
   });
 
-  test("form reinitialize requires separate value and rawValue trees", () => {
+  test("form reinitialize requires separate value and rawValue trees and type checks them", () => {
     const form = createForm({
       fields: {
         name: createField({ initialValue: "Alice" }),
@@ -190,5 +190,40 @@ describe("Type inference matrix (P1e corrections)", () => {
         age: FieldState<number, string>;
       }>
     >();
+
+    form.reinitialize({
+      value: { name: "Bob", age: 10 },
+      // @ts-expect-error rawValue tree type must match field TRaw type
+      rawValue: { name: "Bob", age: 10 },
+    });
+
+    form.reinitialize({
+      // @ts-expect-error value tree type must match field TValue type
+      value: { name: "Bob", age: "10" },
+      rawValue: { name: "Bob", age: "010" },
+    });
+  });
+
+  test("createField rejects mismatched initial domain or raw baseline types at compile time", () => {
+    createField<number, string>({
+      initialValue: 5,
+      // @ts-expect-error initialRawValue type must match TRaw
+      initialRawValue: 5,
+      parser: createNumberParser(),
+    });
+
+    createField<number, string>({
+      // @ts-expect-error initialValue type must match TValue
+      initialValue: "5",
+      initialRawValue: "5",
+      parser: createNumberParser(),
+    });
+  });
+
+  test("FieldState does not expose setIssues at compile time or runtime", () => {
+    const field = createField({ initialValue: "test" });
+    expect("setIssues" in field).toBe(false);
+    // @ts-expect-error setIssues was removed from public FieldState
+    expect(field.setIssues).toBeUndefined();
   });
 });

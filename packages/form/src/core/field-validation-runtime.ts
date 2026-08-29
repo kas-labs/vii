@@ -75,6 +75,14 @@ function commitAutoValidationFailure(hostCallbacks: ValidationHostCallbacks, err
   hostCallbacks.setPending(false);
 }
 
+function isPromiseLike(value: unknown): value is Promise<readonly FieldIssue[]> {
+  return (
+    value !== null &&
+    typeof value === "object" &&
+    typeof (value as Promise<unknown>).then === "function"
+  );
+}
+
 export function createValidationRuntime<TValue>(
   config: SharedFieldConfig<TValue>,
   valueState: { get(): TValue },
@@ -128,7 +136,24 @@ export function createValidationRuntime<TValue>(
     const { revision, controller } = revisionCtrl.nextGeneration();
     const run = (): void => {
       if (!revisionCtrl.isCurrent(revision, controller.signal) || isDisposed()) return;
-      Promise.resolve(executeValidation(trigger, revision, controller)).catch((err) => {
+      try {
+        const result = executeValidation(trigger, revision, controller);
+        if (isPromiseLike(result)) {
+          result.catch((err) => {
+            if (
+              controller.signal.aborted ||
+              !revisionCtrl.isCurrent(revision, controller.signal) ||
+              isDisposed()
+            ) {
+              return;
+            }
+            if (err && typeof err === "object" && (err as Error).name === "AbortError") {
+              return;
+            }
+            commitAutoValidationFailure(hostCallbacks, err);
+          });
+        }
+      } catch (err) {
         if (
           controller.signal.aborted ||
           !revisionCtrl.isCurrent(revision, controller.signal) ||
@@ -140,7 +165,7 @@ export function createValidationRuntime<TValue>(
           return;
         }
         commitAutoValidationFailure(hostCallbacks, err);
-      });
+      }
     };
 
     if (config.debounceMs > 0 && trigger === "change") {

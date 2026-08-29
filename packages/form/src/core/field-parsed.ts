@@ -1,7 +1,6 @@
 import { batch, computed, createScope, state } from "@vii-labs/core";
 import { sanitizeParseIssue } from "../parsers/builtins.js";
 import type { ParseIssue, ParseStatus } from "../parsers/types.js";
-import { sanitizeValidationIssue } from "../validation/revision.js";
 import type { FieldIssue, ValidationIssue, ValidationStatus } from "../validation/types.js";
 import type { InternalFieldBaseline } from "./baseline-types.js";
 import { createValidationRuntime, readSharedConfig } from "./field-validation-runtime.js";
@@ -99,7 +98,6 @@ export function createParsedField<TRaw, TValue>(
 
   const setRawValue = (raw: TRaw): void => {
     assertActive();
-    rawValueState.set(raw);
     revisionCtrl.cancelActive();
 
     const parseResult = parser(raw);
@@ -113,6 +111,7 @@ export function createParsedField<TRaw, TValue>(
 
     if (parseResult.ok) {
       batch(() => {
+        rawValueState.set(raw);
         valueState.set(parseResult.value);
         parseIssueState.set(null);
         parseStatusState.set("parsed");
@@ -124,10 +123,11 @@ export function createParsedField<TRaw, TValue>(
     } else {
       const issue = sanitizeParseIssue(parseResult.issue);
       batch(() => {
+        rawValueState.set(raw);
         parseIssueState.set(issue);
         parseStatusState.set("invalid");
-        syncCombinedIssues([], issue);
         validationIssuesState.set([]);
+        syncCombinedIssues([], issue);
         validationStatusState.set("invalid");
         pendingState.set(false);
       });
@@ -180,21 +180,6 @@ export function createParsedField<TRaw, TValue>(
         scheduleValidation("blur");
     },
     markTouched: () => fieldState.setTouched(true),
-    setIssues: (issues) => {
-      assertActive();
-      const vIssues: ValidationIssue[] = [];
-      for (let i = 0; i < issues.length; i++) {
-        const iss = issues[i]!;
-        if (iss.source === "validation") vIssues.push(sanitizeValidationIssue(iss));
-      }
-      batch(() => {
-        validationIssuesState.set(Object.freeze(vIssues));
-        syncCombinedIssues(vIssues, parseIssueState.get());
-        validationStatusState.set(
-          vIssues.length === 0 && parseIssueState.get() === null ? "valid" : "invalid",
-        );
-      });
-    },
     validate: (trigger) => {
       assertActive();
       return validate(trigger);

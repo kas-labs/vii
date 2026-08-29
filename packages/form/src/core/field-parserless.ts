@@ -1,6 +1,5 @@
 import { batch, computed, createScope, state } from "@vii-labs/core";
 import type { ParseIssue, ParseStatus } from "../parsers/types.js";
-import { sanitizeValidationIssue } from "../validation/revision.js";
 import type { FieldIssue, ValidationIssue, ValidationStatus } from "../validation/types.js";
 import type { InternalFieldBaseline } from "./baseline-types.js";
 import { createValidationRuntime, readSharedConfig } from "./field-validation-runtime.js";
@@ -156,21 +155,6 @@ export function createParserlessField<TValue>(
         scheduleValidation("blur");
     },
     markTouched: () => fieldState.setTouched(true),
-    setIssues: (issues) => {
-      assertActive();
-      const vIssues: ValidationIssue[] = [];
-      for (let i = 0; i < issues.length; i++) {
-        const iss = issues[i]!;
-        if (iss.source === "validation") vIssues.push(sanitizeValidationIssue(iss));
-      }
-      batch(() => {
-        validationIssuesState.set(Object.freeze(vIssues));
-        syncCombinedIssues(vIssues, parseIssueState.get());
-        validationStatusState.set(
-          vIssues.length === 0 && parseIssueState.get() === null ? "valid" : "invalid",
-        );
-      });
-    },
     validate: (trigger) => {
       assertActive();
       return validate(trigger);

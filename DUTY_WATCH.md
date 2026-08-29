@@ -37,6 +37,53 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-30 01:25 CEST | Production Form Phase 1 Slice P1e post-merge corrections
+
+Status: completed
+Branch: `fix/form-p1e-post-merge-corrections`
+PR: not opened
+
+### Scope
+
+- Post-merge P1e correctness and API correction on baseline main SHA `487d3b23004f7ba16df885f65a599c9484e6b3df`.
+- Contain unexpected synchronous validator throws in automatic validation runtime (`setValue`, `setRawValue`, `setTouched`, debounced change) without unhandled exceptions or leaks, while preserving caller-owned throws for manual `validate()`.
+- Ensure parsed field `setRawValue` is strictly atomic by batching `rawValue`, `value`, `parseIssue`, `parseStatus`, `validationStatus`, `pending`, and combined issues in a single transaction.
+- Remove `setIssues()` from public `FieldState` interface and implementations (issue mutation remains strictly internal; server issue routing deferred to P1g).
+- Affirm and test trusted canonical baseline contract (explicit domain/raw pair is adopted directly on init and reinitialize without automatic baseline parsing; parsers run on subsequent raw input mutations).
+- Clean up misleading type assertion test patterns and replace with compile-time `@ts-expect-error` negative type tests.
+
+### Changes
+
+- Modified `packages/form/src/core/field-validation-runtime.ts` to wrap synchronous validation rule execution in `try ... catch` and commit `validation.execution_error` on unexpected throws during automatic mutation triggers (`change`, `blur`, debounce).
+- Modified `packages/form/src/core/field-parsed.ts` to defer `rawValueState.set(raw)` into the synchronous `batch` commit so that subscribers never observe intermediate or inconsistent states.
+- Removed public `setIssues()` from `packages/form/src/core/types.ts` (`FieldState`), `packages/form/src/core/field-parsed.ts`, and `packages/form/src/core/field-parserless.ts`.
+- Updated `packages/form/test/unit/validation.test.ts` with tests for automatic sync throw containment on change, blur, and debounce, and manual throw propagation.
+- Updated `packages/form/test/unit/async-validation.test.ts` with tests for automatic async rejection commit and manual validate rejection propagation.
+- Updated `packages/form/test/unit/parser.test.ts` with subscription tests for single-batch atomicity on parse success and failure, and trusted initial/reinitialize baseline tests.
+- Updated `packages/form/test/unit/types.test.ts` with negative compile-time type checks for baseline raw/value type enforcement and public `setIssues` absence.
+- Updated `packages/form/README.md` and `PROJECT_STATE.md` to reflect the corrected durable P1e semantics.
+
+### Validation
+
+- `pnpm nx lint form` — passed.
+- `pnpm nx typecheck form` — passed.
+- `pnpm nx test form` — passed (12 files, 151 tests).
+- `pnpm nx build form` — passed.
+- `pnpm nx validate-package form` — passed (pack & clean consumer validation passed).
+- `git diff --check` — passed.
+- `NX_DAEMON=false pnpm validate` — passed (all workspace targets and packed consumer fixtures passed).
+
+### Architecture / compatibility
+
+- Zero `@vii-labs/core` changes.
+- `@vii-labs/form` remains private (`private: true`).
+- P1f (FieldArray) and P1g (Submission & Server Issues) not started.
+- All production files in `packages/form/src/core/` remain under 250 effective lines.
+
+### Remaining / recovery
+
+- None. Ready for PR against main. P1f to begin only after PR review and merge.
+
 ## 2026-08-29 17:45 UTC | Production Form Phase 1 Slice P1e final correction pass (unambiguous reinitialize & fail-closed Standard Schema)
 
 Status: completed

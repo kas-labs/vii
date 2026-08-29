@@ -18,9 +18,22 @@ export interface ValidationHostCallbacks {
   readonly commitResults: (issues: readonly ValidationIssue[], status: ValidationStatus) => void;
 }
 
+function isPromiseLike(value: unknown): value is Promise<unknown> {
+  return (
+    value !== null &&
+    typeof value === "object" &&
+    typeof (value as Promise<unknown>).then === "function"
+  );
+}
+
 /**
- * Executes a list of synchronous and asynchronous validation rules against a domain value.
- * Handles monotonic revision checking, AbortSignal propagation, debounce cancellation, and atomic result commit.
+ * Executes synchronous and asynchronous validation rules against a domain value.
+ *
+ * Mixed-rule contract (FORM_ARCHITECTURE §8.1, F4 Fixture 9):
+ * - Sync issues from every synchronously-returning rule are aggregated.
+ * - If any sync issue exists, active async work is cancelled and async results are not committed.
+ * - Async rules may still be invoked when listed after sync rules that pass; if a later sync rule
+ *   fails, already-started async work is cancelled without commit (F4 Fixture 9).
  */
 export function executeFieldValidation<TValue>(
   rules: readonly AnyValidationRule<TValue>[],
@@ -46,17 +59,10 @@ export function executeFieldValidation<TValue>(
     const ctx: ValidationRuleContext = { trigger, signal: controller.signal };
     const res = rule(value, ctx as never);
 
-    if (
-      res !== null &&
-      typeof res === "object" &&
-      typeof (res as Promise<unknown>).then === "function"
-    ) {
+    if (isPromiseLike(res)) {
       pendingAsyncCalls.push(
         Promise.resolve(res).catch((err) => {
-          if (
-            controller.signal.aborted ||
-            (err && (err.name === "AbortError" || err.code === "ABORT_ERR"))
-          ) {
+          if (controller.signal.aborted || (err && (err as Error).name === "AbortError")) {
             return null;
           }
           throw err;
@@ -64,8 +70,9 @@ export function executeFieldValidation<TValue>(
       );
     } else if (res !== null && res !== undefined) {
       if (Array.isArray(res)) {
-        for (let j = 0; j < res.length; j++)
+        for (let j = 0; j < res.length; j++) {
           collectedSyncIssues.push(sanitizeValidationIssue(res[j]));
+        }
       } else {
         collectedSyncIssues.push(sanitizeValidationIssue(res));
       }
@@ -95,8 +102,9 @@ export function executeFieldValidation<TValue>(
         const r = asyncResults[i];
         if (r !== null && r !== undefined) {
           if (Array.isArray(r)) {
-            for (let j = 0; j < r.length; j++)
+            for (let j = 0; j < r.length; j++) {
               collectedAsyncIssues.push(sanitizeValidationIssue(r[j]));
+            }
           } else {
             collectedAsyncIssues.push(sanitizeValidationIssue(r));
           }

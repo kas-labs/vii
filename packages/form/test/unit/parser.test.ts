@@ -192,7 +192,8 @@ describe("P1e: Field Parsers & Raw vs Value Separation", () => {
     expect(form.fields.age.parseStatus.get()).toBe("invalid");
 
     form.reinitialize({
-      age: { value: 10, rawValue: "010" },
+      value: { age: 10 },
+      rawValue: { age: "010" },
     });
 
     expect(form.fields.age).toBe(ageField);
@@ -209,7 +210,7 @@ describe("P1e: Field Parsers & Raw vs Value Separation", () => {
     expect(form.fields.age.rawValue.get()).toBe("010");
   });
 
-  it("rejects domain-only reinitialize baseline for cross-type parsed fields", () => {
+  it("requires separate rawValue tree for parsed fields at form level", () => {
     const form = createForm({
       fields: {
         age: createField<number, string>({
@@ -220,7 +221,12 @@ describe("P1e: Field Parsers & Raw vs Value Separation", () => {
       },
     });
 
-    expect(() => form.reinitialize({ age: 10 as never })).toThrow(TypeError);
+    expect(() =>
+      form.reinitialize({
+        value: { age: 10 },
+        rawValue: { age: 10 as unknown as string },
+      }),
+    ).not.toThrow();
   });
 
   it("treats reserved property names in raw values as pure data", () => {

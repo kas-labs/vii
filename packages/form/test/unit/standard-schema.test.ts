@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
   createField,
-  isStandardSchema,
   standardSchema,
   type FieldIssue,
   type StandardSchemaV1,
 } from "../../src/index.js";
-import { normalizeStandardSchemaIssue } from "../../src/validation/standard-schema.js";
+import {
+  isStandardSchema,
+  normalizeStandardSchemaIssue,
+} from "../../src/validation/standard-schema.js";
 
 describe("P1e: Standard Schema v1 Validation Bridge", () => {
   const createMockSchema = <TInput>(
@@ -101,6 +103,35 @@ describe("P1e: Standard Schema v1 Validation Bridge", () => {
       expect(() => rule("test", { trigger: "manual" })).toThrow(TypeError);
     });
 
+    it("fails closed on primitive schema results", () => {
+      const primitiveSchema = createMockSchema<string>(
+        () => "not-an-object" as unknown as StandardSchemaV1.Result<string>,
+      );
+      const rule = standardSchema(primitiveSchema);
+
+      expect(() => rule("test", { trigger: "manual" })).toThrow(TypeError);
+    });
+
+    it("fails closed on empty object result (sync)", () => {
+      const emptySchema = createMockSchema<string>(
+        () => ({}) as unknown as StandardSchemaV1.Result<string>,
+      );
+      const rule = standardSchema(emptySchema);
+
+      expect(() => rule("test", { trigger: "manual" })).toThrow(TypeError);
+    });
+
+    it("fails closed on empty object result (async)", async () => {
+      const emptyAsyncSchema = createMockSchema<string>(
+        async () => ({}) as unknown as StandardSchemaV1.Result<string>,
+      );
+      const rule = standardSchema(emptyAsyncSchema);
+
+      await expect(
+        rule("test", { trigger: "manual" }) as Promise<readonly FieldIssue[]>,
+      ).rejects.toThrow(TypeError);
+    });
+
     it("fails closed on non-array issues property (sync)", () => {
       const malformedIssuesSchema = createMockSchema<string>(
         () => ({ issues: "malformed-not-an-array" }) as unknown as StandardSchemaV1.Result<string>,
@@ -122,12 +153,49 @@ describe("P1e: Standard Schema v1 Validation Bridge", () => {
       ).rejects.toThrow(TypeError);
     });
 
+    it("fails closed on malformed issue missing required message", () => {
+      const malformedIssueSchema = createMockSchema<string>(() => ({
+        issues: [{ path: ["name"] } as unknown as StandardSchemaV1.Issue],
+      }));
+      const rule = standardSchema(malformedIssueSchema);
+
+      expect(() => rule("test", { trigger: "manual" })).toThrow(TypeError);
+    });
+
+    it("fails closed on malformed issue path", () => {
+      expect(() =>
+        normalizeStandardSchemaIssue({
+          message: "bad path",
+          path: "not-an-array",
+        } as unknown as StandardSchemaV1.Issue),
+      ).toThrow(TypeError);
+    });
+
     it("rejects non-standard-schema objects in standardSchema factory", () => {
       expect(() => standardSchema({} as unknown as StandardSchemaV1<unknown>)).toThrow(TypeError);
       expect(() => standardSchema(null as unknown as StandardSchemaV1<unknown>)).toThrow(TypeError);
       expect(() =>
         standardSchema({ "~standard": { version: 2 } } as unknown as StandardSchemaV1<unknown>),
       ).toThrow(TypeError);
+    });
+
+    it("ignores transformed TOutput and does not replace field TValue", () => {
+      const schema: StandardSchemaV1<number, string> = {
+        "~standard": {
+          version: 1,
+          vendor: "transform-test",
+          validate: (val) => ({ value: String((val as number) * 2) }),
+        },
+      };
+
+      const field = createField({
+        initialValue: 5,
+        rules: [standardSchema(schema)],
+      });
+
+      field.setValue(10);
+      expect(field.getValue()).toBe(10);
+      expect(field.valid.get()).toBe(true);
     });
   });
 
@@ -155,7 +223,6 @@ describe("P1e: Standard Schema v1 Validation Bridge", () => {
       expect(issue.path).toEqual(["user", "constructor", "prototype", "__proto__"]);
       expect(issue.source).toBe("validation");
 
-      // Verify Object.prototype is unpolluted
       expect((Object.prototype as unknown as Record<string, unknown>)["constructor"]).toBe(Object);
     });
   });

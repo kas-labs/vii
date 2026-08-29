@@ -20,12 +20,7 @@ export type {
   FormValues,
 } from "./tree-types.js";
 
-export type {
-  FieldBaseline,
-  FieldReinitializeInput,
-  FormReinitializeBaseline,
-  FormReinitializeBaselineFor,
-} from "./baseline-types.js";
+export type { FormReinitializeInput } from "./baseline-types.js";
 
 export type {
   FieldParser,

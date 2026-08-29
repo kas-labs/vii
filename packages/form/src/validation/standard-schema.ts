@@ -10,6 +10,7 @@ export type { StandardSchemaV1 };
 
 /**
  * Type guard verifying whether an object conforms to the Standard Schema v1 specification.
+ * Internal helper for the standardSchema adapter factory.
  */
 export function isStandardSchema(value: unknown): value is StandardSchemaV1<unknown, unknown> {
   return (
@@ -25,7 +26,7 @@ export function isStandardSchema(value: unknown): value is StandardSchemaV1<unkn
 
 /**
  * Normalizes a provider-specific Standard Schema issue into a safe, frozen Vii ValidationIssue.
- * Defends against prototype pollution on issue codes and sanitizes structural path keys.
+ * Standard Schema v1 requires issue.message to be a string; malformed issues fail closed.
  */
 export function normalizeStandardSchemaIssue(raw: StandardSchemaV1.Issue): ValidationIssue {
   if (raw === null || typeof raw !== "object") {
@@ -33,8 +34,11 @@ export function normalizeStandardSchemaIssue(raw: StandardSchemaV1.Issue): Valid
   }
 
   const rawObj = raw as unknown as Record<string, unknown>;
-  let code = "schema.validation";
+  if (typeof rawObj["message"] !== "string") {
+    throw new TypeError("Standard Schema issue message must be a string");
+  }
 
+  let code = "schema.validation";
   if (typeof rawObj["code"] === "string" && rawObj["code"].trim() !== "") {
     code = rawObj["code"];
   }
@@ -71,11 +75,9 @@ export function normalizeStandardSchemaIssue(raw: StandardSchemaV1.Issue): Valid
     sanitizedPath = Object.freeze(segments);
   }
 
-  const message = typeof raw.message === "string" ? raw.message : undefined;
-
   const issue: ValidationIssue = {
     code,
-    message,
+    message: rawObj["message"],
     path: sanitizedPath,
     source: "validation",
   };
@@ -83,8 +85,47 @@ export function normalizeStandardSchemaIssue(raw: StandardSchemaV1.Issue): Valid
 }
 
 /**
+ * Parses a Standard Schema v1 Result into validation issues or success (null).
+ * Accepts only `{ value }` success or `{ issues: Issue[] }` failure shapes per spec v1.
+ * Transformed TOutput is ignored; parser remains responsible for Raw -> Value.
+ */
+function parseStandardSchemaResult(
+  result: unknown,
+  vendor: string,
+): readonly ValidationIssue[] | null {
+  if (!result || typeof result !== "object") {
+    throw new TypeError("Standard Schema validate returned an invalid result object");
+  }
+
+  const obj = result as Record<string, unknown>;
+  const hasIssues = obj["issues"] !== undefined && obj["issues"] !== null;
+  const hasValue = "value" in obj;
+
+  if (hasIssues) {
+    if (!Array.isArray(obj["issues"])) {
+      throw new TypeError(
+        `Standard Schema provider "${vendor}" returned a non-array "issues" property`,
+      );
+    }
+    return Object.freeze(
+      (obj["issues"] as StandardSchemaV1.Issue[]).map((iss) => normalizeStandardSchemaIssue(iss)),
+    );
+  }
+
+  if (hasValue) {
+    return null;
+  }
+
+  throw new TypeError(
+    `Standard Schema provider "${vendor}" returned a malformed result: expected { value } or { issues }`,
+  );
+}
+
+/**
  * Provider-neutral adapter bridging any Standard Schema v1 schema (e.g. Zod 4, Valibot, ArkType)
  * into a Vii ValidationRule with fail-closed boundary enforcement.
+ *
+ * Validation bridge only: schema TOutput does not replace field TValue.
  */
 export function standardSchema<TInput, TOutput = TInput>(
   schema: StandardSchemaV1<TInput, TOutput>,
@@ -101,7 +142,6 @@ export function standardSchema<TInput, TOutput = TInput>(
   ) => {
     const validateResult = schema["~standard"].validate(value);
 
-    // Asynchronous Standard Schema execution
     if (
       validateResult !== null &&
       typeof validateResult === "object" &&
@@ -111,39 +151,10 @@ export function standardSchema<TInput, TOutput = TInput>(
         if (context.signal?.aborted) {
           return null;
         }
-        if (!result || typeof result !== "object") {
-          throw new TypeError("Standard Schema validate returned an invalid result object");
-        }
-        if (result.issues !== undefined && result.issues !== null) {
-          if (!Array.isArray(result.issues)) {
-            throw new TypeError(
-              `Standard Schema provider "${vendor}" returned a non-array "issues" property`,
-            );
-          }
-          return Object.freeze(
-            result.issues.map((iss: StandardSchemaV1.Issue) => normalizeStandardSchemaIssue(iss)),
-          );
-        }
-        return null;
+        return parseStandardSchemaResult(result, vendor);
       });
     }
 
-    // Synchronous Standard Schema execution
-    const syncResult = validateResult as StandardSchemaV1.Result<TOutput>;
-    if (!syncResult || typeof syncResult !== "object") {
-      throw new TypeError("Standard Schema validate returned an invalid result object");
-    }
-    if (syncResult.issues !== undefined && syncResult.issues !== null) {
-      if (!Array.isArray(syncResult.issues)) {
-        throw new TypeError(
-          `Standard Schema provider "${vendor}" returned a non-array "issues" property`,
-        );
-      }
-      return Object.freeze(
-        syncResult.issues.map((iss: StandardSchemaV1.Issue) => normalizeStandardSchemaIssue(iss)),
-      );
-    }
-
-    return null;
+    return parseStandardSchemaResult(validateResult, vendor);
   };
 }

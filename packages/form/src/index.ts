@@ -14,7 +14,7 @@ export { createForm } from "./core/form.js";
 
 export { createNumberParser, createStringParser } from "./parsers/builtins.js";
 
-export { isStandardSchema, standardSchema } from "./validation/standard-schema.js";
+export { standardSchema } from "./validation/standard-schema.js";
 
 export type {
   AnyValidationRule,
@@ -22,13 +22,11 @@ export type {
   CreateFieldGroupOptions,
   CreateFieldOptions,
   CreateFormOptions,
-  FieldBaseline,
   FieldEqualityFn,
   FieldGroup,
   FieldIssue,
   FieldParser,
   FieldPathSegment,
-  FieldReinitializeInput,
   FieldState,
   FormFieldsRecord,
   FormInstance,
@@ -36,8 +34,7 @@ export type {
   FormNode,
   FormRawValueFor,
   FormRawValues,
-  FormReinitializeBaseline,
-  FormReinitializeBaselineFor,
+  FormReinitializeInput,
   FormValueFor,
   FormValues,
   IssueSource,

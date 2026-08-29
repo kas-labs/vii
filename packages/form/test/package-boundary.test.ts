@@ -23,7 +23,6 @@ describe("@vii-labs/form package boundary (P1e)", () => {
         "createForm",
         "createNumberParser",
         "createStringParser",
-        "isStandardSchema",
         "standardSchema",
       ].sort(),
     );

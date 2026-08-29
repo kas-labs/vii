@@ -22,7 +22,7 @@ Internal development / experimental candidate (Phase 1 Baseline).
   - **Nested Groups (`createFieldGroup`) & Root Forms (`createForm`):**
     - Hierarchical aggregation of `value`, `rawValue`, `touched`, `dirty`, `pending`, `valid`, `invalid`, and `issues` (with recursive path prefixing).
     - Granular reactivity: field mutation in one branch does not notify un-mutated branches.
-    - Whole-form parser-aware baseline reinitialization (`form.reinitialize`) using `FormReinitializeBaseline` (cross-type parsed fields require `{ value, rawValue }` per field).
+    - Whole-form baseline reinitialization (`form.reinitialize`) using explicit separate `value` and `rawValue` trees (`FormReinitializeInput`); no per-field baseline heuristics that reserve application object shapes.
     - Transactional node adoption and deterministic Scope lifecycle ownership.
 - **Subpaths (`/react`, `/vanilla`, `/angular`, `/vue`):** Skeleton infrastructure entrypoints (adapters deferred to P1h–P1j).
 - **Deferred / Non-Goals for P1e:** No dynamic array collections (`createFieldArray` deferred to P1f), no submission pipeline or server issue routing (deferred to P1g), and no framework adapter implementations.

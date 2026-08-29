@@ -144,8 +144,14 @@ describe("P1e: Group & Form Aggregate Validation State", () => {
     expect(form.dirty.get()).toBe(true);
 
     form.reinitialize({
-      name: "Charlie",
-      profile: { theme: "dark" },
+      value: {
+        name: "Charlie",
+        profile: { theme: "dark" },
+      },
+      rawValue: {
+        name: "Charlie",
+        profile: { theme: "dark" },
+      },
     });
 
     expect(form.getValue()).toEqual({

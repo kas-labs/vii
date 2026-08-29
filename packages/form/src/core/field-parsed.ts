@@ -3,7 +3,7 @@ import { sanitizeParseIssue } from "../parsers/builtins.js";
 import type { ParseIssue, ParseStatus } from "../parsers/types.js";
 import { sanitizeValidationIssue } from "../validation/revision.js";
 import type { FieldIssue, ValidationIssue, ValidationStatus } from "../validation/types.js";
-import { normalizeFieldReinitializeInput, type FieldReinitializeInput } from "./baseline-types.js";
+import type { InternalFieldBaseline } from "./baseline-types.js";
 import { createValidationRuntime, readSharedConfig } from "./field-validation-runtime.js";
 import { attachInternalNode, type FormNodeInternal, type NodeOwnership } from "./internal.js";
 import type { FieldState, ParsedCreateFieldOptions } from "./types.js";
@@ -15,7 +15,6 @@ export function createParsedField<TRaw, TValue>(
   const parser = options.parser;
   const initialValue = options.initialValue;
   const initialRawValue = options.initialRawValue;
-  const requiresExplicitRawBaseline = typeof initialValue !== typeof initialRawValue;
 
   let disposed = false;
   let ownership: NodeOwnership = config.scope ? "external-scope" : "standalone";
@@ -211,7 +210,7 @@ export function createParsedField<TRaw, TValue>(
     },
   };
 
-  const internal: FormNodeInternal<FieldReinitializeInput<TValue, TRaw>> = {
+  const internal: FormNodeInternal<InternalFieldBaseline<TValue, TRaw>> = {
     kind: "field",
     scope: fieldScope,
     ownership,
@@ -219,15 +218,21 @@ export function createParsedField<TRaw, TValue>(
     reinitialize: (nextBaseline) => {
       assertActive();
       revisionCtrl.cancelActive();
-      const normalized = normalizeFieldReinitializeInput(nextBaseline, {
-        hasParser: true,
-        requiresExplicitRawBaseline,
-      });
+      if (
+        nextBaseline === null ||
+        typeof nextBaseline !== "object" ||
+        !("value" in nextBaseline) ||
+        !("rawValue" in nextBaseline)
+      ) {
+        throw new TypeError(
+          "Invalid field reinitialize baseline: expected { value, rawValue } from parent traversal",
+        );
+      }
       batch(() => {
-        baselineValueState.set(normalized.value);
-        baselineRawState.set(normalized.rawValue);
-        valueState.set(normalized.value);
-        rawValueState.set(normalized.rawValue);
+        baselineValueState.set(nextBaseline.value);
+        baselineRawState.set(nextBaseline.rawValue);
+        valueState.set(nextBaseline.value);
+        rawValueState.set(nextBaseline.rawValue);
         parseIssueState.set(null);
         validationIssuesState.set([]);
         issuesState.set([]);

@@ -1,15 +1,14 @@
 import { batch, computed, createScope } from "@vii-labs/core";
 import type { FieldIssue } from "../validation/types.js";
-import type { FormReinitializeBaseline } from "./baseline-types.js";
+import type { FormReinitializeInput } from "./baseline-types.js";
 import {
   adoptChildNodes,
   attachInternalNode,
-  getInternalNode,
   safeDefineProperty,
-  safeHasProperty,
   type FormNodeInternal,
   type NodeOwnership,
 } from "./internal.js";
+import { reinitializeChildNodes } from "./reinitialize-tree.js";
 import type {
   CreateFormOptions,
   FormFieldsRecord,
@@ -162,31 +161,10 @@ export function createForm<TFields extends FormFieldsRecord>(
     });
   };
 
-  const reinitialize = (nextBaseline: FormReinitializeBaseline<TFields>): void => {
+  const reinitialize = (nextBaseline: FormReinitializeInput<TFields>): void => {
     assertActive();
-    if (nextBaseline === null || typeof nextBaseline !== "object") {
-      throw new TypeError(
-        `Invalid reinitialize baseline: expected an object, received ${
-          nextBaseline === null ? "null" : typeof nextBaseline
-        }`,
-      );
-    }
-    for (let i = 0; i < fieldKeys.length; i++) {
-      const key = fieldKeys[i]!;
-      if (!safeHasProperty(nextBaseline, key)) {
-        throw new TypeError(`Invalid reinitialize baseline: missing property "${key}"`);
-      }
-    }
     batch(() => {
-      for (let i = 0; i < fieldKeys.length; i++) {
-        const key = fieldKeys[i]!;
-        const child = fields[key]!;
-        const childInternal = getInternalNode(child);
-        if (!childInternal) {
-          throw new Error(`Child node "${key}" is missing internal node metadata`);
-        }
-        childInternal.reinitialize((nextBaseline as Record<string, unknown>)[key]);
-      }
+      reinitializeChildNodes(fields, fieldKeys, nextBaseline);
     });
   };
 
@@ -214,7 +192,7 @@ export function createForm<TFields extends FormFieldsRecord>(
     dispose,
   };
 
-  const internal: FormNodeInternal<FormReinitializeBaseline<TFields>> = {
+  const internal: FormNodeInternal<FormReinitializeInput<TFields>> = {
     kind: "form",
     scope: formScope,
     ownership,

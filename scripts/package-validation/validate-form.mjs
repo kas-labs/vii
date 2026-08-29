@@ -80,6 +80,10 @@ try {
     "package/dist/core/baseline-types.d.ts.map",
     "package/dist/core/baseline-types.js",
     "package/dist/core/baseline-types.js.map",
+    "package/dist/core/reinitialize-tree.d.ts",
+    "package/dist/core/reinitialize-tree.d.ts.map",
+    "package/dist/core/reinitialize-tree.js",
+    "package/dist/core/reinitialize-tree.js.map",
     "package/dist/core/field-parserless.d.ts",
     "package/dist/core/field-parserless.d.ts.map",
     "package/dist/core/field-parserless.js",
@@ -227,16 +231,44 @@ export async function runFormTreeScenario() {
 
   // Reinitialize
   formInstance.reinitialize({
-    user: {
-      name: "Bob",
-      age: { value: 40, rawValue: "40" },
+    value: {
+      user: {
+        name: "Bob",
+        age: 40,
+      },
+      settings: { theme: "dark" },
     },
-    settings: { theme: "dark" },
+    rawValue: {
+      user: {
+        name: "Bob",
+        age: "40",
+      },
+      settings: { theme: "dark" },
+    },
   });
 
   const reinitializedVal = formInstance.getValue();
   const reinitializedRawVal = formInstance.getRawValue();
   const reinitializedDirty = formInstance.dirty.get();
+
+  // Parserless object TValue with value/rawValue keys
+  type MoneyModel = { value: number; rawValue: string };
+  const moneyBaseline = { value: 2, rawValue: "€2" };
+  const moneyForm = createForm({
+    fields: {
+      money: createField<MoneyModel>({
+        initialValue: { value: 1, rawValue: "€1" },
+      }),
+    },
+  });
+  moneyForm.fields.money.setValue({ value: 9, rawValue: "€9" });
+  moneyForm.reinitialize({
+    value: { money: moneyBaseline },
+    rawValue: { money: moneyBaseline },
+  });
+  const moneyReinitialized = moneyForm.fields.money.getValue();
+  const moneyDirty = moneyForm.fields.money.dirty.get();
+  moneyForm.dispose();
 
   // Standard Schema bridge test
   const mockSchema = {
@@ -253,6 +285,22 @@ export async function runFormTreeScenario() {
   const schemaInitialValid = schemaField.valid.get();
   schemaField.setValue("invalid");
   const schemaInvalidValid = schemaField.valid.get();
+
+  const emptySchema = {
+    "~standard": {
+      version: 1,
+      vendor: "empty-test",
+      validate: () => ({}),
+    },
+  };
+  const emptySchemaRule = standardSchema(emptySchema as never);
+  let emptySchemaFailedClosed = false;
+  try {
+    emptySchemaRule("x", { trigger: "manual" });
+  } catch {
+    emptySchemaFailedClosed = true;
+  }
+  schemaField.dispose();
 
   formInstance.dispose();
 
@@ -276,8 +324,11 @@ export async function runFormTreeScenario() {
       reinitializedVal,
       reinitializedRawVal,
       reinitializedDirty,
+    moneyReinitialized,
+    moneyDirty,
     schemaInitialValid,
     schemaInvalidValid,
+    emptySchemaFailedClosed,
     postDisposeError,
   };
 }
@@ -312,7 +363,6 @@ export async function runFormTreeScenario() {
       "createForm",
       "createNumberParser",
       "createStringParser",
-      "isStandardSchema",
       "standardSchema",
     ].sort(),
     "clean consumer root export should contain P1e symbols",
@@ -354,8 +404,11 @@ export async function runFormTreeScenario() {
       reinitializedVal: { user: { name: "Bob", age: 40 }, settings: { theme: "dark" } },
       reinitializedRawVal: { user: { name: "Bob", age: "40" }, settings: { theme: "dark" } },
       reinitializedDirty: false,
+      moneyReinitialized: { value: 2, rawValue: "€2" },
+      moneyDirty: false,
       schemaInitialValid: true,
       schemaInvalidValid: false,
+      emptySchemaFailedClosed: true,
       postDisposeError: true,
     },
     "clean consumer form tree scenario must execute correctly against packed artifact",

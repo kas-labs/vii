@@ -37,6 +37,45 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-29 17:45 UTC | Production Form Phase 1 Slice P1e final correction pass (unambiguous reinitialize & fail-closed Standard Schema)
+
+Status: completed
+Branch: `feat/form-p1e-validation-parsers`
+PR: #183 (Draft)
+
+### Scope
+
+- Final bounded P1e correction on audited head `1879b2d200c9cb9b153826110060bdee76582375` (same PR #183).
+- Remove reinitialize baseline-shape ambiguity; make Standard Schema fully fail-closed; eliminate cross-generic baseline casts; document mixed sync/async rule semantics; align PR body with implementation.
+
+### Changes
+
+- Replaced per-field `FieldBaseline` heuristics with `FormReinitializeInput<TFields>` (`{ value: FormValues, rawValue: FormRawValues }`).
+- Added `packages/form/src/core/reinitialize-tree.ts` for explicit child baseline dispatch.
+- Internal field reinitialize receives `{ value, rawValue }` from parent traversal only (never inferred from TValue).
+- Standard Schema adapter accepts only `{ value }` success or `{ issues }` failure per spec v1; `{}` fails closed; required issue `message` enforced.
+- Documented mixed-rule semantics in validation executor (sync issues aggregate; async commit short-circuited).
+- Removed public `isStandardSchema`, `FieldBaseline`, `FormReinitializeBaseline*`, `FieldReinitializeInput`.
+- Added reinitialize, mixed-validation, and expanded Standard Schema regression tests (132 total).
+
+### Validation
+
+- `pnpm nx lint form` — passed.
+- `pnpm nx typecheck form` — passed.
+- `pnpm nx test form` — passed (12 files, 132 tests).
+- `pnpm nx build form` — passed.
+- `pnpm nx validate-package form` — passed.
+- `git diff --check` — passed.
+- `NX_DAEMON=false pnpm validate` — passed.
+
+### Architecture / compatibility
+
+- No `@vii-labs/core` changes. Package remains private. P1f/P1g not started.
+
+### Remaining / recovery
+
+- None. Await maintainer review of Draft PR #183 final correction head.
+
 ## 2026-08-29 17:00 UTC | Production Form Phase 1 Slice P1e correction pass (RAW/VALUE baseline & public API)
 
 Status: completed

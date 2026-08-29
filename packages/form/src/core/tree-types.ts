@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Computed, ReadableState, Scope } from "@vii-labs/core";
-import type { FormReinitializeBaseline } from "./baseline-types.js";
+import type { FormReinitializeInput } from "./baseline-types.js";
 import type { FieldState } from "./types.js";
 import type { FieldIssue } from "../validation/types.js";
 
@@ -223,10 +223,10 @@ export interface FormInstance<TFields extends Record<string, any> = Record<strin
   reset(): void;
 
   /**
-   * Atomically replaces the whole-form baseline with newBaseline, resets touched to false, and marks dirty as false.
-   * Parser-aware fields with distinct Raw/Value types require `{ value, rawValue }` baselines per field.
+   * Atomically replaces the whole-form baseline with separate domain and raw presentation trees.
+   * Resets touched to false and marks dirty as false.
    */
-  reinitialize(newBaseline: FormReinitializeBaseline<TFields>): void;
+  reinitialize(newBaseline: FormReinitializeInput<TFields>): void;
 
   /**
    * Disposes the form and all owned descendant resources idempotently.

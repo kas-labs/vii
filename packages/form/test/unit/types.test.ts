@@ -7,7 +7,7 @@ import type {
   FieldGroup,
   FieldState,
   FormInstance,
-  FormReinitializeBaseline,
+  FormReinitializeInput,
   ParsedCreateFieldOptions,
 } from "../../src/core/types.js";
 
@@ -78,7 +78,7 @@ describe("Type inference matrix (P1e corrections)", () => {
     >();
 
     expectTypeOf(form.reinitialize).parameter(0).toEqualTypeOf<
-      FormReinitializeBaseline<{
+      FormReinitializeInput<{
         name: FieldState<string>;
         age: FieldState<number>;
         active: FieldState<boolean>;
@@ -161,5 +161,34 @@ describe("Type inference matrix (P1e corrections)", () => {
     expectTypeOf(group.getValue()).toEqualTypeOf<ExpectedGroupValues>();
     expectTypeOf(group.fields.fields).toEqualTypeOf<FieldState<string>>();
     expectTypeOf(group.fields.count).toEqualTypeOf<FieldState<number>>();
+  });
+
+  test("parserless object TValue with value/rawValue keys is legal", () => {
+    type MoneyModel = { value: number; rawValue: string };
+    const field = createField<MoneyModel>({
+      initialValue: { value: 5, rawValue: "€5" },
+    });
+    expectTypeOf(field).toEqualTypeOf<FieldState<MoneyModel>>();
+    expectTypeOf(field.getValue()).toEqualTypeOf<MoneyModel>();
+  });
+
+  test("form reinitialize requires separate value and rawValue trees", () => {
+    const form = createForm({
+      fields: {
+        name: createField({ initialValue: "Alice" }),
+        age: createField<number, string>({
+          initialValue: 5,
+          initialRawValue: "05",
+          parser: createNumberParser(),
+        }),
+      },
+    });
+
+    expectTypeOf(form.reinitialize).parameter(0).toEqualTypeOf<
+      FormReinitializeInput<{
+        name: FieldState<string>;
+        age: FieldState<number, string>;
+      }>
+    >();
   });
 });

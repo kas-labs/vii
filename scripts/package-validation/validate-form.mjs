@@ -104,6 +104,10 @@ try {
     "package/dist/core/reinitialize-tree.d.ts.map",
     "package/dist/core/reinitialize-tree.js",
     "package/dist/core/reinitialize-tree.js.map",
+    "package/dist/core/snapshot.d.ts",
+    "package/dist/core/snapshot.d.ts.map",
+    "package/dist/core/snapshot.js",
+    "package/dist/core/snapshot.js.map",
     "package/dist/core/field-parserless.d.ts",
     "package/dist/core/field-parserless.d.ts.map",
     "package/dist/core/field-parserless.js",
@@ -140,6 +144,26 @@ try {
     "package/dist/core/types.d.ts.map",
     "package/dist/core/types.js",
     "package/dist/core/types.js.map",
+    "package/dist/submission/array-snapshot.d.ts",
+    "package/dist/submission/array-snapshot.d.ts.map",
+    "package/dist/submission/array-snapshot.js",
+    "package/dist/submission/array-snapshot.js.map",
+    "package/dist/submission/result.d.ts",
+    "package/dist/submission/result.d.ts.map",
+    "package/dist/submission/result.js",
+    "package/dist/submission/result.js.map",
+    "package/dist/submission/server-issues.d.ts",
+    "package/dist/submission/server-issues.d.ts.map",
+    "package/dist/submission/server-issues.js",
+    "package/dist/submission/server-issues.js.map",
+    "package/dist/submission/state-machine.d.ts",
+    "package/dist/submission/state-machine.d.ts.map",
+    "package/dist/submission/state-machine.js",
+    "package/dist/submission/state-machine.js.map",
+    "package/dist/submission/types.d.ts",
+    "package/dist/submission/types.d.ts.map",
+    "package/dist/submission/types.js",
+    "package/dist/submission/types.js.map",
     "package/dist/parsers/builtins.d.ts",
     "package/dist/parsers/builtins.d.ts.map",
     "package/dist/parsers/builtins.js",
@@ -342,6 +366,20 @@ export async function runFormTreeScenario() {
   }
   schemaField.dispose();
 
+  // Test form submit with server issue routing
+  const submitResult = await formInstance.submit(async () => ({
+    ok: false,
+    issues: [
+      { code: "theme.error", message: "Dark theme deprecated", path: ["settings", "theme"] },
+    ],
+  }));
+  const submitStatus = formInstance.submissionStatus.get();
+  const themeServerIssuesCount = formInstance.fields.settings.fields.theme.serverIssues.get().length;
+
+  // Localized clear on edit
+  formInstance.fields.settings.fields.theme.setValue("system");
+  const themeServerIssuesCleared = formInstance.fields.settings.fields.theme.serverIssues.get().length;
+
   formInstance.dispose();
 
   let postDisposeError = false;
@@ -372,6 +410,9 @@ export async function runFormTreeScenario() {
     schemaInitialValid,
     schemaInvalidValid,
     emptySchemaFailedClosed,
+    submitStatus,
+    themeServerIssuesCount,
+    themeServerIssuesCleared,
     postDisposeError,
   };
 }
@@ -472,6 +513,9 @@ export async function runFormTreeScenario() {
       schemaInitialValid: true,
       schemaInvalidValid: false,
       emptySchemaFailedClosed: true,
+      submitStatus: "failed",
+      themeServerIssuesCount: 1,
+      themeServerIssuesCleared: 0,
       postDisposeError: true,
     },
     "clean consumer form tree scenario must execute correctly against packed artifact",

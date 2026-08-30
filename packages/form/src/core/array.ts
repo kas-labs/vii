@@ -1,4 +1,5 @@
 import { batch, computed, createScope, state, type Scope } from "@vii-labs/core";
+import type { ServerIssue } from "../submission/types.js";
 import type { FieldIssue, ValidationTriggerMode } from "../validation/types.js";
 import {
   commitArrayItemsAdoption,
@@ -29,6 +30,7 @@ export function createFieldArray<TItemNode extends FormNode = FormNode>(
   };
 
   const arrayScope = scope ? scope.createChild({ name: "array" }) : createScope({ name: "array" });
+  const serverIssuesState = state<readonly ServerIssue[]>([]);
   const scopesMap = new Map<string, Scope>();
 
   // Phase 1: Preflight entire initial items list without mutating any candidate node
@@ -39,6 +41,9 @@ export function createFieldArray<TItemNode extends FormNode = FormNode>(
   const { items: initialItems, scopes: initialScopes } = commitArrayItemsAdoption(
     arrayScope,
     preparedInitial,
+    () => {
+      internal.notifyMutation?.();
+    },
   );
   for (let i = 0; i < initialScopes.length; i++) {
     const [id, itemScope] = initialScopes[i]!;
@@ -98,7 +103,10 @@ export function createFieldArray<TItemNode extends FormNode = FormNode>(
   );
 
   const dirtyComputed = arrayScope.run(() =>
-    computed(() => baselineTracker.isDirty(itemsState.get())),
+    computed(() => {
+      const items = itemsState.get();
+      return baselineTracker.isDirty(items);
+    }),
   );
 
   const touchedComputed = arrayScope.run(() =>
@@ -123,6 +131,7 @@ export function createFieldArray<TItemNode extends FormNode = FormNode>(
 
   const validComputed = arrayScope.run(() =>
     computed(() => {
+      if (serverIssuesState.get().length > 0) return false;
       const items = itemsState.get();
       for (let i = 0; i < items.length; i++) {
         if (!items[i]!.node.valid.get()) return false;
@@ -145,6 +154,10 @@ export function createFieldArray<TItemNode extends FormNode = FormNode>(
           collected.push({ ...iss, path: Object.freeze(prefix) });
         }
       }
+      const ownServer = serverIssuesState.get();
+      for (let i = 0; i < ownServer.length; i++) {
+        collected.push(ownServer[i]!);
+      }
       return Object.freeze(collected);
     }),
   );
@@ -159,7 +172,9 @@ export function createFieldArray<TItemNode extends FormNode = FormNode>(
     const [prepared] = preflightArrayItems([node], existingKeys, keyExtractor);
 
     // Phase 2: Commit adoption
-    const { item, itemScope } = commitItemAdoption(arrayScope, prepared!);
+    const { item, itemScope } = commitItemAdoption(arrayScope, prepared!, () => {
+      internal.notifyMutation?.();
+    });
     scopesMap.set(item.id, itemScope);
 
     batch(() => {
@@ -167,6 +182,7 @@ export function createFieldArray<TItemNode extends FormNode = FormNode>(
       next.splice(index, 0, item);
       itemsState.set(Object.freeze(next));
     });
+    internal.notifyMutation?.();
 
     return item;
   };
@@ -184,6 +200,7 @@ export function createFieldArray<TItemNode extends FormNode = FormNode>(
       itemsState.set(Object.freeze(next));
       baselineTracker.handleItemRemoval(item, itemScope, scopesMap);
     });
+    internal.notifyMutation?.();
   };
 
   const move = (fromIndex: number, toIndex: number): void => {
@@ -198,6 +215,7 @@ export function createFieldArray<TItemNode extends FormNode = FormNode>(
       next.splice(toIndex, 0, item);
       itemsState.set(Object.freeze(next));
     });
+    internal.notifyMutation?.();
   };
 
   const swap = (indexA: number, indexB: number): void => {
@@ -213,6 +231,7 @@ export function createFieldArray<TItemNode extends FormNode = FormNode>(
       next[indexB] = itemA;
       itemsState.set(Object.freeze(next));
     });
+    internal.notifyMutation?.();
   };
 
   const clear = (): void => {
@@ -227,6 +246,7 @@ export function createFieldArray<TItemNode extends FormNode = FormNode>(
         baselineTracker.handleItemRemoval(item, itemScope, scopesMap);
       }
     });
+    internal.notifyMutation?.();
   };
 
   const validate = (
@@ -250,6 +270,7 @@ export function createFieldArray<TItemNode extends FormNode = FormNode>(
   const reset = (): void => {
     assertActive();
     batch(() => {
+      serverIssuesState.set([]);
       const current = itemsState.get();
       const restored = baselineTracker.performReset(current, scopesMap);
       itemsState.set(restored);
@@ -258,6 +279,7 @@ export function createFieldArray<TItemNode extends FormNode = FormNode>(
 
   const reinitialize = (): void => {
     assertActive();
+    serverIssuesState.set([]);
     const current = itemsState.get();
     baselineTracker.performReinitialize(current, scopesMap);
   };
@@ -273,6 +295,7 @@ export function createFieldArray<TItemNode extends FormNode = FormNode>(
     valid: validComputed,
     invalid: invalidComputed,
     issues: issuesComputed,
+    serverIssues: serverIssuesState,
     getValue: () => {
       assertActive();
       return valueComputed.get();
@@ -302,6 +325,15 @@ export function createFieldArray<TItemNode extends FormNode = FormNode>(
     getDirectChildNodes: () => itemsState.get().map((it) => it.node),
     disposeFromOwner: () => {
       performDisposal();
+    },
+    clearServerIssues: () => {
+      serverIssuesState.set([]);
+    },
+    setServerIssues: (sIssues) => {
+      serverIssuesState.set(Object.freeze(sIssues));
+    },
+    notifyMutation: () => {
+      internal.onMutation?.();
     },
   };
 

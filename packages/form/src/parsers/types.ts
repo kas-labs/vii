@@ -1,7 +1,7 @@
 /**
  * Issue source discriminator indicating the subsystem that originated the issue.
  */
-export type IssueSource = "validation" | "parse";
+export type IssueSource = "validation" | "parse" | "server";
 
 /**
  * Base structured issue shape shared across all Form issue categories.

@@ -37,6 +37,168 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-30 18:15 CEST | Production Form Phase 1 Slice P1g: Submit Validation Authority & Edit-During-Validation Cancellation
+
+Status: completed
+Branch: `feat/form-p1g-submission-server-issues`
+PR: #186
+
+### Scope
+
+- Implement internal submission validation authority to guarantee that submit validation passes are strictly authoritative for the exact tree state being snapshotted and submitted.
+- Enforce the cancellation contract: any user mutation (`setValue`, `setRawValue`, or `FieldArray` structural operations `insert`/`remove`/`move`/`swap`/`clear`) that occurs while `submissionStatus === "validating"` advances the internal monotonic tree mutation revision and cancels the in-flight submission attempt (`{ status: "cancelled" }`), preventing stale or unvalidated payloads from running submit actions.
+- Add exhaustive controllable-promise regression test suite covering: valid A -> invalid B, valid A -> valid B, pending B validation timing, parse-invalid raw value edits, FieldArray structural mutations, multiple rapid edits, and unchanged normal submissions.
+
+### Changes
+
+- Updated `packages/form/src/core/internal.ts`: added `notifyMutation?(): void` and `onMutation?: () => void` to `FormNodeInternal`, and updated `adoptChildNode` / `adoptChildNodes` / `commitChildAdoption` to wire upward mutation notification.
+- Updated `packages/form/src/core/field-parserless.ts` and `packages/form/src/core/field-parsed.ts`: notify tree mutation on `setValue` and `setRawValue`.
+- Updated `packages/form/src/core/group.ts`: propagated child mutation notifications upward through group hierarchy.
+- Updated `packages/form/src/core/array-adoption.ts` and `packages/form/src/core/array.ts`: wired child item mutation bubbling and notified on structural operations (`insert`, `remove`, `move`, `swap`, `clear`).
+- Updated `packages/form/src/core/form.ts`: tracked root monotonic `treeMutationRevision` counter and exposed `getTreeRevision` to `SubmissionCoordinator`.
+- Updated `packages/form/src/submission/state-machine.ts`: verified `treeRevisionBeforeValidation === currentTreeRevision` after `validateTree("submit")`, cancelling and aborting if any mutation occurred during validation.
+- Updated `packages/form/test/unit/submission-validation-gate.test.ts`: added the complete 7-test validation authority matrix.
+- Appended `DUTY_WATCH.md`.
+
+### Validation
+
+- `NX_DAEMON=false pnpm nx lint form`: passed (0 errors, 0 warnings).
+- `NX_DAEMON=false pnpm nx typecheck form`: passed (0 errors).
+- `NX_DAEMON=false pnpm nx test form`: passed (19 test files, 245 unit tests).
+- `NX_DAEMON=false pnpm nx build form`: passed (clean build).
+- `NX_DAEMON=false pnpm nx validate-package form`: passed (tarball packing and clean consumer validation).
+- Server issues routing perf fixture: 1,000 issues across 100 array items in 48ms (<50ms budget).
+- `git diff --check`: passed (0 whitespace errors).
+- `NX_DAEMON=false pnpm validate`: passed (full repository validation).
+
+### Architecture / compatibility
+
+- Clean internal monotonic mutation revision without exposing public revision counters or changing public APIs.
+- Model A terminal state preserved: user edits after submit completion advance mutation generation without resetting terminal `submissionStatus`.
+- Clean Architecture boundaries preserved: zero `@vii-labs/core` mutations, platform-neutral runtime.
+
+### Remaining / recovery
+
+- None. Ready for maintainer review on Draft PR #186.
+
+## 2026-08-30 17:45 CEST | Production Form Phase 1 Slice P1g: Submission Consistency, Fail-Closed Boundaries & Cancellation Classification
+
+Status: completed
+Branch: `feat/form-p1g-submission-server-issues`
+PR: #186
+
+### Scope
+
+- Correct submission lifecycle ordering: capture output domain snapshot (`deepCloneSnapshot`) and `FieldArray` identity snapshots (`collectArraySnapshots`) strictly AFTER the submission validation gate successfully passes, ensuring the submitted payload matches the validated generation and preventing pre-validation race conditions.
+- Replace array snapshot path key serialization with an injective, collision-free format (`JSON.stringify(path.map(...))`) preserving segment types (numbers vs numeric strings, dotted keys vs nested segments).
+- Implement fail-closed submit action result discrimination in `packages/form/src/submission/result.ts`: when `ok === false`, require an `issues` array where all issues sanitize atomically; throw `TypeError` and fail closed on malformed shapes.
+- Eliminate unsafe message-text cancellation heuristics in `isAbortCancellation`: classify cancellation authoritatively via `signal.aborted` or `AbortError` / `ABORT_ERR` only.
+- Add comprehensive regression test suites covering async validation races, collision-safe snapshot keys, tricky nested array routing, fail-closed result parsing, and structural cancellation classification.
+
+### Changes
+
+- Created `packages/form/src/submission/result.ts`: contains `parseSubmitActionResult` with fail-closed discrimination, atomic sanitization, and `isAbortCancellation`.
+- Updated `packages/form/src/submission/array-snapshot.ts`: updated `createArraySnapshotKey` to use injective typed JSON encoding.
+- Updated `packages/form/src/submission/state-machine.ts`: restructured `submit()` lifecycle so validation gate runs first and snapshotting occurs only after validation succeeds; integrated `parseSubmitActionResult` and `isAbortCancellation`.
+- Updated `packages/form/test/unit/submission-validation-gate.test.ts`: added async validation and user edit race condition tests.
+- Updated `packages/form/test/unit/submission-state-machine.test.ts`: added fail-closed result discrimination tests, atomic sanitization tests, and non-heuristic cancellation error ownership tests.
+- Updated `packages/form/test/unit/server-issues.test.ts`: added path key collision tests and nested array routing tests with collision-prone dotted names.
+- Updated `scripts/package-validation/validate-form.mjs`: added `dist/submission/result.*` to expected packed artifact entries.
+- Updated `packages/form/README.md` and `DUTY_WATCH.md`.
+
+### Validation
+
+- `NX_DAEMON=false pnpm nx lint form`: passed (0 errors, 0 warnings).
+- `NX_DAEMON=false pnpm nx typecheck form`: passed (0 errors).
+- `NX_DAEMON=false pnpm nx test form`: passed (19 test files, 239 unit tests).
+- `NX_DAEMON=false pnpm nx build form`: passed (clean build).
+- `NX_DAEMON=false pnpm nx validate-package form`: passed (tarball packaging and clean consumer validation).
+- `git diff --check`: passed (0 whitespace errors).
+- `NX_DAEMON=false pnpm validate`: passed (full repository validation).
+
+### Architecture / compatibility
+
+- Preserves small-core strategy and zero modification to `@vii-labs/core`.
+- Maintains strict Clean Architecture boundaries and unidirectional dependency flow.
+- Zero framework runtime dependencies (framework adapters remain deferred to P1h–P1j).
+- Package remains private (`private: true`).
+
+### Remaining / recovery
+
+- None. PR #186 updated and ready for review.
+
+## 2026-08-30 16:30 CEST | Production Form Phase 1 Slice P1g: Submission & Server Issues
+
+Status: completed
+Branch: `feat/form-p1g-submission-server-issues`
+PR: not opened (Draft PR pending)
+
+### Scope
+
+- Implement production form submission lifecycle and structured server issue routing in `@vii-labs/form` (Phase 1 Slice P1g).
+- Implement Model A submission state machine (`idle -> validating -> submitting -> succeeded | failed | cancelled`) where terminal outcome statuses persist across subsequent field edits without resetting to idle.
+- Implement submission validation gate: runs recursive tree validation with `trigger: "submit"`, awaits async rules, and blocks submission if invalid or if any field has parse errors (`parseStatus === "invalid"`).
+- Implement deep immutable domain snapshot generator (`deepCloneSnapshot`) supporting primitives, plain/null-prototype objects, arrays, Date, RegExp, Map, Set, cycle handling, prototype pollution protection, and unsupported class/Weak collection rejection.
+- Implement caller error ownership: unexpected errors in user submit action rethrow to caller while setting `submissionStatus: "failed"`.
+- Implement AbortSignal submission cancellation (`form.cancelSubmit()`, duplicate policies `supersede`/`drop`/`reject`, automatic abort on `form.reset()`, `form.reinitialize()`, or `form.dispose()`).
+- Implement structured `ServerIssue` taxonomy with routing to leaf fields, nested groups, arrays, and fallback to root `form.serverIssues` for unresolvable or root paths.
+- Implement localized server issue clearing on field edit (`setValue`/`setRawValue`) without disturbing sibling or root issues.
+- Preserve coexistence with client validation: running client validation rules does not wipe active server issues.
+- Implement `FieldArray` in-flight identity snapshots (`collectArraySnapshots`) mapping array paths to stable item IDs, ensuring server responses route to the correct item at its live position even if items are reordered mid-flight; deleted items fall back safely to root `form.serverIssues`.
+- Conduct 1,000-issue routing performance investigation (<50ms O(N) path lookup).
+- Enforce diagnostics privacy with zero user data in telemetry.
+- Verify package boundary, export maps, tree-shaking, line budgets, and clean consumer packed validation.
+
+### Changes
+
+- Created `packages/form/src/submission/types.ts`: public submission types (`SubmissionStatus`, `ServerIssue`, `ServerIssueInput`, `SubmitAction`, `SubmitActionResult`, `FormSubmitResult`, `SubmitOptions`, `DuplicateSubmitPolicy`, `ArraySnapshotMap`).
+- Created `packages/form/src/core/snapshot.ts`: `deepCloneSnapshot` implementation with cycle safety, prototype pollution defense, and immutability freezing.
+- Created `packages/form/src/submission/array-snapshot.ts`: `collectArraySnapshots` for capturing array path to item ID mappings.
+- Created `packages/form/src/submission/server-issues.ts`: `sanitizeServerIssue`, `clearTreeServerIssues`, `routeServerIssuesToTree`.
+- Created `packages/form/src/submission/state-machine.ts`: `SubmissionCoordinator` managing Model A lifecycle, cancellation, and validation gate.
+- Extended `packages/form/src/parsers/types.ts`: added `"server"` to `IssueSource`.
+- Extended `packages/form/src/validation/types.ts`: added `ServerIssue` to `FieldIssue` union.
+- Extended `packages/form/src/core/internal.ts`: added `clearServerIssues` and `setServerIssues` to `FormNodeInternal`.
+- Extended `packages/form/src/core/tree-types.ts`: added submission properties (`submissionStatus`, `submitting`, `serverIssues`, `validate`, `submit`, `cancelSubmit`) to `FormInstance` and `FieldGroup`.
+- Extended `packages/form/src/core/array-types.ts`: added `serverIssues` to `FieldArray`.
+- Extended `packages/form/src/core/types.ts`: added `serverIssues` to `FieldState` and re-exported submission types.
+- Updated `packages/form/src/core/field-parserless.ts` & `field-parsed.ts`: added `serverIssuesState`, integrated into `syncCombinedIssues` and `validComputed`, localized clear on `setValue`/`setRawValue`/`reset`/`reinitialize`.
+- Updated `packages/form/src/core/group.ts` & `array.ts`: added `serverIssuesState`, integrated into `issuesComputed` and `validComputed`, internal routing support.
+- Updated `packages/form/src/core/form.ts`: integrated `SubmissionCoordinator`, wired `submit`, `cancelSubmit`, `validate`, `reset`, `reinitialize`, `dispose`.
+- Updated `packages/form/src/index.ts`: exported public submission types.
+- Created test suites:
+  - `packages/form/test/unit/submission-snapshot.test.ts`
+  - `packages/form/test/unit/submission-state-machine.test.ts`
+  - `packages/form/test/unit/submission-validation-gate.test.ts`
+  - `packages/form/test/unit/server-issues.test.ts`
+  - `packages/form/test/unit/server-issues-perf.test.ts`
+  - `packages/form/test/unit/diagnostics-privacy.test.ts`
+- Updated package boundary test `packages/form/test/package-boundary.test.ts` and clean consumer verification script `scripts/package-validation/validate-form.mjs`.
+- Updated `packages/form/README.md`, `PROJECT_STATE.md`, and `DUTY_WATCH.md`.
+
+### Validation
+
+- `NX_DAEMON=false pnpm nx lint form`: passed (0 errors, 0 warnings).
+- `NX_DAEMON=false pnpm nx typecheck form`: passed (0 errors).
+- `NX_DAEMON=false pnpm nx test form`: passed (19 test files, 234 unit tests passing).
+- `NX_DAEMON=false pnpm nx build form`: passed (clean TypeScript compilation).
+- `NX_DAEMON=false pnpm nx validate-package form`: passed (tarball packaging and clean consumer fixture test against packed artifact).
+- `git diff --check`: passed (0 whitespace errors).
+- `NX_DAEMON=false pnpm validate`: passed (full repository validation).
+
+### Architecture / compatibility
+
+- Preserves small-core strategy and zero modification to `@vii-labs/core`.
+- Maintains strict Clean Architecture boundaries and unidirectional dependency flow.
+- Zero framework runtime dependencies (framework adapters remain deferred to P1h–P1j).
+- Package remains private (`private: true`).
+- Performance: 1,000 server issues routed in <50ms with O(N) path depth traversal.
+- Security & Privacy: Value-free structural diagnostics only.
+
+### Remaining / recovery
+
+- None. Ready for Draft PR and review.
+
 ## 2026-08-30 02:24 CEST | Production Form Phase 1 Slice P1f: FieldArray & Stable Identity
 
 Status: completed

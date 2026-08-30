@@ -63,9 +63,10 @@ export function preflightArrayItems<TNode extends FormNode>(
 export function commitItemAdoption<TNode extends FormNode>(
   arrayScope: Scope,
   prepared: PreparedArrayItem<TNode>,
+  onMutation?: () => void,
 ): { item: FieldArrayItem<TNode>; itemScope: Scope } {
   const itemScope = arrayScope.createChild({ name: "array-item" });
-  commitChildAdoption(itemScope, prepared.internal);
+  commitChildAdoption(itemScope, prepared.internal, onMutation);
   return {
     item: { id: prepared.id, node: prepared.node },
     itemScope,
@@ -78,11 +79,12 @@ export function commitItemAdoption<TNode extends FormNode>(
 export function commitArrayItemsAdoption<TNode extends FormNode>(
   arrayScope: Scope,
   preparedItems: readonly PreparedArrayItem<TNode>[],
+  onMutation?: () => void,
 ): { items: FieldArrayItem<TNode>[]; scopes: [string, Scope][] } {
   const items: FieldArrayItem<TNode>[] = [];
   const scopes: [string, Scope][] = [];
   for (let i = 0; i < preparedItems.length; i++) {
-    const { item, itemScope } = commitItemAdoption(arrayScope, preparedItems[i]!);
+    const { item, itemScope } = commitItemAdoption(arrayScope, preparedItems[i]!, onMutation);
     items.push(item);
     scopes.push([item.id, itemScope]);
   }

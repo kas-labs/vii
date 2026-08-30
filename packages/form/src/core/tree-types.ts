@@ -1,16 +1,23 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import type { Computed, ReadableState, Scope } from "@vii-labs/core";
+import type { Computed, Diagnostics, ReadableState, Scope } from "@vii-labs/core";
 import type { CreateFieldArrayOptions, FieldArray, FieldArrayItem } from "./array-types.js";
 import type { FormReinitializeInput } from "./baseline-types.js";
 import type { FieldState } from "./types.js";
-import type { FieldIssue } from "../validation/types.js";
+import type {
+  FormSubmitResult,
+  ServerIssue,
+  SubmissionStatus,
+  SubmitAction,
+  SubmitOptions,
+} from "../submission/types.js";
+import type { FieldIssue, ValidationTriggerMode } from "../validation/types.js";
 
 export type { CreateFieldArrayOptions, FieldArray, FieldArrayItem };
 
 /**
  * Union of supported node types in a composable form tree.
  */
-export type FormNode = FieldState<any, any> | FieldGroup<any> | FieldArray<any>;
+export type FormNode = FieldState<any, any> | FieldGroup<any> | FieldArray<any> | FormInstance<any>;
 
 /**
  * Record of child form nodes keyed by property names.
@@ -125,6 +132,11 @@ export interface FieldGroup<TFields extends Record<string, any> = Record<string,
   readonly issues: Computed<readonly FieldIssue[]>;
 
   /**
+   * Reactive state signal returning server issues owned directly by this group node.
+   */
+  readonly serverIssues: ReadableState<readonly ServerIssue[]>;
+
+  /**
    * Returns current aggregate domain values synchronously.
    */
   getValue(): FormValues<TFields>;
@@ -133,6 +145,11 @@ export interface FieldGroup<TFields extends Record<string, any> = Record<string,
    * Returns current aggregate raw presentation values synchronously.
    */
   getRawValue(): FormRawValues<TFields>;
+
+  /**
+   * Explicitly triggers validation recursively on all descendant nodes.
+   */
+  validate(trigger?: ValidationTriggerMode): Promise<readonly FieldIssue[]> | readonly FieldIssue[];
 
   /**
    * Atomically resets all descendant fields and groups to their original baseline.
@@ -158,6 +175,11 @@ export interface CreateFormOptions<TFields extends Record<string, any> = Record<
    * Optional parent Scope that deterministically owns the form lifecycle.
    */
   readonly scope?: Scope | undefined;
+
+  /**
+   * Optional diagnostics collector for value-free structural lifecycle tracing.
+   */
+  readonly diagnostics?: Diagnostics | undefined;
 }
 
 /**
@@ -215,6 +237,21 @@ export interface FormInstance<TFields extends Record<string, any> = Record<strin
   readonly issues: Computed<readonly FieldIssue[]>;
 
   /**
+   * Reactive state signal returning server issues owned at the root form level.
+   */
+  readonly serverIssues: ReadableState<readonly ServerIssue[]>;
+
+  /**
+   * Reactive state signal reflecting the latest submission lifecycle status under Model A.
+   */
+  readonly submissionStatus: ReadableState<SubmissionStatus>;
+
+  /**
+   * Lazy computed signal indicating whether the form is currently validating for submission or submitting.
+   */
+  readonly submitting: Computed<boolean>;
+
+  /**
    * Returns current aggregate domain values synchronously.
    */
   getValue(): FormValues<TFields>;
@@ -223,6 +260,24 @@ export interface FormInstance<TFields extends Record<string, any> = Record<strin
    * Returns current aggregate raw presentation values synchronously.
    */
   getRawValue(): FormRawValues<TFields>;
+
+  /**
+   * Explicitly triggers validation recursively on all descendant nodes.
+   */
+  validate(trigger?: ValidationTriggerMode): Promise<readonly FieldIssue[]> | readonly FieldIssue[];
+
+  /**
+   * Submits the form by validating all fields, capturing an immutable snapshot, and invoking the submit action.
+   */
+  submit<TResult = void>(
+    action?: SubmitAction<FormValues<TFields>, TResult>,
+    options?: SubmitOptions,
+  ): Promise<FormSubmitResult<TResult, FieldIssue>>;
+
+  /**
+   * Cancels the active submission attempt if validating or submitting.
+   */
+  cancelSubmit(): void;
 
   /**
    * Atomically resets all descendant fields and groups to their current baseline.

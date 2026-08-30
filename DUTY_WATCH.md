@@ -37,6 +37,62 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-31 00:41 CEST | Production Form Phase 1 Slice P1h: React Adapter
+
+Status: completed
+Branch: `feat/form-p1h-react-adapter`
+PR: not opened
+
+### Scope
+
+- Implement the minimal production React adapter for Vii Form (`@vii-labs/form/react`) in Phase 1 Slice P1h.
+- Provide public hooks: `useField`, `useForm`, `useFieldArray` built on React's `useSyncExternalStore`.
+- Implement live snapshot reads with referential property memoization (`createMemoizedSnapshotReader`) to eliminate unnecessary re-renders and prevent render loops while preserving pre-subscription freshness.
+- Implement fine-grained render isolation: mutating a leaf field triggers re-rendering only in that field's subscribed component (0 sibling re-renders).
+- Preserve `FieldArrayItem.id` across collection reorders and mutations for stable React keys.
+- Ensure StrictMode lifecycle safety (clean double-mount/unmount subscriptions, no leaked listeners).
+- Ensure lifecycle isolation: component unmount unregisters adapter subscriptions only and never auto-disposes canonical Form nodes.
+- Handle node replacement (`fieldA` -> `fieldB`) cleanly without stale cross-talk.
+- Provide deterministic SSR snapshot evaluation (`getServerSnapshot`) without browser globals.
+- Preserve optional peer dependency contract (`react: ">=18.0.0"`) and verify root `@vii-labs/form` import safety in projects without React installed.
+- Verify packed artifact in clean Core-only and clean React consumers.
+
+### Changes
+
+- Created `packages/form/src/adapters/react/types.ts`: public TypeScript snapshot and binding interfaces (`ReactFieldSnapshot`, `ReactFieldBinding`, `ReactFormSnapshot`, `ReactFormBinding`, `ReactArraySnapshot`, `ReactArrayBinding`).
+- Created `packages/form/src/adapters/react/external-store.ts`: internal `createMemoizedSnapshotReader` (referential memoization via `Object.is`) and `subscribeSignals` (unified subscription combiner).
+- Created `packages/form/src/adapters/react/use-field.ts`: fine-grained `useField` hook for leaf field nodes.
+- Created `packages/form/src/adapters/react/use-form.ts`: aggregate `useForm` hook for root form coordinators.
+- Created `packages/form/src/adapters/react/use-field-array.ts`: collection `useFieldArray` hook for dynamic repeatable arrays.
+- Updated `packages/form/src/adapters/react/index.ts`: exported public React adapter hooks and types.
+- Updated `packages/form/package.json`: added React 19 test devDependencies (`react`, `react-dom`, `react-test-renderer`, `@types/react`, `@types/react-dom`, `@types/react-test-renderer`).
+- Created `packages/form/test/unit/react-adapter.test.ts`: comprehensive React 19 unit test suite (30 test assertions covering `useField`, snapshot freshness, render isolation, `useForm`, `useFieldArray`, StrictMode, lifecycle, SSR, and type preservation).
+- Updated `packages/form/test/package-boundary.test.ts`: verified `formReact` exports `useField`, `useFieldArray`, `useForm`.
+- Updated `scripts/package-validation/validate-form.mjs`: added packed React build outputs to expected entries; added dual clean consumer validation (Core-only consumer without React and React consumer with React 19).
+- Updated `packages/form/README.md`, `PROJECT_STATE.md`, and `DUTY_WATCH.md`.
+
+### Validation
+
+- `NX_DAEMON=false pnpm nx lint form`: passed (0 errors, 0 warnings).
+- `NX_DAEMON=false pnpm nx typecheck form`: passed (0 errors).
+- `NX_DAEMON=false pnpm nx test form`: passed (20 test files, 264 passed tests).
+- `NX_DAEMON=false pnpm nx build form`: passed (clean d.ts and ESM build).
+- `NX_DAEMON=false pnpm nx validate-package form`: passed (dual clean consumer verification against packed artifact).
+- `git diff --check`: passed (0 whitespace errors).
+- `NX_DAEMON=false pnpm validate`: passed (full repository validation).
+
+### Architecture / compatibility
+
+- Zero modification to `@vii-labs/core`.
+- Unidirectional dependency flow: `@vii-labs/form/react` -> public `@vii-labs/form` primitives/types.
+- Root `@vii-labs/form` has zero React imports and works in clean environments without React installed.
+- Optional peer dependency `react: ">=18.0.0"` declared via `peerDependencies` and `peerDependenciesMeta.react.optional: true`.
+- Package remains private (`private: true`).
+
+### Remaining / recovery
+
+- None. Ready for Draft PR.
+
 ## 2026-08-30 18:15 CEST | Production Form Phase 1 Slice P1g: Submit Validation Authority & Edit-During-Validation Cancellation
 
 Status: completed

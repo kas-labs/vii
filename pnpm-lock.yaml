@@ -205,9 +205,27 @@ importers:
       '@types/node':
         specifier: 22.17.0
         version: 22.17.0
+      '@types/react':
+        specifier: 19.2.17
+        version: 19.2.17
+      '@types/react-dom':
+        specifier: 19.2.3
+        version: 19.2.3(@types/react@19.2.17)
+      '@types/react-test-renderer':
+        specifier: 19.0.0
+        version: 19.0.0
       '@vii-labs/core':
         specifier: workspace:*
         version: link:../core
+      react:
+        specifier: 19.2.8
+        version: 19.2.8
+      react-dom:
+        specifier: 19.2.8
+        version: 19.2.8(react@19.2.8)
+      react-test-renderer:
+        specifier: 19.2.8
+        version: 19.2.8(react@19.2.8)
 
   packages/react:
     devDependencies:

@@ -6,7 +6,18 @@ Experimental reactive headless form state and validation engine for the Vii ecos
 
 Internal development / experimental candidate (Phase 1 Baseline).
 
-- **Current Implementation (P1g — Submission & Server Issues):**
+- **Current Implementation (P1h — React Adapter):**
+  - **React 18/19 Adapter (`@vii-labs/form/react`):**
+    - `useField(field)`: fine-grained leaf field binding exposing live observable snapshot (`value`, `rawValue`, `dirty`, `touched`, `pending`, `valid`, `invalid`, `parseStatus`, `parseIssue`, `validationStatus`, `issues`, `serverIssues`) and stable action references (`setValue`, `setRawValue`, `setTouched`, `blur`, `validate`, `reset`).
+    - `useForm(form)`: root form aggregate binding exposing live snapshot (`value`, `rawValue`, `dirty`, `touched`, `pending`, `valid`, `invalid`, `issues`, `serverIssues`, `submissionStatus`, `submitting`), child `fields`, and stable actions (`validate`, `submit`, `cancelSubmit`, `reset`, `reinitialize`).
+    - `useFieldArray(array)`: repeatable collection binding exposing live snapshot (`items`, `value`, `rawValue`, `dirty`, `touched`, `pending`, `valid`, `invalid`, `issues`, `serverIssues`, `length`) and stable structural actions (`append`, `prepend`, `insert`, `remove`, `move`, `swap`, `clear`, `validate`, `reset`).
+    - `useSyncExternalStore` primitive: tear-free React concurrent rendering with live store evaluation and pre-subscription freshness.
+    - Snapshot referential memoization: live store reads return stable object references when observable values are unchanged (`Object.is` per key), eliminating infinite loops and redundant re-renders.
+    - Fine-grained render isolation: mutating a leaf field triggers re-rendering only in that field's subscribed component (0 sibling re-renders).
+    - Stable item identity: preserves `FieldArrayItem.id` across moves and swaps for canonical React list keys (`key={item.id}`).
+    - StrictMode safety & lifecycle isolation: double-mount/unmount cycles cleanly subscribe and teardown; unmounting a React component unregisters adapter subscriptions only and never disposes the canonical Form node.
+    - SSR safe: `getServerSnapshot` evaluates synchronous in-memory state without browser globals.
+    - Import isolation: root `@vii-labs/form` remains framework-neutral and requires no React installation; `@vii-labs/form/react` declares React as an optional peer dependency.
   - **Model A Submission Lifecycle (`form.submit`):**
     - State machine: `idle` -> `validating` -> `submitting` -> `succeeded` | `failed` | `cancelled`.
     - Model A terminal state invariant: `submissionStatus` represents the outcome of the latest submission attempt. User edits after `succeeded` or `failed` update `dirty: true` but do NOT reset `submissionStatus` to `idle`.
@@ -47,8 +58,9 @@ Internal development / experimental candidate (Phase 1 Baseline).
     - Hierarchical aggregation of `value`, `rawValue`, `touched`, `dirty`, `pending`, `valid`, `invalid`, `issues`, and `serverIssues` (with recursive path prefixing).
     - Granular reactivity: field mutation in one branch does not notify un-mutated branches.
     - Whole-form baseline reinitialization (`form.reinitialize`) using explicit separate `value` and `rawValue` trees (`FormReinitializeInput`); recursive two-phase prevalidation with zero mutation on malformed input; successful commit is batched for observer atomicity.
-    - Transactional node adoption and deterministic Scope lifecycle ownership.
-- **Subpaths (`/react`, `/vanilla`, `/angular`, `/vue`):** Skeleton infrastructure entrypoints (adapters deferred to P1h–P1j).
-- **Deferred / Non-Goals for P1g:** Framework adapter implementations (deferred to P1h–P1j).
+- **Subpaths (`/react`, `/vanilla`, `/angular`, `/vue`):**
+  - `/react`: Implemented production React 18/19 adapter (`useField`, `useForm`, `useFieldArray`).
+  - `/vanilla`, `/angular`, `/vue`: Skeleton infrastructure entrypoints (adapters deferred to P1i–P1j).
+- **Deferred / Non-Goals for P1h:** Framework adapter implementations for Vanilla, Angular, and Vue (deferred to P1i–P1j).
 
 See `docs/architecture/FORM_ARCHITECTURE.md` and `docs/roadmap/FORM_RESEARCH.md` for architecture and roadmap details.

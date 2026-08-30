@@ -1,5 +1,6 @@
-import { batch, computed, createScope } from "@vii-labs/core";
-import type { FieldIssue } from "../validation/types.js";
+import { batch, computed, createScope, state } from "@vii-labs/core";
+import type { ServerIssue } from "../submission/types.js";
+import type { FieldIssue, ValidationTriggerMode } from "../validation/types.js";
 import type { InternalGroupReinitializeInput } from "./baseline-types.js";
 import {
   adoptChildNodes,
@@ -39,6 +40,7 @@ export function createFieldGroup<TFields extends FormFieldsRecord>(
   };
 
   const groupScope = scope ? scope.createChild({ name: "group" }) : createScope({ name: "group" });
+  const serverIssuesState = state<readonly ServerIssue[]>([]);
 
   adoptChildNodes(groupScope, fields, fieldKeys);
 
@@ -125,6 +127,9 @@ export function createFieldGroup<TFields extends FormFieldsRecord>(
 
   const validComputed = groupScope.run(() =>
     computed(() => {
+      if (serverIssuesState.get().length > 0) {
+        return false;
+      }
       for (let i = 0; i < fieldKeys.length; i++) {
         if (!fields[fieldKeys[i]!]!.valid.get()) {
           return false;
@@ -151,13 +156,36 @@ export function createFieldGroup<TFields extends FormFieldsRecord>(
           });
         }
       }
+      const ownServer = serverIssuesState.get();
+      for (let i = 0; i < ownServer.length; i++) {
+        collected.push(ownServer[i]!);
+      }
       return Object.freeze(collected);
     }),
   );
 
+  const validate = (
+    trigger: ValidationTriggerMode = "manual",
+  ): Promise<readonly FieldIssue[]> | readonly FieldIssue[] => {
+    assertActive();
+    const promises: Promise<readonly FieldIssue[]>[] = [];
+    for (let i = 0; i < fieldKeys.length; i++) {
+      const child = fields[fieldKeys[i]!]!;
+      const res = child.validate(trigger);
+      if (res && typeof (res as Promise<unknown>).then === "function") {
+        promises.push(res as Promise<readonly FieldIssue[]>);
+      }
+    }
+    if (promises.length > 0) {
+      return Promise.all(promises).then(() => issuesComputed.get());
+    }
+    return issuesComputed.get();
+  };
+
   const reset = (): void => {
     assertActive();
     batch(() => {
+      serverIssuesState.set([]);
       for (let i = 0; i < fieldKeys.length; i++) {
         fields[fieldKeys[i]!]!.reset();
       }
@@ -168,6 +196,7 @@ export function createFieldGroup<TFields extends FormFieldsRecord>(
     assertActive();
     const plan = prepareReinitializePlan(fields, fieldKeys, nextBaseline);
     batch(() => {
+      serverIssuesState.set([]);
       commitReinitializePlan(plan);
     });
   };
@@ -183,6 +212,7 @@ export function createFieldGroup<TFields extends FormFieldsRecord>(
     valid: validComputed,
     invalid: invalidComputed,
     issues: issuesComputed,
+    serverIssues: serverIssuesState,
     getValue: () => {
       assertActive();
       return valueComputed.get();
@@ -191,6 +221,7 @@ export function createFieldGroup<TFields extends FormFieldsRecord>(
       assertActive();
       return rawValueComputed.get();
     },
+    validate,
     reset,
     dispose,
   };
@@ -204,6 +235,12 @@ export function createFieldGroup<TFields extends FormFieldsRecord>(
     getDirectChildNodes: () => fieldKeys.map((k) => fields[k]!),
     disposeFromOwner: () => {
       performDisposal();
+    },
+    clearServerIssues: () => {
+      serverIssuesState.set([]);
+    },
+    setServerIssues: (sIssues) => {
+      serverIssuesState.set(Object.freeze(sIssues));
     },
   };
 

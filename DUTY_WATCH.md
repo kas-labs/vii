@@ -37,6 +37,78 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-30 16:30 CEST | Production Form Phase 1 Slice P1g: Submission & Server Issues
+
+Status: completed
+Branch: `feat/form-p1g-submission-server-issues`
+PR: not opened (Draft PR pending)
+
+### Scope
+
+- Implement production form submission lifecycle and structured server issue routing in `@vii-labs/form` (Phase 1 Slice P1g).
+- Implement Model A submission state machine (`idle -> validating -> submitting -> succeeded | failed | cancelled`) where terminal outcome statuses persist across subsequent field edits without resetting to idle.
+- Implement submission validation gate: runs recursive tree validation with `trigger: "submit"`, awaits async rules, and blocks submission if invalid or if any field has parse errors (`parseStatus === "invalid"`).
+- Implement deep immutable domain snapshot generator (`deepCloneSnapshot`) supporting primitives, plain/null-prototype objects, arrays, Date, RegExp, Map, Set, cycle handling, prototype pollution protection, and unsupported class/Weak collection rejection.
+- Implement caller error ownership: unexpected errors in user submit action rethrow to caller while setting `submissionStatus: "failed"`.
+- Implement AbortSignal submission cancellation (`form.cancelSubmit()`, duplicate policies `supersede`/`drop`/`reject`, automatic abort on `form.reset()`, `form.reinitialize()`, or `form.dispose()`).
+- Implement structured `ServerIssue` taxonomy with routing to leaf fields, nested groups, arrays, and fallback to root `form.serverIssues` for unresolvable or root paths.
+- Implement localized server issue clearing on field edit (`setValue`/`setRawValue`) without disturbing sibling or root issues.
+- Preserve coexistence with client validation: running client validation rules does not wipe active server issues.
+- Implement `FieldArray` in-flight identity snapshots (`collectArraySnapshots`) mapping array paths to stable item IDs, ensuring server responses route to the correct item at its live position even if items are reordered mid-flight; deleted items fall back safely to root `form.serverIssues`.
+- Conduct 1,000-issue routing performance investigation (<50ms O(N) path lookup).
+- Enforce diagnostics privacy with zero user data in telemetry.
+- Verify package boundary, export maps, tree-shaking, line budgets, and clean consumer packed validation.
+
+### Changes
+
+- Created `packages/form/src/submission/types.ts`: public submission types (`SubmissionStatus`, `ServerIssue`, `ServerIssueInput`, `SubmitAction`, `SubmitActionResult`, `FormSubmitResult`, `SubmitOptions`, `DuplicateSubmitPolicy`, `ArraySnapshotMap`).
+- Created `packages/form/src/core/snapshot.ts`: `deepCloneSnapshot` implementation with cycle safety, prototype pollution defense, and immutability freezing.
+- Created `packages/form/src/submission/array-snapshot.ts`: `collectArraySnapshots` for capturing array path to item ID mappings.
+- Created `packages/form/src/submission/server-issues.ts`: `sanitizeServerIssue`, `clearTreeServerIssues`, `routeServerIssuesToTree`.
+- Created `packages/form/src/submission/state-machine.ts`: `SubmissionCoordinator` managing Model A lifecycle, cancellation, and validation gate.
+- Extended `packages/form/src/parsers/types.ts`: added `"server"` to `IssueSource`.
+- Extended `packages/form/src/validation/types.ts`: added `ServerIssue` to `FieldIssue` union.
+- Extended `packages/form/src/core/internal.ts`: added `clearServerIssues` and `setServerIssues` to `FormNodeInternal`.
+- Extended `packages/form/src/core/tree-types.ts`: added submission properties (`submissionStatus`, `submitting`, `serverIssues`, `validate`, `submit`, `cancelSubmit`) to `FormInstance` and `FieldGroup`.
+- Extended `packages/form/src/core/array-types.ts`: added `serverIssues` to `FieldArray`.
+- Extended `packages/form/src/core/types.ts`: added `serverIssues` to `FieldState` and re-exported submission types.
+- Updated `packages/form/src/core/field-parserless.ts` & `field-parsed.ts`: added `serverIssuesState`, integrated into `syncCombinedIssues` and `validComputed`, localized clear on `setValue`/`setRawValue`/`reset`/`reinitialize`.
+- Updated `packages/form/src/core/group.ts` & `array.ts`: added `serverIssuesState`, integrated into `issuesComputed` and `validComputed`, internal routing support.
+- Updated `packages/form/src/core/form.ts`: integrated `SubmissionCoordinator`, wired `submit`, `cancelSubmit`, `validate`, `reset`, `reinitialize`, `dispose`.
+- Updated `packages/form/src/index.ts`: exported public submission types.
+- Created test suites:
+  - `packages/form/test/unit/submission-snapshot.test.ts`
+  - `packages/form/test/unit/submission-state-machine.test.ts`
+  - `packages/form/test/unit/submission-validation-gate.test.ts`
+  - `packages/form/test/unit/server-issues.test.ts`
+  - `packages/form/test/unit/server-issues-perf.test.ts`
+  - `packages/form/test/unit/diagnostics-privacy.test.ts`
+- Updated package boundary test `packages/form/test/package-boundary.test.ts` and clean consumer verification script `scripts/package-validation/validate-form.mjs`.
+- Updated `packages/form/README.md`, `PROJECT_STATE.md`, and `DUTY_WATCH.md`.
+
+### Validation
+
+- `NX_DAEMON=false pnpm nx lint form`: passed (0 errors, 0 warnings).
+- `NX_DAEMON=false pnpm nx typecheck form`: passed (0 errors).
+- `NX_DAEMON=false pnpm nx test form`: passed (19 test files, 234 unit tests passing).
+- `NX_DAEMON=false pnpm nx build form`: passed (clean TypeScript compilation).
+- `NX_DAEMON=false pnpm nx validate-package form`: passed (tarball packaging and clean consumer fixture test against packed artifact).
+- `git diff --check`: passed (0 whitespace errors).
+- `NX_DAEMON=false pnpm validate`: passed (full repository validation).
+
+### Architecture / compatibility
+
+- Preserves small-core strategy and zero modification to `@vii-labs/core`.
+- Maintains strict Clean Architecture boundaries and unidirectional dependency flow.
+- Zero framework runtime dependencies (framework adapters remain deferred to P1h–P1j).
+- Package remains private (`private: true`).
+- Performance: 1,000 server issues routed in <50ms with O(N) path depth traversal.
+- Security & Privacy: Value-free structural diagnostics only.
+
+### Remaining / recovery
+
+- None. Ready for Draft PR and review.
+
 ## 2026-08-30 02:24 CEST | Production Form Phase 1 Slice P1f: FieldArray & Stable Identity
 
 Status: completed

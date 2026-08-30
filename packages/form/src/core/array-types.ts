@@ -1,6 +1,7 @@
 import type { Computed, ReadableState, Scope } from "@vii-labs/core";
-import type { FormNode, FormRawValueFor, FormValueFor } from "./tree-types.js";
+import type { ServerIssue } from "../submission/types.js";
 import type { FieldIssue, ValidationTriggerMode } from "../validation/types.js";
+import type { FormNode, FormRawValueFor, FormValueFor } from "./tree-types.js";
 
 /**
  * Public item wrapper containing a unique stable identifier and child form node.
@@ -93,6 +94,11 @@ export interface FieldArray<TItemNode extends FormNode = FormNode> {
    * Lazy computed signal returning aggregate issues from all descendant items with numeric index prefix paths.
    */
   readonly issues: Computed<readonly FieldIssue[]>;
+
+  /**
+   * Reactive state signal returning server issues owned by this array node.
+   */
+  readonly serverIssues: ReadableState<readonly ServerIssue[]>;
 
   /**
    * Returns current aggregate domain values array synchronously.

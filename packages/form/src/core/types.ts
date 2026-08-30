@@ -1,5 +1,6 @@
 import type { Computed, ReadableState, Scope } from "@vii-labs/core";
 import type { FieldParser, ParseIssue, ParseStatus } from "../parsers/types.js";
+import type { ServerIssue } from "../submission/types.js";
 import type {
   AnyValidationRule,
   FieldIssue,
@@ -24,6 +25,18 @@ export type {
 } from "./tree-types.js";
 
 export type { FormReinitializeInput } from "./baseline-types.js";
+
+export type {
+  DuplicateSubmitPolicy,
+  FormSubmitResult,
+  ServerIssue,
+  ServerIssueInput,
+  SubmissionStatus,
+  SubmitAction,
+  SubmitActionResult,
+  SubmitContext,
+  SubmitOptions,
+} from "../submission/types.js";
 
 export type {
   FieldParser,
@@ -102,6 +115,7 @@ export interface FieldState<TValue, TRaw = TValue> {
   readonly valid: Computed<boolean>;
   readonly invalid: Computed<boolean>;
   readonly issues: ReadableState<readonly FieldIssue[]>;
+  readonly serverIssues: ReadableState<readonly ServerIssue[]>;
   readonly parseIssue: ReadableState<ParseIssue | null>;
   readonly parseStatus: ReadableState<ParseStatus>;
   readonly validationStatus: ReadableState<ValidationStatus>;

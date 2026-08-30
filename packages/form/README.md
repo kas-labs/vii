@@ -6,12 +6,25 @@ Experimental reactive headless form state and validation engine for the Vii ecos
 
 Internal development / experimental candidate (Phase 1 Baseline).
 
-- **Current Implementation (P1f — FieldArray & Stable Identity):**
+- **Current Implementation (P1g — Submission & Server Issues):**
+  - **Model A Submission Lifecycle (`form.submit`):**
+    - State machine: `idle` -> `validating` -> `submitting` -> `succeeded` | `failed` | `cancelled`.
+    - Model A terminal state invariant: `submissionStatus` represents the outcome of the latest submission attempt. User edits after `succeeded` or `failed` update `dirty: true` but do NOT reset `submissionStatus` to `idle`.
+    - Validation gate: runs recursive tree validation with `trigger: "submit"`, awaits async rules, and blocks submission if invalid or if any field has parse errors (`parseStatus === "invalid"`).
+    - Immutable snapshotting: passes deep-cloned immutable domain output snapshot (`deepCloneSnapshot`) to `submit(action)` to protect against mid-flight tree mutation.
+    - Error ownership: unexpected errors in user submit action rethrow to caller while setting `submissionStatus: "failed"`.
+    - In-flight cancellation: `form.cancelSubmit()`, duplicate submit policies (`supersede`, `drop`, `reject`), and automatic abort on `form.reset()`, `form.reinitialize()`, or `form.dispose()`.
+  - **Structured Server Issue Taxonomy & Routing:**
+    - `ServerIssue` structure: `{ code, message, path?, source: "server" }`.
+    - Routing to leaf fields, groups, arrays, and fallback to root `form.serverIssues` for unresolvable/root paths.
+    - Localized clearing on edit: editing a leaf field clears only that field's server issues; siblings and root issues remain intact.
+    - Coexistence with client validation: running client validators does not wipe active server issues.
+    - `FieldArray` in-flight mutation resilience: submission-time identity snapshots map array paths to stable item IDs, ensuring server responses route to the correct item at its live position even if items are reordered mid-flight; deleted items fall back safely to `form.serverIssues`.
   - **Dynamic Repeatable Collections (`createFieldArray`):**
     - Stable logical item identity (`FieldArrayItem<TNode>` with stable `id` and `node`) independent of array positional indices; reordering (`move`, `swap`), insertion, and removal preserve item identity, child Scope, focus state, and client issues.
     - Opaque internal ID generation (`vii_item_${counter}`) or custom `keyExtractor` (requiring a non-empty string) without ID collisions; IDs never leak into domain `value` or presentation `rawValue`.
     - Batch-safe array mutations: `append`, `prepend`, `insert`, `remove` (returns `void`), `move`, `swap`, `clear`.
-    - Reactive collection aggregation: `value`, `rawValue`, `touched`, `dirty`, `pending`, `valid`, `invalid`, and `issues` (with dynamically updated numeric index prefix paths `[i, ...]`).
+    - Reactive collection aggregation: `value`, `rawValue`, `touched`, `dirty`, `pending`, `valid`, `invalid`, `issues`, and `serverIssues` (with dynamically updated numeric index prefix paths `[i, ...]`).
     - Identity-strict dirty tracking: an array is pristine (`dirty === false`) if and only if its length matches baseline, its exact key identity sequence matches baseline, and all child nodes are pristine.
     - Deterministic child Scope lifecycle and transactional adoption: removed baseline items are retained privately for `reset()` restoration; non-baseline items are cleanly disposed; parent disposal cascades to all child items; direct disposal of adopted items is rejected.
     - Cancellation & race safety: removing an item while async validation is in flight immediately aborts its controller; moving an item dynamically updates its issue prefix upon resolution.
@@ -22,7 +35,7 @@ Internal development / experimental candidate (Phase 1 Baseline).
     - Synchronous validation rules (`SyncValidationRule<TValue>`) and asynchronous validation rules (`AsyncValidationRule<TValue>`). Automatic validation (on change, blur, debounce) contains unexpected synchronous exceptions and asynchronous rejections into structured execution issues (`validation.execution_error`) with `validationStatus: "invalid"`, while manual `validate()` propagates errors directly to the caller.
     - Standard Schema v1 validation bridge (`standardSchema`) providing provider-neutral support for any `@standard-schema/spec` schema (e.g., Zod 4, Valibot, ArkType) with fail-closed boundary enforcement and zero vendor runtime dependencies.
     - Validation execution controls: trigger modes (`change`, `blur`, `submit`, `manual`), debounce duration (`debounceMs`), monotonic validation revision counters, AbortSignal cancellation, and stale-result protection.
-    - Reactive state signals: `value`, `rawValue`, `touched`, `dirty`, `pending`, `valid`, `invalid`, `issues`, `parseIssue`, `parseStatus`, `validationStatus`. Issue state mutation remains strictly internal (no public `setIssues`).
+    - Reactive state signals: `value`, `rawValue`, `touched`, `dirty`, `pending`, `valid`, `invalid`, `issues`, `serverIssues`, `parseIssue`, `parseStatus`, `validationStatus`. Issue state mutation remains strictly internal (no public `setIssues`).
     - Trusted baseline contract: explicit `initialValue` + `initialRawValue` at creation and `{ value, rawValue }` in `form.reinitialize` establish the canonical domain + presentation pair as a trusted baseline without running the parser; parsers are used for subsequent raw input mutations.
     - `field.reset()` restores the current canonical baseline only; baseline replacement belongs to `form.reinitialize`.
     - Domain dirty semantics: `dirty` compares parsed domain `value` to baseline domain value (presentation-only raw edits with equivalent value stay pristine).
@@ -30,11 +43,11 @@ Internal development / experimental candidate (Phase 1 Baseline).
     - `createNumberParser`: strict decimal grammar parser with options for empty handling, whitespace trimming, and raw input preservation.
     - `createStringParser`: optional whitespace trimming without silent data loss by default.
   - **Nested Groups (`createFieldGroup`) & Root Forms (`createForm`):**
-    - Hierarchical aggregation of `value`, `rawValue`, `touched`, `dirty`, `pending`, `valid`, `invalid`, and `issues` (with recursive path prefixing).
+    - Hierarchical aggregation of `value`, `rawValue`, `touched`, `dirty`, `pending`, `valid`, `invalid`, `issues`, and `serverIssues` (with recursive path prefixing).
     - Granular reactivity: field mutation in one branch does not notify un-mutated branches.
     - Whole-form baseline reinitialization (`form.reinitialize`) using explicit separate `value` and `rawValue` trees (`FormReinitializeInput`); recursive two-phase prevalidation with zero mutation on malformed input; successful commit is batched for observer atomicity.
     - Transactional node adoption and deterministic Scope lifecycle ownership.
 - **Subpaths (`/react`, `/vanilla`, `/angular`, `/vue`):** Skeleton infrastructure entrypoints (adapters deferred to P1h–P1j).
-- **Deferred / Non-Goals for P1f:** No submission pipeline or server issue routing (deferred to P1g), and no framework adapter implementations (deferred to P1h–P1j).
+- **Deferred / Non-Goals for P1g:** Framework adapter implementations (deferred to P1h–P1j).
 
 See `docs/architecture/FORM_ARCHITECTURE.md` and `docs/roadmap/FORM_RESEARCH.md` for architecture and roadmap details.

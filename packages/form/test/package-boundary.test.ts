@@ -13,7 +13,7 @@ const packageRoot = path.resolve(currentDirectory, "..");
 const manifestPath = path.join(packageRoot, "package.json");
 const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
 
-describe("@vii-labs/form package boundary (P1f)", () => {
+describe("@vii-labs/form package boundary (P1g)", () => {
   test("root exports createField, createFieldGroup, createFieldArray, createForm, standardSchema, and parsers; adapter entrypoints resolve cleanly as zero-runtime ESM modules", () => {
     expect(formRoot).toBeDefined();
     expect(Object.keys(formRoot).sort()).toEqual(

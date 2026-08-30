@@ -1,6 +1,7 @@
 import { batch, computed, createScope, state } from "@vii-labs/core";
 import { sanitizeParseIssue } from "../parsers/builtins.js";
 import type { ParseIssue, ParseStatus } from "../parsers/types.js";
+import type { ServerIssue } from "../submission/types.js";
 import type { FieldIssue, ValidationIssue, ValidationStatus } from "../validation/types.js";
 import type { InternalFieldBaseline } from "./baseline-types.js";
 import { createValidationRuntime, readSharedConfig } from "./field-validation-runtime.js";
@@ -33,6 +34,7 @@ export function createParsedField<TRaw, TValue>(
   const pendingState = state<boolean>(false);
   const issuesState = state<readonly FieldIssue[]>([]);
   const validationIssuesState = state<readonly ValidationIssue[]>([]);
+  const serverIssuesState = state<readonly ServerIssue[]>([]);
   const parseIssueState = state<ParseIssue | null>(null);
   const parseStatusState = state<ParseStatus>("parsed");
   const validationStatusState = state<ValidationStatus>("unvalidated");
@@ -40,8 +42,11 @@ export function createParsedField<TRaw, TValue>(
   const syncCombinedIssues = (
     validationIss: readonly ValidationIssue[] = validationIssuesState.get(),
     parseIss: ParseIssue | null = parseIssueState.get(),
+    serverIss: readonly ServerIssue[] = serverIssuesState.get(),
   ): readonly FieldIssue[] => {
-    const combined = parseIss ? Object.freeze([parseIss]) : Object.freeze([...validationIss]);
+    const combined = parseIss
+      ? Object.freeze([parseIss])
+      : Object.freeze([...validationIss, ...serverIss]);
     issuesState.set(combined);
     return combined;
   };
@@ -89,7 +94,8 @@ export function createParsedField<TRaw, TValue>(
       valueState.set(next);
       parseIssueState.set(null);
       parseStatusState.set("parsed");
-      syncCombinedIssues(validationIssuesState.get(), null);
+      serverIssuesState.set([]);
+      syncCombinedIssues(validationIssuesState.get(), null, []);
       if (validationIssuesState.get().length === 0) validationStatusState.set("unvalidated");
     });
     if (!disposed && config.rules.length > 0 && config.triggerSet.has("change"))
@@ -115,7 +121,8 @@ export function createParsedField<TRaw, TValue>(
         valueState.set(parseResult.value);
         parseIssueState.set(null);
         parseStatusState.set("parsed");
-        syncCombinedIssues(validationIssuesState.get(), null);
+        serverIssuesState.set([]);
+        syncCombinedIssues(validationIssuesState.get(), null, []);
         if (validationIssuesState.get().length === 0) validationStatusState.set("unvalidated");
       });
       if (!disposed && config.rules.length > 0 && config.triggerSet.has("change"))
@@ -127,7 +134,8 @@ export function createParsedField<TRaw, TValue>(
         parseIssueState.set(issue);
         parseStatusState.set("invalid");
         validationIssuesState.set([]);
-        syncCombinedIssues([], issue);
+        serverIssuesState.set([]);
+        syncCombinedIssues([], issue, []);
         validationStatusState.set("invalid");
         pendingState.set(false);
       });
@@ -142,6 +150,7 @@ export function createParsedField<TRaw, TValue>(
       rawValueState.set(baselineRawState.get());
       parseIssueState.set(null);
       validationIssuesState.set([]);
+      serverIssuesState.set([]);
       issuesState.set([]);
       parseStatusState.set("parsed");
       touchedState.set(false);
@@ -160,6 +169,7 @@ export function createParsedField<TRaw, TValue>(
     valid: validComputed,
     invalid: invalidComputed,
     issues: issuesState,
+    serverIssues: serverIssuesState,
     parseIssue: parseIssueState,
     parseStatus: parseStatusState,
     validationStatus: validationStatusState,
@@ -220,6 +230,7 @@ export function createParsedField<TRaw, TValue>(
         rawValueState.set(nextBaseline.rawValue);
         parseIssueState.set(null);
         validationIssuesState.set([]);
+        serverIssuesState.set([]);
         issuesState.set([]);
         parseStatusState.set("parsed");
         touchedState.set(false);
@@ -229,6 +240,18 @@ export function createParsedField<TRaw, TValue>(
     },
     getDirectChildNodes: () => [],
     disposeFromOwner: () => performDisposal(),
+    clearServerIssues: () => {
+      batch(() => {
+        serverIssuesState.set([]);
+        syncCombinedIssues(validationIssuesState.get(), parseIssueState.get(), []);
+      });
+    },
+    setServerIssues: (sIssues) => {
+      batch(() => {
+        serverIssuesState.set(Object.freeze(sIssues));
+        syncCombinedIssues(validationIssuesState.get(), parseIssueState.get(), sIssues);
+      });
+    },
   };
 
   attachInternalNode(fieldState, internal);

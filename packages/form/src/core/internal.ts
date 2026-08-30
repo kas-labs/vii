@@ -1,4 +1,5 @@
 import type { Scope } from "@vii-labs/core";
+import type { ServerIssue } from "../submission/types.js";
 import type { FormFieldsRecord, FormNode } from "./types.js";
 
 /**
@@ -23,6 +24,8 @@ export interface FormNodeInternal<T = unknown> {
   reinitialize(nextBaseline: T): void;
   getDirectChildNodes(): readonly FormNode[];
   disposeFromOwner(): void;
+  clearServerIssues?(): void;
+  setServerIssues?(issues: readonly ServerIssue[]): void;
 }
 
 /**

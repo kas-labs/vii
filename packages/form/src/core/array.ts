@@ -1,4 +1,5 @@
 import { batch, computed, createScope, state, type Scope } from "@vii-labs/core";
+import type { ServerIssue } from "../submission/types.js";
 import type { FieldIssue, ValidationTriggerMode } from "../validation/types.js";
 import {
   commitArrayItemsAdoption,
@@ -29,6 +30,7 @@ export function createFieldArray<TItemNode extends FormNode = FormNode>(
   };
 
   const arrayScope = scope ? scope.createChild({ name: "array" }) : createScope({ name: "array" });
+  const serverIssuesState = state<readonly ServerIssue[]>([]);
   const scopesMap = new Map<string, Scope>();
 
   // Phase 1: Preflight entire initial items list without mutating any candidate node
@@ -123,6 +125,7 @@ export function createFieldArray<TItemNode extends FormNode = FormNode>(
 
   const validComputed = arrayScope.run(() =>
     computed(() => {
+      if (serverIssuesState.get().length > 0) return false;
       const items = itemsState.get();
       for (let i = 0; i < items.length; i++) {
         if (!items[i]!.node.valid.get()) return false;
@@ -144,6 +147,10 @@ export function createFieldArray<TItemNode extends FormNode = FormNode>(
           const prefix = [i, ...(iss.path ?? [])];
           collected.push({ ...iss, path: Object.freeze(prefix) });
         }
+      }
+      const ownServer = serverIssuesState.get();
+      for (let i = 0; i < ownServer.length; i++) {
+        collected.push(ownServer[i]!);
       }
       return Object.freeze(collected);
     }),
@@ -250,6 +257,7 @@ export function createFieldArray<TItemNode extends FormNode = FormNode>(
   const reset = (): void => {
     assertActive();
     batch(() => {
+      serverIssuesState.set([]);
       const current = itemsState.get();
       const restored = baselineTracker.performReset(current, scopesMap);
       itemsState.set(restored);
@@ -258,6 +266,7 @@ export function createFieldArray<TItemNode extends FormNode = FormNode>(
 
   const reinitialize = (): void => {
     assertActive();
+    serverIssuesState.set([]);
     const current = itemsState.get();
     baselineTracker.performReinitialize(current, scopesMap);
   };
@@ -273,6 +282,7 @@ export function createFieldArray<TItemNode extends FormNode = FormNode>(
     valid: validComputed,
     invalid: invalidComputed,
     issues: issuesComputed,
+    serverIssues: serverIssuesState,
     getValue: () => {
       assertActive();
       return valueComputed.get();
@@ -302,6 +312,12 @@ export function createFieldArray<TItemNode extends FormNode = FormNode>(
     getDirectChildNodes: () => itemsState.get().map((it) => it.node),
     disposeFromOwner: () => {
       performDisposal();
+    },
+    clearServerIssues: () => {
+      serverIssuesState.set([]);
+    },
+    setServerIssues: (sIssues) => {
+      serverIssuesState.set(Object.freeze(sIssues));
     },
   };
 

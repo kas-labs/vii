@@ -1,4 +1,5 @@
 import type { FormIssueBase, IssueSource, ParseIssue } from "../parsers/types.js";
+import type { ServerIssue } from "../submission/types.js";
 
 /**
  * Structural segment in a field issue path (property key or array index).
@@ -29,7 +30,7 @@ export interface ValidationIssue extends FormIssueBase {
 /**
  * Union of all structured issues that can attach to a form field.
  */
-export type FieldIssue = ValidationIssue | ParseIssue;
+export type FieldIssue = ValidationIssue | ParseIssue | ServerIssue;
 
 /**
  * Raw input shape acceptable when returning issues from validation rules.

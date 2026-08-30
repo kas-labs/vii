@@ -1,5 +1,6 @@
 import { batch, computed, createScope } from "@vii-labs/core";
-import type { FieldIssue } from "../validation/types.js";
+import { SubmissionCoordinator } from "../submission/state-machine.js";
+import type { FieldIssue, ValidationTriggerMode } from "../validation/types.js";
 import type { FormReinitializeInput } from "./baseline-types.js";
 import {
   adoptChildNodes,
@@ -22,7 +23,8 @@ import type {
  *
  * Exposes typed child access, aggregate domain and raw presentation values,
  * recursive dirty/touched tracking, aggregate validation validity/pending/issues,
- * batched reset, whole-form baseline reinitialization, and deterministic root Scope lifecycle ownership.
+ * Model A submission state machine, server issue routing, batched reset,
+ * whole-form baseline reinitialization, and deterministic root Scope lifecycle ownership.
  */
 export function createForm<TFields extends FormFieldsRecord>(
   options: CreateFormOptions<TFields>,
@@ -42,6 +44,17 @@ export function createForm<TFields extends FormFieldsRecord>(
 
   adoptChildNodes(formScope, fields, fieldKeys);
 
+  const coordinator = new SubmissionCoordinator<FormValues<TFields>>(formScope, {
+    isDisposed: () => disposed,
+    assertActive,
+    getValues: () => valueComputed.get(),
+    validateTree: (trigger) => validate(trigger),
+    getIssues: () => issuesComputed.get(),
+    isInvalid: () => invalidComputed.get(),
+    rootNode: () => formInstance,
+    getDiagnostics: () => options.diagnostics,
+  });
+
   let detachFromParent: (() => void) | undefined;
 
   const performDisposal = (): void => {
@@ -51,6 +64,7 @@ export function createForm<TFields extends FormFieldsRecord>(
     disposed = true;
     ownership = "disposed";
     internal.ownership = "disposed";
+    coordinator.dispose();
     detachFromParent?.();
     formScope.dispose();
   };
@@ -122,6 +136,9 @@ export function createForm<TFields extends FormFieldsRecord>(
 
   const validComputed = formScope.run(() =>
     computed(() => {
+      if (coordinator.formServerIssuesState.get().length > 0) {
+        return false;
+      }
       for (let i = 0; i < fieldKeys.length; i++) {
         if (!fields[fieldKeys[i]!]!.valid.get()) {
           return false;
@@ -148,13 +165,36 @@ export function createForm<TFields extends FormFieldsRecord>(
           });
         }
       }
+      const ownServer = coordinator.formServerIssuesState.get();
+      for (let i = 0; i < ownServer.length; i++) {
+        collected.push(ownServer[i]!);
+      }
       return Object.freeze(collected);
     }),
   );
 
+  const validate = (
+    trigger: ValidationTriggerMode = "manual",
+  ): Promise<readonly FieldIssue[]> | readonly FieldIssue[] => {
+    assertActive();
+    const promises: Promise<readonly FieldIssue[]>[] = [];
+    for (let i = 0; i < fieldKeys.length; i++) {
+      const child = fields[fieldKeys[i]!]!;
+      const res = child.validate(trigger);
+      if (res && typeof (res as Promise<unknown>).then === "function") {
+        promises.push(res as Promise<readonly FieldIssue[]>);
+      }
+    }
+    if (promises.length > 0) {
+      return Promise.all(promises).then(() => issuesComputed.get());
+    }
+    return issuesComputed.get();
+  };
+
   const reset = (): void => {
     assertActive();
     batch(() => {
+      coordinator.reset();
       for (let i = 0; i < fieldKeys.length; i++) {
         fields[fieldKeys[i]!]!.reset();
       }
@@ -165,6 +205,7 @@ export function createForm<TFields extends FormFieldsRecord>(
     assertActive();
     const plan = prepareReinitializePlan(fields, fieldKeys, nextBaseline);
     batch(() => {
+      coordinator.reset();
       commitReinitializePlan(plan);
     });
   };
@@ -180,6 +221,9 @@ export function createForm<TFields extends FormFieldsRecord>(
     valid: validComputed,
     invalid: invalidComputed,
     issues: issuesComputed,
+    serverIssues: coordinator.formServerIssuesState,
+    submissionStatus: coordinator.submissionStatusState,
+    submitting: coordinator.submitting,
     getValue: () => {
       assertActive();
       return valueComputed.get();
@@ -188,6 +232,9 @@ export function createForm<TFields extends FormFieldsRecord>(
       assertActive();
       return rawValueComputed.get();
     },
+    validate,
+    submit: (action, options) => coordinator.submit(action, options),
+    cancelSubmit: () => coordinator.cancelSubmit(),
     reset,
     reinitialize,
     dispose,
@@ -202,6 +249,12 @@ export function createForm<TFields extends FormFieldsRecord>(
     getDirectChildNodes: () => fieldKeys.map((k) => fields[k]!),
     disposeFromOwner: () => {
       performDisposal();
+    },
+    clearServerIssues: () => {
+      coordinator.formServerIssuesState.set([]);
+    },
+    setServerIssues: (sIssues) => {
+      coordinator.formServerIssuesState.set(Object.freeze(sIssues));
     },
   };
 

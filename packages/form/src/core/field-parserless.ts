@@ -1,5 +1,6 @@
 import { batch, computed, createScope, state } from "@vii-labs/core";
 import type { ParseIssue, ParseStatus } from "../parsers/types.js";
+import type { ServerIssue } from "../submission/types.js";
 import type { FieldIssue, ValidationIssue, ValidationStatus } from "../validation/types.js";
 import type { InternalFieldBaseline } from "./baseline-types.js";
 import { createValidationRuntime, readSharedConfig } from "./field-validation-runtime.js";
@@ -30,6 +31,7 @@ export function createParserlessField<TValue>(
   const pendingState = state<boolean>(false);
   const issuesState = state<readonly FieldIssue[]>([]);
   const validationIssuesState = state<readonly ValidationIssue[]>([]);
+  const serverIssuesState = state<readonly ServerIssue[]>([]);
   const parseIssueState = state<ParseIssue | null>(null);
   const parseStatusState = state<ParseStatus>("unparsed");
   const validationStatusState = state<ValidationStatus>("unvalidated");
@@ -37,8 +39,11 @@ export function createParserlessField<TValue>(
   const syncCombinedIssues = (
     validationIss: readonly ValidationIssue[] = validationIssuesState.get(),
     parseIss: ParseIssue | null = parseIssueState.get(),
+    serverIss: readonly ServerIssue[] = serverIssuesState.get(),
   ): readonly FieldIssue[] => {
-    const combined = parseIss ? Object.freeze([parseIss]) : Object.freeze([...validationIss]);
+    const combined = parseIss
+      ? Object.freeze([parseIss])
+      : Object.freeze([...validationIss, ...serverIss]);
     issuesState.set(combined);
     return combined;
   };
@@ -87,7 +92,8 @@ export function createParserlessField<TValue>(
       rawValueState.set(next);
       parseIssueState.set(null);
       parseStatusState.set("unparsed");
-      syncCombinedIssues(validationIssuesState.get(), null);
+      serverIssuesState.set([]);
+      syncCombinedIssues(validationIssuesState.get(), null, []);
       if (validationIssuesState.get().length === 0) validationStatusState.set("unvalidated");
     });
     if (!disposed && config.rules.length > 0 && config.triggerSet.has("change"))
@@ -102,7 +108,8 @@ export function createParserlessField<TValue>(
       valueState.set(raw);
       parseIssueState.set(null);
       parseStatusState.set("unparsed");
-      syncCombinedIssues(validationIssuesState.get(), null);
+      serverIssuesState.set([]);
+      syncCombinedIssues(validationIssuesState.get(), null, []);
       if (validationIssuesState.get().length === 0) validationStatusState.set("unvalidated");
     });
     if (!disposed && config.rules.length > 0 && config.triggerSet.has("change"))
@@ -117,6 +124,7 @@ export function createParserlessField<TValue>(
       rawValueState.set(baselineRawState.get());
       parseIssueState.set(null);
       validationIssuesState.set([]);
+      serverIssuesState.set([]);
       issuesState.set([]);
       parseStatusState.set("unparsed");
       touchedState.set(false);
@@ -135,6 +143,7 @@ export function createParserlessField<TValue>(
     valid: validComputed,
     invalid: invalidComputed,
     issues: issuesState,
+    serverIssues: serverIssuesState,
     parseIssue: parseIssueState,
     parseStatus: parseStatusState,
     validationStatus: validationStatusState,
@@ -195,6 +204,7 @@ export function createParserlessField<TValue>(
         rawValueState.set(nextBaseline.rawValue);
         parseIssueState.set(null);
         validationIssuesState.set([]);
+        serverIssuesState.set([]);
         issuesState.set([]);
         parseStatusState.set("unparsed");
         touchedState.set(false);
@@ -204,6 +214,18 @@ export function createParserlessField<TValue>(
     },
     getDirectChildNodes: () => [],
     disposeFromOwner: () => performDisposal(),
+    clearServerIssues: () => {
+      batch(() => {
+        serverIssuesState.set([]);
+        syncCombinedIssues(validationIssuesState.get(), parseIssueState.get(), []);
+      });
+    },
+    setServerIssues: (sIssues) => {
+      batch(() => {
+        serverIssuesState.set(Object.freeze(sIssues));
+        syncCombinedIssues(validationIssuesState.get(), parseIssueState.get(), sIssues);
+      });
+    },
   };
 
   attachInternalNode(fieldState, internal);

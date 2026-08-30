@@ -14,6 +14,8 @@ const artifactDirectory = path.join(temporaryRoot, "artifact");
 const coreArtifactDirectory = path.join(temporaryRoot, "core-artifact");
 const consumerDirectory = path.join(temporaryRoot, "consumer");
 const fixtureDirectory = path.join(temporaryRoot, "fixture");
+const reactConsumerDirectory = path.join(temporaryRoot, "react-consumer");
+const reactFixtureDirectory = path.join(temporaryRoot, "react-fixture");
 
 function run(command, args, cwd = repositoryRoot) {
   execFileSync(command, args, {
@@ -46,6 +48,8 @@ try {
   await mkdir(coreArtifactDirectory, { recursive: true });
   await mkdir(consumerDirectory, { recursive: true });
   await mkdir(path.join(fixtureDirectory, "src"), { recursive: true });
+  await mkdir(reactConsumerDirectory, { recursive: true });
+  await mkdir(path.join(reactFixtureDirectory, "src"), { recursive: true });
 
   run(pnpm, ["--filter", "@vii-labs/core", "build"]);
   run(pnpm, ["--filter", "@vii-labs/form", "build"]);
@@ -188,10 +192,30 @@ try {
     "package/dist/validation/types.d.ts.map",
     "package/dist/validation/types.js",
     "package/dist/validation/types.js.map",
+    "package/dist/adapters/react/external-store.d.ts",
+    "package/dist/adapters/react/external-store.d.ts.map",
+    "package/dist/adapters/react/external-store.js",
+    "package/dist/adapters/react/external-store.js.map",
     "package/dist/adapters/react/index.d.ts",
     "package/dist/adapters/react/index.d.ts.map",
     "package/dist/adapters/react/index.js",
     "package/dist/adapters/react/index.js.map",
+    "package/dist/adapters/react/types.d.ts",
+    "package/dist/adapters/react/types.d.ts.map",
+    "package/dist/adapters/react/types.js",
+    "package/dist/adapters/react/types.js.map",
+    "package/dist/adapters/react/use-field-array.d.ts",
+    "package/dist/adapters/react/use-field-array.d.ts.map",
+    "package/dist/adapters/react/use-field-array.js",
+    "package/dist/adapters/react/use-field-array.js.map",
+    "package/dist/adapters/react/use-field.d.ts",
+    "package/dist/adapters/react/use-field.d.ts.map",
+    "package/dist/adapters/react/use-field.js",
+    "package/dist/adapters/react/use-field.js.map",
+    "package/dist/adapters/react/use-form.d.ts",
+    "package/dist/adapters/react/use-form.d.ts.map",
+    "package/dist/adapters/react/use-form.js",
+    "package/dist/adapters/react/use-form.js.map",
     "package/dist/adapters/vanilla/index.d.ts",
     "package/dist/adapters/vanilla/index.d.ts.map",
     "package/dist/adapters/vanilla/index.js",
@@ -219,13 +243,11 @@ import {
   createNumberParser,
   standardSchema,
 } from "@vii-labs/form";
-import * as formReact from "@vii-labs/form/react";
 import * as formVanilla from "@vii-labs/form/vanilla";
 import * as formAngular from "@vii-labs/form/angular";
 import * as formVue from "@vii-labs/form/vue";
 
 export const rootKeys = Object.keys(form).sort();
-export const reactKeys = Object.keys(formReact);
 export const vanillaKeys = Object.keys(formVanilla);
 export const angularKeys = Object.keys(formAngular);
 export const vueKeys = Object.keys(formVue);
@@ -450,27 +472,22 @@ export async function runFormTreeScenario() {
       "createStringParser",
       "standardSchema",
     ].sort(),
-    "clean consumer root export should contain P1f symbols",
-  );
-  assert.deepEqual(
-    consumer.reactKeys,
-    [],
-    "clean consumer react subpath export should be empty in P1f",
+    "clean consumer root export should contain P1h symbols",
   );
   assert.deepEqual(
     consumer.vanillaKeys,
     [],
-    "clean consumer vanilla subpath export should be empty in P1f",
+    "clean consumer vanilla subpath export should be empty in P1h",
   );
   assert.deepEqual(
     consumer.angularKeys,
     [],
-    "clean consumer angular subpath export should be empty in P1f",
+    "clean consumer angular subpath export should be empty in P1h",
   );
   assert.deepEqual(
     consumer.vueKeys,
     [],
-    "clean consumer vue subpath export should be empty in P1f",
+    "clean consumer vue subpath export should be empty in P1h",
   );
 
   const scenarioResult = await consumer.runFormTreeScenario();
@@ -519,6 +536,104 @@ export async function runFormTreeScenario() {
       postDisposeError: true,
     },
     "clean consumer form tree scenario must execute correctly against packed artifact",
+  );
+
+  // React consumer fixture source
+  const reactConsumerSource = `
+import React, { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { createField, createFieldArray, createForm } from "@vii-labs/form";
+import * as formReact from "@vii-labs/form/react";
+import { useField, useForm, useFieldArray } from "@vii-labs/form/react";
+
+export const reactKeys = Object.keys(formReact).sort();
+
+export function runReactApp() {
+  const form = createForm({
+    fields: {
+      username: createField({ initialValue: "test-user" }),
+      items: createFieldArray({
+        items: [createField({ initialValue: "item-1" })],
+      }),
+    },
+  });
+
+  function UserView({ target }: { target: typeof form.fields.username }) {
+    const binding = useField(target);
+    return createElement("span", { "data-field": "username" }, binding.value);
+  }
+
+  function ListView({ target }: { target: typeof form.fields.items }) {
+    const arrayBinding = useFieldArray(target);
+    return createElement(
+      "ul",
+      null,
+      arrayBinding.items.map((it) => createElement("li", { key: it.id }, it.node.value.get())),
+    );
+  }
+
+  function App({ target }: { target: typeof form }) {
+    const formBinding = useForm(target);
+    return createElement(
+      "div",
+      null,
+      createElement(UserView, { target: target.fields.username }),
+      createElement(ListView, { target: target.fields.items }),
+      createElement("span", { "data-status": formBinding.submissionStatus }, formBinding.submissionStatus),
+    );
+  }
+
+  const markup = renderToStaticMarkup(createElement(App, { target: form }));
+  form.dispose();
+  return { markup };
+}
+`;
+
+  await import("node:fs/promises").then((fs) =>
+    fs.writeFile(path.join(reactFixtureDirectory, "src/main.ts"), reactConsumerSource, "utf8"),
+  );
+
+  await prepareConsumer({
+    directory: reactConsumerDirectory,
+    fixtureDirectory: reactFixtureDirectory,
+    packageJson: {
+      name: "vii-packed-form-react-consumer",
+      private: true,
+      type: "module",
+      dependencies: {
+        "@vii-labs/form": `file:${formArtifactPath}`,
+        "@vii-labs/core": `file:${coreArtifactPath}`,
+        react: "19.2.8",
+        "react-dom": "19.2.8",
+      },
+      devDependencies: {
+        "@types/react": "19.2.17",
+        "@types/react-dom": "19.2.3",
+      },
+    },
+    repositoryRoot,
+    pnpm,
+  });
+
+  const reactConsumer = await import(path.join(reactConsumerDirectory, "dist/main.js"));
+  assert.deepEqual(
+    reactConsumer.reactKeys,
+    ["useField", "useFieldArray", "useForm"].sort(),
+    "clean React consumer subpath export must contain P1h hooks",
+  );
+
+  const reactScenarioResult = reactConsumer.runReactApp();
+  assert.ok(
+    reactScenarioResult.markup.includes("test-user"),
+    "React consumer should render useField output",
+  );
+  assert.ok(
+    reactScenarioResult.markup.includes("item-1"),
+    "React consumer should render useFieldArray output",
+  );
+  assert.ok(
+    reactScenarioResult.markup.includes("idle"),
+    "React consumer should render useForm output",
   );
 
   // Sanity size logging

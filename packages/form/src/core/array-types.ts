@@ -34,7 +34,8 @@ export interface CreateFieldArrayOptions<TItemNode extends FormNode = FormNode> 
 
   /**
    * Optional custom key extractor to derive a stable identifier from an item node.
-   * If omitted or returns empty/nullish, an opaque unique token is generated automatically.
+   * If provided, it must return a non-empty string.
+   * If omitted, an opaque unique token is generated automatically.
    */
   readonly keyExtractor?: ((node: TItemNode) => string) | undefined;
 }
@@ -119,9 +120,17 @@ export interface FieldArray<TItemNode extends FormNode = FormNode> {
   insert(index: number, node: TItemNode): FieldArrayItem<TItemNode>;
 
   /**
-   * Removes and disposes the item node at the specified index.
+   * Removes the item at the specified index from the active array.
+   *
+   * Lifecycle semantics:
+   * - Baseline items (established at creation or reinitialization) are removed from active presentation
+   *   and aggregate computations, but are retained privately for potential restoration by `reset()`.
+   * - Non-baseline items (appended or inserted after baseline) are disposed immediately.
+   * - Restoring the baseline via `reset()` restores baseline items with their original stable IDs and node instances.
+   * - Replacing the baseline via `reinitialize()` disposes any obsolete retained baseline items.
+   * - Disposing the array disposes all active and retained items.
    */
-  remove(index: number): TItemNode;
+  remove(index: number): void;
 
   /**
    * Moves an item node from fromIndex to toIndex preserving stable identity and child states.
@@ -134,7 +143,12 @@ export interface FieldArray<TItemNode extends FormNode = FormNode> {
   swap(indexA: number, indexB: number): void;
 
   /**
-   * Removes and disposes all item nodes in the array.
+   * Removes all items from the active array presentation.
+   *
+   * Lifecycle semantics:
+   * - Baseline items are retained privately for potential restoration by `reset()`.
+   * - Non-baseline items are disposed immediately.
+   * - Calling `reset()` restores all baseline items in canonical order and restores pristine dirty state.
    */
   clear(): void;
 

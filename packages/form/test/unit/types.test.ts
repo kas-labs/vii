@@ -258,6 +258,9 @@ describe("Type inference matrix (P1e corrections)", () => {
 
     expectTypeOf(groupArray.getValue()).toEqualTypeOf<readonly ExpectedGroupItemValue[]>();
     expectTypeOf(groupArray.getRawValue()).toEqualTypeOf<readonly ExpectedGroupItemRawValue[]>();
+    expectTypeOf(groupArray.remove).parameters.toEqualTypeOf<[number]>();
+    expectTypeOf(groupArray.remove).returns.toEqualTypeOf<void>();
+    expectTypeOf(groupArray.clear).returns.toEqualTypeOf<void>();
   });
 
   test("infers nested Form containing FieldArray", () => {

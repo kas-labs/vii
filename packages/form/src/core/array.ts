@@ -171,7 +171,7 @@ export function createFieldArray<TItemNode extends FormNode = FormNode>(
     return item;
   };
 
-  const remove = (index: number): TItemNode => {
+  const remove = (index: number): void => {
     assertActive();
     const current = itemsState.get();
     assertIntegerIndex(index, current.length, false);
@@ -184,8 +184,6 @@ export function createFieldArray<TItemNode extends FormNode = FormNode>(
       itemsState.set(Object.freeze(next));
       baselineTracker.handleItemRemoval(item, itemScope, scopesMap);
     });
-
-    return item.node;
   };
 
   const move = (fromIndex: number, toIndex: number): void => {

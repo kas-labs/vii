@@ -149,8 +149,7 @@ describe("FieldArray — dynamic collection with stable identity (P1f)", () => {
       const id1 = array.items.get()[0]!.id;
       const id3 = array.items.get()[2]!.id;
 
-      const removed = array.remove(1);
-      expect(removed).toBe(f2);
+      array.remove(1);
 
       const current = array.items.get();
       expect(current.length).toBe(2);
@@ -746,10 +745,15 @@ describe("FieldArray — dynamic collection with stable identity (P1f)", () => {
       const idB = array.items.get()[1]!.id;
 
       // Remove baseline item 0 ("a")
-      const removed = array.remove(0);
-      expect(removed).toBe(a);
+      array.remove(0);
       expect(array.getValue()).toEqual(["b"]);
       expect(array.dirty.get()).toBe(true);
+
+      // Baseline-retained node is still tree-owned by the array: cannot be disposed directly or adopted elsewhere
+      expect(() => a.dispose()).toThrow("Cannot dispose an adopted field directly");
+      expect(() => createFieldArray({ items: [a] })).toThrow(
+        "node is already part of another form or group",
+      );
 
       // Reset restores "a" and "b" in original baseline order with exact node identities
       array.reset();
@@ -765,6 +769,20 @@ describe("FieldArray — dynamic collection with stable identity (P1f)", () => {
       expect(array.getValue()).toEqual(["a-updated", "b"]);
 
       array.dispose();
+    });
+
+    test("keyExtractor returning an empty string throws TypeError and leaves candidates standalone", () => {
+      const f1 = createField({ initialValue: "test" });
+      expect(() =>
+        createFieldArray({
+          items: [f1],
+          keyExtractor: () => "",
+        }),
+      ).toThrow(TypeError);
+
+      // Candidate f1 was not mutated or adopted
+      expect(() => f1.setValue("new")).not.toThrow();
+      expect(() => f1.dispose()).not.toThrow();
     });
 
     test("removing multiple baseline items then calling reset restores all items in canonical order", () => {

@@ -36,7 +36,9 @@ export function preflightArrayItems<TNode extends FormNode>(
       const extracted = keyExtractor(node);
       if (typeof extracted !== "string" || extracted.length === 0) {
         throw new TypeError(
-          `keyExtractor must return a non-empty string, received ${typeof extracted}`,
+          `keyExtractor must return a non-empty string, received ${
+            typeof extracted === "string" ? '""' : typeof extracted
+          }`,
         );
       }
       id = extracted;

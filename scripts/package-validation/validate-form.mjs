@@ -253,13 +253,19 @@ export async function runFormTreeScenario() {
   // Restore age to valid
   formInstance.fields.user.fields.age.setRawValue("35");
 
-  // Exercise array mutation & stable identity
+  // Exercise array mutation, baseline retention, and stable identity
   const initialTagId0 = formInstance.fields.tags.items.get()[0]!.id;
   const initialTagId1 = formInstance.fields.tags.items.get()[1]!.id;
   formInstance.fields.tags.move(0, 1);
   const tagMovedVal = formInstance.fields.tags.getValue();
   const tagMovedId0 = formInstance.fields.tags.items.get()[0]!.id;
   const tagMovedId1 = formInstance.fields.tags.items.get()[1]!.id;
+
+  // Remove baseline item and reset
+  formInstance.fields.tags.remove(0);
+  const tagRemovedVal = formInstance.fields.tags.getValue();
+  formInstance.fields.tags.reset();
+  const tagResetVal = formInstance.fields.tags.getValue();
 
   // Reinitialize
   formInstance.reinitialize({

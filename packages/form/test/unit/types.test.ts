@@ -1,5 +1,6 @@
 import { describe, expect, expectTypeOf, test } from "vitest";
 import { createField } from "../../src/core/field.js";
+import { createFieldArray } from "../../src/core/array.js";
 import { createForm } from "../../src/core/form.js";
 import { createFieldGroup } from "../../src/core/group.js";
 import { createNumberParser } from "../../src/index.js";
@@ -225,5 +226,71 @@ describe("Type inference matrix (P1e corrections)", () => {
     expect("setIssues" in field).toBe(false);
     // @ts-expect-error setIssues was removed from public FieldState
     expect(field.setIssues).toBeUndefined();
+  });
+
+  test("infers exact types for FieldArray and nested items", () => {
+    const stringArray = createFieldArray({
+      items: [createField({ initialValue: "a" })],
+    });
+
+    expectTypeOf(stringArray.getValue()).toEqualTypeOf<readonly string[]>();
+    expectTypeOf(stringArray.getRawValue()).toEqualTypeOf<readonly string[]>();
+    expectTypeOf(stringArray.value.get()).toEqualTypeOf<readonly string[]>();
+    expectTypeOf(stringArray.rawValue.get()).toEqualTypeOf<readonly string[]>();
+
+    const groupArray = createFieldArray({
+      items: [
+        createFieldGroup({
+          fields: {
+            title: createField({ initialValue: "Lead" }),
+            salary: createField<number, string>({
+              initialValue: 1000,
+              initialRawValue: "1000",
+              parser: createNumberParser(),
+            }),
+          },
+        }),
+      ],
+    });
+
+    type ExpectedGroupItemValue = { title: string; salary: number };
+    type ExpectedGroupItemRawValue = { title: string; salary: string };
+
+    expectTypeOf(groupArray.getValue()).toEqualTypeOf<readonly ExpectedGroupItemValue[]>();
+    expectTypeOf(groupArray.getRawValue()).toEqualTypeOf<readonly ExpectedGroupItemRawValue[]>();
+    expectTypeOf(groupArray.remove).parameters.toEqualTypeOf<[number]>();
+    expectTypeOf(groupArray.remove).returns.toEqualTypeOf<void>();
+    expectTypeOf(groupArray.clear).returns.toEqualTypeOf<void>();
+  });
+
+  test("infers nested Form containing FieldArray", () => {
+    const form = createForm({
+      fields: {
+        users: createFieldArray({
+          items: [
+            createFieldGroup({
+              fields: {
+                name: createField({ initialValue: "Alice" }),
+                age: createField<number, string>({
+                  initialValue: 20,
+                  initialRawValue: "20",
+                  parser: createNumberParser(),
+                }),
+              },
+            }),
+          ],
+        }),
+      },
+    });
+
+    type ExpectedFormValues = {
+      users: readonly { name: string; age: number }[];
+    };
+    type ExpectedFormRawValues = {
+      users: readonly { name: string; age: string }[];
+    };
+
+    expectTypeOf(form.getValue()).toEqualTypeOf<ExpectedFormValues>();
+    expectTypeOf(form.getRawValue()).toEqualTypeOf<ExpectedFormRawValues>();
   });
 });

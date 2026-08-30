@@ -8,8 +8,11 @@ import type {
 } from "../validation/types.js";
 
 export type {
+  CreateFieldArrayOptions,
   CreateFieldGroupOptions,
   CreateFormOptions,
+  FieldArray,
+  FieldArrayItem,
   FieldGroup,
   FormFieldsRecord,
   FormInstance,

@@ -135,4 +135,39 @@ describe("Submission Validation Gate", () => {
     expect(actionCalledWith).toEqual({ name: "Bob", age: 30 });
     expect(form.submissionStatus.get()).toBe("succeeded");
   });
+
+  describe("Async validation and user edit race conditions", () => {
+    it("never submits a stale pre-validation snapshot when field is edited during async submit validation", async () => {
+      let submittedValues: unknown = null;
+
+      const form = createForm({
+        fields: {
+          title: createField<string>({
+            initialValue: "Initial Title A",
+            rules: [
+              async (val: string) => {
+                await new Promise((resolve) => setTimeout(resolve, 30));
+                return val.length < 3 ? { code: "min_len" } : null;
+              },
+            ],
+          }),
+        },
+      });
+
+      // Submit begins with "Initial Title A"
+      const submitPromise = form.submit(async (values) => {
+        submittedValues = values;
+        return { ok: true };
+      });
+
+      // While async submit validation is in-flight, user edits to "Updated Title B"
+      form.fields.title.setValue("Updated Title B");
+
+      const result = await submitPromise;
+
+      expect(result.status).toBe("succeeded");
+      // Action MUST receive the post-validation snapshot ("Updated Title B"), NEVER the stale "Initial Title A"!
+      expect(submittedValues).toEqual({ title: "Updated Title B" });
+    });
+  });
 });

@@ -3,6 +3,7 @@ import { createFieldArray } from "../../src/core/array.js";
 import { createField } from "../../src/core/field.js";
 import { createForm } from "../../src/core/form.js";
 import { createFieldGroup } from "../../src/core/group.js";
+import { createArraySnapshotKey } from "../../src/submission/array-snapshot.js";
 import { sanitizeServerIssue } from "../../src/submission/server-issues.js";
 
 describe("Server Issue Taxonomy and Routing", () => {
@@ -228,6 +229,71 @@ describe("Server Issue Taxonomy and Routing", () => {
       // The issue falls back to root form.serverIssues without crashing or resurrecting Alice
       expect(form.serverIssues.get()).toHaveLength(1);
       expect(form.serverIssues.get()[0]?.message).toBe("Alice invalid");
+    });
+
+    it("distinguishes collision-prone path segments and dotted keys in array snapshots", async () => {
+      // 1. Snapshot key collision checks
+      const keyDotted = createArraySnapshotKey(["a.b"]);
+      const keyNested = createArraySnapshotKey(["a", "b"]);
+      expect(keyDotted).not.toBe(keyNested);
+
+      const keyNum = createArraySnapshotKey(["items", 1]);
+      const keyStr = createArraySnapshotKey(["items", "1"]);
+      expect(keyNum).not.toBe(keyStr);
+
+      const keyEmptyStr = createArraySnapshotKey([""]);
+      const keyEmptyArray = createArraySnapshotKey([]);
+      expect(keyEmptyStr).not.toBe(keyEmptyArray);
+
+      // 2. Real nested array routing with dotted field name
+      const form = createForm({
+        fields: {
+          // Object key containing an actual dot
+          "user.meta": createFieldArray({
+            items: [
+              createFieldGroup({
+                fields: {
+                  note: createField<string>({ initialValue: "DottedArrayItem0" }),
+                },
+              }),
+            ],
+          }),
+          // Separate nested group
+          user: createFieldGroup({
+            fields: {
+              meta: createFieldArray({
+                items: [
+                  createFieldGroup({
+                    fields: {
+                      note: createField<string>({ initialValue: "NestedArrayItem0" }),
+                    },
+                  }),
+                ],
+              }),
+            },
+          }),
+        },
+      });
+
+      // Submit and route issue to the dotted array: ["user.meta", 0, "note"]
+      await form.submit(async () => ({
+        ok: false,
+        issues: [
+          {
+            code: "dotted.error",
+            message: "Dotted key issue",
+            path: ["user.meta", 0, "note"],
+          },
+        ],
+      }));
+
+      // The issue must attach to form.fields["user.meta"], NOT form.fields.user.fields.meta!
+      expect(
+        form.fields["user.meta"].items.get()[0]?.node.fields.note.serverIssues.get(),
+      ).toHaveLength(1);
+      expect(
+        form.fields.user.fields.meta.items.get()[0]?.node.fields.note.serverIssues.get(),
+      ).toHaveLength(0);
     });
   });
 });

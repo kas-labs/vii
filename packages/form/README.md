@@ -11,8 +11,9 @@ Internal development / experimental candidate (Phase 1 Baseline).
     - State machine: `idle` -> `validating` -> `submitting` -> `succeeded` | `failed` | `cancelled`.
     - Model A terminal state invariant: `submissionStatus` represents the outcome of the latest submission attempt. User edits after `succeeded` or `failed` update `dirty: true` but do NOT reset `submissionStatus` to `idle`.
     - Validation gate: runs recursive tree validation with `trigger: "submit"`, awaits async rules, and blocks submission if invalid or if any field has parse errors (`parseStatus === "invalid"`).
-    - Immutable snapshotting: passes deep-cloned immutable domain output snapshot (`deepCloneSnapshot`) to `submit(action)` to protect against mid-flight tree mutation.
-    - Error ownership: unexpected errors in user submit action rethrow to caller while setting `submissionStatus: "failed"`.
+    - Immutable snapshotting: captures deep-cloned immutable domain output snapshot (`deepCloneSnapshot`) and `FieldArray` identity snapshots after the validation gate successfully passes, ensuring the submitted payload strictly matches the validated submission generation.
+    - Error ownership & structural cancellation: unexpected errors in user submit action rethrow to caller while setting `submissionStatus: "failed"`; cancellation is classified authoritatively via `signal.aborted` or canonical `AbortError` (never arbitrary message-text heuristics).
+    - Fail-closed result discrimination: submit action payloads declaring `ok === false` require an `issues` array where all issues sanitize atomically; malformed failure payloads throw `TypeError` and fail closed, never succeeding.
     - In-flight cancellation: `form.cancelSubmit()`, duplicate submit policies (`supersede`, `drop`, `reject`), and automatic abort on `form.reset()`, `form.reinitialize()`, or `form.dispose()`.
   - **Structured Server Issue Taxonomy & Routing:**
     - `ServerIssue` structure: `{ code, message, path?, source: "server" }`.

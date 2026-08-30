@@ -37,6 +37,52 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-30 17:45 CEST | Production Form Phase 1 Slice P1g: Submission Consistency, Fail-Closed Boundaries & Cancellation Classification
+
+Status: completed
+Branch: `feat/form-p1g-submission-server-issues`
+PR: #186
+
+### Scope
+
+- Correct submission lifecycle ordering: capture output domain snapshot (`deepCloneSnapshot`) and `FieldArray` identity snapshots (`collectArraySnapshots`) strictly AFTER the submission validation gate successfully passes, ensuring the submitted payload matches the validated generation and preventing pre-validation race conditions.
+- Replace array snapshot path key serialization with an injective, collision-free format (`JSON.stringify(path.map(...))`) preserving segment types (numbers vs numeric strings, dotted keys vs nested segments).
+- Implement fail-closed submit action result discrimination in `packages/form/src/submission/result.ts`: when `ok === false`, require an `issues` array where all issues sanitize atomically; throw `TypeError` and fail closed on malformed shapes.
+- Eliminate unsafe message-text cancellation heuristics in `isAbortCancellation`: classify cancellation authoritatively via `signal.aborted` or `AbortError` / `ABORT_ERR` only.
+- Add comprehensive regression test suites covering async validation races, collision-safe snapshot keys, tricky nested array routing, fail-closed result parsing, and structural cancellation classification.
+
+### Changes
+
+- Created `packages/form/src/submission/result.ts`: contains `parseSubmitActionResult` with fail-closed discrimination, atomic sanitization, and `isAbortCancellation`.
+- Updated `packages/form/src/submission/array-snapshot.ts`: updated `createArraySnapshotKey` to use injective typed JSON encoding.
+- Updated `packages/form/src/submission/state-machine.ts`: restructured `submit()` lifecycle so validation gate runs first and snapshotting occurs only after validation succeeds; integrated `parseSubmitActionResult` and `isAbortCancellation`.
+- Updated `packages/form/test/unit/submission-validation-gate.test.ts`: added async validation and user edit race condition tests.
+- Updated `packages/form/test/unit/submission-state-machine.test.ts`: added fail-closed result discrimination tests, atomic sanitization tests, and non-heuristic cancellation error ownership tests.
+- Updated `packages/form/test/unit/server-issues.test.ts`: added path key collision tests and nested array routing tests with collision-prone dotted names.
+- Updated `scripts/package-validation/validate-form.mjs`: added `dist/submission/result.*` to expected packed artifact entries.
+- Updated `packages/form/README.md` and `DUTY_WATCH.md`.
+
+### Validation
+
+- `NX_DAEMON=false pnpm nx lint form`: passed (0 errors, 0 warnings).
+- `NX_DAEMON=false pnpm nx typecheck form`: passed (0 errors).
+- `NX_DAEMON=false pnpm nx test form`: passed (19 test files, 239 unit tests).
+- `NX_DAEMON=false pnpm nx build form`: passed (clean build).
+- `NX_DAEMON=false pnpm nx validate-package form`: passed (tarball packaging and clean consumer validation).
+- `git diff --check`: passed (0 whitespace errors).
+- `NX_DAEMON=false pnpm validate`: passed (full repository validation).
+
+### Architecture / compatibility
+
+- Preserves small-core strategy and zero modification to `@vii-labs/core`.
+- Maintains strict Clean Architecture boundaries and unidirectional dependency flow.
+- Zero framework runtime dependencies (framework adapters remain deferred to P1h–P1j).
+- Package remains private (`private: true`).
+
+### Remaining / recovery
+
+- None. PR #186 updated and ready for review.
+
 ## 2026-08-30 16:30 CEST | Production Form Phase 1 Slice P1g: Submission & Server Issues
 
 Status: completed

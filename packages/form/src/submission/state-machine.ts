@@ -10,16 +10,12 @@ import { deepCloneSnapshot } from "../core/snapshot.js";
 import type { FormNode } from "../core/tree-types.js";
 import type { FieldIssue, ValidationTriggerMode } from "../validation/types.js";
 import { collectArraySnapshots } from "./array-snapshot.js";
-import {
-  clearTreeServerIssues,
-  routeServerIssuesToTree,
-  sanitizeServerIssue,
-} from "./server-issues.js";
+import { isAbortCancellation, parseSubmitActionResult } from "./result.js";
+import { clearTreeServerIssues, routeServerIssuesToTree } from "./server-issues.js";
 import type {
   DuplicateSubmitPolicy,
   FormSubmitResult,
   ServerIssue,
-  ServerIssueInput,
   SubmissionStatus,
   SubmitAction,
   SubmitOptions,
@@ -154,22 +150,6 @@ export class SubmissionCoordinator<TValues> {
     recordDiagnostic(diag, "form.submission.started", { revision });
 
     const root = this.host.rootNode();
-    const arraySnapshots = collectArraySnapshots(root);
-
-    let outputSnapshot: TValues;
-    try {
-      outputSnapshot = deepCloneSnapshot(this.host.getValues());
-    } catch (outputErr) {
-      if (this.activeAbortController === ac) {
-        this.activeAbortController = null;
-      }
-      this.submissionStatusState.set("failed");
-      recordDiagnostic(diag, "form.submission.failed", {
-        reason: outputErr instanceof Error ? outputErr.name : typeof outputErr,
-      });
-      throw outputErr;
-    }
-
     this.formServerIssuesState.set([]);
     clearTreeServerIssues(root);
 
@@ -217,6 +197,22 @@ export class SubmissionCoordinator<TValues> {
       return { status: "invalid", issues: this.host.getIssues() };
     }
 
+    // Capture output and array identity snapshots coherently after validation gate passes
+    let outputSnapshot: TValues;
+    try {
+      outputSnapshot = deepCloneSnapshot(this.host.getValues());
+    } catch (outputErr) {
+      if (this.activeAbortController === ac) {
+        this.activeAbortController = null;
+      }
+      this.submissionStatusState.set("failed");
+      recordDiagnostic(diag, "form.submission.failed", {
+        reason: outputErr instanceof Error ? outputErr.name : typeof outputErr,
+      });
+      throw outputErr;
+    }
+    const arraySnapshots = collectArraySnapshots(root);
+
     this.submissionStatusState.set("submitting");
     recordDiagnostic(diag, "form.submission.submitting", { revision });
 
@@ -230,7 +226,7 @@ export class SubmissionCoordinator<TValues> {
     }
 
     try {
-      const actionResult = await action(outputSnapshot, { signal: ac.signal });
+      const rawActionResult = await action(outputSnapshot, { signal: ac.signal });
 
       if (
         revision !== this.currentSubmissionRevision ||
@@ -240,56 +236,32 @@ export class SubmissionCoordinator<TValues> {
         return { status: "cancelled" };
       }
 
-      if (
-        actionResult !== null &&
-        typeof actionResult === "object" &&
-        (actionResult as { ok?: boolean }).ok === false &&
-        Array.isArray((actionResult as { issues?: unknown }).issues)
-      ) {
-        const rawIssues = (actionResult as { issues: readonly (ServerIssueInput | string)[] })
-          .issues;
-        const sanitized = rawIssues.map((iss) =>
-          typeof iss === "string"
-            ? sanitizeServerIssue({ code: "server.error", message: iss })
-            : sanitizeServerIssue(iss),
+      const parsedResult = parseSubmitActionResult<TResult>(rawActionResult);
+
+      if (!parsedResult.ok) {
+        const unmatched = routeServerIssuesToTree(
+          root,
+          parsedResult.sanitizedIssues,
+          arraySnapshots,
         );
-        const unmatched = routeServerIssuesToTree(root, sanitized, arraySnapshots);
         this.formServerIssuesState.set(unmatched);
         this.submissionStatusState.set("failed");
         recordDiagnostic(diag, "form.submission.failed", {
           reason: "server_validation",
-          issueCount: sanitized.length,
+          issueCount: parsedResult.sanitizedIssues.length,
         });
-        return { status: "server-invalid", issues: sanitized };
+        return { status: "server-invalid", issues: parsedResult.sanitizedIssues };
       }
-
-      const finalResult =
-        actionResult !== null &&
-        typeof actionResult === "object" &&
-        (actionResult as { ok?: boolean }).ok === true &&
-        "result" in (actionResult as object)
-          ? (actionResult as { result: TResult }).result
-          : (actionResult as TResult);
 
       this.submissionStatusState.set("succeeded");
       recordDiagnostic(diag, "form.submission.succeeded", { revision });
-      return { status: "succeeded", result: finalResult };
+      return { status: "succeeded", result: parsedResult.result };
     } catch (actionErr: unknown) {
-      if (
-        revision !== this.currentSubmissionRevision ||
-        ac.signal.aborted ||
-        this.host.isDisposed()
-      ) {
+      if (revision !== this.currentSubmissionRevision || this.host.isDisposed()) {
         return { status: "cancelled" };
       }
 
-      if (
-        actionErr &&
-        typeof actionErr === "object" &&
-        ((actionErr as Error).name === "AbortError" ||
-          (actionErr as { code?: string }).code === "ABORT_ERR" ||
-          (actionErr as Error).message?.includes("aborted"))
-      ) {
+      if (isAbortCancellation(actionErr, ac.signal)) {
         this.submissionStatusState.set("cancelled");
         recordDiagnostic(diag, "form.submission.cancelled", { revision });
         return { status: "cancelled" };

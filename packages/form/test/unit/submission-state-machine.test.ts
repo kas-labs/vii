@@ -246,6 +246,82 @@ describe("Submission State Machine (Model A)", () => {
     expect(form.submissionStatus.get()).toBe("cancelled");
   });
 
+  it("does NOT classify errors containing the word 'aborted' in message as cancellation", async () => {
+    const form = createForm({
+      fields: {
+        name: createField<string>({ initialValue: "Alice" }),
+      },
+    });
+
+    const dbError = new Error("Database transaction aborted unexpectedly by remote host");
+
+    await expect(
+      form.submit(async () => {
+        throw dbError;
+      }),
+    ).rejects.toThrow("Database transaction aborted unexpectedly by remote host");
+
+    expect(form.submissionStatus.get()).toBe("failed");
+    expect(form.submitting.get()).toBe(false);
+
+    const normalError = new Error("not aborted but contains aborted in text");
+    await expect(
+      form.submit(async () => {
+        throw normalError;
+      }),
+    ).rejects.toThrow("not aborted but contains aborted in text");
+
+    expect(form.submissionStatus.get()).toBe("failed");
+  });
+
+  describe("Fail-closed submit action result discrimination", () => {
+    it("fails closed and throws TypeError when ok === false has missing or non-array issues", async () => {
+      const form = createForm({
+        fields: {
+          name: createField<string>({ initialValue: "Alice" }),
+        },
+      });
+
+      // 1. ok === false with non-array issues
+      await expect(
+        form.submit(async () => ({ ok: false, issues: "not-an-array" }) as never),
+      ).rejects.toThrow(TypeError);
+
+      expect(form.submissionStatus.get()).toBe("failed");
+
+      // 2. ok === false with missing issues
+      await expect(form.submit(async () => ({ ok: false }) as never)).rejects.toThrow(TypeError);
+
+      expect(form.submissionStatus.get()).toBe("failed");
+    });
+
+    it("sanitizes issues array atomically: malformed issue fails all-or-nothing without partial tree mutation", async () => {
+      const form = createForm({
+        fields: {
+          email: createField<string>({ initialValue: "alice@example.com" }),
+          name: createField<string>({ initialValue: "Alice" }),
+        },
+      });
+
+      const malformedPayload = {
+        ok: false,
+        issues: [
+          { code: "valid.code", message: "Valid issue", path: ["email"] },
+          { code: "", message: "Malformed: empty code", path: ["name"] },
+          { code: "valid.code2", message: "Another valid", path: ["email"] },
+        ],
+      };
+
+      await expect(form.submit(async () => malformedPayload as never)).rejects.toThrow(TypeError);
+
+      expect(form.submissionStatus.get()).toBe("failed");
+      // Zero issues committed to any field or the root
+      expect(form.fields.email.serverIssues.get()).toEqual([]);
+      expect(form.fields.name.serverIssues.get()).toEqual([]);
+      expect(form.serverIssues.get()).toEqual([]);
+    });
+  });
+
   it("form.dispose() cancels active submission", async () => {
     const form = createForm({
       fields: {

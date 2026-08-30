@@ -2,10 +2,10 @@ import type { FormNode } from "../core/tree-types.js";
 import type { ArraySnapshotMap } from "./types.js";
 
 /**
- * Creates a unique string key for an array path.
+ * Creates an injective, collision-free key for an array path, preserving string vs number segment types.
  */
 export function createArraySnapshotKey(path: readonly (string | number)[]): string {
-  return path.join(".");
+  return JSON.stringify(path.map((seg) => (typeof seg === "number" ? ["n", seg] : ["s", seg])));
 }
 
 /**

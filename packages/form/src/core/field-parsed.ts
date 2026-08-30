@@ -98,6 +98,7 @@ export function createParsedField<TRaw, TValue>(
       syncCombinedIssues(validationIssuesState.get(), null, []);
       if (validationIssuesState.get().length === 0) validationStatusState.set("unvalidated");
     });
+    internal.notifyMutation?.();
     if (!disposed && config.rules.length > 0 && config.triggerSet.has("change"))
       scheduleValidation("change");
   };
@@ -125,6 +126,7 @@ export function createParsedField<TRaw, TValue>(
         syncCombinedIssues(validationIssuesState.get(), null, []);
         if (validationIssuesState.get().length === 0) validationStatusState.set("unvalidated");
       });
+      internal.notifyMutation?.();
       if (!disposed && config.rules.length > 0 && config.triggerSet.has("change"))
         scheduleValidation("change");
     } else {
@@ -139,6 +141,7 @@ export function createParsedField<TRaw, TValue>(
         validationStatusState.set("invalid");
         pendingState.set(false);
       });
+      internal.notifyMutation?.();
     }
   };
 
@@ -251,6 +254,9 @@ export function createParsedField<TRaw, TValue>(
         serverIssuesState.set(Object.freeze(sIssues));
         syncCombinedIssues(validationIssuesState.get(), parseIssueState.get(), sIssues);
       });
+    },
+    notifyMutation: () => {
+      internal.onMutation?.();
     },
   };
 

@@ -37,6 +37,50 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-30 18:15 CEST | Production Form Phase 1 Slice P1g: Submit Validation Authority & Edit-During-Validation Cancellation
+
+Status: completed
+Branch: `feat/form-p1g-submission-server-issues`
+PR: #186
+
+### Scope
+
+- Implement internal submission validation authority to guarantee that submit validation passes are strictly authoritative for the exact tree state being snapshotted and submitted.
+- Enforce the cancellation contract: any user mutation (`setValue`, `setRawValue`, or `FieldArray` structural operations `insert`/`remove`/`move`/`swap`/`clear`) that occurs while `submissionStatus === "validating"` advances the internal monotonic tree mutation revision and cancels the in-flight submission attempt (`{ status: "cancelled" }`), preventing stale or unvalidated payloads from running submit actions.
+- Add exhaustive controllable-promise regression test suite covering: valid A -> invalid B, valid A -> valid B, pending B validation timing, parse-invalid raw value edits, FieldArray structural mutations, multiple rapid edits, and unchanged normal submissions.
+
+### Changes
+
+- Updated `packages/form/src/core/internal.ts`: added `notifyMutation?(): void` and `onMutation?: () => void` to `FormNodeInternal`, and updated `adoptChildNode` / `adoptChildNodes` / `commitChildAdoption` to wire upward mutation notification.
+- Updated `packages/form/src/core/field-parserless.ts` and `packages/form/src/core/field-parsed.ts`: notify tree mutation on `setValue` and `setRawValue`.
+- Updated `packages/form/src/core/group.ts`: propagated child mutation notifications upward through group hierarchy.
+- Updated `packages/form/src/core/array-adoption.ts` and `packages/form/src/core/array.ts`: wired child item mutation bubbling and notified on structural operations (`insert`, `remove`, `move`, `swap`, `clear`).
+- Updated `packages/form/src/core/form.ts`: tracked root monotonic `treeMutationRevision` counter and exposed `getTreeRevision` to `SubmissionCoordinator`.
+- Updated `packages/form/src/submission/state-machine.ts`: verified `treeRevisionBeforeValidation === currentTreeRevision` after `validateTree("submit")`, cancelling and aborting if any mutation occurred during validation.
+- Updated `packages/form/test/unit/submission-validation-gate.test.ts`: added the complete 7-test validation authority matrix.
+- Appended `DUTY_WATCH.md`.
+
+### Validation
+
+- `NX_DAEMON=false pnpm nx lint form`: passed (0 errors, 0 warnings).
+- `NX_DAEMON=false pnpm nx typecheck form`: passed (0 errors).
+- `NX_DAEMON=false pnpm nx test form`: passed (19 test files, 245 unit tests).
+- `NX_DAEMON=false pnpm nx build form`: passed (clean build).
+- `NX_DAEMON=false pnpm nx validate-package form`: passed (tarball packing and clean consumer validation).
+- Server issues routing perf fixture: 1,000 issues across 100 array items in 48ms (<50ms budget).
+- `git diff --check`: passed (0 whitespace errors).
+- `NX_DAEMON=false pnpm validate`: passed (full repository validation).
+
+### Architecture / compatibility
+
+- Clean internal monotonic mutation revision without exposing public revision counters or changing public APIs.
+- Model A terminal state preserved: user edits after submit completion advance mutation generation without resetting terminal `submissionStatus`.
+- Clean Architecture boundaries preserved: zero `@vii-labs/core` mutations, platform-neutral runtime.
+
+### Remaining / recovery
+
+- None. Ready for maintainer review on Draft PR #186.
+
 ## 2026-08-30 17:45 CEST | Production Form Phase 1 Slice P1g: Submission Consistency, Fail-Closed Boundaries & Cancellation Classification
 
 Status: completed

@@ -35,6 +35,7 @@ export interface SubmissionHostCallbacks<TValues> {
   readonly isInvalid: () => boolean;
   readonly rootNode: () => FormNode;
   readonly getDiagnostics?: () => Diagnostics | undefined;
+  readonly getTreeRevision?: () => number;
 }
 
 /**
@@ -142,6 +143,7 @@ export class SubmissionCoordinator<TValues> {
     }
 
     const revision = ++this.currentSubmissionRevision;
+    const treeRevisionBeforeValidation = this.host.getTreeRevision?.() ?? 0;
     const ac = new AbortController();
     this.activeAbortController = ac;
     this.submissionStatusState.set("validating");
@@ -178,11 +180,19 @@ export class SubmissionCoordinator<TValues> {
       throw valErr;
     }
 
+    const currentTreeRevision = this.host.getTreeRevision?.() ?? 0;
     if (
+      treeRevisionBeforeValidation !== currentTreeRevision ||
       revision !== this.currentSubmissionRevision ||
       ac.signal.aborted ||
       this.host.isDisposed()
     ) {
+      if (this.activeAbortController === ac) {
+        this.activeAbortController.abort();
+        this.activeAbortController = null;
+      }
+      this.submissionStatusState.set("cancelled");
+      recordDiagnostic(diag, "form.submission.cancelled", { revision });
       return { status: "cancelled" };
     }
 

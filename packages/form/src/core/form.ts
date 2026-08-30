@@ -41,8 +41,11 @@ export function createForm<TFields extends FormFieldsRecord>(
   };
 
   const formScope = scope ? scope.createChild({ name: "form" }) : createScope({ name: "form" });
+  let treeMutationRevision = 0;
 
-  adoptChildNodes(formScope, fields, fieldKeys);
+  adoptChildNodes(formScope, fields, fieldKeys, () => {
+    ++treeMutationRevision;
+  });
 
   const coordinator = new SubmissionCoordinator<FormValues<TFields>>(formScope, {
     isDisposed: () => disposed,
@@ -53,6 +56,7 @@ export function createForm<TFields extends FormFieldsRecord>(
     isInvalid: () => invalidComputed.get(),
     rootNode: () => formInstance,
     getDiagnostics: () => options.diagnostics,
+    getTreeRevision: () => treeMutationRevision,
   });
 
   let detachFromParent: (() => void) | undefined;
@@ -255,6 +259,9 @@ export function createForm<TFields extends FormFieldsRecord>(
     },
     setServerIssues: (sIssues) => {
       coordinator.formServerIssuesState.set(Object.freeze(sIssues));
+    },
+    notifyMutation: () => {
+      ++treeMutationRevision;
     },
   };
 

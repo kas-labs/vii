@@ -42,7 +42,9 @@ export function createFieldGroup<TFields extends FormFieldsRecord>(
   const groupScope = scope ? scope.createChild({ name: "group" }) : createScope({ name: "group" });
   const serverIssuesState = state<readonly ServerIssue[]>([]);
 
-  adoptChildNodes(groupScope, fields, fieldKeys);
+  adoptChildNodes(groupScope, fields, fieldKeys, () => {
+    internal.notifyMutation?.();
+  });
 
   let detachFromParent: (() => void) | undefined;
 
@@ -241,6 +243,9 @@ export function createFieldGroup<TFields extends FormFieldsRecord>(
     },
     setServerIssues: (sIssues) => {
       serverIssuesState.set(Object.freeze(sIssues));
+    },
+    notifyMutation: () => {
+      internal.onMutation?.();
     },
   };
 

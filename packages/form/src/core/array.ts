@@ -41,6 +41,9 @@ export function createFieldArray<TItemNode extends FormNode = FormNode>(
   const { items: initialItems, scopes: initialScopes } = commitArrayItemsAdoption(
     arrayScope,
     preparedInitial,
+    () => {
+      internal.notifyMutation?.();
+    },
   );
   for (let i = 0; i < initialScopes.length; i++) {
     const [id, itemScope] = initialScopes[i]!;
@@ -100,7 +103,10 @@ export function createFieldArray<TItemNode extends FormNode = FormNode>(
   );
 
   const dirtyComputed = arrayScope.run(() =>
-    computed(() => baselineTracker.isDirty(itemsState.get())),
+    computed(() => {
+      const items = itemsState.get();
+      return baselineTracker.isDirty(items);
+    }),
   );
 
   const touchedComputed = arrayScope.run(() =>
@@ -166,7 +172,9 @@ export function createFieldArray<TItemNode extends FormNode = FormNode>(
     const [prepared] = preflightArrayItems([node], existingKeys, keyExtractor);
 
     // Phase 2: Commit adoption
-    const { item, itemScope } = commitItemAdoption(arrayScope, prepared!);
+    const { item, itemScope } = commitItemAdoption(arrayScope, prepared!, () => {
+      internal.notifyMutation?.();
+    });
     scopesMap.set(item.id, itemScope);
 
     batch(() => {
@@ -174,6 +182,7 @@ export function createFieldArray<TItemNode extends FormNode = FormNode>(
       next.splice(index, 0, item);
       itemsState.set(Object.freeze(next));
     });
+    internal.notifyMutation?.();
 
     return item;
   };
@@ -191,6 +200,7 @@ export function createFieldArray<TItemNode extends FormNode = FormNode>(
       itemsState.set(Object.freeze(next));
       baselineTracker.handleItemRemoval(item, itemScope, scopesMap);
     });
+    internal.notifyMutation?.();
   };
 
   const move = (fromIndex: number, toIndex: number): void => {
@@ -205,6 +215,7 @@ export function createFieldArray<TItemNode extends FormNode = FormNode>(
       next.splice(toIndex, 0, item);
       itemsState.set(Object.freeze(next));
     });
+    internal.notifyMutation?.();
   };
 
   const swap = (indexA: number, indexB: number): void => {
@@ -220,6 +231,7 @@ export function createFieldArray<TItemNode extends FormNode = FormNode>(
       next[indexB] = itemA;
       itemsState.set(Object.freeze(next));
     });
+    internal.notifyMutation?.();
   };
 
   const clear = (): void => {
@@ -234,6 +246,7 @@ export function createFieldArray<TItemNode extends FormNode = FormNode>(
         baselineTracker.handleItemRemoval(item, itemScope, scopesMap);
       }
     });
+    internal.notifyMutation?.();
   };
 
   const validate = (
@@ -318,6 +331,9 @@ export function createFieldArray<TItemNode extends FormNode = FormNode>(
     },
     setServerIssues: (sIssues) => {
       serverIssuesState.set(Object.freeze(sIssues));
+    },
+    notifyMutation: () => {
+      internal.onMutation?.();
     },
   };
 

@@ -6,7 +6,19 @@ Experimental reactive headless form state and validation engine for the Vii ecos
 
 Internal development / experimental candidate (Phase 1 Baseline).
 
-- **Current Implementation (P1h — React Adapter):**
+- **Current Implementation (P1i — Vanilla DOM Adapter):**
+  - **Vanilla DOM Adapter (`@vii-labs/form/vanilla`):**
+    - `bindField(field, element, options?)`: binds native input, textarea, select, or file elements to a canonical `FieldState`.
+    - `bindForm(form, formElement, options?)`: binds native `<form>` submit events to canonical `form.submit()`.
+    - Single commit event contract: strictly binds `"input"` for text-like controls and `"change"` for checkbox, radio, select, and file controls; zero duplicate `input` + `change` registration per edit.
+    - Bidirectional projection without feedback loops: DOM edits commit to canonical fields (`setRawValue` / `setValue`), and programmatic field updates project back to the DOM without synthetic event dispatches.
+    - Raw vs Value preservation: parser-backed fields display `rawValue` in the DOM (e.g. `"-"` or `"05"`), preventing presentation snap-back bugs during typing.
+    - ARIA invalid projection: projects `aria-invalid="true"` strictly when the field is invalid (client, parse, or server issues); pending async validation alone never marks the control invalid; restores/removes attribute when valid.
+    - Additive `aria-describedby` management: safely appends `issueElement.id` to `aria-describedby` while preserving pre-existing application tokens, and restores original tokens on disposal.
+    - Safe textContent sink (DOM XSS defense): issue messages are rendered strictly via `issueElement.textContent = ...` (never `innerHTML` or HTML parsing sinks), ensuring hostile payloads (e.g. `<img src=x onerror="...">`) render as plain literal text.
+    - Submit error ownership & exception containment: native DOM submit listeners route unexpected action rejections through `onSubmitException` to prevent unhandled Promise rejections.
+    - Deterministic lifecycle cleanup: returns `{ dispose(): void }` which cleanly removes DOM event listeners and signal subscriptions without disposing the canonical Form node.
+    - Transactional preflight: validates field and element capabilities before registration, failing closed with `TypeError` without leaving partial listeners or subscriptions.
   - **React 18/19 Adapter (`@vii-labs/form/react`):**
     - `useField(field)`: fine-grained leaf field binding exposing live observable snapshot (`value`, `rawValue`, `dirty`, `touched`, `pending`, `valid`, `invalid`, `parseStatus`, `parseIssue`, `validationStatus`, `issues`, `serverIssues`) and stable action references (`setValue`, `setRawValue`, `setTouched`, `blur`, `validate`, `reset`).
     - `useForm(form)`: root form aggregate binding exposing live snapshot (`value`, `rawValue`, `dirty`, `touched`, `pending`, `valid`, `invalid`, `issues`, `serverIssues`, `submissionStatus`, `submitting`), child `fields`, and stable actions (`validate`, `submit`, `cancelSubmit`, `reset`, `reinitialize`).
@@ -59,8 +71,12 @@ Internal development / experimental candidate (Phase 1 Baseline).
     - Granular reactivity: field mutation in one branch does not notify un-mutated branches.
     - Whole-form baseline reinitialization (`form.reinitialize`) using explicit separate `value` and `rawValue` trees (`FormReinitializeInput`); recursive two-phase prevalidation with zero mutation on malformed input; successful commit is batched for observer atomicity.
 - **Subpaths (`/react`, `/vanilla`, `/angular`, `/vue`):**
-  - `/react`: Implemented production React 18/19 adapter (`useField`, `useForm`, `useFieldArray`).
-  - `/vanilla`, `/angular`, `/vue`: Skeleton infrastructure entrypoints (adapters deferred to P1i–P1j).
-- **Deferred / Non-Goals for P1h:** Framework adapter implementations for Vanilla, Angular, and Vue (deferred to P1i–P1j).
+  - `/react`: Production React 18/19 adapter (`useField`, `useForm`, `useFieldArray`).
+  - `/vanilla`: Production Vanilla DOM adapter (`bindField`, `bindForm`).
+  - `/angular`, `/vue`: Skeleton infrastructure entrypoints (adapters deferred to P1j).
+- **Deferred / Non-Goals for P1i:**
+  - Angular and Vue adapters (deferred to P1j).
+  - Real-browser automated testing (Playwright Chromium, Korean/Japanese/Chinese IME composition, focus-first-invalid navigation, WCAG 2.2 AA audit deferred to P1k).
+  - Performance and memory release budgets (deferred to P1l).
 
 See `docs/architecture/FORM_ARCHITECTURE.md` and `docs/roadmap/FORM_RESEARCH.md` for architecture and roadmap details.

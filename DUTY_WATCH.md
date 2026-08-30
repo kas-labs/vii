@@ -37,6 +37,59 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-08-31 01:15 CEST | Production Form Phase 1 Slice P1i: Vanilla DOM Adapter
+
+Status: completed
+Branch: `feat/form-p1i-vanilla-adapter`
+PR: not opened
+
+### Scope
+
+- Implement the production Vanilla DOM adapter for Vii Form (`@vii-labs/form/vanilla`) in Phase 1 Slice P1i.
+- Provide public binding primitives: `bindField` and `bindForm`, plus option and binding types.
+- Implement the single commit event contract: `"input"` for text-like controls and `"change"` for checkbox, radio, select, and file controls, strictly avoiding duplicate event runs per edit.
+- Implement bidirectional synchronization without feedback loops and preserve `rawValue` in parsed DOM text inputs preventing typing snap-backs.
+- Implement ARIA projection: project `aria-invalid="true"` strictly when invalid (client, parse, server) and never on pending-only; restore/remove attribute when valid.
+- Implement additive and restorative `aria-describedby` linking with `issueElement.id`, preserving pre-existing tokens and restoring only added tokens on disposal.
+- Implement safe plain text sinks (`textContent`) for issue messages (never `innerHTML`), ensuring complete DOM XSS defense against hostile payloads.
+- Implement submit error ownership and unexpected rejection containment (`onSubmitException`) preventing unhandled Promise rejections from native DOM submit listeners.
+- Implement transactional preflight validation throwing `TypeError` before mutation without leaving dangling listeners or subscriptions.
+- Implement deterministic lifecycle cleanup removing listeners and subscriptions without disposing canonical Form nodes.
+- Validate packed artifact against clean consumers with and without React.
+
+### Changes
+
+- Created `packages/form/src/adapters/vanilla/types.ts`: public TypeScript interfaces (`VanillaBinding`, `VanillaDomElement`, `BindFieldOptions`, `BindFormOptions`).
+- Created `packages/form/src/adapters/vanilla/a11y.ts`: direct signal evaluation `isFieldInvalid`, `applyAriaInvalid`, additive `setupAriaDescribedBy`, and safe `renderSafeIssues` sink.
+- Created `packages/form/src/adapters/vanilla/bind-field.ts`: single commit event binding for native inputs, textareas, selects, and checkboxes with loop prevention and disposal.
+- Created `packages/form/src/adapters/vanilla/bind-form.ts`: native form submit coordinator with `event.preventDefault()`, result routing, and exception containment.
+- Updated `packages/form/src/adapters/vanilla/index.ts`: exported `bindField`, `bindForm`, and types.
+- Created `packages/form/test/unit/vanilla-adapter.test.ts`: comprehensive unit test suite (30 test assertions covering controls, events, ARIA, safe sinks, submit lifecycle, exception containment, leaks, and transactional preflight).
+- Updated `packages/form/test/package-boundary.test.ts`: verified `formVanilla` exports `bindField` and `bindForm`.
+- Updated `scripts/package-validation/validate-form.mjs`: added packed Vanilla build outputs to expected entries; added clean consumer scenario executing `bindField` and `bindForm` against packed artifact.
+- Updated `packages/form/README.md`, `PROJECT_STATE.md`, and `DUTY_WATCH.md`.
+
+### Validation
+
+- `NX_DAEMON=false pnpm nx lint form`: passed (0 errors, 0 warnings).
+- `NX_DAEMON=false pnpm nx typecheck form`: passed (0 errors).
+- `NX_DAEMON=false pnpm nx test form`: passed (21 test files, 297 passed tests).
+- `NX_DAEMON=false pnpm nx build form`: passed (clean d.ts and ESM build).
+- `NX_DAEMON=false pnpm nx validate-package form`: passed (clean consumer verification against packed artifact for Core-only, Vanilla DOM, React 19, and React 18).
+- `git diff --check`: passed (0 whitespace errors).
+- `NX_DAEMON=false pnpm validate`: passed (full repository validation).
+
+### Architecture / compatibility
+
+- Zero modification to `@vii-labs/core`.
+- Unidirectional dependency flow: `@vii-labs/form/vanilla` -> public `@vii-labs/form` primitives/types.
+- Root `@vii-labs/form` has zero DOM framework dependencies and runs in pure ESM/Node/SSR environments without browser globals.
+- Package remains private (`private: true`).
+
+### Remaining / recovery
+
+- None. Ready for Draft PR.
+
 ## 2026-08-31 00:41 CEST | Production Form Phase 1 Slice P1h: React Adapter
 
 Status: completed

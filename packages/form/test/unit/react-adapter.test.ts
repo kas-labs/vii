@@ -8,7 +8,10 @@ import {
   createFieldGroup,
   createForm,
   createNumberParser,
+  type FieldArray,
   type FieldState,
+  type FormInstance,
+  type FormNode,
 } from "../../src/index.js";
 import { useField, useFieldArray, useForm } from "../../src/adapters/react/index.js";
 
@@ -23,6 +26,124 @@ function render(element: ReactElement): ReactTestRenderer {
     renderer = create(element);
   });
   return renderer;
+}
+
+interface SignalSubscriptionTracker {
+  readonly subscribeCalls: () => number;
+  readonly unsubscribeCalls: () => number;
+  readonly activeCount: () => number;
+}
+
+function trackSignal(signal: { subscribe(fn: () => void): () => void }): SignalSubscriptionTracker {
+  let subscribeCalls = 0;
+  let unsubscribeCalls = 0;
+  const originalSubscribe = signal.subscribe.bind(signal);
+
+  signal.subscribe = (callback: () => void) => {
+    subscribeCalls++;
+    const unsubscribe = originalSubscribe(callback);
+    let unsubscribed = false;
+    return () => {
+      if (!unsubscribed) {
+        unsubscribed = true;
+        unsubscribeCalls++;
+      }
+      unsubscribe();
+    };
+  };
+
+  return {
+    subscribeCalls: () => subscribeCalls,
+    unsubscribeCalls: () => unsubscribeCalls,
+    activeCount: () => subscribeCalls - unsubscribeCalls,
+  };
+}
+
+function trackField(field: FieldState<unknown, unknown>) {
+  const signalKeys = [
+    "value",
+    "rawValue",
+    "touched",
+    "dirty",
+    "pending",
+    "valid",
+    "invalid",
+    "issues",
+    "serverIssues",
+    "parseStatus",
+    "parseIssue",
+    "validationStatus",
+  ] as const;
+
+  const trackers = signalKeys.map((key) => ({
+    key,
+    ...trackSignal(field[key] as { subscribe(fn: () => void): () => void }),
+  }));
+
+  return {
+    trackers,
+    valueTracker: trackers.find((t) => t.key === "value")!,
+    totalSubscribeCalls: () => trackers.reduce((sum, t) => sum + t.subscribeCalls(), 0),
+    totalUnsubscribeCalls: () => trackers.reduce((sum, t) => sum + t.unsubscribeCalls(), 0),
+    totalActiveCount: () => trackers.reduce((sum, t) => sum + t.activeCount(), 0),
+  };
+}
+
+function trackForm(form: FormInstance<Record<string, unknown>>) {
+  const signalKeys = [
+    "value",
+    "rawValue",
+    "touched",
+    "dirty",
+    "pending",
+    "valid",
+    "invalid",
+    "issues",
+    "serverIssues",
+    "submitting",
+    "submissionStatus",
+  ] as const;
+
+  const trackers = signalKeys.map((key) => ({
+    key,
+    ...trackSignal(form[key] as { subscribe(fn: () => void): () => void }),
+  }));
+
+  return {
+    trackers,
+    valueTracker: trackers.find((t) => t.key === "value")!,
+    totalSubscribeCalls: () => trackers.reduce((sum, t) => sum + t.subscribeCalls(), 0),
+    totalUnsubscribeCalls: () => trackers.reduce((sum, t) => sum + t.unsubscribeCalls(), 0),
+    totalActiveCount: () => trackers.reduce((sum, t) => sum + t.activeCount(), 0),
+  };
+}
+
+function trackFieldArray(array: FieldArray<FormNode>) {
+  const signalKeys = [
+    "items",
+    "value",
+    "rawValue",
+    "touched",
+    "dirty",
+    "pending",
+    "valid",
+    "invalid",
+    "issues",
+    "serverIssues",
+  ] as const;
+
+  const trackers = signalKeys.map((key) => ({
+    key,
+    ...trackSignal(array[key] as { subscribe(fn: () => void): () => void }),
+  }));
+
+  return {
+    trackers,
+    itemsTracker: trackers.find((t) => t.key === "items")!,
+    totalSubscribeCalls: () => trackers.reduce((sum, t) => sum + t.subscribeCalls(), 0),
+    totalUnsubscribeCalls: () => trackers.reduce((sum, t) => sum + t.unsubscribeCalls(), 0),
+    totalActiveCount: () => trackers.reduce((sum, t) => sum + t.activeCount(), 0),
+  };
 }
 
 describe("React Adapter Unit Tests (P1h)", () => {
@@ -225,9 +346,18 @@ describe("React Adapter Unit Tests (P1h)", () => {
       field.dispose();
     });
 
-    it("handles node replacement (fieldA -> fieldB) cleanly without cross-talk", () => {
+    it("removes old listeners and establishes new listeners on node replacement (fieldA -> fieldB)", () => {
       const fieldA = createField<string>({ initialValue: "A" });
       const fieldB = createField<string>({ initialValue: "B" });
+      const trackerA = trackField(fieldA as unknown as FieldState<unknown, unknown>);
+      const trackerB = trackField(fieldB as unknown as FieldState<unknown, unknown>);
+
+      // 0. Baseline before mount
+      expect(trackerA.totalActiveCount()).toBe(0);
+      expect(trackerA.valueTracker.activeCount()).toBe(0);
+      expect(trackerB.totalActiveCount()).toBe(0);
+      expect(trackerB.valueTracker.activeCount()).toBe(0);
+
       const renderedValues: string[] = [];
 
       function DynamicView({ target }: { target: FieldState<string> }) {
@@ -236,30 +366,57 @@ describe("React Adapter Unit Tests (P1h)", () => {
         return createElement("span", null, binding.value);
       }
 
+      // 1. Mount bound to fieldA
       const renderer = render(createElement(DynamicView, { target: fieldA }));
       expect(renderedValues).toEqual(["A"]);
+      expect(trackerA.totalActiveCount()).toBe(12);
+      expect(trackerA.valueTracker.activeCount()).toBe(1);
+      expect(trackerB.totalActiveCount()).toBe(0);
+      expect(trackerB.valueTracker.activeCount()).toBe(0);
 
-      // Switch to fieldB
+      // 2. Switch target to fieldB
       act(() => {
         renderer.update(createElement(DynamicView, { target: fieldB }));
       });
       expect(renderedValues).toEqual(["A", "B"]);
 
-      // Mutating fieldA must NOT trigger re-render in component now bound to fieldB
+      // Old listeners on fieldA must return to baseline 0; new listeners on fieldB established (12)
+      expect(trackerA.totalActiveCount()).toBe(0);
+      expect(trackerA.valueTracker.activeCount()).toBe(0);
+      expect(trackerB.totalActiveCount()).toBe(12);
+      expect(trackerB.valueTracker.activeCount()).toBe(1);
+
+      // 3. Mutating fieldA must NOT trigger re-render in component now bound to fieldB
       act(() => {
         fieldA.setValue("A_mutated");
       });
       expect(renderedValues).toEqual(["A", "B"]);
+      expect(fieldA.value.get()).toBe("A_mutated");
 
-      // Mutating fieldB triggers update
+      // 4. Mutating fieldB triggers update
       act(() => {
         fieldB.setValue("B_mutated");
       });
       expect(renderedValues).toEqual(["A", "B", "B_mutated"]);
 
+      // 5. Final unmount
       act(() => {
         renderer.unmount();
       });
+
+      // Both fields must return to baseline 0 active listeners
+      expect(trackerA.totalActiveCount()).toBe(0);
+      expect(trackerA.valueTracker.activeCount()).toBe(0);
+      expect(trackerB.totalActiveCount()).toBe(0);
+      expect(trackerB.valueTracker.activeCount()).toBe(0);
+
+      // 6. Mutating fieldB after unmount delivers 0 renders
+      act(() => {
+        fieldB.setValue("B_after_unmount");
+      });
+      expect(renderedValues).toEqual(["A", "B", "B_mutated"]);
+      expect(fieldB.value.get()).toBe("B_after_unmount");
+
       fieldA.dispose();
       fieldB.dispose();
     });
@@ -708,8 +865,14 @@ describe("React Adapter Unit Tests (P1h)", () => {
   });
 
   describe("StrictMode & Lifecycle", () => {
-    it("handles StrictMode double-mount and unmount cleanly", () => {
+    it("proves real unsubscription and zero listener leakage under StrictMode", () => {
       const field = createField<string>({ initialValue: "strict" });
+      const tracker = trackField(field as unknown as FieldState<unknown, unknown>);
+
+      // 0. Baseline before mount: zero active subscriptions
+      expect(tracker.totalActiveCount()).toBe(0);
+      expect(tracker.valueTracker.activeCount()).toBe(0);
+
       const renderCount = vi.fn();
 
       function StrictView({ target }: { target: FieldState<string> }) {
@@ -718,29 +881,185 @@ describe("React Adapter Unit Tests (P1h)", () => {
         return createElement("span", null, binding.value);
       }
 
+      // 1. Mount under StrictMode
       const renderer = render(
         createElement(StrictMode, null, createElement(StrictView, { target: field })),
       );
-      const countBefore = renderCount.mock.calls.length;
 
+      // Under React StrictMode development lifecycle:
+      // - Gen 1 subscribes (12 signals)
+      // - StrictMode cleans up gen 1 (12 unsubs)
+      // - Gen 2 subscribes (12 signals)
+      // Total subscribe calls: 24 (value signal: 2)
+      // Total unsubscribe calls: 12 (value signal: 1)
+      // Active subscriptions during live generation: exactly 12 (value signal: 1)
+      expect(tracker.valueTracker.subscribeCalls()).toBe(2);
+      expect(tracker.valueTracker.unsubscribeCalls()).toBe(1);
+      expect(tracker.valueTracker.activeCount()).toBe(1);
+      expect(tracker.totalSubscribeCalls()).toBe(24);
+      expect(tracker.totalUnsubscribeCalls()).toBe(12);
+      expect(tracker.totalActiveCount()).toBe(12);
+
+      // 2. Mutation delivered to the live component
+      const countBefore = renderCount.mock.calls.length;
       act(() => {
         field.setValue("updated_strict");
       });
       expect(renderCount.mock.calls.length).toBeGreaterThan(countBefore);
+      expect(renderCount.mock.calls[renderCount.mock.calls.length - 1]![0]).toBe("updated_strict");
+
+      // Active listeners during live generation remain exactly 12
+      expect(tracker.totalActiveCount()).toBe(12);
+      expect(tracker.valueTracker.activeCount()).toBe(1);
+
+      // 3. Final unmount
+      act(() => {
+        renderer.unmount();
+      });
+
+      // Final unmount tears down generation 2:
+      // Total subscribe calls: 24
+      // Total unsubscribe calls: 24
+      // Active subscriptions: exactly 0 (returns to baseline)
+      expect(tracker.valueTracker.subscribeCalls()).toBe(2);
+      expect(tracker.valueTracker.unsubscribeCalls()).toBe(2);
+      expect(tracker.valueTracker.activeCount()).toBe(0);
+      expect(tracker.totalSubscribeCalls()).toBe(24);
+      expect(tracker.totalUnsubscribeCalls()).toBe(24);
+      expect(tracker.totalActiveCount()).toBe(0);
+
+      // 4. Mutating field after unmount delivers 0 renders
+      const countAfterLive = renderCount.mock.calls.length;
+      act(() => {
+        field.setValue("after_strict_unmount");
+      });
+      expect(renderCount.mock.calls.length).toBe(countAfterLive);
+      expect(field.value.get()).toBe("after_strict_unmount");
+
+      field.dispose();
+    });
+
+    it("ensures generation 1 unsubscribe does not cancel generation 2 subscriptions", () => {
+      const field = createField<string>({ initialValue: "gen" });
+      const tracker = trackField(field as unknown as FieldState<unknown, unknown>);
+
+      let callback1Called = 0;
+      let callback2Called = 0;
+
+      // Gen 1 subscribes
+      const unsub1 = field.value.subscribe(() => {
+        callback1Called++;
+      });
+      expect(tracker.valueTracker.activeCount()).toBe(1);
+
+      // Gen 2 subscribes
+      const unsub2 = field.value.subscribe(() => {
+        callback2Called++;
+      });
+      expect(tracker.valueTracker.activeCount()).toBe(2);
+
+      // Gen 1 tears down
+      unsub1();
+      expect(tracker.valueTracker.activeCount()).toBe(1);
+
+      // Mutating value must notify gen 2 only
+      field.setValue("gen_next");
+      expect(callback1Called).toBe(0);
+      expect(callback2Called).toBe(1);
+
+      // Gen 2 tears down
+      unsub2();
+      expect(tracker.valueTracker.activeCount()).toBe(0);
+
+      field.dispose();
+    });
+
+    it("establishes and tears down all signal listeners cleanly on useForm unmount", () => {
+      const form = createForm({
+        fields: {
+          title: createField({ initialValue: "Form Title" }),
+        },
+      });
+      const tracker = trackForm(form as unknown as FormInstance<Record<string, unknown>>);
+
+      // Baseline before mount: 0 active subscriptions
+      expect(tracker.totalActiveCount()).toBe(0);
+      expect(tracker.valueTracker.activeCount()).toBe(0);
+
+      let formRenders = 0;
+      function FormView({ target }: { target: typeof form }) {
+        const binding = useForm(target);
+        formRenders++;
+        return createElement("span", null, binding.value.title);
+      }
+
+      const renderer = render(createElement(FormView, { target: form }));
+      expect(formRenders).toBe(1);
+      expect(tracker.totalActiveCount()).toBe(11);
+      expect(tracker.valueTracker.activeCount()).toBe(1);
+
+      act(() => {
+        form.fields.title.setValue("Form Title 2");
+      });
+      expect(formRenders).toBe(2);
 
       act(() => {
         renderer.unmount();
       });
 
-      const countAfterUnmount = renderCount.mock.calls.length;
-      act(() => {
-        field.setValue("after_strict_unmount");
-      });
-      expect(renderCount.mock.calls.length).toBe(countAfterUnmount);
+      // All 11 form subscriptions return to baseline 0
+      expect(tracker.totalActiveCount()).toBe(0);
+      expect(tracker.valueTracker.activeCount()).toBe(0);
 
-      // Node remains intact after React unmount
-      expect(field.value.get()).toBe("after_strict_unmount");
-      field.dispose();
+      // Form remains completely functional after unmount
+      expect(form.getValue()).toEqual({ title: "Form Title 2" });
+      form.fields.title.setValue("Form Title 3");
+      expect(form.getValue()).toEqual({ title: "Form Title 3" });
+
+      form.dispose();
+    });
+
+    it("establishes and tears down all signal listeners cleanly on useFieldArray unmount", () => {
+      const arrayNode = createFieldArray({
+        items: [createField({ initialValue: "item-1" })],
+      });
+      const tracker = trackFieldArray(arrayNode as unknown as FieldArray<FormNode>);
+
+      // Baseline before mount: 0 active subscriptions
+      expect(tracker.totalActiveCount()).toBe(0);
+      expect(tracker.itemsTracker.activeCount()).toBe(0);
+
+      let arrayRenders = 0;
+      function ArrayView({ target }: { target: typeof arrayNode }) {
+        const binding = useFieldArray(target);
+        arrayRenders++;
+        return createElement("span", null, binding.items.length);
+      }
+
+      const renderer = render(createElement(ArrayView, { target: arrayNode }));
+      expect(arrayRenders).toBe(1);
+      expect(tracker.totalActiveCount()).toBe(10);
+      expect(tracker.itemsTracker.activeCount()).toBe(1);
+
+      act(() => {
+        arrayNode.append(createField({ initialValue: "item-2" }));
+      });
+      expect(arrayRenders).toBe(2);
+
+      act(() => {
+        renderer.unmount();
+      });
+
+      // All 10 array subscriptions return to baseline 0
+      expect(tracker.totalActiveCount()).toBe(0);
+      expect(tracker.itemsTracker.activeCount()).toBe(0);
+
+      // Array node remains completely functional after unmount
+      expect(arrayNode.getValue()).toEqual(["item-1", "item-2"]);
+      arrayNode.append(createField({ initialValue: "item-3" }));
+      expect(arrayNode.getValue()).toEqual(["item-1", "item-2", "item-3"]);
+
+      arrayNode.dispose();
     });
 
     it("does not auto-dispose the canonical Form node on component unmount", () => {

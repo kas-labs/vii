@@ -16,6 +16,8 @@ const consumerDirectory = path.join(temporaryRoot, "consumer");
 const fixtureDirectory = path.join(temporaryRoot, "fixture");
 const reactConsumerDirectory = path.join(temporaryRoot, "react-consumer");
 const reactFixtureDirectory = path.join(temporaryRoot, "react-fixture");
+const react18ConsumerDirectory = path.join(temporaryRoot, "react18-consumer");
+const react18FixtureDirectory = path.join(temporaryRoot, "react18-fixture");
 
 function run(command, args, cwd = repositoryRoot) {
   execFileSync(command, args, {
@@ -634,6 +636,57 @@ export function runReactApp() {
   assert.ok(
     reactScenarioResult.markup.includes("idle"),
     "React consumer should render useForm output",
+  );
+
+  // React 18 clean consumer smoke validation
+  await mkdir(react18ConsumerDirectory, { recursive: true });
+  await mkdir(path.join(react18FixtureDirectory, "src"), { recursive: true });
+
+  await import("node:fs/promises").then((fs) =>
+    fs.writeFile(path.join(react18FixtureDirectory, "src/main.ts"), reactConsumerSource, "utf8"),
+  );
+
+  await prepareConsumer({
+    directory: react18ConsumerDirectory,
+    fixtureDirectory: react18FixtureDirectory,
+    packageJson: {
+      name: "vii-packed-form-react18-consumer",
+      private: true,
+      type: "module",
+      dependencies: {
+        "@vii-labs/form": `file:${formArtifactPath}`,
+        "@vii-labs/core": `file:${coreArtifactPath}`,
+        react: "18.3.1",
+        "react-dom": "18.3.1",
+      },
+      devDependencies: {
+        "@types/react": "18.3.18",
+        "@types/react-dom": "18.3.5",
+      },
+    },
+    repositoryRoot,
+    pnpm,
+  });
+
+  const react18Consumer = await import(path.join(react18ConsumerDirectory, "dist/main.js"));
+  assert.deepEqual(
+    react18Consumer.reactKeys,
+    ["useField", "useFieldArray", "useForm"].sort(),
+    "clean React 18 consumer subpath export must contain P1h hooks",
+  );
+
+  const react18ScenarioResult = react18Consumer.runReactApp();
+  assert.ok(
+    react18ScenarioResult.markup.includes("test-user"),
+    "React 18 consumer should render useField output",
+  );
+  assert.ok(
+    react18ScenarioResult.markup.includes("item-1"),
+    "React 18 consumer should render useFieldArray output",
+  );
+  assert.ok(
+    react18ScenarioResult.markup.includes("idle"),
+    "React 18 consumer should render useForm output",
   );
 
   // Sanity size logging

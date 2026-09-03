@@ -13,8 +13,8 @@ const packageRoot = path.resolve(currentDirectory, "..");
 const manifestPath = path.join(packageRoot, "package.json");
 const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
 
-describe("@vii-labs/form package boundary (P1i)", () => {
-  test("root exports createField, createFieldGroup, createFieldArray, createForm, standardSchema, and parsers; React and Vanilla adapters export public hooks/bindings; other adapters remain empty placeholders", () => {
+describe("@vii-labs/form package boundary (P1j)", () => {
+  test("root exports createField, createFieldGroup, createFieldArray, createForm, standardSchema, and parsers; React, Vanilla, Angular, and Vue adapters export public hooks/bindings/signals", () => {
     expect(formRoot).toBeDefined();
     expect(Object.keys(formRoot).sort()).toEqual(
       [
@@ -35,10 +35,19 @@ describe("@vii-labs/form package boundary (P1i)", () => {
     expect(Object.keys(formVanilla).sort()).toEqual(["bindField", "bindForm"].sort());
 
     expect(formAngular).toBeDefined();
-    expect(Object.keys(formAngular)).toEqual([]);
+    expect(Object.keys(formAngular).sort()).toEqual(
+      [
+        "createAngularField",
+        "createAngularFieldArray",
+        "createAngularForm",
+        "toAngularField",
+      ].sort(),
+    );
 
     expect(formVue).toBeDefined();
-    expect(Object.keys(formVue)).toEqual([]);
+    expect(Object.keys(formVue).sort()).toEqual(
+      ["createVueField", "createVueFieldArray", "createVueForm", "useViiField"].sort(),
+    );
   });
 
   test("package manifest establishes correct identity, exports map, and safety metadata", () => {

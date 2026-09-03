@@ -37,6 +37,69 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-09-04 01:30 CEST | Production Form Phase 1 Slice P1j: Angular & Vue Reactive Adapters
+
+Status: completed
+Branch: `feat/form-p1j-angular-vue-adapters`
+PR: not opened
+
+### Scope
+
+- Implement the minimal, idiomatic, zero-state-mirror reactive adapters for Vii Form:
+  1. Angular 17+ adapter (`@vii-labs/form/angular`): `createAngularField`, `toAngularField`, `createAngularForm`, `createAngularFieldArray`.
+  2. Vue 3.3+ adapter (`@vii-labs/form/vue`): `createVueField`, `useViiField`, `createVueForm`, `createVueFieldArray`.
+- Provide read-only reactive primitives (Angular `Signal<T>`, Vue `Readonly<ShallowRef<T>>`) synchronizing with canonical Vii Form nodes without state duplication.
+- Ensure stable action references, leaf render/update isolation, and caller-owned error containment.
+- Implement explicit lifecycle disposal via `.dispose()` and automatic framework integration:
+  - Angular: `DestroyRef` option or injection-context lookup (`toAngularField`) throwing deterministically when called outside injection context.
+  - Vue: `onScopeDispose` when executed within an active `effectScope`, with `useViiField` throwing deterministically when called outside an active scope.
+- Enforce unmount/disposal safety: tearing down framework handles unsubscribes listeners without destroying canonical Form nodes.
+- Maintain package boundaries, pure Node/ESM execution without browser globals, and clean packed-artifact consumer validation.
+
+### Changes
+
+- Added `packages/form/src/adapters/angular/types.ts`: typed signal handles for fields, forms, and field arrays with `DestroyRefLike` interface.
+- Added `packages/form/src/adapters/angular/field.ts`: `createAngularField` and `toAngularField` implementations.
+- Added `packages/form/src/adapters/angular/form.ts`: `createAngularForm` implementation.
+- Added `packages/form/src/adapters/angular/array.ts`: `createAngularFieldArray` implementation.
+- Added `packages/form/src/adapters/angular/index.ts`: public exports.
+- Added `packages/form/src/adapters/vue/types.ts`: typed shallow ref handles for fields, forms, and field arrays with `VueReadonlyRef`.
+- Added `packages/form/src/adapters/vue/field.ts`: `createVueField` and `useViiField` implementations.
+- Added `packages/form/src/adapters/vue/form.ts`: `createVueForm` implementation.
+- Added `packages/form/src/adapters/vue/array.ts`: `createVueFieldArray` implementation.
+- Added `packages/form/src/adapters/vue/index.ts`: public exports.
+- Added unit tests:
+  - `packages/form/test/unit/angular-adapter.test.ts`: 25 comprehensive unit tests covering all signal behaviors, reactivity, actions, lifecycle, sibling isolation, and unmount safety.
+  - `packages/form/test/unit/vue-adapter.test.ts`: 25 comprehensive unit tests covering all shallowRef behaviors, reactivity in effects, actions, scope lifecycle, sibling isolation, and unmount safety.
+- Updated `packages/form/test/package-boundary.test.ts`: verified public subpath exports for `/angular` and `/vue` and zero cross-framework leakage.
+- Updated `scripts/package-validation/validate-form.mjs`: added 40 tarball entry expectations for Angular and Vue, added clean Angular 22 and Vue 3.5 packed consumer test fixtures, and verified independent peer dependency isolation.
+- Updated `packages/form/package.json`: added `@angular/core` and `vue` to `devDependencies` (preserved optional `peerDependencies`).
+- Updated `packages/form/README.md` and `PROJECT_STATE.md`: documented P1j status, APIs, and roadmap.
+- Updated `DUTY_WATCH.md`.
+
+### Validation
+
+- `NX_DAEMON=false pnpm nx lint form`: passed (0 errors, 0 warnings).
+- `NX_DAEMON=false pnpm nx typecheck form`: passed (0 errors).
+- `NX_DAEMON=false pnpm nx test form`: passed (23 test files, 365 passed tests; 25 Angular + 25 Vue).
+- `NX_DAEMON=false pnpm nx build form`: passed (clean d.ts and ESM build).
+- `NX_DAEMON=false pnpm nx validate-package form`: passed (clean consumer verification for Core-only, Vanilla DOM, React 19, React 18, Angular 22, and Vue 3.5).
+- `git diff --check`: passed (0 whitespace errors).
+- `NX_DAEMON=false pnpm validate`: passed (full repository validation).
+
+### Architecture / compatibility
+
+- Zero modifications to `@vii-labs/core`.
+- Zero modifications to `@vii-labs/form/react` or `@vii-labs/form/vanilla`.
+- Direct dependency on `@angular/core` and `vue` is restricted to `/angular` and `/vue` subpaths; root `@vii-labs/form` remains framework-agnostic.
+- Optional peer dependencies ensure consumers only install the framework they use.
+- All production adapter source files strictly adhere to the <= 250 lines code quality guideline (max is 155 lines).
+- Package remains private (`private: true`).
+
+### Remaining / recovery
+
+- None. Open Draft PR and await review.
+
 ## 2026-09-04 01:05 CEST | Production Form Phase 1 Slice P1i: Vanilla DOM Adapter Overlapping Ownership & API Cleanup
 
 Status: completed

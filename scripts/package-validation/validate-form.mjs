@@ -18,6 +18,10 @@ const reactConsumerDirectory = path.join(temporaryRoot, "react-consumer");
 const reactFixtureDirectory = path.join(temporaryRoot, "react-fixture");
 const react18ConsumerDirectory = path.join(temporaryRoot, "react18-consumer");
 const react18FixtureDirectory = path.join(temporaryRoot, "react18-fixture");
+const angularConsumerDirectory = path.join(temporaryRoot, "angular-consumer");
+const angularFixtureDirectory = path.join(temporaryRoot, "angular-fixture");
+const vueConsumerDirectory = path.join(temporaryRoot, "vue-consumer");
+const vueFixtureDirectory = path.join(temporaryRoot, "vue-fixture");
 
 function run(command, args, cwd = repositoryRoot) {
   execFileSync(command, args, {
@@ -242,14 +246,46 @@ try {
     "package/dist/adapters/vanilla/types.d.ts.map",
     "package/dist/adapters/vanilla/types.js",
     "package/dist/adapters/vanilla/types.js.map",
+    "package/dist/adapters/angular/array.d.ts",
+    "package/dist/adapters/angular/array.d.ts.map",
+    "package/dist/adapters/angular/array.js",
+    "package/dist/adapters/angular/array.js.map",
+    "package/dist/adapters/angular/field.d.ts",
+    "package/dist/adapters/angular/field.d.ts.map",
+    "package/dist/adapters/angular/field.js",
+    "package/dist/adapters/angular/field.js.map",
+    "package/dist/adapters/angular/form.d.ts",
+    "package/dist/adapters/angular/form.d.ts.map",
+    "package/dist/adapters/angular/form.js",
+    "package/dist/adapters/angular/form.js.map",
     "package/dist/adapters/angular/index.d.ts",
     "package/dist/adapters/angular/index.d.ts.map",
     "package/dist/adapters/angular/index.js",
     "package/dist/adapters/angular/index.js.map",
+    "package/dist/adapters/angular/types.d.ts",
+    "package/dist/adapters/angular/types.d.ts.map",
+    "package/dist/adapters/angular/types.js",
+    "package/dist/adapters/angular/types.js.map",
+    "package/dist/adapters/vue/array.d.ts",
+    "package/dist/adapters/vue/array.d.ts.map",
+    "package/dist/adapters/vue/array.js",
+    "package/dist/adapters/vue/array.js.map",
+    "package/dist/adapters/vue/field.d.ts",
+    "package/dist/adapters/vue/field.d.ts.map",
+    "package/dist/adapters/vue/field.js",
+    "package/dist/adapters/vue/field.js.map",
+    "package/dist/adapters/vue/form.d.ts",
+    "package/dist/adapters/vue/form.d.ts.map",
+    "package/dist/adapters/vue/form.js",
+    "package/dist/adapters/vue/form.js.map",
     "package/dist/adapters/vue/index.d.ts",
     "package/dist/adapters/vue/index.d.ts.map",
     "package/dist/adapters/vue/index.js",
     "package/dist/adapters/vue/index.js.map",
+    "package/dist/adapters/vue/types.d.ts",
+    "package/dist/adapters/vue/types.d.ts.map",
+    "package/dist/adapters/vue/types.js",
+    "package/dist/adapters/vue/types.js.map",
   ]);
 
   assertPackageEntries(formArtifactPath, expectedFormEntries, "Form");
@@ -267,13 +303,9 @@ import {
 } from "@vii-labs/form";
 import * as formVanilla from "@vii-labs/form/vanilla";
 import { bindField, bindForm } from "@vii-labs/form/vanilla";
-import * as formAngular from "@vii-labs/form/angular";
-import * as formVue from "@vii-labs/form/vue";
 
 export const rootKeys = Object.keys(form).sort();
 export const vanillaKeys = Object.keys(formVanilla).sort();
-export const angularKeys = Object.keys(formAngular);
-export const vueKeys = Object.keys(formVue);
 
 export async function runFormTreeScenario() {
   const formInstance = createForm({
@@ -569,22 +601,12 @@ export async function runVanillaScenario() {
       "createStringParser",
       "standardSchema",
     ].sort(),
-    "clean consumer root export should contain P1i symbols",
+    "clean consumer root export should contain P1j symbols",
   );
   assert.deepEqual(
     consumer.vanillaKeys,
     ["bindField", "bindForm"].sort(),
-    "clean consumer vanilla subpath export must contain P1i bindings",
-  );
-  assert.deepEqual(
-    consumer.angularKeys,
-    [],
-    "clean consumer angular subpath export should be empty in P1i",
-  );
-  assert.deepEqual(
-    consumer.vueKeys,
-    [],
-    "clean consumer vue subpath export should be empty in P1i",
+    "clean consumer vanilla subpath export must contain P1j bindings",
   );
 
   const scenarioResult = await consumer.runFormTreeScenario();
@@ -796,6 +818,192 @@ export function runReactApp() {
     react18ScenarioResult.markup.includes("idle"),
     "React 18 consumer should render useForm output",
   );
+
+  // Angular clean consumer smoke validation
+  await mkdir(angularConsumerDirectory, { recursive: true });
+  await mkdir(path.join(angularFixtureDirectory, "src"), { recursive: true });
+
+  const angularConsumerSource = `
+import { createField, createFieldArray, createForm } from "@vii-labs/form";
+import * as formAngular from "@vii-labs/form/angular";
+import {
+  createAngularField,
+  createAngularFieldArray,
+  createAngularForm,
+  toAngularField,
+} from "@vii-labs/form/angular";
+
+export const angularKeys = Object.keys(formAngular).sort();
+
+export function runAngularSmoke() {
+  const form = createForm({
+    fields: {
+      username: createField({ initialValue: "test-user" }),
+      items: createFieldArray({
+        items: [createField({ initialValue: "item-1" })],
+      }),
+    },
+  });
+
+  const fieldHandle = createAngularField(form.fields.username);
+  const initialValue = fieldHandle.value();
+  fieldHandle.setValue("mutated-user");
+  const mutatedValue = fieldHandle.value();
+  const canonicalValue = form.fields.username.getValue();
+  fieldHandle.dispose();
+
+  const formHandle = createAngularForm(form);
+  const formValue = formHandle.value();
+  const submissionStatus = formHandle.submissionStatus();
+  formHandle.dispose();
+
+  const arrayHandle = createAngularFieldArray(form.fields.items);
+  const arrayLen = arrayHandle.length();
+  const firstItemId = arrayHandle.items()[0]?.id;
+  arrayHandle.dispose();
+
+  form.dispose();
+
+  return {
+    initialValue,
+    mutatedValue,
+    canonicalValue,
+    formValue,
+    submissionStatus,
+    arrayLen,
+    firstItemId,
+  };
+}
+`;
+
+  await import("node:fs/promises").then((fs) =>
+    fs.writeFile(path.join(angularFixtureDirectory, "src/main.ts"), angularConsumerSource, "utf8"),
+  );
+
+  await prepareConsumer({
+    directory: angularConsumerDirectory,
+    fixtureDirectory: angularFixtureDirectory,
+    packageJson: {
+      name: "vii-packed-form-angular-consumer",
+      private: true,
+      type: "module",
+      dependencies: {
+        "@vii-labs/form": `file:${formArtifactPath}`,
+        "@vii-labs/core": `file:${coreArtifactPath}`,
+        "@angular/core": "22.1.4",
+      },
+    },
+    repositoryRoot,
+    pnpm,
+  });
+
+  const angularConsumer = await import(path.join(angularConsumerDirectory, "dist/main.js"));
+  assert.deepEqual(
+    angularConsumer.angularKeys,
+    ["createAngularField", "createAngularFieldArray", "createAngularForm", "toAngularField"].sort(),
+    "clean Angular consumer subpath export must contain P1j signals functions",
+  );
+
+  const angularSmokeResult = angularConsumer.runAngularSmoke();
+  assert.equal(angularSmokeResult.initialValue, "test-user");
+  assert.equal(angularSmokeResult.mutatedValue, "mutated-user");
+  assert.equal(angularSmokeResult.canonicalValue, "mutated-user");
+  assert.equal(angularSmokeResult.submissionStatus, "idle");
+  assert.equal(angularSmokeResult.arrayLen, 1);
+  assert.ok(angularSmokeResult.firstItemId);
+
+  // Vue clean consumer smoke validation
+  await mkdir(vueConsumerDirectory, { recursive: true });
+  await mkdir(path.join(vueFixtureDirectory, "src"), { recursive: true });
+
+  const vueConsumerSource = `
+import { createField, createFieldArray, createForm } from "@vii-labs/form";
+import * as formVue from "@vii-labs/form/vue";
+import {
+  createVueField,
+  createVueFieldArray,
+  createVueForm,
+  useViiField,
+} from "@vii-labs/form/vue";
+
+export const vueKeys = Object.keys(formVue).sort();
+
+export function runVueSmoke() {
+  const form = createForm({
+    fields: {
+      username: createField({ initialValue: "test-user" }),
+      items: createFieldArray({
+        items: [createField({ initialValue: "item-1" })],
+      }),
+    },
+  });
+
+  const fieldHandle = createVueField(form.fields.username);
+  const initialValue = fieldHandle.value.value;
+  fieldHandle.setValue("mutated-user");
+  const mutatedValue = fieldHandle.value.value;
+  const canonicalValue = form.fields.username.getValue();
+  fieldHandle.dispose();
+
+  const formHandle = createVueForm(form);
+  const formValue = formHandle.value.value;
+  const submissionStatus = formHandle.submissionStatus.value;
+  formHandle.dispose();
+
+  const arrayHandle = createVueFieldArray(form.fields.items);
+  const arrayLen = arrayHandle.length.value;
+  const firstItemId = arrayHandle.items.value[0]?.id;
+  arrayHandle.dispose();
+
+  form.dispose();
+
+  return {
+    initialValue,
+    mutatedValue,
+    canonicalValue,
+    formValue,
+    submissionStatus,
+    arrayLen,
+    firstItemId,
+  };
+}
+`;
+
+  await import("node:fs/promises").then((fs) =>
+    fs.writeFile(path.join(vueFixtureDirectory, "src/main.ts"), vueConsumerSource, "utf8"),
+  );
+
+  await prepareConsumer({
+    directory: vueConsumerDirectory,
+    fixtureDirectory: vueFixtureDirectory,
+    packageJson: {
+      name: "vii-packed-form-vue-consumer",
+      private: true,
+      type: "module",
+      dependencies: {
+        "@vii-labs/form": `file:${formArtifactPath}`,
+        "@vii-labs/core": `file:${coreArtifactPath}`,
+        vue: "3.5.41",
+      },
+    },
+    repositoryRoot,
+    pnpm,
+  });
+
+  const vueConsumer = await import(path.join(vueConsumerDirectory, "dist/main.js"));
+  assert.deepEqual(
+    vueConsumer.vueKeys,
+    ["createVueField", "createVueFieldArray", "createVueForm", "useViiField"].sort(),
+    "clean Vue consumer subpath export must contain P1j shallowRef functions",
+  );
+
+  const vueSmokeResult = vueConsumer.runVueSmoke();
+  assert.equal(vueSmokeResult.initialValue, "test-user");
+  assert.equal(vueSmokeResult.mutatedValue, "mutated-user");
+  assert.equal(vueSmokeResult.canonicalValue, "mutated-user");
+  assert.equal(vueSmokeResult.submissionStatus, "idle");
+  assert.equal(vueSmokeResult.arrayLen, 1);
+  assert.ok(vueSmokeResult.firstItemId);
 
   // Sanity size logging
   const distDir = path.join(repositoryRoot, "packages/form/dist");

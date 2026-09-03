@@ -12,6 +12,7 @@ import {
   type VanillaDomControl,
   type VanillaDomElement,
 } from "../../src/adapters/vanilla/index.js";
+import { getAriaInvalidOwnershipSize } from "../../src/adapters/vanilla/a11y.js";
 
 class MockDomElement implements VanillaDomControl, VanillaDomElement {
   value: unknown = "";
@@ -678,6 +679,221 @@ describe("@vii-labs/form/vanilla - Vanilla DOM Adapter", () => {
         fieldA.dispose();
         fieldB.dispose();
       });
+
+      describe("Overlapping Bindings Coordination Matrix", () => {
+        test("overlap A: original absent -> A valid, B invalid -> true -> dispose A -> still true -> dispose B -> absent", async () => {
+          const fieldA = createField({ initialValue: "good" });
+          const fieldB = createField({
+            initialValue: "bad",
+            rules: [(v: string) => (v === "bad" ? { code: "invalid", message: "err" } : null)],
+          });
+          await fieldB.validate();
+          expect(fieldB.invalid.get()).toBe(true);
+
+          const input = new MockDomElement();
+          expect(input.hasAttribute("aria-invalid")).toBe(false);
+
+          const bindingA = bindField(fieldA, input);
+          expect(getAriaInvalidOwnershipSize(input)).toBe(1);
+          expect(input.hasAttribute("aria-invalid")).toBe(false);
+
+          const bindingB = bindField(fieldB, input);
+          expect(getAriaInvalidOwnershipSize(input)).toBe(2);
+          // B is invalid -> "true"
+          expect(input.getAttribute("aria-invalid")).toBe("true");
+
+          // Dispose A -> B remains live and invalid -> still "true"
+          bindingA.dispose();
+          expect(getAriaInvalidOwnershipSize(input)).toBe(1);
+          expect(input.getAttribute("aria-invalid")).toBe("true");
+
+          // Dispose B -> final dispose -> restores absent baseline
+          bindingB.dispose();
+          expect(getAriaInvalidOwnershipSize(input)).toBe(0);
+          expect(input.hasAttribute("aria-invalid")).toBe(false);
+
+          fieldA.dispose();
+          fieldB.dispose();
+        });
+
+        test("overlap B: original 'grammar' -> A invalid, B valid -> true -> dispose B -> still true -> dispose A -> 'grammar'", async () => {
+          const fieldA = createField({
+            initialValue: "bad",
+            rules: [(v: string) => (v === "bad" ? { code: "invalid", message: "err" } : null)],
+          });
+          await fieldA.validate();
+          expect(fieldA.invalid.get()).toBe(true);
+
+          const fieldB = createField({ initialValue: "good" });
+          const input = new MockDomElement();
+          input.setAttribute("aria-invalid", "grammar");
+
+          const bindingA = bindField(fieldA, input);
+          expect(input.getAttribute("aria-invalid")).toBe("true");
+
+          const bindingB = bindField(fieldB, input);
+          expect(getAriaInvalidOwnershipSize(input)).toBe(2);
+          expect(input.getAttribute("aria-invalid")).toBe("true");
+
+          // Dispose B -> A remains live and invalid -> still "true"
+          bindingB.dispose();
+          expect(getAriaInvalidOwnershipSize(input)).toBe(1);
+          expect(input.getAttribute("aria-invalid")).toBe("true");
+
+          // Dispose A -> final dispose -> restores "grammar"
+          bindingA.dispose();
+          expect(getAriaInvalidOwnershipSize(input)).toBe(0);
+          expect(input.getAttribute("aria-invalid")).toBe("grammar");
+
+          fieldA.dispose();
+          fieldB.dispose();
+        });
+
+        test("overlap C: both invalid -> A invalid, B invalid -> dispose A -> true -> dispose B -> baseline", async () => {
+          const fieldA = createField({
+            initialValue: "bad1",
+            rules: [(v: string) => (v === "bad1" ? { code: "invalid", message: "err1" } : null)],
+          });
+          const fieldB = createField({
+            initialValue: "bad2",
+            rules: [(v: string) => (v === "bad2" ? { code: "invalid", message: "err2" } : null)],
+          });
+          await fieldA.validate();
+          await fieldB.validate();
+          expect(fieldA.invalid.get()).toBe(true);
+          expect(fieldB.invalid.get()).toBe(true);
+
+          const input = new MockDomElement();
+          input.setAttribute("aria-invalid", "custom-baseline");
+
+          const bindingA = bindField(fieldA, input);
+          const bindingB = bindField(fieldB, input);
+          expect(input.getAttribute("aria-invalid")).toBe("true");
+
+          bindingA.dispose();
+          expect(input.getAttribute("aria-invalid")).toBe("true");
+
+          bindingB.dispose();
+          expect(getAriaInvalidOwnershipSize(input)).toBe(0);
+          expect(input.getAttribute("aria-invalid")).toBe("custom-baseline");
+
+          fieldA.dispose();
+          fieldB.dispose();
+        });
+
+        test("overlap D: active binding state changes dynamically between live bindings", () => {
+          const fieldA = createField({
+            initialValue: "good-a",
+            rules: [(v: string) => (v === "bad-a" ? { code: "invalid", message: "err" } : null)],
+            validateOn: "change",
+          });
+          const fieldB = createField({
+            initialValue: "good-b",
+            rules: [(v: string) => (v === "bad-b" ? { code: "invalid", message: "err" } : null)],
+            validateOn: "change",
+          });
+          const input = new MockDomElement();
+          input.setAttribute("aria-invalid", "baseline-d");
+
+          const bindingA = bindField(fieldA, input);
+          const bindingB = bindField(fieldB, input);
+          // Both initially valid -> preserves baseline
+          expect(input.getAttribute("aria-invalid")).toBe("baseline-d");
+
+          // B becomes invalid -> projects "true"
+          fieldB.setValue("bad-b");
+          expect(input.getAttribute("aria-invalid")).toBe("true");
+
+          // B becomes valid again -> restores baseline
+          fieldB.setValue("good-b");
+          expect(input.getAttribute("aria-invalid")).toBe("baseline-d");
+
+          // A becomes invalid -> projects "true"
+          fieldA.setValue("bad-a");
+          expect(input.getAttribute("aria-invalid")).toBe("true");
+
+          // Dispose A while B is valid -> B is valid -> restores baseline
+          bindingA.dispose();
+          expect(input.getAttribute("aria-invalid")).toBe("baseline-d");
+
+          bindingB.dispose();
+          expect(getAriaInvalidOwnershipSize(input)).toBe(0);
+          expect(input.getAttribute("aria-invalid")).toBe("baseline-d");
+
+          fieldA.dispose();
+          fieldB.dispose();
+        });
+
+        test("overlap E: ariaInvalid: false does not participate or clobber live bindings", async () => {
+          const fieldA = createField({
+            initialValue: "bad",
+            rules: [(v: string) => (v === "bad" ? { code: "invalid", message: "err" } : null)],
+          });
+          await fieldA.validate();
+          expect(fieldA.invalid.get()).toBe(true);
+
+          const fieldB = createField({ initialValue: "good" });
+          const input = new MockDomElement();
+          input.setAttribute("aria-invalid", "baseline-e");
+
+          const bindingA = bindField(fieldA, input);
+          expect(input.getAttribute("aria-invalid")).toBe("true");
+          expect(getAriaInvalidOwnershipSize(input)).toBe(1);
+
+          // B has ariaInvalid: false
+          const bindingB = bindField(fieldB, input, { ariaInvalid: false });
+          // Must not add to ownership tracking
+          expect(getAriaInvalidOwnershipSize(input)).toBe(1);
+          // A's invalid state remains active
+          expect(input.getAttribute("aria-invalid")).toBe("true");
+
+          // Disposing B must not affect A or mutate attribute
+          bindingB.dispose();
+          expect(getAriaInvalidOwnershipSize(input)).toBe(1);
+          expect(input.getAttribute("aria-invalid")).toBe("true");
+
+          // Disposing A restores baseline
+          bindingA.dispose();
+          expect(getAriaInvalidOwnershipSize(input)).toBe(0);
+          expect(input.getAttribute("aria-invalid")).toBe("baseline-e");
+
+          fieldA.dispose();
+          fieldB.dispose();
+        });
+
+        test("overlap F: reverse cleanup order (create A then B, dispose B first then A)", async () => {
+          const fieldA = createField({
+            initialValue: "bad-a",
+            rules: [(v: string) => (v === "bad-a" ? { code: "invalid", message: "err" } : null)],
+          });
+          await fieldA.validate();
+          expect(fieldA.invalid.get()).toBe(true);
+
+          const fieldB = createField({
+            initialValue: "good-b",
+          });
+          const input = new MockDomElement();
+          input.setAttribute("aria-invalid", "baseline-f");
+
+          const bindingA = bindField(fieldA, input);
+          const bindingB = bindField(fieldB, input);
+          expect(input.getAttribute("aria-invalid")).toBe("true");
+
+          // Dispose B first
+          bindingB.dispose();
+          // A is still active and invalid -> still "true"
+          expect(input.getAttribute("aria-invalid")).toBe("true");
+          expect(getAriaInvalidOwnershipSize(input)).toBe(1);
+
+          // Dispose A
+          bindingA.dispose();
+          expect(getAriaInvalidOwnershipSize(input)).toBe(0);
+          expect(input.getAttribute("aria-invalid")).toBe("baseline-f");
+
+          fieldA.dispose();
+          fieldB.dispose();
+        });
+      });
     });
 
     test("links issueElement id into aria-describedby and restores original tokens on unbind", () => {
@@ -1232,6 +1448,16 @@ describe("@vii-labs/form/vanilla - Vanilla DOM Adapter", () => {
 
       bindingEmail.dispose();
       form.dispose();
+    });
+  });
+
+  describe("Package Boundary & Type Encapsulation", () => {
+    test("does not expose internal classifier types or helpers through public /vanilla exports", async () => {
+      const formVanilla = await import("../../src/adapters/vanilla/index.js");
+      expect(Object.keys(formVanilla).sort()).toEqual(["bindField", "bindForm"].sort());
+      expect("classifyControl" in formVanilla).toBe(false);
+      expect("VanillaControlKind" in formVanilla).toBe(false);
+      expect("applyAriaInvalid" in formVanilla).toBe(false);
     });
   });
 });

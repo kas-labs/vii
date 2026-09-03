@@ -37,7 +37,7 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
-## 2026-09-04 00:30 CEST | Production Form Phase 1 Slice P1i: Vanilla DOM Adapter Contract Hardening
+## 2026-09-04 01:05 CEST | Production Form Phase 1 Slice P1i: Vanilla DOM Adapter Overlapping Ownership & API Cleanup
 
 Status: completed
 Branch: `feat/form-p1i-vanilla-adapter`
@@ -45,32 +45,24 @@ PR: https://github.com/kas-labs/vii/pull/188
 
 ### Scope
 
-- Resolve the three Vanilla DOM contract blockers on Draft PR #188:
-  1. Unsupported element fail-closed preflight: classify controls into supported categories (HTMLInputElement-compatible, HTMLTextAreaElement-compatible, single HTMLSelectElement-compatible, and equivalent test doubles) and fail closed with `TypeError` on arbitrary elements (`<div>`, `<span>`, `<button>`, arbitrary objects) before any listener registration, subscription, or DOM mutation.
-  2. Non-destructive `aria-invalid` ownership and restoration: capture pre-binding attribute presence and exact string value during preflight; restore the original application-owned value (or remove it if absent) whenever the field is valid and upon `dispose()`.
-  3. Defer multi-select (`select-multiple`): explicitly defer `select-multiple` from P1i, fail closed with deterministic `TypeError`, and update documentation.
-- Add negative compile-time type coverage (`@ts-expect-error`) preventing arbitrary `HTMLElement` (such as `HTMLDivElement`) from being passed to `bindField`.
-- Add full test matrix for unsupported elements (div, span, button, arbitrary object) verifying 0 listeners, 0 subscriptions, 0 DOM mutations.
-- Add full test matrix for `aria-invalid` restoration across original absent, "grammar", "false", disabled `ariaInvalid: false`, and independent generation-local bindings.
-- Add signal subscription accounting in unit tests (`trackFieldSignals`) proving 100% unsubscription upon `dispose()` alongside DOM listener cleanup.
-- Correct documentation overclaims to sink-specific wording: "prevents HTML interpretation at the issue-message sink by writing through textContent".
+- Resolve the final two Vanilla DOM merge blockers on Draft PR #188:
+  1. Overlapping `aria-invalid` bindings coordination: implement element-local `WeakMap<object, AriaInvalidOwnership>` coordinating multiple live bindings on the same element without clobbering. Remembers true application baseline once per element; projects `"true"` if ANY live participating binding is invalid, otherwise restores baseline; removes element bookkeeping when final binding disposes; bindings with `ariaInvalid: false` never participate.
+  2. Public API surface cleanup: remove internal `VanillaControlKind` export from `packages/form/src/adapters/vanilla/index.ts` so classifier details remain private. Keep runtime exports strictly `bindField` and `bindForm`. Remove dead, uncalled `applyAriaInvalid` helper from `a11y.ts`.
+- Add full Overlapping Bindings Coordination Matrix tests (scenarios A through F, plus proof of element bookkeeping cleanup and no strong DOM retention).
+- Add package boundary encapsulation test ensuring classifier types and helpers are not exposed through `/vanilla`.
 
 ### Changes
 
-- Created `packages/form/src/adapters/vanilla/control.ts`: classifier `classifyControl(element)` resolving `"text"`, `"checkbox"`, `"radio"`, `"select-one"`, `"file"` or failing closed with `TypeError`.
-- Updated `packages/form/src/adapters/vanilla/types.ts`: narrowed `VanillaFieldElement` to `HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | VanillaDomControl` with required `value: unknown` on `VanillaDomControl`.
-- Updated `packages/form/src/adapters/vanilla/a11y.ts`: added `setupAriaInvalid` capturing pre-binding attribute state and non-destructively restoring application state upon field validity or disposal.
-- Updated `packages/form/src/adapters/vanilla/bind-field.ts`: integrated `classifyControl` and `setupAriaInvalid`; removed partial multi-select branch; narrowed element type to `VanillaFieldElement`.
-- Updated `packages/form/src/adapters/vanilla/index.ts`: exported `classifyControl` and supporting control and element types.
-- Updated `packages/form/test/unit/vanilla-adapter.test.ts`: added unsupported elements test matrix (div, span, button, arbitrary object, negative type test), ARIA restoration matrix (absent, grammar, false, disabled, generation-local), deferred `select-multiple` fail-closed test, and signal subscription accounting (`trackFieldSignals`). Total 308 tests in 21 test files.
-- Updated `scripts/package-validation/validate-form.mjs`: included emitted `control.*` build files in expected entries; verified clean consumers against packed artifact.
-- Updated `packages/form/README.md`, `PROJECT_STATE.md`, and `DUTY_WATCH.md` with sink-specific security wording and deferred multi-select notice.
+- Updated `packages/form/src/adapters/vanilla/a11y.ts`: implemented element-local `WeakMap` coordination for overlapping `setupAriaInvalid` calls, tracking per-binding state via unique Symbol tokens; recomputes effective projection on change or disposal; deletes bookkeeping and restores true application baseline on final disposal; removed dead `applyAriaInvalid` function; added internal test inspection helper `getAriaInvalidOwnershipSize`.
+- Updated `packages/form/src/adapters/vanilla/index.ts`: removed `VanillaControlKind` type export.
+- Updated `packages/form/test/unit/vanilla-adapter.test.ts`: added Overlapping Bindings Coordination Matrix (A: absent, B: grammar, C: both invalid, D: active state changes, E: ariaInvalid: false non-participation, F: reverse cleanup order, G: zero bookkeeping after final dispose) and Package Boundary & Type Encapsulation test. Total 315 tests across 21 test files (48 tests in `vanilla-adapter.test.ts`).
+- Updated `DUTY_WATCH.md`.
 
 ### Validation
 
 - `NX_DAEMON=false pnpm nx lint form`: passed (0 errors, 0 warnings).
 - `NX_DAEMON=false pnpm nx typecheck form`: passed (0 errors).
-- `NX_DAEMON=false pnpm nx test form`: passed (21 test files, 308 passed tests).
+- `NX_DAEMON=false pnpm nx test form`: passed (21 test files, 315 passed tests).
 - `NX_DAEMON=false pnpm nx build form`: passed (clean d.ts and ESM build).
 - `NX_DAEMON=false pnpm nx validate-package form`: passed (clean consumer verification against packed artifact for Core-only, Vanilla DOM, React 19, and React 18).
 - `git diff --check`: passed (0 whitespace errors).
@@ -81,6 +73,7 @@ PR: https://github.com/kas-labs/vii/pull/188
 - Zero modification to `@vii-labs/core`.
 - Zero modification to `@vii-labs/form/react` or React runtime.
 - Unidirectional dependency flow: `@vii-labs/form/vanilla` -> public `@vii-labs/form` primitives/types.
+- WeakMap ensures elements are held weakly, preventing memory leaks on element GC even without explicit disposal.
 - Root `@vii-labs/form` has zero DOM framework dependencies and runs in pure ESM/Node/SSR environments without browser globals.
 - Package remains private (`private: true`).
 

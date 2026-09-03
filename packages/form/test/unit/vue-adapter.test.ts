@@ -4,7 +4,6 @@ import {
   createVueField,
   createVueFieldArray,
   createVueForm,
-  useViiField,
 } from "../../src/adapters/vue/index.js";
 import {
   createField,
@@ -322,13 +321,13 @@ describe("Vue Adapter (@vii-labs/form/vue)", () => {
   });
 
   describe("EffectScope Lifecycle & Resource Stability", () => {
-    it("useViiField automatically cleans subscriptions when Vue effectScope is stopped", () => {
+    it("createVueField automatically cleans subscriptions when Vue effectScope is stopped", () => {
       const field = createField<string>({ initialValue: "scoped" });
       const scope = effectScope();
-      let handleRef!: ReturnType<typeof useViiField<string>>;
+      let handleRef!: ReturnType<typeof createVueField<string>>;
 
       scope.run(() => {
-        handleRef = useViiField(field);
+        handleRef = createVueField(field);
       });
 
       expect(handleRef.value.value).toBe("scoped");
@@ -344,19 +343,26 @@ describe("Vue Adapter (@vii-labs/form/vue)", () => {
       field.dispose();
     });
 
-    it("useViiField throws deterministically when called outside an active effectScope", () => {
-      const field = createField<string>({ initialValue: "err" });
-      expect(() => useViiField(field)).toThrow();
+    it("createVueField works outside an active effectScope with manual dispose", () => {
+      const field = createField<string>({ initialValue: "manual" });
+      const handle = createVueField(field);
+      expect(handle.value.value).toBe("manual");
+
+      handle.dispose();
+      field.setValue("after_dispose");
+      expect(handle.value.value).toBe("manual");
+      expect(field.getValue()).toBe("after_dispose");
+
       field.dispose();
     });
 
     it("is safe and idempotent when manual dispose occurs before scope.stop()", () => {
       const field = createField<string>({ initialValue: "safe" });
       const scope = effectScope();
-      let handleRef!: ReturnType<typeof useViiField<string>>;
+      let handleRef!: ReturnType<typeof createVueField<string>>;
 
       scope.run(() => {
-        handleRef = useViiField(field);
+        handleRef = createVueField(field);
       });
 
       expect(() => {
@@ -374,10 +380,10 @@ describe("Vue Adapter (@vii-labs/form/vue)", () => {
     it("is safe and idempotent when scope.stop() occurs before manual dispose", () => {
       const field = createField<string>({ initialValue: "safe2" });
       const scope = effectScope();
-      let handleRef!: ReturnType<typeof useViiField<string>>;
+      let handleRef!: ReturnType<typeof createVueField<string>>;
 
       scope.run(() => {
-        handleRef = useViiField(field);
+        handleRef = createVueField(field);
       });
 
       expect(() => {
@@ -410,9 +416,9 @@ describe("Vue Adapter (@vii-labs/form/vue)", () => {
 
       for (let i = 0; i < 100; i++) {
         const scope = effectScope();
-        let handle!: ReturnType<typeof useViiField<number>>;
+        let handle!: ReturnType<typeof createVueField<number>>;
         scope.run(() => {
-          handle = useViiField(field);
+          handle = createVueField(field);
         });
 
         handle.setValue(i);
@@ -435,14 +441,14 @@ describe("Vue Adapter (@vii-labs/form/vue)", () => {
       const field = createField<string>({ initialValue: "shared" });
       const scopeA = effectScope();
       const scopeB = effectScope();
-      let handleA!: ReturnType<typeof useViiField<string>>;
-      let handleB!: ReturnType<typeof useViiField<string>>;
+      let handleA!: ReturnType<typeof createVueField<string>>;
+      let handleB!: ReturnType<typeof createVueField<string>>;
 
       scopeA.run(() => {
-        handleA = useViiField(field);
+        handleA = createVueField(field);
       });
       scopeB.run(() => {
-        handleB = useViiField(field);
+        handleB = createVueField(field);
       });
 
       expect(handleA.value.value).toBe("shared");

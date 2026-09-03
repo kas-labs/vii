@@ -130,22 +130,3 @@ export function createVueField<TValue, TRaw = TValue>(
     dispose,
   };
 }
-
-/**
- * Idiomatic Vue composable projection over a canonical Vii Form leaf field.
- *
- * Strictly requires an active Vue effectScope (or explicit options.onDispose) to prevent
- * subscription leaks. Fails deterministically outside a reactive scope.
- */
-export function useViiField<TValue, TRaw = TValue>(
-  field: FieldState<TValue, TRaw>,
-  options?: VueAdapterOptions,
-): VueFieldHandle<TValue, TRaw> {
-  const scope = getCurrentScope();
-  if (scope === undefined && options?.onDispose === undefined) {
-    throw new Error(
-      "useViiField must be called within an active Vue effectScope or provide an explicit options.onDispose callback.",
-    );
-  }
-  return createVueField(field, options);
-}

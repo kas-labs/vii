@@ -11,7 +11,6 @@ import {
   createAngularField,
   createAngularFieldArray,
   createAngularForm,
-  toAngularField,
 } from "../../src/adapters/angular/index.js";
 import {
   createField,
@@ -326,11 +325,12 @@ describe("Angular Adapter (@vii-labs/form/angular)", () => {
   });
 
   describe("DestroyRef Lifecycle Integration", () => {
-    it("toAngularField subscribes inside injection context and cleans up when injector destroys", () => {
+    it("createAngularField with options.destroyRef cleans up when injector destroys", () => {
       const injector = createTestInjector();
+      const destroyRef = injector.get(DestroyRef);
       const field = createField<string>({ initialValue: "scoped" });
 
-      const handle = runInInjectionContext(injector, () => toAngularField(field));
+      const handle = createAngularField(field, { destroyRef });
       expect(handle.value()).toBe("scoped");
 
       injector.destroy();
@@ -344,17 +344,25 @@ describe("Angular Adapter (@vii-labs/form/angular)", () => {
       field.dispose();
     });
 
-    it("toAngularField throws deterministically when called outside an injection context", () => {
-      const field = createField<string>({ initialValue: "err" });
-      expect(() => toAngularField(field)).toThrow();
+    it("createAngularField works outside an injection context with manual dispose", () => {
+      const field = createField<string>({ initialValue: "manual" });
+      const handle = createAngularField(field);
+      expect(handle.value()).toBe("manual");
+
+      handle.dispose();
+      field.setValue("after_dispose");
+      expect(handle.value()).toBe("manual");
+      expect(field.getValue()).toBe("after_dispose");
+
       field.dispose();
     });
 
     it("is safe and idempotent when manual dispose occurs before DestroyRef teardown", () => {
       const injector = createTestInjector();
+      const destroyRef = injector.get(DestroyRef);
       const field = createField<string>({ initialValue: "safe" });
 
-      const handle = runInInjectionContext(injector, () => toAngularField(field));
+      const handle = createAngularField(field, { destroyRef });
 
       expect(() => {
         handle.dispose();
@@ -370,9 +378,10 @@ describe("Angular Adapter (@vii-labs/form/angular)", () => {
 
     it("is safe and idempotent when DestroyRef teardown occurs before manual dispose", () => {
       const injector = createTestInjector();
+      const destroyRef = injector.get(DestroyRef);
       const field = createField<string>({ initialValue: "safe2" });
 
-      const handle = runInInjectionContext(injector, () => toAngularField(field));
+      const handle = createAngularField(field, { destroyRef });
 
       expect(() => {
         injector.destroy();
@@ -404,7 +413,8 @@ describe("Angular Adapter (@vii-labs/form/angular)", () => {
 
       for (let i = 0; i < 100; i++) {
         const injector = createTestInjector();
-        const handle = runInInjectionContext(injector, () => toAngularField(field));
+        const destroyRef = injector.get(DestroyRef);
+        const handle = createAngularField(field, { destroyRef });
         handle.setValue(i);
         expect(handle.value()).toBe(i);
 

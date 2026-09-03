@@ -1,4 +1,4 @@
-import type { Signal } from "@angular/core";
+import type { DestroyRef, Signal } from "@angular/core";
 import type {
   FieldArray,
   FieldArrayItem,
@@ -23,21 +23,13 @@ import type {
 } from "../../core/types.js";
 
 /**
- * Minimal structural contract for an Angular DestroyRef or equivalent lifecycle token.
- */
-export interface DestroyRefLike {
-  readonly destroyed?: boolean;
-  onDestroy(callback: () => void): () => void;
-}
-
-/**
  * Configuration options for Angular adapter handle creation.
  */
 export interface AngularAdapterOptions {
   /**
-   * Explicit DestroyRef or lifecycle token used to automate subscription teardown.
+   * Explicit Angular DestroyRef used to automate subscription teardown on component destruction.
    */
-  readonly destroyRef?: DestroyRefLike | undefined;
+  readonly destroyRef?: DestroyRef | undefined;
 }
 
 /**

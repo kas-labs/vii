@@ -1,4 +1,4 @@
-import { DestroyRef, inject, signal } from "@angular/core";
+import { signal } from "@angular/core";
 import type { FieldState, ValidationTriggerMode } from "../../core/types.js";
 import type { AngularAdapterOptions, AngularFieldHandle } from "./types.js";
 
@@ -136,18 +136,4 @@ export function createAngularField<TValue, TRaw = TValue>(
     reset,
     dispose,
   };
-}
-
-/**
- * Creates an Angular Signals projection bound automatically to the ambient Angular DestroyRef.
- *
- * Must be executed within an active Angular injection context unless an explicit
- * DestroyRef is supplied in options.
- */
-export function toAngularField<TValue, TRaw = TValue>(
-  field: FieldState<TValue, TRaw>,
-  options?: AngularAdapterOptions,
-): AngularFieldHandle<TValue, TRaw> {
-  const destroyRef = options?.destroyRef ?? inject(DestroyRef);
-  return createAngularField(field, { ...options, destroyRef });
 }

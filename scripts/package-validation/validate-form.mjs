@@ -218,10 +218,30 @@ try {
     "package/dist/adapters/react/use-form.d.ts.map",
     "package/dist/adapters/react/use-form.js",
     "package/dist/adapters/react/use-form.js.map",
+    "package/dist/adapters/vanilla/a11y.d.ts",
+    "package/dist/adapters/vanilla/a11y.d.ts.map",
+    "package/dist/adapters/vanilla/a11y.js",
+    "package/dist/adapters/vanilla/a11y.js.map",
+    "package/dist/adapters/vanilla/bind-field.d.ts",
+    "package/dist/adapters/vanilla/bind-field.d.ts.map",
+    "package/dist/adapters/vanilla/bind-field.js",
+    "package/dist/adapters/vanilla/bind-field.js.map",
+    "package/dist/adapters/vanilla/bind-form.d.ts",
+    "package/dist/adapters/vanilla/bind-form.d.ts.map",
+    "package/dist/adapters/vanilla/bind-form.js",
+    "package/dist/adapters/vanilla/bind-form.js.map",
+    "package/dist/adapters/vanilla/control.d.ts",
+    "package/dist/adapters/vanilla/control.d.ts.map",
+    "package/dist/adapters/vanilla/control.js",
+    "package/dist/adapters/vanilla/control.js.map",
     "package/dist/adapters/vanilla/index.d.ts",
     "package/dist/adapters/vanilla/index.d.ts.map",
     "package/dist/adapters/vanilla/index.js",
     "package/dist/adapters/vanilla/index.js.map",
+    "package/dist/adapters/vanilla/types.d.ts",
+    "package/dist/adapters/vanilla/types.d.ts.map",
+    "package/dist/adapters/vanilla/types.js",
+    "package/dist/adapters/vanilla/types.js.map",
     "package/dist/adapters/angular/index.d.ts",
     "package/dist/adapters/angular/index.d.ts.map",
     "package/dist/adapters/angular/index.js",
@@ -246,11 +266,12 @@ import {
   standardSchema,
 } from "@vii-labs/form";
 import * as formVanilla from "@vii-labs/form/vanilla";
+import { bindField, bindForm } from "@vii-labs/form/vanilla";
 import * as formAngular from "@vii-labs/form/angular";
 import * as formVue from "@vii-labs/form/vue";
 
 export const rootKeys = Object.keys(form).sort();
-export const vanillaKeys = Object.keys(formVanilla);
+export const vanillaKeys = Object.keys(formVanilla).sort();
 export const angularKeys = Object.keys(formAngular);
 export const vueKeys = Object.keys(formVue);
 
@@ -440,6 +461,80 @@ export async function runFormTreeScenario() {
     postDisposeError,
   };
 }
+
+export async function runVanillaScenario() {
+  class MockElement {
+    value = "";
+    checked = false;
+    type = "text";
+    id = "";
+    textContent = "";
+    private attrs = new Map<string, string>();
+    private listeners = new Map<string, Set<(e: any) => void>>();
+    getAttribute(name: string) { return this.attrs.get(name) ?? null; }
+    setAttribute(name: string, val: string) { this.attrs.set(name, val); }
+    removeAttribute(name: string) { this.attrs.delete(name); }
+    addEventListener(event: string, handler: (e: any) => void) {
+      if (!this.listeners.has(event)) this.listeners.set(event, new Set());
+      this.listeners.get(event)!.add(handler);
+    }
+    removeEventListener(event: string, handler: (e: any) => void) {
+      this.listeners.get(event)?.delete(handler);
+    }
+    dispatch(event: string, overrides = {}) {
+      let prevented = false;
+      const evt = { type: event, target: this, preventDefault: () => { prevented = true; }, ...overrides };
+      this.listeners.get(event)?.forEach((h) => h(evt));
+      return { prevented };
+    }
+  }
+
+  const field = createField({ initialValue: "initial-val" });
+  const input = new MockElement();
+  const issueElem = new MockElement();
+  issueElem.id = "email-issue";
+
+  const fieldBinding = bindField(field, input as any, { issueElement: issueElem as any });
+  const initialInputVal = input.value;
+  const initialDescribedBy = input.getAttribute("aria-describedby");
+
+  input.value = "user-edited";
+  input.dispatch("input");
+  const fieldRawVal = field.rawValue.get();
+
+  fieldBinding.dispose();
+  const postDisposeDescribedBy = input.getAttribute("aria-describedby");
+
+  // Form submit binding
+  const form = createForm({ fields: { title: createField({ initialValue: "post title" }) } });
+  const formElem = new MockElement();
+  let submitSucceeded = false;
+  let submitResultText = "";
+
+  const formBinding = bindForm(form, formElem as any, {
+    action: async (val) => ({ ok: true, result: \`Published: \${val.title}\` }),
+    onSubmitSuccess: (res) => {
+      submitSucceeded = true;
+      submitResultText = res as string;
+    },
+  });
+
+  formElem.dispatch("submit");
+  await new Promise((r) => setTimeout(r, 10));
+
+  formBinding.dispose();
+  field.dispose();
+  form.dispose();
+
+  return {
+    initialInputVal,
+    initialDescribedBy,
+    fieldRawVal,
+    postDisposeDescribedBy,
+    submitSucceeded,
+    submitResultText,
+  };
+}
 `;
 
   await import("node:fs/promises").then((fs) =>
@@ -474,25 +569,38 @@ export async function runFormTreeScenario() {
       "createStringParser",
       "standardSchema",
     ].sort(),
-    "clean consumer root export should contain P1h symbols",
+    "clean consumer root export should contain P1i symbols",
   );
   assert.deepEqual(
     consumer.vanillaKeys,
-    [],
-    "clean consumer vanilla subpath export should be empty in P1h",
+    ["bindField", "bindForm"].sort(),
+    "clean consumer vanilla subpath export must contain P1i bindings",
   );
   assert.deepEqual(
     consumer.angularKeys,
     [],
-    "clean consumer angular subpath export should be empty in P1h",
+    "clean consumer angular subpath export should be empty in P1i",
   );
   assert.deepEqual(
     consumer.vueKeys,
     [],
-    "clean consumer vue subpath export should be empty in P1h",
+    "clean consumer vue subpath export should be empty in P1i",
   );
 
   const scenarioResult = await consumer.runFormTreeScenario();
+  const vanillaScenarioResult = await consumer.runVanillaScenario();
+  assert.deepEqual(
+    vanillaScenarioResult,
+    {
+      initialInputVal: "initial-val",
+      initialDescribedBy: "email-issue",
+      fieldRawVal: "user-edited",
+      postDisposeDescribedBy: null,
+      submitSucceeded: true,
+      submitResultText: "Published: post title",
+    },
+    "clean consumer vanilla scenario must execute correctly against packed artifact",
+  );
   assert.deepEqual(
     scenarioResult,
     {

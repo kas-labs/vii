@@ -1,0 +1,1463 @@
+import { describe, expect, test } from "vitest";
+import {
+  createField,
+  createForm,
+  createNumberParser,
+  type FieldIssue,
+  type FieldState,
+} from "../../src/index.js";
+import {
+  bindField,
+  bindForm,
+  type VanillaDomControl,
+  type VanillaDomElement,
+} from "../../src/adapters/vanilla/index.js";
+import { getAriaInvalidOwnershipSize } from "../../src/adapters/vanilla/a11y.js";
+
+class MockDomElement implements VanillaDomControl, VanillaDomElement {
+  value: unknown = "";
+  tagName?: string = "INPUT";
+  nodeName?: string = "INPUT";
+  checked?: boolean | undefined = false;
+  type?: string | undefined = "text";
+  id?: string = "";
+  name?: string = "";
+  multiple?: boolean = false;
+  files?: unknown = null;
+  textContent?: string | null = "";
+  selectedOptions?: Array<{ value: string }> = [];
+
+  private attributes = new Map<string, string>();
+  private listeners = new Map<string, Set<(event: unknown) => void>>();
+
+  public totalListenersAdded = 0;
+  public totalListenersRemoved = 0;
+
+  get currentListenerCount(): number {
+    let count = 0;
+    for (const set of this.listeners.values()) {
+      count += set.size;
+    }
+    return count;
+  }
+
+  getAttribute(name: string): string | null {
+    return this.attributes.has(name) ? this.attributes.get(name)! : null;
+  }
+
+  setAttribute(name: string, value: string): void {
+    this.attributes.set(name, value);
+  }
+
+  removeAttribute(name: string): void {
+    this.attributes.delete(name);
+  }
+
+  hasAttribute(name: string): boolean {
+    return this.attributes.has(name);
+  }
+
+  addEventListener(event: string, handler: (event: unknown) => void): void {
+    if (!this.listeners.has(event)) {
+      this.listeners.set(event, new Set());
+    }
+    this.listeners.get(event)!.add(handler);
+    this.totalListenersAdded++;
+  }
+
+  removeEventListener(event: string, handler: (event: unknown) => void): void {
+    const set = this.listeners.get(event);
+    if (set && set.has(handler)) {
+      set.delete(handler);
+      this.totalListenersRemoved++;
+    }
+  }
+
+  dispatch(eventName: string, overrides: Record<string, unknown> = {}): { prevented: boolean } {
+    let prevented = false;
+    const evt = {
+      type: eventName,
+      target: this,
+      preventDefault: () => {
+        prevented = true;
+      },
+      ...overrides,
+    };
+    const set = this.listeners.get(eventName);
+    if (set) {
+      for (const handler of Array.from(set)) {
+        handler(evt);
+      }
+    }
+    return { prevented };
+  }
+}
+
+interface SignalTracker {
+  readonly subscribeCalls: () => number;
+  readonly unsubscribeCalls: () => number;
+  readonly activeCount: () => number;
+}
+
+function trackSignal(signal: { subscribe(fn: (v: unknown) => void): () => void }): SignalTracker {
+  let subscribeCalls = 0;
+  let unsubscribeCalls = 0;
+  const originalSubscribe = signal.subscribe.bind(signal);
+  signal.subscribe = (callback: (v: unknown) => void) => {
+    subscribeCalls++;
+    const unsubscribe = originalSubscribe(callback);
+    let unsubscribed = false;
+    return () => {
+      if (!unsubscribed) {
+        unsubscribed = true;
+        unsubscribeCalls++;
+      }
+      unsubscribe();
+    };
+  };
+  return {
+    subscribeCalls: () => subscribeCalls,
+    unsubscribeCalls: () => unsubscribeCalls,
+    activeCount: () => subscribeCalls - unsubscribeCalls,
+  };
+}
+
+function trackFieldSignals(field: FieldState<unknown, unknown>) {
+  const rawValueTracker = trackSignal(
+    field.rawValue as unknown as { subscribe(fn: (v: unknown) => void): () => void },
+  );
+  const valueTracker = trackSignal(
+    field.value as unknown as { subscribe(fn: (v: unknown) => void): () => void },
+  );
+  const issuesTracker = trackSignal(
+    field.issues as unknown as { subscribe(fn: (v: unknown) => void): () => void },
+  );
+  const serverIssuesTracker = trackSignal(
+    field.serverIssues as unknown as { subscribe(fn: (v: unknown) => void): () => void },
+  );
+  const parseStatusTracker = trackSignal(
+    field.parseStatus as unknown as { subscribe(fn: (v: unknown) => void): () => void },
+  );
+
+  return {
+    rawValueTracker,
+    valueTracker,
+    issuesTracker,
+    serverIssuesTracker,
+    parseStatusTracker,
+    totalSubscribeCalls: () =>
+      rawValueTracker.subscribeCalls() +
+      valueTracker.subscribeCalls() +
+      issuesTracker.subscribeCalls() +
+      serverIssuesTracker.subscribeCalls() +
+      parseStatusTracker.subscribeCalls(),
+    totalUnsubscribeCalls: () =>
+      rawValueTracker.unsubscribeCalls() +
+      valueTracker.unsubscribeCalls() +
+      issuesTracker.unsubscribeCalls() +
+      serverIssuesTracker.unsubscribeCalls() +
+      parseStatusTracker.unsubscribeCalls(),
+    activeCount: () =>
+      rawValueTracker.activeCount() +
+      valueTracker.activeCount() +
+      issuesTracker.activeCount() +
+      serverIssuesTracker.activeCount() +
+      parseStatusTracker.activeCount(),
+  };
+}
+
+describe("@vii-labs/form/vanilla - Vanilla DOM Adapter", () => {
+  describe("Text-like Controls & Single Commit Contract", () => {
+    test("initializes DOM input with initial field raw value", () => {
+      const field = createField({ initialValue: "hello world" });
+      const input = new MockDomElement();
+      input.type = "text";
+
+      const binding = bindField(field, input);
+      expect(input.value).toBe("hello world");
+      binding.dispose();
+      field.dispose();
+    });
+
+    test("commits DOM input event to field rawValue exactly once per event", () => {
+      let validationCount = 0;
+      const field = createField({
+        initialValue: "abc",
+        rules: [
+          (val: string) => {
+            validationCount++;
+            return val.length < 2 ? { code: "min_len", message: "too short" } : null;
+          },
+        ],
+        validateOn: "change",
+      });
+      const input = new MockDomElement();
+      input.type = "text";
+
+      const binding = bindField(field, input);
+      validationCount = 0;
+
+      input.value = "abcd";
+      input.dispatch("input");
+
+      expect(field.rawValue.get()).toBe("abcd");
+      expect(field.value.get()).toBe("abcd");
+      expect(validationCount).toBe(1);
+
+      // Verify change event is NOT registered for text inputs
+      input.value = "abcde";
+      input.dispatch("change");
+      // field should NOT change from change event because only input is bound
+      expect(field.rawValue.get()).toBe("abcd");
+      expect(validationCount).toBe(1);
+
+      binding.dispose();
+      field.dispose();
+    });
+
+    test("projects programmatic setRawValue back to input.value", () => {
+      const field = createField<number, string>({
+        initialValue: 42,
+        initialRawValue: "42",
+        parser: createNumberParser(),
+      });
+      const input = new MockDomElement();
+      input.type = "text";
+
+      const binding = bindField(field, input);
+      expect(input.value).toBe("42");
+
+      field.setRawValue("100");
+      expect(input.value).toBe("100");
+      expect(field.value.get()).toBe(100);
+
+      binding.dispose();
+      field.dispose();
+    });
+
+    test("parsed invalid intermediate raw input remains visible in DOM and does not snap back", () => {
+      const field = createField<number, string>({
+        initialValue: 42,
+        initialRawValue: "42",
+        parser: createNumberParser(),
+      });
+      const input = new MockDomElement();
+      input.type = "text";
+
+      const binding = bindField(field, input);
+
+      // User types "-" which is invalid numeric syntax
+      input.value = "-";
+      input.dispatch("input");
+
+      expect(field.rawValue.get()).toBe("-");
+      expect(field.value.get()).toBe(42); // Domain value remains at last known valid baseline
+      expect(field.parseStatus.get()).toBe("invalid");
+      expect(input.value).toBe("-"); // DOM input must NOT snap back to "42"
+
+      binding.dispose();
+      field.dispose();
+    });
+
+    test("reset projects baseline back to DOM input", () => {
+      const field = createField({ initialValue: "initial text" });
+      const input = new MockDomElement();
+      input.type = "text";
+
+      const binding = bindField(field, input);
+      input.value = "modified text";
+      input.dispatch("input");
+      expect(field.rawValue.get()).toBe("modified text");
+
+      field.reset();
+      expect(field.rawValue.get()).toBe("initial text");
+      expect(input.value).toBe("initial text");
+
+      binding.dispose();
+      field.dispose();
+    });
+
+    test("blur event marks field touched exactly once and triggers blur validation", () => {
+      let blurValidateCount = 0;
+      const field = createField({
+        initialValue: "test",
+        rules: [
+          () => {
+            blurValidateCount++;
+            return null;
+          },
+        ],
+        validateOn: "blur",
+      });
+      const input = new MockDomElement();
+      input.type = "text";
+
+      const binding = bindField(field, input);
+      expect(field.touched.get()).toBe(false);
+      expect(blurValidateCount).toBe(0);
+
+      input.dispatch("blur");
+      expect(field.touched.get()).toBe(true);
+      expect(blurValidateCount).toBe(1);
+
+      // Repeated blur when already touched
+      input.dispatch("blur");
+      expect(field.touched.get()).toBe(true);
+
+      binding.dispose();
+      field.dispose();
+    });
+  });
+
+  describe("Checkbox Controls", () => {
+    test("initializes checked state and syncs bidirectionally on change", () => {
+      let commitCount = 0;
+      const field = createField<boolean>({
+        initialValue: false,
+        rules: [
+          () => {
+            commitCount++;
+            return null;
+          },
+        ],
+        validateOn: "change",
+      });
+      const checkbox = new MockDomElement();
+      checkbox.type = "checkbox";
+
+      const binding = bindField(field, checkbox);
+      expect(checkbox.checked).toBe(false);
+      commitCount = 0;
+
+      // User checks the box
+      checkbox.checked = true;
+      checkbox.dispatch("change");
+
+      expect(field.value.get()).toBe(true);
+      expect(commitCount).toBe(1);
+
+      // Programmatic change
+      field.setValue(false);
+      expect(checkbox.checked).toBe(false);
+
+      // Reset
+      field.setValue(true);
+      expect(checkbox.checked).toBe(true);
+      field.reset();
+      expect(checkbox.checked).toBe(false);
+
+      binding.dispose();
+      field.dispose();
+    });
+  });
+
+  describe("Select Controls", () => {
+    test("binds single select and commits on change event", () => {
+      let commitCount = 0;
+      const field = createField({
+        initialValue: "opt-1",
+        rules: [
+          () => {
+            commitCount++;
+            return null;
+          },
+        ],
+        validateOn: "change",
+      });
+      const select = new MockDomElement();
+      select.type = "select-one";
+
+      const binding = bindField(field, select);
+      expect(select.value).toBe("opt-1");
+      commitCount = 0;
+
+      select.value = "opt-2";
+      select.dispatch("change");
+
+      expect(field.value.get()).toBe("opt-2");
+      expect(commitCount).toBe(1);
+
+      field.setValue("opt-3");
+      expect(select.value).toBe("opt-3");
+
+      binding.dispose();
+      field.dispose();
+    });
+
+    test("select-multiple fails closed with TypeError and zero partial binding", () => {
+      const field = createField<string[]>({
+        initialValue: ["opt-1"],
+      });
+      const tracker = trackFieldSignals(field as unknown as FieldState<unknown, unknown>);
+      const select = new MockDomElement();
+      select.tagName = "SELECT";
+      select.type = "select-multiple";
+      select.multiple = true;
+      select.value = "opt-1";
+      select.setAttribute("data-test", "original");
+
+      expect(() => {
+        bindField(field as unknown as FieldState<string>, select);
+      }).toThrow(TypeError);
+
+      // 1. Exactly 0 listeners attached
+      expect(select.currentListenerCount).toBe(0);
+      expect(select.totalListenersAdded).toBe(0);
+
+      // 2. Exactly 0 subscriptions created on the field
+      expect(tracker.totalSubscribeCalls()).toBe(0);
+      expect(tracker.activeCount()).toBe(0);
+
+      // 3. No DOM mutation
+      expect(select.value).toBe("opt-1");
+      expect(select.getAttribute("data-test")).toBe("original");
+      expect(select.hasAttribute("aria-invalid")).toBe(false);
+
+      field.dispose();
+    });
+  });
+
+  describe("Radio Controls", () => {
+    test("binds radio option and sets checked based on value matching", () => {
+      const field = createField({ initialValue: "green" });
+      const radioRed = new MockDomElement();
+      radioRed.type = "radio";
+      radioRed.value = "red";
+
+      const radioGreen = new MockDomElement();
+      radioGreen.type = "radio";
+      radioGreen.value = "green";
+
+      const bindingRed = bindField(field, radioRed);
+      const bindingGreen = bindField(field, radioGreen);
+
+      expect(radioRed.checked).toBe(false);
+      expect(radioGreen.checked).toBe(true);
+
+      // User selects red
+      radioRed.checked = true;
+      radioRed.dispatch("change");
+
+      expect(field.value.get()).toBe("red");
+      expect(radioRed.checked).toBe(true);
+      expect(radioGreen.checked).toBe(false);
+
+      bindingRed.dispose();
+      bindingGreen.dispose();
+      field.dispose();
+    });
+  });
+
+  describe("File Input Controls", () => {
+    test("binds file input DOM -> Field on change without reverse path mutation", () => {
+      const field = createField<unknown>({ initialValue: null });
+      const fileInput = new MockDomElement();
+      fileInput.type = "file";
+      const dummyFileList = [{ name: "document.pdf", size: 1024 }];
+      fileInput.files = dummyFileList;
+
+      const binding = bindField(field, fileInput);
+
+      fileInput.dispatch("change");
+      expect(field.value.get()).toBe(dummyFileList);
+
+      // Programmatic field update must not throw or attempt fileInput.value mutation
+      expect(() => {
+        field.setValue({ name: "another.pdf" });
+      }).not.toThrow();
+
+      binding.dispose();
+      field.dispose();
+    });
+  });
+
+  describe("ARIA Projection & Safe textContent Sink", () => {
+    test("projects aria-invalid only when invalid and never when pending-only", async () => {
+      let resolveAsync!: () => void;
+      const field = createField({
+        initialValue: "valid-input",
+        rules: [
+          (val: string) =>
+            val === "invalid-input" ? { code: "invalid_input", message: "Input is invalid" } : null,
+          () =>
+            new Promise<FieldIssue | null>((res) => {
+              resolveAsync = () => res(null);
+            }),
+        ],
+        validateOn: "change",
+      });
+      const input = new MockDomElement();
+      input.type = "text";
+
+      const binding = bindField(field, input);
+      expect(input.hasAttribute("aria-invalid")).toBe(false);
+
+      // Trigger change to enter pending state
+      input.value = "pending-input";
+      input.dispatch("input");
+
+      expect(field.pending.get()).toBe(true);
+      expect(field.invalid.get()).toBe(false);
+      // Pending alone must NOT mark aria-invalid="true"
+      expect(input.hasAttribute("aria-invalid")).toBe(false);
+
+      resolveAsync();
+      await new Promise((r) => setTimeout(r, 0));
+
+      expect(field.pending.get()).toBe(false);
+      expect(input.hasAttribute("aria-invalid")).toBe(false);
+
+      // Now set client invalid
+      input.value = "invalid-input";
+      input.dispatch("input");
+
+      expect(field.invalid.get()).toBe(true);
+      expect(input.getAttribute("aria-invalid")).toBe("true");
+
+      // Restore to valid
+      input.value = "valid-again";
+      input.dispatch("input");
+      resolveAsync();
+      await new Promise((r) => setTimeout(r, 0));
+      expect(field.invalid.get()).toBe(false);
+      expect(input.hasAttribute("aria-invalid")).toBe(false);
+
+      binding.dispose();
+      field.dispose();
+    });
+
+    describe("aria-invalid Non-destructive Ownership & Restoration Matrix", () => {
+      test("matrix 1: original aria-invalid absent -> invalid='true' -> valid=absent -> dispose=absent", () => {
+        const field = createField({
+          initialValue: "valid",
+          rules: [(v: string) => (v === "bad" ? { code: "invalid", message: "bad" } : null)],
+          validateOn: "change",
+        });
+        const input = new MockDomElement();
+        // Original: absent
+        expect(input.hasAttribute("aria-invalid")).toBe(false);
+
+        const binding = bindField(field, input);
+        // Valid initially: remains absent
+        expect(input.hasAttribute("aria-invalid")).toBe(false);
+
+        // Invalid: projects "true"
+        input.value = "bad";
+        input.dispatch("input");
+        expect(field.invalid.get()).toBe(true);
+        expect(input.getAttribute("aria-invalid")).toBe("true");
+
+        // Valid again: restores absent state
+        input.value = "good";
+        input.dispatch("input");
+        expect(field.invalid.get()).toBe(false);
+        expect(input.hasAttribute("aria-invalid")).toBe(false);
+
+        // Turn invalid again before dispose
+        input.value = "bad";
+        input.dispatch("input");
+        expect(input.getAttribute("aria-invalid")).toBe("true");
+
+        // Dispose: restores exact original absent state
+        binding.dispose();
+        expect(input.hasAttribute("aria-invalid")).toBe(false);
+
+        field.dispose();
+      });
+
+      test("matrix 2: original aria-invalid='grammar' -> valid='grammar' -> invalid='true' -> valid='grammar' -> dispose='grammar'", () => {
+        const field = createField({
+          initialValue: "valid",
+          rules: [(v: string) => (v === "bad" ? { code: "invalid", message: "bad" } : null)],
+          validateOn: "change",
+        });
+        const input = new MockDomElement();
+        input.setAttribute("aria-invalid", "grammar");
+
+        const binding = bindField(field, input);
+        // Field is valid initially: preserves application-owned "grammar"
+        expect(input.getAttribute("aria-invalid")).toBe("grammar");
+
+        // Invalid: projects "true"
+        input.value = "bad";
+        input.dispatch("input");
+        expect(field.invalid.get()).toBe(true);
+        expect(input.getAttribute("aria-invalid")).toBe("true");
+
+        // Valid: restores original application "grammar"
+        input.value = "good";
+        input.dispatch("input");
+        expect(field.invalid.get()).toBe(false);
+        expect(input.getAttribute("aria-invalid")).toBe("grammar");
+
+        // Dispose: restores original application "grammar"
+        input.value = "bad";
+        input.dispatch("input");
+        expect(input.getAttribute("aria-invalid")).toBe("true");
+
+        binding.dispose();
+        expect(input.getAttribute("aria-invalid")).toBe("grammar");
+
+        field.dispose();
+      });
+
+      test("matrix 3: original aria-invalid='false' -> valid='false' -> invalid='true' -> valid='false' -> dispose='false'", () => {
+        const field = createField({
+          initialValue: "valid",
+          rules: [(v: string) => (v === "bad" ? { code: "invalid", message: "bad" } : null)],
+          validateOn: "change",
+        });
+        const input = new MockDomElement();
+        input.setAttribute("aria-invalid", "false");
+
+        const binding = bindField(field, input);
+        // Valid initially: preserves "false"
+        expect(input.getAttribute("aria-invalid")).toBe("false");
+
+        // Invalid: projects "true"
+        input.value = "bad";
+        input.dispatch("input");
+        expect(field.invalid.get()).toBe(true);
+        expect(input.getAttribute("aria-invalid")).toBe("true");
+
+        // Valid: restores "false"
+        input.value = "good";
+        input.dispatch("input");
+        expect(field.invalid.get()).toBe(false);
+        expect(input.getAttribute("aria-invalid")).toBe("false");
+
+        // Dispose: restores exact original "false"
+        binding.dispose();
+        expect(input.getAttribute("aria-invalid")).toBe("false");
+
+        field.dispose();
+      });
+
+      test("matrix 4: ariaInvalid: false never mutates application aria-invalid attribute", () => {
+        const field = createField({
+          initialValue: "valid",
+          rules: [(v: string) => (v === "bad" ? { code: "invalid", message: "bad" } : null)],
+          validateOn: "change",
+        });
+        const input = new MockDomElement();
+        input.setAttribute("aria-invalid", "custom-app-state");
+
+        const binding = bindField(field, input, { ariaInvalid: false });
+        expect(input.getAttribute("aria-invalid")).toBe("custom-app-state");
+
+        input.value = "bad";
+        input.dispatch("input");
+        expect(field.invalid.get()).toBe(true);
+        // Must remain untouched
+        expect(input.getAttribute("aria-invalid")).toBe("custom-app-state");
+
+        binding.dispose();
+        // Still untouched on dispose
+        expect(input.getAttribute("aria-invalid")).toBe("custom-app-state");
+
+        field.dispose();
+      });
+
+      test("matrix 5: generation-local multiple bindings manage aria-invalid independently", () => {
+        const fieldA = createField({ initialValue: "a" });
+        const fieldB = createField({ initialValue: "b" });
+        const input = new MockDomElement();
+        input.setAttribute("aria-invalid", "pre-existing");
+
+        const bindingA = bindField(fieldA, input);
+        expect(input.getAttribute("aria-invalid")).toBe("pre-existing");
+
+        bindingA.dispose();
+        expect(input.getAttribute("aria-invalid")).toBe("pre-existing");
+
+        const bindingB = bindField(fieldB, input);
+        expect(input.getAttribute("aria-invalid")).toBe("pre-existing");
+
+        bindingB.dispose();
+        expect(input.getAttribute("aria-invalid")).toBe("pre-existing");
+
+        fieldA.dispose();
+        fieldB.dispose();
+      });
+
+      describe("Overlapping Bindings Coordination Matrix", () => {
+        test("overlap A: original absent -> A valid, B invalid -> true -> dispose A -> still true -> dispose B -> absent", async () => {
+          const fieldA = createField({ initialValue: "good" });
+          const fieldB = createField({
+            initialValue: "bad",
+            rules: [(v: string) => (v === "bad" ? { code: "invalid", message: "err" } : null)],
+          });
+          await fieldB.validate();
+          expect(fieldB.invalid.get()).toBe(true);
+
+          const input = new MockDomElement();
+          expect(input.hasAttribute("aria-invalid")).toBe(false);
+
+          const bindingA = bindField(fieldA, input);
+          expect(getAriaInvalidOwnershipSize(input)).toBe(1);
+          expect(input.hasAttribute("aria-invalid")).toBe(false);
+
+          const bindingB = bindField(fieldB, input);
+          expect(getAriaInvalidOwnershipSize(input)).toBe(2);
+          // B is invalid -> "true"
+          expect(input.getAttribute("aria-invalid")).toBe("true");
+
+          // Dispose A -> B remains live and invalid -> still "true"
+          bindingA.dispose();
+          expect(getAriaInvalidOwnershipSize(input)).toBe(1);
+          expect(input.getAttribute("aria-invalid")).toBe("true");
+
+          // Dispose B -> final dispose -> restores absent baseline
+          bindingB.dispose();
+          expect(getAriaInvalidOwnershipSize(input)).toBe(0);
+          expect(input.hasAttribute("aria-invalid")).toBe(false);
+
+          fieldA.dispose();
+          fieldB.dispose();
+        });
+
+        test("overlap B: original 'grammar' -> A invalid, B valid -> true -> dispose B -> still true -> dispose A -> 'grammar'", async () => {
+          const fieldA = createField({
+            initialValue: "bad",
+            rules: [(v: string) => (v === "bad" ? { code: "invalid", message: "err" } : null)],
+          });
+          await fieldA.validate();
+          expect(fieldA.invalid.get()).toBe(true);
+
+          const fieldB = createField({ initialValue: "good" });
+          const input = new MockDomElement();
+          input.setAttribute("aria-invalid", "grammar");
+
+          const bindingA = bindField(fieldA, input);
+          expect(input.getAttribute("aria-invalid")).toBe("true");
+
+          const bindingB = bindField(fieldB, input);
+          expect(getAriaInvalidOwnershipSize(input)).toBe(2);
+          expect(input.getAttribute("aria-invalid")).toBe("true");
+
+          // Dispose B -> A remains live and invalid -> still "true"
+          bindingB.dispose();
+          expect(getAriaInvalidOwnershipSize(input)).toBe(1);
+          expect(input.getAttribute("aria-invalid")).toBe("true");
+
+          // Dispose A -> final dispose -> restores "grammar"
+          bindingA.dispose();
+          expect(getAriaInvalidOwnershipSize(input)).toBe(0);
+          expect(input.getAttribute("aria-invalid")).toBe("grammar");
+
+          fieldA.dispose();
+          fieldB.dispose();
+        });
+
+        test("overlap C: both invalid -> A invalid, B invalid -> dispose A -> true -> dispose B -> baseline", async () => {
+          const fieldA = createField({
+            initialValue: "bad1",
+            rules: [(v: string) => (v === "bad1" ? { code: "invalid", message: "err1" } : null)],
+          });
+          const fieldB = createField({
+            initialValue: "bad2",
+            rules: [(v: string) => (v === "bad2" ? { code: "invalid", message: "err2" } : null)],
+          });
+          await fieldA.validate();
+          await fieldB.validate();
+          expect(fieldA.invalid.get()).toBe(true);
+          expect(fieldB.invalid.get()).toBe(true);
+
+          const input = new MockDomElement();
+          input.setAttribute("aria-invalid", "custom-baseline");
+
+          const bindingA = bindField(fieldA, input);
+          const bindingB = bindField(fieldB, input);
+          expect(input.getAttribute("aria-invalid")).toBe("true");
+
+          bindingA.dispose();
+          expect(input.getAttribute("aria-invalid")).toBe("true");
+
+          bindingB.dispose();
+          expect(getAriaInvalidOwnershipSize(input)).toBe(0);
+          expect(input.getAttribute("aria-invalid")).toBe("custom-baseline");
+
+          fieldA.dispose();
+          fieldB.dispose();
+        });
+
+        test("overlap D: active binding state changes dynamically between live bindings", () => {
+          const fieldA = createField({
+            initialValue: "good-a",
+            rules: [(v: string) => (v === "bad-a" ? { code: "invalid", message: "err" } : null)],
+            validateOn: "change",
+          });
+          const fieldB = createField({
+            initialValue: "good-b",
+            rules: [(v: string) => (v === "bad-b" ? { code: "invalid", message: "err" } : null)],
+            validateOn: "change",
+          });
+          const input = new MockDomElement();
+          input.setAttribute("aria-invalid", "baseline-d");
+
+          const bindingA = bindField(fieldA, input);
+          const bindingB = bindField(fieldB, input);
+          // Both initially valid -> preserves baseline
+          expect(input.getAttribute("aria-invalid")).toBe("baseline-d");
+
+          // B becomes invalid -> projects "true"
+          fieldB.setValue("bad-b");
+          expect(input.getAttribute("aria-invalid")).toBe("true");
+
+          // B becomes valid again -> restores baseline
+          fieldB.setValue("good-b");
+          expect(input.getAttribute("aria-invalid")).toBe("baseline-d");
+
+          // A becomes invalid -> projects "true"
+          fieldA.setValue("bad-a");
+          expect(input.getAttribute("aria-invalid")).toBe("true");
+
+          // Dispose A while B is valid -> B is valid -> restores baseline
+          bindingA.dispose();
+          expect(input.getAttribute("aria-invalid")).toBe("baseline-d");
+
+          bindingB.dispose();
+          expect(getAriaInvalidOwnershipSize(input)).toBe(0);
+          expect(input.getAttribute("aria-invalid")).toBe("baseline-d");
+
+          fieldA.dispose();
+          fieldB.dispose();
+        });
+
+        test("overlap E: ariaInvalid: false does not participate or clobber live bindings", async () => {
+          const fieldA = createField({
+            initialValue: "bad",
+            rules: [(v: string) => (v === "bad" ? { code: "invalid", message: "err" } : null)],
+          });
+          await fieldA.validate();
+          expect(fieldA.invalid.get()).toBe(true);
+
+          const fieldB = createField({ initialValue: "good" });
+          const input = new MockDomElement();
+          input.setAttribute("aria-invalid", "baseline-e");
+
+          const bindingA = bindField(fieldA, input);
+          expect(input.getAttribute("aria-invalid")).toBe("true");
+          expect(getAriaInvalidOwnershipSize(input)).toBe(1);
+
+          // B has ariaInvalid: false
+          const bindingB = bindField(fieldB, input, { ariaInvalid: false });
+          // Must not add to ownership tracking
+          expect(getAriaInvalidOwnershipSize(input)).toBe(1);
+          // A's invalid state remains active
+          expect(input.getAttribute("aria-invalid")).toBe("true");
+
+          // Disposing B must not affect A or mutate attribute
+          bindingB.dispose();
+          expect(getAriaInvalidOwnershipSize(input)).toBe(1);
+          expect(input.getAttribute("aria-invalid")).toBe("true");
+
+          // Disposing A restores baseline
+          bindingA.dispose();
+          expect(getAriaInvalidOwnershipSize(input)).toBe(0);
+          expect(input.getAttribute("aria-invalid")).toBe("baseline-e");
+
+          fieldA.dispose();
+          fieldB.dispose();
+        });
+
+        test("overlap F: reverse cleanup order (create A then B, dispose B first then A)", async () => {
+          const fieldA = createField({
+            initialValue: "bad-a",
+            rules: [(v: string) => (v === "bad-a" ? { code: "invalid", message: "err" } : null)],
+          });
+          await fieldA.validate();
+          expect(fieldA.invalid.get()).toBe(true);
+
+          const fieldB = createField({
+            initialValue: "good-b",
+          });
+          const input = new MockDomElement();
+          input.setAttribute("aria-invalid", "baseline-f");
+
+          const bindingA = bindField(fieldA, input);
+          const bindingB = bindField(fieldB, input);
+          expect(input.getAttribute("aria-invalid")).toBe("true");
+
+          // Dispose B first
+          bindingB.dispose();
+          // A is still active and invalid -> still "true"
+          expect(input.getAttribute("aria-invalid")).toBe("true");
+          expect(getAriaInvalidOwnershipSize(input)).toBe(1);
+
+          // Dispose A
+          bindingA.dispose();
+          expect(getAriaInvalidOwnershipSize(input)).toBe(0);
+          expect(input.getAttribute("aria-invalid")).toBe("baseline-f");
+
+          fieldA.dispose();
+          fieldB.dispose();
+        });
+      });
+    });
+
+    test("links issueElement id into aria-describedby and restores original tokens on unbind", () => {
+      const field = createField({ initialValue: "test" });
+      const input = new MockDomElement();
+      input.setAttribute("aria-describedby", "existing-help-id");
+
+      const issueElement = new MockDomElement();
+      issueElement.id = "email-issue-id";
+
+      const binding = bindField(field, input, { issueElement });
+      expect(input.getAttribute("aria-describedby")).toBe("existing-help-id email-issue-id");
+
+      binding.dispose();
+      // On unbind, only email-issue-id is removed; existing-help-id is preserved!
+      expect(input.getAttribute("aria-describedby")).toBe("existing-help-id");
+
+      field.dispose();
+    });
+
+    test("removes aria-describedby completely on unbind if no prior tokens existed", () => {
+      const field = createField({ initialValue: "test" });
+      const input = new MockDomElement();
+      const issueElement = new MockDomElement();
+      issueElement.id = "only-error-id";
+
+      const binding = bindField(field, input, { issueElement });
+      expect(input.getAttribute("aria-describedby")).toBe("only-error-id");
+
+      binding.dispose();
+      expect(input.hasAttribute("aria-describedby")).toBe(false);
+
+      field.dispose();
+    });
+
+    test("renders hostile HTML issue messages strictly as literal text via textContent (XSS defense)", () => {
+      const field = createField({
+        initialValue: "bad",
+        rules: [
+          () => ({
+            code: "xss_attempt",
+            message: '<img src=x onerror="globalThis.__xss=true">',
+          }),
+        ],
+        validateOn: "change",
+      });
+      const input = new MockDomElement();
+      const issueElement = new MockDomElement();
+
+      const binding = bindField(field, input, { issueElement });
+
+      input.value = "trigger";
+      input.dispatch("input");
+
+      expect(issueElement.textContent).toBe('<img src=x onerror="globalThis.__xss=true">');
+      expect((globalThis as Record<string, unknown>)["__xss"]).toBeUndefined();
+
+      binding.dispose();
+      field.dispose();
+    });
+
+    test("supports custom formatIssues text formatter", () => {
+      const field = createField({
+        initialValue: "val",
+        rules: [() => ({ code: "err", message: "first error" })],
+        validateOn: "change",
+      });
+      const input = new MockDomElement();
+      const issueElement = new MockDomElement();
+
+      const binding = bindField(field, input, {
+        issueElement,
+        formatIssues: (issues) => `[Error Count: ${issues.length}] ${issues[0]?.message}`,
+      });
+
+      input.value = "new-val";
+      input.dispatch("input");
+
+      expect(issueElement.textContent).toBe("[Error Count: 1] first error");
+
+      binding.dispose();
+      field.dispose();
+    });
+  });
+
+  describe("bindForm Submission & Error Containment", () => {
+    test("submits form on native submit event and prevents default", async () => {
+      const form = createForm({
+        fields: {
+          username: createField({ initialValue: "valid-user" }),
+        },
+      });
+      const formElement = new MockDomElement();
+
+      let submitActionCalled = false;
+      let successResult: string | undefined;
+
+      const binding = bindForm(form, formElement, {
+        action: async (values) => {
+          submitActionCalled = true;
+          return { ok: true, result: `Saved ${values.username}` };
+        },
+        onSubmitSuccess: (res) => {
+          successResult = res;
+        },
+      });
+
+      const { prevented } = formElement.dispatch("submit");
+      expect(prevented).toBe(true);
+
+      await new Promise((r) => setTimeout(r, 10));
+
+      expect(submitActionCalled).toBe(true);
+      expect(successResult).toBe("Saved valid-user");
+      expect(form.submissionStatus.get()).toBe("succeeded");
+
+      binding.dispose();
+      form.dispose();
+    });
+
+    test("routes validation failure to onSubmitError", async () => {
+      const form = createForm({
+        fields: {
+          age: createField<number, string>({
+            initialValue: -5,
+            initialRawValue: "-5",
+            parser: createNumberParser(),
+            rules: [
+              (v: number) => (v < 0 ? { code: "min_age", message: "Age must be positive" } : null),
+            ],
+          }),
+        },
+      });
+      const formElement = new MockDomElement();
+
+      let errorIssues: readonly FieldIssue[] | undefined;
+
+      const binding = bindForm(form, formElement, {
+        onSubmitError: (issues) => {
+          errorIssues = issues;
+        },
+      });
+
+      formElement.dispatch("submit");
+      await new Promise((r) => setTimeout(r, 10));
+
+      expect(form.submissionStatus.get()).toBe("idle");
+      expect(errorIssues).toBeDefined();
+      expect(errorIssues?.length).toBe(1);
+      expect(errorIssues?.[0]?.message).toBe("Age must be positive");
+
+      binding.dispose();
+      form.dispose();
+    });
+
+    test("contains unexpected submit action rejection through onSubmitException without unhandled rejection", async () => {
+      const form = createForm({
+        fields: {
+          field: createField({ initialValue: "test" }),
+        },
+      });
+      const formElement = new MockDomElement();
+
+      let caughtException: unknown;
+      const expectedError = new Error("Network offline");
+
+      const binding = bindForm(form, formElement, {
+        action: async () => {
+          throw expectedError;
+        },
+        onSubmitException: (err) => {
+          caughtException = err;
+        },
+      });
+
+      formElement.dispatch("submit");
+      await new Promise((r) => setTimeout(r, 10));
+
+      expect(form.submissionStatus.get()).toBe("failed");
+      expect(caughtException).toBe(expectedError);
+
+      binding.dispose();
+      form.dispose();
+    });
+
+    test("contains error when onSubmitException is omitted", async () => {
+      const form = createForm({
+        fields: {
+          field: createField({ initialValue: "test" }),
+        },
+      });
+      const formElement = new MockDomElement();
+
+      const binding = bindForm(form, formElement, {
+        action: async () => {
+          throw new Error("Unexpected crash");
+        },
+      });
+
+      // Must not produce unhandled rejection
+      expect(() => {
+        formElement.dispatch("submit");
+      }).not.toThrow();
+
+      await new Promise((r) => setTimeout(r, 10));
+      expect(form.submissionStatus.get()).toBe("failed");
+
+      binding.dispose();
+      form.dispose();
+    });
+
+    test("contains synchronous errors thrown by user onSubmitException handler", async () => {
+      const form = createForm({
+        fields: {
+          field: createField({ initialValue: "test" }),
+        },
+      });
+      const formElement = new MockDomElement();
+
+      const binding = bindForm(form, formElement, {
+        action: async () => {
+          throw new Error("Action failed");
+        },
+        onSubmitException: () => {
+          throw new Error("Handler also crashed");
+        },
+      });
+
+      expect(() => {
+        formElement.dispatch("submit");
+      }).not.toThrow();
+
+      await new Promise((r) => setTimeout(r, 10));
+
+      binding.dispose();
+      form.dispose();
+    });
+  });
+
+  describe("Lifecycle, Rebinding & Leak Safety", () => {
+    test("unsubscribes and detaches all event listeners on dispose", () => {
+      const field = createField({ initialValue: "initial" });
+      const input = new MockDomElement();
+
+      const binding = bindField(field, input);
+      expect(input.currentListenerCount).toBe(2); // input + blur
+
+      binding.dispose();
+      expect(input.currentListenerCount).toBe(0);
+
+      // Further input events do not update field
+      input.value = "after-dispose";
+      input.dispatch("input");
+      expect(field.rawValue.get()).toBe("initial");
+
+      // Canonical field is still alive and usable
+      field.setRawValue("alive");
+      expect(field.rawValue.get()).toBe("alive");
+
+      field.dispose();
+    });
+
+    test("repeated bind/unbind cycles maintain zero listener growth", () => {
+      const field = createField({ initialValue: "test" });
+      const input = new MockDomElement();
+
+      for (let i = 0; i < 10; i++) {
+        const binding = bindField(field, input);
+        expect(input.currentListenerCount).toBe(2);
+        binding.dispose();
+        expect(input.currentListenerCount).toBe(0);
+      }
+
+      expect(input.totalListenersAdded).toBe(20);
+      expect(input.totalListenersRemoved).toBe(20);
+
+      field.dispose();
+    });
+
+    test("handles multiple independent bindings with generation-local cleanup", () => {
+      const field = createField({ initialValue: "test" });
+      const input = new MockDomElement();
+
+      const binding1 = bindField(field, input);
+      const binding2 = bindField(field, input);
+
+      expect(input.currentListenerCount).toBe(4);
+
+      binding1.dispose();
+      expect(input.currentListenerCount).toBe(2);
+
+      // binding2 remains active
+      input.value = "changed-via-binding2";
+      input.dispatch("input");
+      expect(field.rawValue.get()).toBe("changed-via-binding2");
+
+      binding2.dispose();
+      expect(input.currentListenerCount).toBe(0);
+
+      field.dispose();
+    });
+
+    test("dispose is idempotent", () => {
+      const field = createField({ initialValue: "test" });
+      const input = new MockDomElement();
+      const binding = bindField(field, input);
+
+      expect(() => {
+        binding.dispose();
+        binding.dispose();
+        binding.dispose();
+      }).not.toThrow();
+
+      field.dispose();
+    });
+
+    test("tracks signal subscriptions and proves 100% unsubscription upon dispose", () => {
+      const field = createField({ initialValue: "test-sub" });
+      const tracker = trackFieldSignals(field as unknown as FieldState<unknown, unknown>);
+      const input = new MockDomElement();
+
+      const binding = bindField(field, input);
+
+      // Verify active subscriptions were established
+      expect(tracker.totalSubscribeCalls()).toBeGreaterThan(0);
+      expect(tracker.activeCount()).toBeGreaterThan(0);
+      expect(input.currentListenerCount).toBe(2);
+
+      binding.dispose();
+
+      // Upon dispose, ALL subscriptions and listeners must be cleanly unwound
+      expect(tracker.activeCount()).toBe(0);
+      expect(tracker.totalSubscribeCalls()).toBe(tracker.totalUnsubscribeCalls());
+      expect(input.currentListenerCount).toBe(0);
+
+      // Canonical field is still alive and operational
+      field.setValue("still-works");
+      expect(field.value.get()).toBe("still-works");
+
+      field.dispose();
+    });
+
+    test("bindForm cleanup removes submit listener and keeps canonical form usable", () => {
+      const form = createForm({
+        fields: {
+          test: createField({ initialValue: "abc" }),
+        },
+      });
+      const formElement = new MockDomElement();
+
+      let submitCount = 0;
+      const binding = bindForm(form, formElement, {
+        action: async () => {
+          submitCount++;
+          return { ok: true, result: undefined };
+        },
+      });
+
+      expect(formElement.currentListenerCount).toBe(1);
+
+      binding.dispose();
+      expect(formElement.currentListenerCount).toBe(0);
+
+      formElement.dispatch("submit");
+      expect(submitCount).toBe(0);
+
+      // Form remains usable
+      expect(form.getValue()).toEqual({ test: "abc" });
+      form.dispose();
+    });
+  });
+
+  describe("Transactional Preflight / Fail-closed Validation", () => {
+    test("throws TypeError when field is invalid without mutating DOM element", () => {
+      const element = new MockDomElement();
+      expect(() => {
+        bindField(null as never, element);
+      }).toThrow(TypeError);
+      expect(element.currentListenerCount).toBe(0);
+    });
+
+    test("throws TypeError when element is invalid without subscribing to field", () => {
+      const field = createField({ initialValue: "test" });
+      const tracker = trackFieldSignals(field as unknown as FieldState<unknown, unknown>);
+
+      expect(() => {
+        bindField(field, null as never);
+      }).toThrow(TypeError);
+
+      expect(tracker.totalSubscribeCalls()).toBe(0);
+      expect(tracker.activeCount()).toBe(0);
+
+      field.dispose();
+    });
+
+    test("throws TypeError on div-like element with 0 listeners, 0 subscriptions, and 0 DOM mutations", () => {
+      const field = createField({ initialValue: "test-div" });
+      const tracker = trackFieldSignals(field as unknown as FieldState<unknown, unknown>);
+      const div = new MockDomElement();
+      div.tagName = "DIV";
+      div.nodeName = "DIV";
+      div.type = undefined;
+      div.value = "initial-content";
+      div.setAttribute("class", "card-container");
+      div.setAttribute("aria-label", "card");
+
+      expect(() => {
+        bindField(field, div);
+      }).toThrow(TypeError);
+
+      expect(div.currentListenerCount).toBe(0);
+      expect(div.totalListenersAdded).toBe(0);
+      expect(tracker.totalSubscribeCalls()).toBe(0);
+      expect(tracker.activeCount()).toBe(0);
+      expect(div.value).toBe("initial-content");
+      expect(div.getAttribute("class")).toBe("card-container");
+      expect(div.getAttribute("aria-label")).toBe("card");
+      expect(div.hasAttribute("aria-invalid")).toBe(false);
+
+      field.dispose();
+    });
+
+    test("throws TypeError on span-like element with 0 listeners and 0 subscriptions", () => {
+      const field = createField({ initialValue: "test-span" });
+      const tracker = trackFieldSignals(field as unknown as FieldState<unknown, unknown>);
+      const span = new MockDomElement();
+      span.tagName = "SPAN";
+      span.nodeName = "SPAN";
+      span.type = undefined;
+
+      expect(() => {
+        bindField(field, span);
+      }).toThrow(TypeError);
+
+      expect(span.currentListenerCount).toBe(0);
+      expect(tracker.totalSubscribeCalls()).toBe(0);
+      expect(tracker.activeCount()).toBe(0);
+
+      field.dispose();
+    });
+
+    test("throws TypeError on button-like element with 0 listeners and 0 subscriptions", () => {
+      const field = createField({ initialValue: "test-button" });
+      const tracker = trackFieldSignals(field as unknown as FieldState<unknown, unknown>);
+      const button = new MockDomElement();
+      button.tagName = "BUTTON";
+      button.nodeName = "BUTTON";
+      button.type = "submit";
+
+      expect(() => {
+        bindField(field, button);
+      }).toThrow(TypeError);
+
+      expect(button.currentListenerCount).toBe(0);
+      expect(tracker.totalSubscribeCalls()).toBe(0);
+      expect(tracker.activeCount()).toBe(0);
+
+      field.dispose();
+    });
+
+    test("throws TypeError on arbitrary object lacking form control markers", () => {
+      const field = createField({ initialValue: "test-arbitrary" });
+      const tracker = trackFieldSignals(field as unknown as FieldState<unknown, unknown>);
+      let listenerCount = 0;
+      const arbitrary = {
+        value: "foo",
+        addEventListener: () => {
+          listenerCount++;
+        },
+        removeEventListener: () => {
+          listenerCount--;
+        },
+      };
+
+      expect(() => {
+        bindField(field, arbitrary as never);
+      }).toThrow(TypeError);
+
+      expect(listenerCount).toBe(0);
+      expect(tracker.totalSubscribeCalls()).toBe(0);
+      expect(tracker.activeCount()).toBe(0);
+
+      field.dispose();
+    });
+
+    test("provides negative compile-time type coverage for unsupported elements", () => {
+      const field = createField({ initialValue: "typed" });
+      const unsupportedDiv = {
+        tagName: "div",
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      };
+
+      // @ts-expect-error - div is not assignable to VanillaFieldElement (missing required value/control properties)
+      expect(() => bindField(field, unsupportedDiv)).toThrow(TypeError);
+
+      field.dispose();
+    });
+
+    test("bindForm throws TypeError on invalid form or element", () => {
+      const element = new MockDomElement();
+      expect(() => {
+        bindForm(null as never, element);
+      }).toThrow(TypeError);
+
+      const form = createForm({ fields: { a: createField({ initialValue: 1 }) } });
+      expect(() => {
+        bindForm(form, null as never);
+      }).toThrow(TypeError);
+
+      form.dispose();
+    });
+  });
+
+  describe("Server Issues & Localized Clearing Integration", () => {
+    test("projects server issue to aria-invalid and safe issue element, clears localized on edit", async () => {
+      const form = createForm({
+        fields: {
+          email: createField({ initialValue: "test@example.com" }),
+          name: createField({ initialValue: "Vitalii" }),
+        },
+      });
+      const emailInput = new MockDomElement();
+      const emailIssueElem = new MockDomElement();
+      emailIssueElem.id = "email-err";
+
+      const bindingEmail = bindField(form.fields.email, emailInput, {
+        issueElement: emailIssueElem,
+      });
+
+      expect(emailInput.hasAttribute("aria-invalid")).toBe(false);
+      expect(emailIssueElem.textContent).toBe("");
+
+      // Submit with server issue targeting email
+      await form.submit(async () => ({
+        ok: false,
+        issues: [{ code: "email_taken", message: "Email already in use", path: ["email"] }],
+      }));
+
+      expect(form.fields.email.invalid.get()).toBe(true);
+      expect(emailInput.getAttribute("aria-invalid")).toBe("true");
+      expect(emailIssueElem.textContent).toBe("Email already in use");
+
+      // Localized edit on email clears only email's server issue
+      emailInput.value = "new@example.com";
+      emailInput.dispatch("input");
+
+      expect(form.fields.email.serverIssues.get().length).toBe(0);
+      expect(form.fields.email.invalid.get()).toBe(false);
+      expect(emailInput.hasAttribute("aria-invalid")).toBe(false);
+      expect(emailIssueElem.textContent).toBe("");
+
+      bindingEmail.dispose();
+      form.dispose();
+    });
+  });
+
+  describe("Package Boundary & Type Encapsulation", () => {
+    test("does not expose internal classifier types or helpers through public /vanilla exports", async () => {
+      const formVanilla = await import("../../src/adapters/vanilla/index.js");
+      expect(Object.keys(formVanilla).sort()).toEqual(["bindField", "bindForm"].sort());
+      expect("classifyControl" in formVanilla).toBe(false);
+      expect("VanillaControlKind" in formVanilla).toBe(false);
+      expect("applyAriaInvalid" in formVanilla).toBe(false);
+    });
+  });
+});

@@ -37,6 +37,50 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-09-04 01:05 CEST | Production Form Phase 1 Slice P1i: Vanilla DOM Adapter Overlapping Ownership & API Cleanup
+
+Status: completed
+Branch: `feat/form-p1i-vanilla-adapter`
+PR: https://github.com/kas-labs/vii/pull/188
+
+### Scope
+
+- Resolve the final two Vanilla DOM merge blockers on Draft PR #188:
+  1. Overlapping `aria-invalid` bindings coordination: implement element-local `WeakMap<object, AriaInvalidOwnership>` coordinating multiple live bindings on the same element without clobbering. Remembers true application baseline once per element; projects `"true"` if ANY live participating binding is invalid, otherwise restores baseline; removes element bookkeeping when final binding disposes; bindings with `ariaInvalid: false` never participate.
+  2. Public API surface cleanup: remove internal `VanillaControlKind` export from `packages/form/src/adapters/vanilla/index.ts` so classifier details remain private. Keep runtime exports strictly `bindField` and `bindForm`. Remove dead, uncalled `applyAriaInvalid` helper from `a11y.ts`.
+- Add full Overlapping Bindings Coordination Matrix tests (scenarios A through F, plus proof of element bookkeeping cleanup and no strong DOM retention).
+- Add package boundary encapsulation test ensuring classifier types and helpers are not exposed through `/vanilla`.
+
+### Changes
+
+- Updated `packages/form/src/adapters/vanilla/a11y.ts`: implemented element-local `WeakMap` coordination for overlapping `setupAriaInvalid` calls, tracking per-binding state via unique Symbol tokens; recomputes effective projection on change or disposal; deletes bookkeeping and restores true application baseline on final disposal; removed dead `applyAriaInvalid` function; added internal test inspection helper `getAriaInvalidOwnershipSize`.
+- Updated `packages/form/src/adapters/vanilla/index.ts`: removed `VanillaControlKind` type export.
+- Updated `packages/form/test/unit/vanilla-adapter.test.ts`: added Overlapping Bindings Coordination Matrix (A: absent, B: grammar, C: both invalid, D: active state changes, E: ariaInvalid: false non-participation, F: reverse cleanup order, G: zero bookkeeping after final dispose) and Package Boundary & Type Encapsulation test. Total 315 tests across 21 test files (48 tests in `vanilla-adapter.test.ts`).
+- Updated `DUTY_WATCH.md`.
+
+### Validation
+
+- `NX_DAEMON=false pnpm nx lint form`: passed (0 errors, 0 warnings).
+- `NX_DAEMON=false pnpm nx typecheck form`: passed (0 errors).
+- `NX_DAEMON=false pnpm nx test form`: passed (21 test files, 315 passed tests).
+- `NX_DAEMON=false pnpm nx build form`: passed (clean d.ts and ESM build).
+- `NX_DAEMON=false pnpm nx validate-package form`: passed (clean consumer verification against packed artifact for Core-only, Vanilla DOM, React 19, and React 18).
+- `git diff --check`: passed (0 whitespace errors).
+- `NX_DAEMON=false pnpm validate`: passed (full repository validation).
+
+### Architecture / compatibility
+
+- Zero modification to `@vii-labs/core`.
+- Zero modification to `@vii-labs/form/react` or React runtime.
+- Unidirectional dependency flow: `@vii-labs/form/vanilla` -> public `@vii-labs/form` primitives/types.
+- WeakMap ensures elements are held weakly, preventing memory leaks on element GC even without explicit disposal.
+- Root `@vii-labs/form` has zero DOM framework dependencies and runs in pure ESM/Node/SSR environments without browser globals.
+- Package remains private (`private: true`).
+
+### Remaining / recovery
+
+- None. Updated PR #188. Ready for review.
+
 ## 2026-08-31 00:41 CEST | Production Form Phase 1 Slice P1h: React Adapter
 
 Status: completed
@@ -490,6 +534,7 @@ PR: not opened (Draft PR creation queued)
 
 - None for P1e.
 - Next scheduled slice: P1f (Dynamic Collections & FieldArray).
+
 ```
 
 ## 2026-08-28 23:50 CEST | Production Form Phase 1 Slice P1d: Form Tree, Groups & Aggregate State (Ownership & Lifecycle Correction)
@@ -7662,3 +7707,4 @@ PR: [#121](https://github.com/kas-labs/vii/pull/121) draft
 
 - Commit changes, push `test/query-build-vs-buy-gate`, and open a draft PR against `main`.
 - Phase 5 research program concluded.
+```

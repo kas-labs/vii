@@ -13,8 +13,8 @@ const packageRoot = path.resolve(currentDirectory, "..");
 const manifestPath = path.join(packageRoot, "package.json");
 const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
 
-describe("@vii-labs/form package boundary (P1h)", () => {
-  test("root exports createField, createFieldGroup, createFieldArray, createForm, standardSchema, and parsers; React adapter exports public hooks; other adapters remain empty placeholders", () => {
+describe("@vii-labs/form package boundary (P1i)", () => {
+  test("root exports createField, createFieldGroup, createFieldArray, createForm, standardSchema, and parsers; React and Vanilla adapters export public hooks/bindings; other adapters remain empty placeholders", () => {
     expect(formRoot).toBeDefined();
     expect(Object.keys(formRoot).sort()).toEqual(
       [
@@ -32,7 +32,7 @@ describe("@vii-labs/form package boundary (P1h)", () => {
     expect(Object.keys(formReact).sort()).toEqual(["useField", "useFieldArray", "useForm"].sort());
 
     expect(formVanilla).toBeDefined();
-    expect(Object.keys(formVanilla)).toEqual([]);
+    expect(Object.keys(formVanilla).sort()).toEqual(["bindField", "bindForm"].sort());
 
     expect(formAngular).toBeDefined();
     expect(Object.keys(formAngular)).toEqual([]);

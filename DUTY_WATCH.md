@@ -41,7 +41,7 @@ PR: <number or not opened>
 
 Status: completed
 Branch: `feat/form-p1j-angular-vue-adapters`
-PR: not opened
+PR: https://github.com/kas-labs/vii/pull/189
 
 ### Scope
 

@@ -1,11 +1,18 @@
 import type { FieldState } from "../../core/types.js";
 import {
-  applyAriaInvalid,
   isFieldInvalid,
   renderSafeIssues,
   setupAriaDescribedBy,
+  setupAriaInvalid,
 } from "./a11y.js";
-import type { BindFieldOptions, VanillaBinding, VanillaDomElement } from "./types.js";
+import { classifyControl } from "./control.js";
+import type {
+  BindFieldOptions,
+  VanillaBinding,
+  VanillaDomControl,
+  VanillaDomElement,
+  VanillaFieldElement,
+} from "./types.js";
 
 interface EventWithTarget {
   readonly target?: {
@@ -16,19 +23,23 @@ interface EventWithTarget {
 }
 
 /**
- * Binds a DOM input, textarea, or select element to a Vii FieldState.
+ * Binds a DOM input, textarea, or single-select element to a Vii FieldState.
  *
  * Enforces single commit event semantics:
  * - Text-like controls use "input"
- * - Checkbox, radio, select, and file controls use "change"
+ * - Checkbox, radio, select-one, and file controls use "change"
  * - Dual "input" + "change" registration is strictly prevented.
  *
- * Manages bidirectional projection without feedback loops, projects ARIA attributes,
+ * Manages bidirectional projection without feedback loops, non-destructively projects ARIA
+ * attributes (restoring original application state upon validity or disposal),
  * safely renders issue messages via textContent, and provides deterministic disposal.
+ *
+ * Unsupported elements (div, span, button, select-multiple, arbitrary objects) fail closed
+ * with a TypeError during preflight before any listener attachment or DOM mutation.
  */
 export function bindField<TValue, TRaw = TValue>(
   field: FieldState<TValue, TRaw>,
-  element: VanillaDomElement | HTMLElement,
+  element: VanillaFieldElement,
   options?: BindFieldOptions,
 ): VanillaBinding {
   // Preflight validation: fail closed with TypeError before any mutation or listener attachment
@@ -54,43 +65,33 @@ export function bindField<TValue, TRaw = TValue>(
     );
   }
 
-  const domElement = element as VanillaDomElement;
+  // Classify control kind; fails closed on unsupported elements (div, span, button, select-multiple)
+  const controlKind = classifyControl(element);
+
+  const domElement = element as VanillaDomControl;
   let isDisposed = false;
   let isUpdatingFromStore = false;
 
-  // Control classification
-  const isCheckbox = domElement.type === "checkbox";
-  const isRadio = domElement.type === "radio";
-  const isSelect =
-    domElement.type === "select-one" ||
-    domElement.type === "select-multiple" ||
-    (typeof domElement.type === "string" && domElement.type.startsWith("select")) ||
-    (!domElement.type && "selectedOptions" in domElement);
-  const isFile = domElement.type === "file";
-
-  const commitsOnChange = isCheckbox || isRadio || isSelect || isFile;
+  const commitsOnChange = controlKind !== "text";
   const inputEventName = commitsOnChange ? "change" : "input";
 
   // Initial Field -> DOM projection
-  if (isCheckbox) {
+  if (controlKind === "checkbox") {
     domElement.checked = Boolean(field.value.get());
-  } else if (isRadio) {
+  } else if (controlKind === "radio") {
     domElement.checked = Object.is(field.value.get(), domElement.value);
-  } else if (!isFile) {
+  } else if (controlKind !== "file") {
     const isUnparsed = field.parseStatus.get() === "unparsed";
     const initialDisplay = isUnparsed ? field.value.get() : field.rawValue.get();
     domElement.value =
       initialDisplay !== undefined && initialDisplay !== null ? String(initialDisplay) : "";
   }
 
-  // Initial A11y / ARIA projection
+  // Initial A11y / ARIA projection with non-destructive restoration tracking
   const projectAriaInvalid =
     (options?.ariaInvalid ?? true) && typeof domElement.setAttribute === "function";
-  applyAriaInvalid(
-    domElement,
-    isFieldInvalid(field as unknown as FieldState<unknown, unknown>),
-    projectAriaInvalid,
-  );
+  const ariaInvalidController = setupAriaInvalid(domElement, projectAriaInvalid);
+  ariaInvalidController.update(isFieldInvalid(field as unknown as FieldState<unknown, unknown>));
 
   const cleanupDescribedBy = setupAriaDescribedBy(
     domElement,
@@ -109,27 +110,20 @@ export function bindField<TValue, TRaw = TValue>(
     if (isDisposed || isUpdatingFromStore) return;
     const evt = event as EventWithTarget | undefined;
 
-    if (isCheckbox) {
+    if (controlKind === "checkbox") {
       const nextChecked = Boolean(evt?.target?.checked ?? domElement.checked);
       if (Object.is(nextChecked, Boolean(field.value.get()))) return;
       field.setValue(nextChecked as unknown as TValue);
-    } else if (isRadio) {
-      const target = (evt?.target ?? domElement) as VanillaDomElement;
+    } else if (controlKind === "radio") {
+      const target = (evt?.target ?? domElement) as VanillaDomControl;
       if (target.checked) {
         field.setValue(target.value as unknown as TValue);
       }
-    } else if (isSelect) {
-      if (domElement.multiple && "selectedOptions" in domElement && domElement.selectedOptions) {
-        const values = Array.from(domElement.selectedOptions as ArrayLike<{ value: string }>).map(
-          (opt) => opt.value,
-        );
-        field.setValue(values as unknown as TValue);
-      } else {
-        const nextVal = (evt?.target?.value ?? domElement.value) as unknown as TValue;
-        if (Object.is(nextVal, field.value.get())) return;
-        field.setValue(nextVal);
-      }
-    } else if (isFile) {
+    } else if (controlKind === "select-one") {
+      const nextVal = (evt?.target?.value ?? domElement.value) as unknown as TValue;
+      if (Object.is(nextVal, field.value.get())) return;
+      field.setValue(nextVal);
+    } else if (controlKind === "file") {
       const files = evt?.target?.files ?? domElement.files;
       field.setValue(files as unknown as TValue);
     } else {
@@ -167,7 +161,7 @@ export function bindField<TValue, TRaw = TValue>(
   const unsubVal = field.value.subscribe((nextVal) => {
     if (isDisposed) return;
 
-    if (isCheckbox) {
+    if (controlKind === "checkbox") {
       const nextBool = Boolean(nextVal);
       if (domElement.checked !== nextBool) {
         isUpdatingFromStore = true;
@@ -177,7 +171,7 @@ export function bindField<TValue, TRaw = TValue>(
           isUpdatingFromStore = false;
         }
       }
-    } else if (isRadio) {
+    } else if (controlKind === "radio") {
       const shouldBeChecked = Object.is(nextVal, domElement.value);
       if (domElement.checked !== shouldBeChecked) {
         isUpdatingFromStore = true;
@@ -187,7 +181,7 @@ export function bindField<TValue, TRaw = TValue>(
           isUpdatingFromStore = false;
         }
       }
-    } else if (!isFile && field.parseStatus.get() === "unparsed") {
+    } else if (controlKind !== "file" && field.parseStatus.get() === "unparsed") {
       const nextStr = nextVal !== undefined && nextVal !== null ? String(nextVal) : "";
       if (domElement.value !== nextStr) {
         isUpdatingFromStore = true;
@@ -207,11 +201,7 @@ export function bindField<TValue, TRaw = TValue>(
       field.issues.get(),
       options?.formatIssues,
     );
-    applyAriaInvalid(
-      domElement,
-      isFieldInvalid(field as unknown as FieldState<unknown, unknown>),
-      projectAriaInvalid,
-    );
+    ariaInvalidController.update(isFieldInvalid(field as unknown as FieldState<unknown, unknown>));
   };
 
   const unsubIssues = field.issues.subscribe(updateAriaAndIssues);
@@ -232,10 +222,7 @@ export function bindField<TValue, TRaw = TValue>(
     unsubParseStatus();
 
     cleanupDescribedBy();
-
-    if (projectAriaInvalid && typeof domElement.removeAttribute === "function") {
-      domElement.removeAttribute("aria-invalid");
-    }
+    ariaInvalidController.dispose();
   };
 
   return { dispose };

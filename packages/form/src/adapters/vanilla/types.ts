@@ -12,8 +12,45 @@ export interface VanillaBinding {
 }
 
 /**
- * Minimal structural DOM element interface required by Vanilla adapter bindings.
- * Matches standard HTML elements without enforcing runtime DOM global requirements.
+ * Minimal structural DOM control interface required by Vanilla adapter field bindings.
+ * Matches form control elements without enforcing runtime DOM global requirements.
+ */
+export interface VanillaDomControl {
+  value: unknown;
+  tagName?: string | undefined;
+  nodeName?: string | undefined;
+  type?: string | undefined;
+  checked?: boolean | undefined;
+  id?: string | undefined;
+  name?: string | undefined;
+  multiple?: boolean | undefined;
+  files?: unknown;
+  getAttribute?(name: string): string | null;
+  setAttribute?(name: string, value: string): void;
+  removeAttribute?(name: string): void;
+  hasAttribute?(name: string): boolean;
+  addEventListener(
+    event: string,
+    handler: (event: unknown) => void,
+    options?: boolean | AddEventListenerOptions,
+  ): void;
+  removeEventListener(
+    event: string,
+    handler: (event: unknown) => void,
+    options?: boolean | EventListenerOptions,
+  ): void;
+}
+
+/**
+ * Supported DOM form control elements for `bindField`.
+ * Explicitly restricts binding to input, textarea, and select elements,
+ * preventing arbitrary HTMLElement instances (such as HTMLDivElement) from passing type checks.
+ */
+export type VanillaFieldElement =
+  HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | VanillaDomControl;
+
+/**
+ * Structural DOM element interface required by issue element sinks and general DOM nodes.
  */
 export interface VanillaDomElement {
   value?: unknown;
@@ -27,6 +64,7 @@ export interface VanillaDomElement {
   getAttribute?(name: string): string | null;
   setAttribute?(name: string, value: string): void;
   removeAttribute?(name: string): void;
+  hasAttribute?(name: string): boolean;
   addEventListener(
     event: string,
     handler: (event: unknown) => void,
@@ -57,6 +95,7 @@ export interface BindFieldOptions {
    * Controls whether `aria-invalid="true"` is projected when the field is invalid.
    * Defaults to `true` when the element supports DOM attributes.
    * Pending async validation alone never marks the control invalid.
+   * When the field is valid or upon disposal, the original pre-binding attribute state is restored.
    */
   readonly ariaInvalid?: boolean | undefined;
 

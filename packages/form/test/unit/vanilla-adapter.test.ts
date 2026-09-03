@@ -1,11 +1,24 @@
 import { describe, expect, test } from "vitest";
-import { createField, createForm, createNumberParser, type FieldIssue } from "../../src/index.js";
-import { bindField, bindForm, type VanillaDomElement } from "../../src/adapters/vanilla/index.js";
+import {
+  createField,
+  createForm,
+  createNumberParser,
+  type FieldIssue,
+  type FieldState,
+} from "../../src/index.js";
+import {
+  bindField,
+  bindForm,
+  type VanillaDomControl,
+  type VanillaDomElement,
+} from "../../src/adapters/vanilla/index.js";
 
-class MockDomElement implements VanillaDomElement {
+class MockDomElement implements VanillaDomControl, VanillaDomElement {
   value: unknown = "";
-  checked?: boolean = false;
-  type?: string = "text";
+  tagName?: string = "INPUT";
+  nodeName?: string = "INPUT";
+  checked?: boolean | undefined = false;
+  type?: string | undefined = "text";
   id?: string = "";
   name?: string = "";
   multiple?: boolean = false;
@@ -77,6 +90,79 @@ class MockDomElement implements VanillaDomElement {
     }
     return { prevented };
   }
+}
+
+interface SignalTracker {
+  readonly subscribeCalls: () => number;
+  readonly unsubscribeCalls: () => number;
+  readonly activeCount: () => number;
+}
+
+function trackSignal(signal: { subscribe(fn: (v: unknown) => void): () => void }): SignalTracker {
+  let subscribeCalls = 0;
+  let unsubscribeCalls = 0;
+  const originalSubscribe = signal.subscribe.bind(signal);
+  signal.subscribe = (callback: (v: unknown) => void) => {
+    subscribeCalls++;
+    const unsubscribe = originalSubscribe(callback);
+    let unsubscribed = false;
+    return () => {
+      if (!unsubscribed) {
+        unsubscribed = true;
+        unsubscribeCalls++;
+      }
+      unsubscribe();
+    };
+  };
+  return {
+    subscribeCalls: () => subscribeCalls,
+    unsubscribeCalls: () => unsubscribeCalls,
+    activeCount: () => subscribeCalls - unsubscribeCalls,
+  };
+}
+
+function trackFieldSignals(field: FieldState<unknown, unknown>) {
+  const rawValueTracker = trackSignal(
+    field.rawValue as unknown as { subscribe(fn: (v: unknown) => void): () => void },
+  );
+  const valueTracker = trackSignal(
+    field.value as unknown as { subscribe(fn: (v: unknown) => void): () => void },
+  );
+  const issuesTracker = trackSignal(
+    field.issues as unknown as { subscribe(fn: (v: unknown) => void): () => void },
+  );
+  const serverIssuesTracker = trackSignal(
+    field.serverIssues as unknown as { subscribe(fn: (v: unknown) => void): () => void },
+  );
+  const parseStatusTracker = trackSignal(
+    field.parseStatus as unknown as { subscribe(fn: (v: unknown) => void): () => void },
+  );
+
+  return {
+    rawValueTracker,
+    valueTracker,
+    issuesTracker,
+    serverIssuesTracker,
+    parseStatusTracker,
+    totalSubscribeCalls: () =>
+      rawValueTracker.subscribeCalls() +
+      valueTracker.subscribeCalls() +
+      issuesTracker.subscribeCalls() +
+      serverIssuesTracker.subscribeCalls() +
+      parseStatusTracker.subscribeCalls(),
+    totalUnsubscribeCalls: () =>
+      rawValueTracker.unsubscribeCalls() +
+      valueTracker.unsubscribeCalls() +
+      issuesTracker.unsubscribeCalls() +
+      serverIssuesTracker.unsubscribeCalls() +
+      parseStatusTracker.unsubscribeCalls(),
+    activeCount: () =>
+      rawValueTracker.activeCount() +
+      valueTracker.activeCount() +
+      issuesTracker.activeCount() +
+      serverIssuesTracker.activeCount() +
+      parseStatusTracker.activeCount(),
+  };
 }
 
 describe("@vii-labs/form/vanilla - Vanilla DOM Adapter", () => {
@@ -297,21 +383,35 @@ describe("@vii-labs/form/vanilla - Vanilla DOM Adapter", () => {
       field.dispose();
     });
 
-    test("binds multi-select when multiple is true", () => {
+    test("select-multiple fails closed with TypeError and zero partial binding", () => {
       const field = createField<string[]>({
         initialValue: ["opt-1"],
       });
+      const tracker = trackFieldSignals(field as unknown as FieldState<unknown, unknown>);
       const select = new MockDomElement();
+      select.tagName = "SELECT";
       select.type = "select-multiple";
       select.multiple = true;
-      select.selectedOptions = [{ value: "opt-1" }, { value: "opt-3" }];
+      select.value = "opt-1";
+      select.setAttribute("data-test", "original");
 
-      const binding = bindField(field, select);
-      select.dispatch("change");
+      expect(() => {
+        bindField(field as unknown as FieldState<string>, select);
+      }).toThrow(TypeError);
 
-      expect(field.value.get()).toEqual(["opt-1", "opt-3"]);
+      // 1. Exactly 0 listeners attached
+      expect(select.currentListenerCount).toBe(0);
+      expect(select.totalListenersAdded).toBe(0);
 
-      binding.dispose();
+      // 2. Exactly 0 subscriptions created on the field
+      expect(tracker.totalSubscribeCalls()).toBe(0);
+      expect(tracker.activeCount()).toBe(0);
+
+      // 3. No DOM mutation
+      expect(select.value).toBe("opt-1");
+      expect(select.getAttribute("data-test")).toBe("original");
+      expect(select.hasAttribute("aria-invalid")).toBe(false);
+
       field.dispose();
     });
   });
@@ -423,6 +523,161 @@ describe("@vii-labs/form/vanilla - Vanilla DOM Adapter", () => {
 
       binding.dispose();
       field.dispose();
+    });
+
+    describe("aria-invalid Non-destructive Ownership & Restoration Matrix", () => {
+      test("matrix 1: original aria-invalid absent -> invalid='true' -> valid=absent -> dispose=absent", () => {
+        const field = createField({
+          initialValue: "valid",
+          rules: [(v: string) => (v === "bad" ? { code: "invalid", message: "bad" } : null)],
+          validateOn: "change",
+        });
+        const input = new MockDomElement();
+        // Original: absent
+        expect(input.hasAttribute("aria-invalid")).toBe(false);
+
+        const binding = bindField(field, input);
+        // Valid initially: remains absent
+        expect(input.hasAttribute("aria-invalid")).toBe(false);
+
+        // Invalid: projects "true"
+        input.value = "bad";
+        input.dispatch("input");
+        expect(field.invalid.get()).toBe(true);
+        expect(input.getAttribute("aria-invalid")).toBe("true");
+
+        // Valid again: restores absent state
+        input.value = "good";
+        input.dispatch("input");
+        expect(field.invalid.get()).toBe(false);
+        expect(input.hasAttribute("aria-invalid")).toBe(false);
+
+        // Turn invalid again before dispose
+        input.value = "bad";
+        input.dispatch("input");
+        expect(input.getAttribute("aria-invalid")).toBe("true");
+
+        // Dispose: restores exact original absent state
+        binding.dispose();
+        expect(input.hasAttribute("aria-invalid")).toBe(false);
+
+        field.dispose();
+      });
+
+      test("matrix 2: original aria-invalid='grammar' -> valid='grammar' -> invalid='true' -> valid='grammar' -> dispose='grammar'", () => {
+        const field = createField({
+          initialValue: "valid",
+          rules: [(v: string) => (v === "bad" ? { code: "invalid", message: "bad" } : null)],
+          validateOn: "change",
+        });
+        const input = new MockDomElement();
+        input.setAttribute("aria-invalid", "grammar");
+
+        const binding = bindField(field, input);
+        // Field is valid initially: preserves application-owned "grammar"
+        expect(input.getAttribute("aria-invalid")).toBe("grammar");
+
+        // Invalid: projects "true"
+        input.value = "bad";
+        input.dispatch("input");
+        expect(field.invalid.get()).toBe(true);
+        expect(input.getAttribute("aria-invalid")).toBe("true");
+
+        // Valid: restores original application "grammar"
+        input.value = "good";
+        input.dispatch("input");
+        expect(field.invalid.get()).toBe(false);
+        expect(input.getAttribute("aria-invalid")).toBe("grammar");
+
+        // Dispose: restores original application "grammar"
+        input.value = "bad";
+        input.dispatch("input");
+        expect(input.getAttribute("aria-invalid")).toBe("true");
+
+        binding.dispose();
+        expect(input.getAttribute("aria-invalid")).toBe("grammar");
+
+        field.dispose();
+      });
+
+      test("matrix 3: original aria-invalid='false' -> valid='false' -> invalid='true' -> valid='false' -> dispose='false'", () => {
+        const field = createField({
+          initialValue: "valid",
+          rules: [(v: string) => (v === "bad" ? { code: "invalid", message: "bad" } : null)],
+          validateOn: "change",
+        });
+        const input = new MockDomElement();
+        input.setAttribute("aria-invalid", "false");
+
+        const binding = bindField(field, input);
+        // Valid initially: preserves "false"
+        expect(input.getAttribute("aria-invalid")).toBe("false");
+
+        // Invalid: projects "true"
+        input.value = "bad";
+        input.dispatch("input");
+        expect(field.invalid.get()).toBe(true);
+        expect(input.getAttribute("aria-invalid")).toBe("true");
+
+        // Valid: restores "false"
+        input.value = "good";
+        input.dispatch("input");
+        expect(field.invalid.get()).toBe(false);
+        expect(input.getAttribute("aria-invalid")).toBe("false");
+
+        // Dispose: restores exact original "false"
+        binding.dispose();
+        expect(input.getAttribute("aria-invalid")).toBe("false");
+
+        field.dispose();
+      });
+
+      test("matrix 4: ariaInvalid: false never mutates application aria-invalid attribute", () => {
+        const field = createField({
+          initialValue: "valid",
+          rules: [(v: string) => (v === "bad" ? { code: "invalid", message: "bad" } : null)],
+          validateOn: "change",
+        });
+        const input = new MockDomElement();
+        input.setAttribute("aria-invalid", "custom-app-state");
+
+        const binding = bindField(field, input, { ariaInvalid: false });
+        expect(input.getAttribute("aria-invalid")).toBe("custom-app-state");
+
+        input.value = "bad";
+        input.dispatch("input");
+        expect(field.invalid.get()).toBe(true);
+        // Must remain untouched
+        expect(input.getAttribute("aria-invalid")).toBe("custom-app-state");
+
+        binding.dispose();
+        // Still untouched on dispose
+        expect(input.getAttribute("aria-invalid")).toBe("custom-app-state");
+
+        field.dispose();
+      });
+
+      test("matrix 5: generation-local multiple bindings manage aria-invalid independently", () => {
+        const fieldA = createField({ initialValue: "a" });
+        const fieldB = createField({ initialValue: "b" });
+        const input = new MockDomElement();
+        input.setAttribute("aria-invalid", "pre-existing");
+
+        const bindingA = bindField(fieldA, input);
+        expect(input.getAttribute("aria-invalid")).toBe("pre-existing");
+
+        bindingA.dispose();
+        expect(input.getAttribute("aria-invalid")).toBe("pre-existing");
+
+        const bindingB = bindField(fieldB, input);
+        expect(input.getAttribute("aria-invalid")).toBe("pre-existing");
+
+        bindingB.dispose();
+        expect(input.getAttribute("aria-invalid")).toBe("pre-existing");
+
+        fieldA.dispose();
+        fieldB.dispose();
+      });
     });
 
     test("links issueElement id into aria-describedby and restores original tokens on unbind", () => {
@@ -739,6 +994,32 @@ describe("@vii-labs/form/vanilla - Vanilla DOM Adapter", () => {
       field.dispose();
     });
 
+    test("tracks signal subscriptions and proves 100% unsubscription upon dispose", () => {
+      const field = createField({ initialValue: "test-sub" });
+      const tracker = trackFieldSignals(field as unknown as FieldState<unknown, unknown>);
+      const input = new MockDomElement();
+
+      const binding = bindField(field, input);
+
+      // Verify active subscriptions were established
+      expect(tracker.totalSubscribeCalls()).toBeGreaterThan(0);
+      expect(tracker.activeCount()).toBeGreaterThan(0);
+      expect(input.currentListenerCount).toBe(2);
+
+      binding.dispose();
+
+      // Upon dispose, ALL subscriptions and listeners must be cleanly unwound
+      expect(tracker.activeCount()).toBe(0);
+      expect(tracker.totalSubscribeCalls()).toBe(tracker.totalUnsubscribeCalls());
+      expect(input.currentListenerCount).toBe(0);
+
+      // Canonical field is still alive and operational
+      field.setValue("still-works");
+      expect(field.value.get()).toBe("still-works");
+
+      field.dispose();
+    });
+
     test("bindForm cleanup removes submit listener and keeps canonical form usable", () => {
       const form = createForm({
         fields: {
@@ -780,9 +1061,118 @@ describe("@vii-labs/form/vanilla - Vanilla DOM Adapter", () => {
 
     test("throws TypeError when element is invalid without subscribing to field", () => {
       const field = createField({ initialValue: "test" });
+      const tracker = trackFieldSignals(field as unknown as FieldState<unknown, unknown>);
+
       expect(() => {
         bindField(field, null as never);
       }).toThrow(TypeError);
+
+      expect(tracker.totalSubscribeCalls()).toBe(0);
+      expect(tracker.activeCount()).toBe(0);
+
+      field.dispose();
+    });
+
+    test("throws TypeError on div-like element with 0 listeners, 0 subscriptions, and 0 DOM mutations", () => {
+      const field = createField({ initialValue: "test-div" });
+      const tracker = trackFieldSignals(field as unknown as FieldState<unknown, unknown>);
+      const div = new MockDomElement();
+      div.tagName = "DIV";
+      div.nodeName = "DIV";
+      div.type = undefined;
+      div.value = "initial-content";
+      div.setAttribute("class", "card-container");
+      div.setAttribute("aria-label", "card");
+
+      expect(() => {
+        bindField(field, div);
+      }).toThrow(TypeError);
+
+      expect(div.currentListenerCount).toBe(0);
+      expect(div.totalListenersAdded).toBe(0);
+      expect(tracker.totalSubscribeCalls()).toBe(0);
+      expect(tracker.activeCount()).toBe(0);
+      expect(div.value).toBe("initial-content");
+      expect(div.getAttribute("class")).toBe("card-container");
+      expect(div.getAttribute("aria-label")).toBe("card");
+      expect(div.hasAttribute("aria-invalid")).toBe(false);
+
+      field.dispose();
+    });
+
+    test("throws TypeError on span-like element with 0 listeners and 0 subscriptions", () => {
+      const field = createField({ initialValue: "test-span" });
+      const tracker = trackFieldSignals(field as unknown as FieldState<unknown, unknown>);
+      const span = new MockDomElement();
+      span.tagName = "SPAN";
+      span.nodeName = "SPAN";
+      span.type = undefined;
+
+      expect(() => {
+        bindField(field, span);
+      }).toThrow(TypeError);
+
+      expect(span.currentListenerCount).toBe(0);
+      expect(tracker.totalSubscribeCalls()).toBe(0);
+      expect(tracker.activeCount()).toBe(0);
+
+      field.dispose();
+    });
+
+    test("throws TypeError on button-like element with 0 listeners and 0 subscriptions", () => {
+      const field = createField({ initialValue: "test-button" });
+      const tracker = trackFieldSignals(field as unknown as FieldState<unknown, unknown>);
+      const button = new MockDomElement();
+      button.tagName = "BUTTON";
+      button.nodeName = "BUTTON";
+      button.type = "submit";
+
+      expect(() => {
+        bindField(field, button);
+      }).toThrow(TypeError);
+
+      expect(button.currentListenerCount).toBe(0);
+      expect(tracker.totalSubscribeCalls()).toBe(0);
+      expect(tracker.activeCount()).toBe(0);
+
+      field.dispose();
+    });
+
+    test("throws TypeError on arbitrary object lacking form control markers", () => {
+      const field = createField({ initialValue: "test-arbitrary" });
+      const tracker = trackFieldSignals(field as unknown as FieldState<unknown, unknown>);
+      let listenerCount = 0;
+      const arbitrary = {
+        value: "foo",
+        addEventListener: () => {
+          listenerCount++;
+        },
+        removeEventListener: () => {
+          listenerCount--;
+        },
+      };
+
+      expect(() => {
+        bindField(field, arbitrary as never);
+      }).toThrow(TypeError);
+
+      expect(listenerCount).toBe(0);
+      expect(tracker.totalSubscribeCalls()).toBe(0);
+      expect(tracker.activeCount()).toBe(0);
+
+      field.dispose();
+    });
+
+    test("provides negative compile-time type coverage for unsupported elements", () => {
+      const field = createField({ initialValue: "typed" });
+      const unsupportedDiv = {
+        tagName: "div",
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      };
+
+      // @ts-expect-error - div is not assignable to VanillaFieldElement (missing required value/control properties)
+      expect(() => bindField(field, unsupportedDiv)).toThrow(TypeError);
 
       field.dispose();
     });

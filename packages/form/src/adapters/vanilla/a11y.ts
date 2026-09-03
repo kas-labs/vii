@@ -1,5 +1,5 @@
 import type { FieldIssue, FieldState } from "../../core/types.js";
-import type { VanillaDomElement } from "./types.js";
+import type { VanillaDomControl, VanillaDomElement } from "./types.js";
 
 /**
  * Evaluates whether a field is currently invalid by reading underlying source State signals directly,
@@ -16,11 +16,71 @@ export function isFieldInvalid(field: FieldState<unknown, unknown>): boolean {
 }
 
 /**
+ * Controller for generation-local `aria-invalid` lifecycle management with original-state restoration.
+ */
+export interface AriaInvalidController {
+  readonly update: (isInvalid: boolean) => void;
+  readonly dispose: () => void;
+}
+
+/**
+ * Sets up non-destructive `aria-invalid` management for a control.
+ *
+ * Captures the pre-binding `aria-invalid` attribute state (presence and exact string value).
+ * While bound:
+ * - When invalid, projects `aria-invalid="true"`.
+ * - When valid, restores the original application-owned attribute value (or removes it if absent).
+ * Upon disposal:
+ * - Restores the exact pre-binding attribute state, preserving application ownership.
+ */
+export function setupAriaInvalid(
+  element: VanillaDomControl | VanillaDomElement,
+  enabled: boolean,
+): AriaInvalidController {
+  if (!enabled || typeof element.setAttribute !== "function") {
+    return {
+      update: () => undefined,
+      dispose: () => undefined,
+    };
+  }
+
+  const hasGet = typeof element.getAttribute === "function";
+  const hasHas = typeof element.hasAttribute === "function";
+
+  const originalHadAttr = hasHas
+    ? Boolean(element.hasAttribute!("aria-invalid"))
+    : hasGet && element.getAttribute!("aria-invalid") !== null;
+
+  const originalValue = hasGet ? element.getAttribute!("aria-invalid") : null;
+
+  const restoreOriginal = (): void => {
+    if (originalHadAttr && originalValue !== null) {
+      element.setAttribute!("aria-invalid", originalValue);
+    } else if (typeof element.removeAttribute === "function") {
+      element.removeAttribute("aria-invalid");
+    }
+  };
+
+  return {
+    update: (isInvalid: boolean): void => {
+      if (isInvalid) {
+        element.setAttribute!("aria-invalid", "true");
+      } else {
+        restoreOriginal();
+      }
+    },
+    dispose: (): void => {
+      restoreOriginal();
+    },
+  };
+}
+
+/**
  * Projects `aria-invalid="true"` to the element when the field is invalid.
  * When the field is valid or pending-only, removes the attribute.
  */
 export function applyAriaInvalid(
-  element: VanillaDomElement,
+  element: VanillaDomControl | VanillaDomElement,
   isInvalid: boolean,
   enabled: boolean,
 ): void {
@@ -38,7 +98,7 @@ export function applyAriaInvalid(
  * Preserves pre-existing tokens and returns a cleanup function that removes only the added token.
  */
 export function setupAriaDescribedBy(
-  element: VanillaDomElement,
+  element: VanillaDomControl | VanillaDomElement,
   issueElement: VanillaDomElement | undefined,
   enabled: boolean,
 ): () => void {
@@ -82,6 +142,7 @@ export function setupAriaDescribedBy(
 
 /**
  * Renders validation and server issue messages strictly via `textContent`.
+ * Prevents HTML interpretation at the issue-message sink by writing through textContent.
  * NEVER uses `innerHTML`, `outerHTML`, or HTML parsing sinks.
  */
 export function renderSafeIssues(

@@ -159,12 +159,17 @@ Static AST and bundle graph inspection verified:
 
 ## 9. Memory & Lifecycle Retention Evidence
 
-1. **500 Create/Dispose Cycles**: Completed with **0 active subscriptions retained**, **0 active scopes retained**, and **0 active timers retained**.
-2. **FieldArray Disposal**: Removing items releases internal child scopes and detach handlers. Surviving items retain stable IDs.
-3. **Debounce Timer Cancellation**: Scheduled debounce validations are immediately cancelled upon field/form disposal, preventing late callback commits and unhandled errors.
-4. **Async Validation Supersession**: 200 rapid mutations create 200 `AbortController` instances, cleanly abort 199 stale controllers, commit exactly 1 final result, and produce **0 unhandled promise rejections**.
-5. **Submission Cancellation**: Repeated submit/cancel cycles leave 0 dangling controllers and 0 pending promises.
-6. **Adapter Lifecycle**: React mount/unmount, Vanilla bind/dispose, Angular create/dispose, and Vue create/dispose cycles restore active subscription counts to **exactly 0**.
+1. **500 Create/Dispose Cycles with Production Signal Spies**: Exercised leaf fields, groups, and arrays across 500 complete create/dispose cycles with per-cycle subscriber tracking. Verified **0 retained subscriptions** (`cyclesChecked: 500`, `cyclesWithResidualSubscriptions: 0`).
+2. **Core Diagnostics Scope Tree Verification**: Core diagnostics tracing (`createDiagnostics` with `inspectTrace`) proves all created child scopes are cleanly disposed, resulting in **0 retained scopes** (`retainedScopes: 0`).
+3. **FieldArray Disposal**: Removing items releases internal child scopes and detach handlers. Surviving items retain stable IDs.
+4. **Debounce Timer Tracking**: Spying on `setTimeout`/`clearTimeout` during field debounce validation proves that timers are cancelled upon field/form disposal, leaving **0 retained timers** (`scheduledFormTimers: 1`, `cancelledFormTimers: 1`, `outstandingFormTimers: 0`).
+5. **Async Validation Supersession on Production Signals**: 200 rapid mutations observing production `ctx.signal` (not test-owned controllers) and process-level `unhandledRejection` tracking confirm 201 observed signals, 200 aborted signals, exactly 1 authoritative commit, **0 stale commits**, and **0 unhandled rejections**.
+6. **Submission Cancellation**: Repeated submit/cancel cycles leave 0 dangling controllers and 0 pending promises.
+7. **Repeated Adapter Lifecycle (100 cycles each)**:
+   - React (`useField`): 100 mount/unmount cycles $\rightarrow$ **0 residual subscriptions**.
+   - Vanilla DOM (`bindField`): 100 bind/dispose cycles $\rightarrow$ **0 residual subscriptions, 0 residual DOM event listeners**.
+   - Angular (`createAngularField`): 100 create/dispose cycles $\rightarrow$ **0 residual subscriptions**.
+   - Vue (`createVueField`): 100 create/dispose cycles $\rightarrow$ **0 residual subscriptions**.
 
 ---
 
@@ -207,13 +212,13 @@ All metrics are machine-enforced via:
 - **CI Integration**: Added as a required gate in `.github/workflows/validate.yml` ("Run Form performance and size gate").
 
 ### Hard vs Advisory Budgets
-- **HARD Gates (Fail CI)**:
-  - All bundle size maximums (root, createField, adapters, tarball).
-  - All framework isolation checks (zero cross-framework imports).
-  - All memory retention checks (zero retained subscriptions/scopes/timers).
-  - Runtime invariants: sibling notification count == 0, field array identity == true, TS recursion error == false.
-  - Runtime regression ceilings (construct1000 <= 100ms, leafMutation1000 <= 50µs, validation1000 <= 50ms, etc.).
-- **ADVISORY Metrics (Informational)**:
+- **HARD Gates (Fail CI, 41 exact checks evaluated)**:
+  - Bundle size maximums (19 checks: minified, gzip, brotli for root, createField, 4 adapters, plus compressed tarball).
+  - Framework and schema isolation (8 checks: rootFrameworkClean, reactClean, vanillaClean, angularClean, vueClean, schemaProvidersClean, standardSchemaSpecRuntimeBytes == 0, containsExcludedFixtures == false).
+  - Memory lifecycle retention (5 checks: allowedRetainedSubscriptions == 0, allowedRetainedScopes == 0, allowedRetainedTimers == 0, allowedStaleCommits == 0, allowedUnhandledRejections == 0).
+  - Runtime invariants (3 checks: siblingNotificationCount == 0, fieldArrayIdentityVerified == true, typeCheckRecursionError == false).
+  - Runtime regression ceilings (6 checks: construct1000MaxMs <= 100ms, leafMutation1000MaxUs <= 50µs, aggregateMutation1000MaxMs <= 20ms, validation1000MaxMs <= 50ms, submissionSuccessMaxMs <= 20ms, serverIssueRoute1000MaxMs <= 100ms).
+- **ADVISORY Metrics (Informational, 7 checks)**:
   - Microbenchmark execution medians (local reference timings).
 
 ---

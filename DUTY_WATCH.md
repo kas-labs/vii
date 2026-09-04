@@ -80,12 +80,13 @@ PR: https://github.com/kas-labs/vii/pull/192
 
 - `pnpm nx lint form`: PASS
 - `pnpm nx typecheck form`: PASS
-- `pnpm nx test form`: PASS (377 tests passed across 25 files)
+- `pnpm nx test form`: PASS (378 tests passed across 25 files, including clean checkout without pre-existing dist)
 - `pnpm nx build form`: PASS
 - `pnpm nx validate-package form`: PASS
 - `pnpm test:browser`: PASS (31 Playwright tests passed)
-- `pnpm nx performance form`: PASS (all hard and advisory gates passed)
+- `pnpm nx performance form`: PASS (all 41 machine-enforced HARD budgets and ADVISORY ceilings passed)
 - `pnpm format:check`: PASS
+- `NX_DAEMON=false pnpm validate`: PASS
 
 ### Architecture / compatibility
 

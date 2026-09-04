@@ -5,6 +5,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { measureFormBundles } from "./form-performance-bundle.mjs";
 import { measureFormRuntime } from "./form-performance-runtime.mjs";
+import { measureFormMemory } from "./form-performance-memory.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, "../..");
@@ -71,17 +72,20 @@ async function main() {
   console.log(`Environment: ${env.platform} | CPU: ${env.cpuModel} (${env.cpuCount} cores)`);
   console.log(`Node: ${env.nodeVersion} | Git: ${env.gitRevision.slice(0, 10)}\n`);
 
-  console.log("[1/3] Measuring bundle sizes, tree-shaking & package tarball...");
+  console.log("[1/4] Measuring bundle sizes, tree-shaking & package tarball...");
   const bundleResults = await measureFormBundles();
 
-  console.log("[2/3] Measuring runtime performance, arrays & framework adapters...");
+  console.log("[2/4] Measuring runtime performance, arrays & framework adapters...");
   const runtimeResults = await measureFormRuntime();
 
-  console.log("[3/3] Running TypeScript type diagnostics check...");
+  console.log("[3/4] Measuring memory lifecycle, scopes & retention...");
+  const memoryResults = await measureFormMemory();
+
+  console.log("[4/4] Running TypeScript type diagnostics check...");
   const typeResults = runTypeCheckDiagnostics();
 
   console.log("\n-------------------------------------------------------");
-  console.log("  Budget Enforcement Evaluation");
+  console.log("  Budget Enforcement Evaluation (41 HARD checks)");
   console.log("-------------------------------------------------------\n");
 
   const checks = [];
@@ -92,191 +96,272 @@ async function main() {
     const expectedFormatted =
       typeof expected === "number" ? expected.toLocaleString() : String(expected);
     console.log(
-      `  ${tag} ${name.padEnd(42)} ${actualFormatted.padStart(10)} ${unit}  (max/target: ${expectedFormatted} ${unit})`,
+      `  ${tag} ${name.padEnd(44)} ${actualFormatted.padStart(10)} ${unit.padEnd(3)} (threshold: ${expectedFormatted} ${unit})`,
     );
   }
 
-  // Bundle checks
+  // 1. Bundle (Minified, Gzip, Brotli for all entries + Tarball = 19 checks)
   evaluate(
-    "bundle.root.minified",
+    "bundle.root.maxMinifiedBytes",
     bundleResults.root.minified,
     budgets.bundle.root.maxMinifiedBytes,
     bundleResults.root.minified <= budgets.bundle.root.maxMinifiedBytes,
     "B",
   );
   evaluate(
-    "bundle.root.gzip",
+    "bundle.root.maxGzipBytes",
     bundleResults.root.gzip,
     budgets.bundle.root.maxGzipBytes,
     bundleResults.root.gzip <= budgets.bundle.root.maxGzipBytes,
     "B",
   );
   evaluate(
-    "bundle.createFieldOnly.minified",
+    "bundle.root.maxBrotliBytes",
+    bundleResults.root.brotli,
+    budgets.bundle.root.maxBrotliBytes,
+    bundleResults.root.brotli <= budgets.bundle.root.maxBrotliBytes,
+    "B",
+  );
+
+  evaluate(
+    "bundle.createFieldOnly.maxMinifiedBytes",
     bundleResults.createFieldOnly.minified,
     budgets.bundle.createFieldOnly.maxMinifiedBytes,
     bundleResults.createFieldOnly.minified <= budgets.bundle.createFieldOnly.maxMinifiedBytes,
     "B",
   );
   evaluate(
-    "bundle.createFieldOnly.gzip",
+    "bundle.createFieldOnly.maxGzipBytes",
     bundleResults.createFieldOnly.gzip,
     budgets.bundle.createFieldOnly.maxGzipBytes,
     bundleResults.createFieldOnly.gzip <= budgets.bundle.createFieldOnly.maxGzipBytes,
     "B",
   );
   evaluate(
-    "bundle.reactAdapter.minified",
+    "bundle.createFieldOnly.maxBrotliBytes",
+    bundleResults.createFieldOnly.brotli,
+    budgets.bundle.createFieldOnly.maxBrotliBytes,
+    bundleResults.createFieldOnly.brotli <= budgets.bundle.createFieldOnly.maxBrotliBytes,
+    "B",
+  );
+
+  evaluate(
+    "bundle.reactAdapter.maxMinifiedBytes",
     bundleResults.reactAdapter.minified,
     budgets.bundle.reactAdapter.maxMinifiedBytes,
     bundleResults.reactAdapter.minified <= budgets.bundle.reactAdapter.maxMinifiedBytes,
     "B",
   );
   evaluate(
-    "bundle.reactAdapter.gzip",
+    "bundle.reactAdapter.maxGzipBytes",
     bundleResults.reactAdapter.gzip,
     budgets.bundle.reactAdapter.maxGzipBytes,
     bundleResults.reactAdapter.gzip <= budgets.bundle.reactAdapter.maxGzipBytes,
     "B",
   );
   evaluate(
-    "bundle.vanillaAdapter.minified",
+    "bundle.reactAdapter.maxBrotliBytes",
+    bundleResults.reactAdapter.brotli,
+    budgets.bundle.reactAdapter.maxBrotliBytes,
+    bundleResults.reactAdapter.brotli <= budgets.bundle.reactAdapter.maxBrotliBytes,
+    "B",
+  );
+
+  evaluate(
+    "bundle.vanillaAdapter.maxMinifiedBytes",
     bundleResults.vanillaAdapter.minified,
     budgets.bundle.vanillaAdapter.maxMinifiedBytes,
     bundleResults.vanillaAdapter.minified <= budgets.bundle.vanillaAdapter.maxMinifiedBytes,
     "B",
   );
   evaluate(
-    "bundle.vanillaAdapter.gzip",
+    "bundle.vanillaAdapter.maxGzipBytes",
     bundleResults.vanillaAdapter.gzip,
     budgets.bundle.vanillaAdapter.maxGzipBytes,
     bundleResults.vanillaAdapter.gzip <= budgets.bundle.vanillaAdapter.maxGzipBytes,
     "B",
   );
   evaluate(
-    "bundle.angularAdapter.minified",
+    "bundle.vanillaAdapter.maxBrotliBytes",
+    bundleResults.vanillaAdapter.brotli,
+    budgets.bundle.vanillaAdapter.maxBrotliBytes,
+    bundleResults.vanillaAdapter.brotli <= budgets.bundle.vanillaAdapter.maxBrotliBytes,
+    "B",
+  );
+
+  evaluate(
+    "bundle.angularAdapter.maxMinifiedBytes",
     bundleResults.angularAdapter.minified,
     budgets.bundle.angularAdapter.maxMinifiedBytes,
     bundleResults.angularAdapter.minified <= budgets.bundle.angularAdapter.maxMinifiedBytes,
     "B",
   );
   evaluate(
-    "bundle.angularAdapter.gzip",
+    "bundle.angularAdapter.maxGzipBytes",
     bundleResults.angularAdapter.gzip,
     budgets.bundle.angularAdapter.maxGzipBytes,
     bundleResults.angularAdapter.gzip <= budgets.bundle.angularAdapter.maxGzipBytes,
     "B",
   );
   evaluate(
-    "bundle.vueAdapter.minified",
+    "bundle.angularAdapter.maxBrotliBytes",
+    bundleResults.angularAdapter.brotli,
+    budgets.bundle.angularAdapter.maxBrotliBytes,
+    bundleResults.angularAdapter.brotli <= budgets.bundle.angularAdapter.maxBrotliBytes,
+    "B",
+  );
+
+  evaluate(
+    "bundle.vueAdapter.maxMinifiedBytes",
     bundleResults.vueAdapter.minified,
     budgets.bundle.vueAdapter.maxMinifiedBytes,
     bundleResults.vueAdapter.minified <= budgets.bundle.vueAdapter.maxMinifiedBytes,
     "B",
   );
   evaluate(
-    "bundle.vueAdapter.gzip",
+    "bundle.vueAdapter.maxGzipBytes",
     bundleResults.vueAdapter.gzip,
     budgets.bundle.vueAdapter.maxGzipBytes,
     bundleResults.vueAdapter.gzip <= budgets.bundle.vueAdapter.maxGzipBytes,
     "B",
   );
   evaluate(
-    "bundle.tarball.compressed",
+    "bundle.vueAdapter.maxBrotliBytes",
+    bundleResults.vueAdapter.brotli,
+    budgets.bundle.vueAdapter.maxBrotliBytes,
+    bundleResults.vueAdapter.brotli <= budgets.bundle.vueAdapter.maxBrotliBytes,
+    "B",
+  );
+
+  evaluate(
+    "bundle.tarball.maxCompressedBytes",
     bundleResults.tarball.compressedBytes,
     budgets.bundle.tarball.maxCompressedBytes,
     bundleResults.tarball.compressedBytes <= budgets.bundle.tarball.maxCompressedBytes,
     "B",
   );
 
-  // Isolation checks
+  // 2. Isolation (8 checks)
   evaluate(
     "isolation.rootFrameworkClean",
     bundleResults.isolation.rootFrameworkClean,
-    true,
-    bundleResults.isolation.rootFrameworkClean === true,
+    budgets.isolation.rootFrameworkClean,
+    bundleResults.isolation.rootFrameworkClean === budgets.isolation.rootFrameworkClean,
   );
   evaluate(
     "isolation.reactClean",
     bundleResults.isolation.reactClean,
-    true,
-    bundleResults.isolation.reactClean === true,
+    budgets.isolation.reactClean,
+    bundleResults.isolation.reactClean === budgets.isolation.reactClean,
   );
   evaluate(
     "isolation.vanillaClean",
     bundleResults.isolation.vanillaClean,
-    true,
-    bundleResults.isolation.vanillaClean === true,
+    budgets.isolation.vanillaClean,
+    bundleResults.isolation.vanillaClean === budgets.isolation.vanillaClean,
   );
   evaluate(
     "isolation.angularClean",
     bundleResults.isolation.angularClean,
-    true,
-    bundleResults.isolation.angularClean === true,
+    budgets.isolation.angularClean,
+    bundleResults.isolation.angularClean === budgets.isolation.angularClean,
   );
   evaluate(
     "isolation.vueClean",
     bundleResults.isolation.vueClean,
-    true,
-    bundleResults.isolation.vueClean === true,
+    budgets.isolation.vueClean,
+    bundleResults.isolation.vueClean === budgets.isolation.vueClean,
   );
   evaluate(
     "isolation.schemaProvidersClean",
     bundleResults.isolation.schemaProvidersClean,
-    true,
-    bundleResults.isolation.schemaProvidersClean === true,
+    budgets.isolation.schemaProvidersClean,
+    bundleResults.isolation.schemaProvidersClean === budgets.isolation.schemaProvidersClean,
   );
   evaluate(
-    "isolation.standardSchemaRuntimeBytes",
+    "isolation.standardSchemaSpecRuntimeBytes",
     bundleResults.isolation.standardSchemaSpecRuntimeBytes,
-    0,
-    bundleResults.isolation.standardSchemaSpecRuntimeBytes === 0,
+    budgets.isolation.standardSchemaSpecRuntimeBytes,
+    bundleResults.isolation.standardSchemaSpecRuntimeBytes <=
+      budgets.isolation.standardSchemaSpecRuntimeBytes,
     "B",
   );
   evaluate(
-    "isolation.excludedFixtures",
-    !bundleResults.tarball.containsExcludedFixtures,
-    true,
-    !bundleResults.tarball.containsExcludedFixtures,
+    "isolation.containsExcludedFixtures",
+    bundleResults.tarball.containsExcludedFixtures,
+    budgets.isolation.containsExcludedFixtures,
+    bundleResults.tarball.containsExcludedFixtures === budgets.isolation.containsExcludedFixtures,
   );
 
-  // Runtime checks
+  // 3. Memory Hard Gates (5 checks)
+  evaluate(
+    "memory.allowedRetainedSubscriptions",
+    memoryResults.retainedSubscriptions,
+    budgets.memory.allowedRetainedSubscriptions,
+    memoryResults.retainedSubscriptions <= budgets.memory.allowedRetainedSubscriptions,
+  );
+  evaluate(
+    "memory.allowedRetainedScopes",
+    memoryResults.retainedScopes,
+    budgets.memory.allowedRetainedScopes,
+    memoryResults.retainedScopes <= budgets.memory.allowedRetainedScopes,
+  );
+  evaluate(
+    "memory.allowedRetainedTimers",
+    memoryResults.retainedTimers,
+    budgets.memory.allowedRetainedTimers,
+    memoryResults.retainedTimers <= budgets.memory.allowedRetainedTimers,
+  );
+  evaluate(
+    "memory.allowedStaleCommits",
+    memoryResults.staleCommits,
+    budgets.memory.allowedStaleCommits,
+    memoryResults.staleCommits <= budgets.memory.allowedStaleCommits,
+  );
+  evaluate(
+    "memory.allowedUnhandledRejections",
+    memoryResults.unhandledRejections,
+    budgets.memory.allowedUnhandledRejections,
+    memoryResults.unhandledRejections <= budgets.memory.allowedUnhandledRejections,
+  );
+
+  // 4. Runtime Invariants (3 checks)
   evaluate(
     "runtime.siblingNotificationCount",
     runtimeResults.siblingNotifications,
-    0,
-    runtimeResults.siblingNotifications === 0,
+    budgets.runtime.siblingNotificationCount,
+    runtimeResults.siblingNotifications === budgets.runtime.siblingNotificationCount,
   );
   evaluate(
     "runtime.fieldArrayIdentityVerified",
     runtimeResults.identityVerified,
-    true,
-    runtimeResults.identityVerified === true,
+    budgets.runtime.fieldArrayIdentityVerified,
+    runtimeResults.identityVerified === budgets.runtime.fieldArrayIdentityVerified,
   );
   evaluate(
     "runtime.typeCheckRecursionError",
     typeResults.hasRecursionError,
-    false,
-    !typeResults.hasRecursionError,
+    budgets.runtime.typeCheckRecursionError,
+    typeResults.hasRecursionError === budgets.runtime.typeCheckRecursionError,
   );
 
-  // Ceilings (for CI protection)
+  // 5. Runtime Ceilings (6 checks)
   evaluate(
-    "runtime.ceiling.construct1000",
+    "runtime.ceilings.construct1000MaxMs",
     runtimeResults.construction[1000].medianMs,
     budgets.runtime.ceilings.construct1000MaxMs,
     runtimeResults.construction[1000].medianMs <= budgets.runtime.ceilings.construct1000MaxMs,
     "ms",
   );
   evaluate(
-    "runtime.ceiling.leafMutation1000",
+    "runtime.ceilings.leafMutation1000MaxUs",
     runtimeResults.leafMutation[1000].medianUs,
     budgets.runtime.ceilings.leafMutation1000MaxUs,
     runtimeResults.leafMutation[1000].medianUs <= budgets.runtime.ceilings.leafMutation1000MaxUs,
     "us",
   );
   evaluate(
-    "runtime.ceiling.aggregateMutation1000",
+    "runtime.ceilings.aggregateMutation1000MaxMs",
     runtimeResults.aggregateMutation[1000].medianMs,
     budgets.runtime.ceilings.aggregateMutation1000MaxMs,
     runtimeResults.aggregateMutation[1000].medianMs <=
@@ -284,21 +369,21 @@ async function main() {
     "ms",
   );
   evaluate(
-    "runtime.ceiling.validation1000",
+    "runtime.ceilings.validation1000MaxMs",
     runtimeResults.validation[1000].medianMs,
     budgets.runtime.ceilings.validation1000MaxMs,
     runtimeResults.validation[1000].medianMs <= budgets.runtime.ceilings.validation1000MaxMs,
     "ms",
   );
   evaluate(
-    "runtime.ceiling.submissionSuccess",
+    "runtime.ceilings.submissionSuccessMaxMs",
     runtimeResults.submission.success.medianMs,
     budgets.runtime.ceilings.submissionSuccessMaxMs,
     runtimeResults.submission.success.medianMs <= budgets.runtime.ceilings.submissionSuccessMaxMs,
     "ms",
   );
   evaluate(
-    "runtime.ceiling.serverIssueRoute1000",
+    "runtime.ceilings.serverIssueRoute1000MaxMs",
     runtimeResults.serverIssues[1000].medianMs,
     budgets.runtime.ceilings.serverIssueRoute1000MaxMs,
     runtimeResults.serverIssues[1000].medianMs <=
@@ -314,9 +399,11 @@ async function main() {
     results: {
       bundle: bundleResults,
       runtime: runtimeResults,
+      memory: memoryResults,
       typecheck: typeResults,
     },
     checks,
+    totalChecks: checks.length,
     passed: checks.every((c) => c.pass),
   };
 
@@ -329,7 +416,9 @@ async function main() {
 
   console.log("\n-------------------------------------------------------");
   if (report.passed) {
-    console.log("  \x1b[32mALL PERFORMANCE, BUNDLE, AND MEMORY GATES PASSED\x1b[0m");
+    console.log(
+      `  \x1b[32mALL PERFORMANCE, BUNDLE, AND MEMORY GATES PASSED (${checks.length}/41)\x1b[0m`,
+    );
     console.log("-------------------------------------------------------\n");
     process.exit(0);
   } else {

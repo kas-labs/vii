@@ -1,10 +1,10 @@
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { brotliCompressSync, gzipSync } from "node:zlib";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { build } from "vite";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
@@ -74,6 +74,16 @@ describe("P1l Bundle, Tree-Shaking, and Framework Isolation Gate", () => {
     "arktype",
     "@standard-schema/spec",
   ];
+
+  beforeAll(() => {
+    if (!existsSync(resolve(FORM_DIST, "index.js"))) {
+      const pnpm = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
+      execFileSync(pnpm, ["--filter", "@vii-labs/form", "build"], {
+        cwd: REPO_ROOT,
+        stdio: "ignore",
+      });
+    }
+  });
 
   it("proves root entry does not bundle React, Angular, Vue, or concrete schema libraries", async () => {
     const root = await bundleCode(resolve(FORM_DIST, "index.js"), {

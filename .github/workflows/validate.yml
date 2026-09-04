@@ -38,3 +38,6 @@ jobs:
 
       - name: Run Form browser tests
         run: pnpm test:browser
+
+      - name: Run Form performance and size gate
+        run: pnpm nx performance form

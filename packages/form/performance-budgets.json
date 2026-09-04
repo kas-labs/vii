@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "@vii-labs/form performance budgets",
+  "version": "1.0.0",
+  "classification": {
+    "hard": [
+      "bundle.*",
+      "isolation.*",
+      "memory.*",
+      "runtime.siblingNotificationCount",
+      "runtime.fieldArrayIdentityVerified",
+      "runtime.typeCheckRecursionError",
+      "runtime.ceilings.*"
+    ],
+    "advisory": ["runtime.advisoryMedians.*"]
+  },
+  "bundle": {
+    "root": {
+      "maxMinifiedBytes": 60000,
+      "maxGzipBytes": 14000,
+      "maxBrotliBytes": 12000
+    },
+    "createFieldOnly": {
+      "maxMinifiedBytes": 18000,
+      "maxGzipBytes": 5000,
+      "maxBrotliBytes": 4500
+    },
+    "reactAdapter": {
+      "maxMinifiedBytes": 7000,
+      "maxGzipBytes": 2000,
+      "maxBrotliBytes": 1800
+    },
+    "vanillaAdapter": {
+      "maxMinifiedBytes": 14000,
+      "maxGzipBytes": 3800,
+      "maxBrotliBytes": 3200
+    },
+    "angularAdapter": {
+      "maxMinifiedBytes": 8000,
+      "maxGzipBytes": 2000,
+      "maxBrotliBytes": 1800
+    },
+    "vueAdapter": {
+      "maxMinifiedBytes": 8000,
+      "maxGzipBytes": 2000,
+      "maxBrotliBytes": 1800
+    },
+    "tarball": {
+      "maxCompressedBytes": 120000
+    }
+  },
+  "isolation": {
+    "rootFrameworkClean": true,
+    "reactClean": true,
+    "vanillaClean": true,
+    "angularClean": true,
+    "vueClean": true,
+    "schemaProvidersClean": true,
+    "standardSchemaSpecRuntimeBytes": 0,
+    "containsExcludedFixtures": false
+  },
+  "memory": {
+    "allowedRetainedSubscriptions": 0,
+    "allowedRetainedScopes": 0,
+    "allowedRetainedTimers": 0,
+    "allowedStaleCommits": 0,
+    "allowedUnhandledRejections": 0
+  },
+  "runtime": {
+    "siblingNotificationCount": 0,
+    "fieldArrayIdentityVerified": true,
+    "typeCheckRecursionError": false,
+    "ceilings": {
+      "construct1000MaxMs": 100,
+      "leafMutation1000MaxUs": 50,
+      "aggregateMutation1000MaxMs": 20,
+      "validation1000MaxMs": 50,
+      "submissionSuccessMaxMs": 20,
+      "serverIssueRoute1000MaxMs": 100
+    },
+    "advisoryMedians": {
+      "leafMutationUs": 2.0,
+      "aggregateMutation10Us": 10.0,
+      "aggregateMutation1000Us": 800.0,
+      "validation10Ms": 0.1,
+      "validation1000Ms": 15.0,
+      "submissionSuccessMs": 0.1,
+      "fieldArrayPush100Us": 20.0
+    }
+  }
+}

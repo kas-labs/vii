@@ -21,8 +21,10 @@ export default defineConfig({
   webServer: {
     command: "pnpm exec vite --config test/browser/fixture/vite.config.ts",
     url: "http://127.0.0.1:4173",
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: !process.env["CI"],
     timeout: 15_000,
     cwd: path.resolve(__dirname, "../.."),
+    stdout: "pipe",
+    stderr: "pipe",
   },
 });

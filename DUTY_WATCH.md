@@ -37,6 +37,66 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-09-05 02:00 CEST | Form Production Graduation & Public API Review (P1m)
+
+Status: completed
+Branch: `feat/form-p1m-production-graduation-review`
+PR: not opened (opening Draft PR)
+
+### Scope
+
+- Execute the final official slice of Vii Form Production Phase 1: P1m — Production Graduation & Public API Review.
+- Formalize public API contract, machine-readable API surface snapshot, and boundary tests for `@vii-labs/form`.
+- Audit 18 public runtime exports and 74 public named types across root (`.`), React (`./react`), Vanilla (`./vanilla`), Angular (`./angular`), and Vue (`./vue`).
+- Verify rejection of unsupported deep internal imports (e.g. `@vii-labs/form/dist/core/field.js`) by exports map.
+- Finalize definitive consumer documentation in `packages/form/README.md` with 21 required sections and executable test fixtures (`test/unit/readme-examples.test.ts`).
+- Graduate package stability from Experimental to Preview Candidate (`vii.stability: "preview"`).
+- Preserve `"private": true` and defer package publication pending explicit maintainer release approval (`docs/release/FORM_RELEASE_GATE.md`).
+- Add candidate Changeset (`.changeset/preview-form-candidate.md`).
+- Verify full validation, browser acceptance (31 tests), and performance/memory/bundle budgets (41 HARD budgets).
+- Officially conclude Vii Form Production Phase 1 with zero modifications to `@vii-labs/core` and zero new form feature implementations. Do not begin Phase 2.
+
+### Changes
+
+- `packages/form/package.json`: Updated `description` and `vii.stability` to `"preview"`; preserved `"private": true` and version `0.1.0-experimental.1`.
+- `packages/form/api-surface.json`: Created machine-readable public API snapshot cataloging all 18 runtime exports and 74 public named types across 5 subpath entrypoints.
+- `packages/form/test/package-boundary.test.ts`: Added automated assertions verifying public exports and exported type declarations strictly match `api-surface.json`, and verifying that the exports map forbids deep internal imports.
+- `scripts/package-validation/validate-form.mjs`: Added assertions checking `formManifest.vii?.stability === "preview"` and verifying that Node resolution rejects internal deep imports with `ERR_PACKAGE_PATH_NOT_EXPORTED`.
+- `packages/form/test/unit/readme-examples.test.ts`: Created comprehensive unit test compiling and executing all representative README code snippets across root and framework adapters.
+- `packages/form/README.md`: Completely finalized definitive consumer entry document containing all 21 required architectural sections.
+- `.changeset/preview-form-candidate.md`: Created candidate Changeset declaring minor bump for Preview Candidate graduation.
+- `docs/release/FORM_RELEASE_GATE.md`: Created release readiness gate document clearly separating P1m completion from explicit future publication authorization.
+- `docs/architecture/FORM_ARCHITECTURE.md`: Updated status to `Phase 1 Production Architecture Implemented / Preview Candidate`, marked P1a–P1m completed in roadmap table, and pruned obsolete research references.
+- `PROJECT_STATE.md`: Recorded P1m completion, Preview Candidate graduation, deferred publication, and formal conclusion of Vii Form Production Phase 1.
+
+### Validation
+
+- `pnpm format:check`: passed (0 formatting issues across repository).
+- `pnpm nx lint form`: passed (0 ESLint warnings/errors).
+- `pnpm nx typecheck form`: passed (0 TypeScript errors in `packages/form`).
+- `pnpm nx test form`: passed (26 test files, 385 tests passed, including `package-boundary.test.ts` and `readme-examples.test.ts`).
+- `pnpm nx build form`: passed (clean declaration and ESM build).
+- `pnpm nx validate-package form`: passed (artifact tarball verification, deep import rejection check, packed consumer matrix covering root/vanilla, React 18 & 19, Angular 17 & 22, Vue 3.3 & 3.5).
+- `pnpm test:browser`: passed (31 Playwright headless Chromium tests passed, 0 failures, 0 regressions).
+- `pnpm nx performance form`: passed (41/41 HARD performance, bundle, and memory budgets passed).
+- `git diff --check`: passed (0 whitespace errors).
+- `NX_DAEMON=false pnpm validate`: passed (clean repository-wide validation).
+
+### Architecture / compatibility
+
+- Package identity: `@vii-labs/form` graduated from `Experimental` to `Preview Candidate` (`vii.stability: "preview"`).
+- Package publication: strictly deferred; `"private": true` retained. Zero public npm releases or git tags created.
+- Zero changes to `@vii-labs/core` runtime or semantics.
+- Public API surface strictly minimized: 18 runtime exports and 74 public types across 5 entrypoints.
+- Deep internal imports explicitly rejected by package `exports` map.
+- Pure ESM architecture, `sideEffects: false`, zero third-party bundled runtime dependencies (`@standard-schema/spec` consumed type-only).
+- Framework adapters (React, Vanilla, Angular, Vue) strictly isolated with zero cross-framework peer dependencies.
+
+### Remaining / recovery
+
+- Open Draft PR against `main` for maintainer review.
+- Vii Form Production Phase 1 is complete. Do not start Phase 2.
+
 ## 2026-09-05 01:10 CEST | Implement Performance, Bundle, and Memory Gate (P1l)
 
 Status: completed

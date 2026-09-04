@@ -148,5 +148,5 @@ switch (scenario) {
     mountReactLifecycle(app, bridge);
     break;
   default:
-    app.innerHTML = `<div>Unknown scenario: ${scenario}</div>`;
+    app.textContent = `Unknown scenario: ${scenario}`;
 }

@@ -215,6 +215,76 @@ describe("@vii-labs/form/vanilla - Vanilla DOM Adapter", () => {
       field.dispose();
     });
 
+    test("IME: suppresses intermediate commits and validation during composition, committing exactly once on completion", () => {
+      let validationCount = 0;
+      let rawCommitCount = 0;
+      const field = createField({
+        initialValue: "",
+        rules: [
+          (val: string) => {
+            validationCount++;
+            return val.length < 1 ? { code: "required", message: "required" } : null;
+          },
+        ],
+        validateOn: "change",
+      });
+      field.rawValue.subscribe(() => {
+        rawCommitCount++;
+      });
+      rawCommitCount = 0;
+      validationCount = 0;
+
+      const input = new MockDomElement();
+      input.type = "text";
+      const binding = bindField(field, input);
+
+      // Start composition
+      input.dispatch("compositionstart");
+
+      // Intermediate keystrokes during composition
+      input.value = "か";
+      input.dispatch("input", { isComposing: true });
+
+      expect(field.rawValue.get()).toBe("");
+      expect(rawCommitCount).toBe(0);
+      expect(validationCount).toBe(0);
+
+      // End composition
+      input.dispatch("compositionend");
+
+      // Final commit event
+      input.dispatch("input", { isComposing: false });
+
+      expect(field.rawValue.get()).toBe("か");
+      expect(rawCommitCount).toBe(1);
+      expect(validationCount).toBe(1);
+
+      binding.dispose();
+      field.dispose();
+    });
+
+    test("IME: suppresses input with isComposing: true even without compositionstart", () => {
+      let rawCommitCount = 0;
+      const field = createField({ initialValue: "" });
+      field.rawValue.subscribe(() => {
+        rawCommitCount++;
+      });
+      rawCommitCount = 0;
+
+      const input = new MockDomElement();
+      input.type = "text";
+      const binding = bindField(field, input);
+
+      input.value = "typing";
+      input.dispatch("input", { isComposing: true });
+
+      expect(field.rawValue.get()).toBe("");
+      expect(rawCommitCount).toBe(0);
+
+      binding.dispose();
+      field.dispose();
+    });
+
     test("projects programmatic setRawValue back to input.value", () => {
       const field = createField<number, string>({
         initialValue: 42,

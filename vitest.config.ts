@@ -21,6 +21,6 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    exclude: ["**/node_modules/**", "**/dist/**", "**/coverage/**"],
+    exclude: ["**/node_modules/**", "**/dist/**", "**/coverage/**", "**/test/browser/**"],
   },
 });

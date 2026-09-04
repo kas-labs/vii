@@ -37,6 +37,13 @@
         "command": "pnpm validate-package",
         "cwd": "packages/form"
       }
+    },
+    "test-browser": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm test:browser",
+        "cwd": "packages/form"
+      }
     }
   }
 }

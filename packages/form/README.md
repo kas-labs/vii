@@ -6,7 +6,20 @@ Experimental reactive headless form state and validation engine for the Vii ecos
 
 Internal development / experimental candidate (Phase 1 Baseline).
 
-- **Current Implementation (P1j — Angular & Vue Adapters):**
+- **Current Implementation (P1k — Browser / A11y / Historical Regressions):**
+  - **Browser Acceptance Suite (`@vii-labs/form` via Playwright & Headless Chromium):**
+    - Headless Chromium acceptance harness running against a dedicated local Vite test fixture (`packages/form/test/browser/fixture`). Command: `pnpm nx test-browser form`.
+    - Real DOM event semantics: verified single commit event model across `HTMLInputElement` (`text`, `checkbox`, `radio`, `file`), `HTMLTextAreaElement`, and `HTMLSelectElement` (`select-one`).
+    - Raw vs Value intermediate input preservation: typing intermediate raw input (e.g. `"-"` or `"05"`) into parsed number fields maintains raw input in the DOM without snap-back while updating domain values.
+    - IME composition resilience: simulated Japanese, Korean, and Chinese composition sequences verify full intermediate composition string updates without premature intermediate validation or raw commits (intermediate validationCount: 0, intermediate rawCommitCount: 0); exactly 1 raw commit and 1 validation invocation fire upon composition completion. Native OS IME input caveat: composition events are simulated in Playwright via DOM composition APIs; OS-level candidate window interactions require native manual verification.
+    - Focus and blur preservation: `validateOn: "blur"` fires exactly once per blur event; active focus state is strictly preserved during field invalidation and issue message DOM projection.
+    - Accessibility (WCAG 2.2 AA) via `@axe-core/playwright` v4.13.0: automated accessibility audit passes with 0 violations; verified non-destructive `aria-invalid` lifecycle restoration (restoring original attribute or removing if absent), additive `aria-describedby` linking, and overlapping field binding preservation.
+    - Hostile payload & safe sink verification: hostile issue messages (`<img src=x onerror=...>`, `<script>`) projected into issue elements write exclusively via `textContent`, producing 0 new DOM elements and 0 script execution.
+    - Real-browser native submission lifecycle: form submission via submit button and Enter key; unexpected submit action rejections are safely contained via `onSubmitException` with 0 unhandled Promise rejections and 0 page errors.
+    - Async validation race and cancellation: fresh user edits supersede in-flight async validation; edits during submit validation transition submission status to `"cancelled"`.
+    - Route unmount and lifecycle teardown: unbinding removes DOM listeners and signal subscriptions without mutating detached DOM; canonical Form instances survive route teardowns.
+    - React 19 real-browser lifecycle: component mount, edit, unmount during in-flight async validation, and remount execute cleanly with 0 console or page errors.
+    - Historical regressions matrix: 15 cataloged failure modes (P1K-H01 through P1K-H15) documented in `test/browser/HISTORICAL_REGRESSIONS.md` verified 100% green.
   - **Angular 17+ Adapter (`@vii-labs/form/angular`):**
     - `createAngularField(field, options?)`: projects a canonical leaf `FieldState` into 12 readonly Angular Signals (`value`, `rawValue`, `dirty`, `touched`, `pending`, `valid`, `invalid`, `parseStatus`, `parseIssue`, `validationStatus`, `issues`, `serverIssues`) and stable action delegates (`setValue`, `setRawValue`, `setTouched`, `blur`, `validate`, `reset`, `dispose`). Accepts optional `{ destroyRef?: DestroyRef }` to automate subscription teardown on component destruction; works anywhere outside injection contexts with manual `.dispose()`.
     - `createAngularForm(form, options?)`: projects a root `FormInstance` into aggregate readonly Signals (`value`, `rawValue`, `dirty`, `touched`, `pending`, `valid`, `invalid`, `issues`, `serverIssues`, `submissionStatus`, `submitting`) and stable actions (`validate`, `submit`, `cancelSubmit`, `reset`, `reinitialize`, `dispose`). Promoted to public API for adapter symmetry and idiomatic root form state consumption.
@@ -76,13 +89,13 @@ Internal development / experimental candidate (Phase 1 Baseline).
 - **Subpaths (`/react`, `/vanilla`, `/angular`, `/vue`):**
   - `/react`: Production React 18/19 adapter (`useField`, `useForm`, `useFieldArray`).
   - `/vanilla`: Production Vanilla DOM adapter (`bindField`, `bindForm`).
-  - `/angular`: Production Angular 17+ adapter (`createAngularField`, `toAngularField`, `createAngularForm`, `createAngularFieldArray`).
-  - `/vue`: Production Vue 3.3+ adapter (`createVueField`, `useViiField`, `createVueForm`, `createVueFieldArray`).
-- **Deferred / Non-Goals for P1j:**
-  - Angular directives / forms integration (ControlValueAccessor, NgControl, ReactiveFormsModule, template-driven forms).
-  - Vue components / custom directives (v-model directive integration, Pinia, VueUse).
-  - DOM behavior in Angular/Vue adapters (reactive state bridges only; DOM management belongs to Vanilla adapter or UI component bindings).
-  - Real-browser automated testing (Playwright Chromium, Korean/Japanese/Chinese IME composition, focus-first-invalid navigation, WCAG 2.2 AA audit deferred to P1k).
+  - `/angular`: Production Angular 17+ adapter (`createAngularField`, `createAngularForm`, `createAngularFieldArray`).
+  - `/vue`: Production Vue 3.3+ adapter (`createVueField`, `createVueForm`, `createVueFieldArray`).
+- **Deferred / Non-Goals for P1k:**
+  - Multi-select controls (`select-multiple` remains an intentional fail-closed TypeError).
+  - Public focus-first-invalid API or DOM element registries (form core remains decoupled from DOM elements).
+  - Angular/Vue browser applications in P1k (already verified via packed consumer matrix in P1j; DOM integration belongs to Vanilla/React layers).
   - Performance and memory release budgets (deferred to P1l).
+  - Production package graduation and public release review (deferred to P1m).
 
 See `docs/architecture/FORM_ARCHITECTURE.md` and `docs/roadmap/FORM_RESEARCH.md` for architecture and roadmap details.

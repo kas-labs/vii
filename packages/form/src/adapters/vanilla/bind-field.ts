@@ -127,6 +127,7 @@ export function bindField<TValue, TRaw = TValue>(
       const files = evt?.target?.files ?? domElement.files;
       field.setValue(files as unknown as TValue);
     } else {
+      if ((event as { isComposing?: boolean })?.isComposing) return;
       const nextRaw = (evt?.target?.value ?? domElement.value) as unknown as TRaw;
       if (Object.is(nextRaw, field.rawValue.get())) return;
       field.setRawValue(nextRaw);

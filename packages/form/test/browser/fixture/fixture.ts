@@ -9,8 +9,8 @@ import {
   mountVanillaFile,
   mountParserRaw,
   mountSafeSink,
-  mountImeText,
 } from "./vanilla-scenarios.js";
+import { mountImeText, mountImeParser } from "./ime-scenarios.js";
 import {
   mountSubmitNative,
   mountSubmitException,
@@ -113,6 +113,9 @@ switch (scenario) {
     break;
   case "ime-text":
     mountImeText(app, bridge);
+    break;
+  case "ime-parser":
+    mountImeParser(app, bridge);
     break;
   case "focus-blur":
     mountFocusBlur(app, bridge);

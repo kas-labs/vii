@@ -36,6 +36,62 @@ PR: <number or not opened>
 - Exact remaining work, or `None`.
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
+
+## 2026-09-05 00:35 CEST | Resolve IME Composition Premature Validation Blocker in Draft PR #191
+
+Status: completed
+Branch: `feat/form-p1k-browser-a11y-regressions`
+PR: https://github.com/kas-labs/vii/pull/191
+
+### Scope
+
+- Address the sole remaining merge blocker on Draft PR #191 regarding IME composition event sequencing and validation/commit invariants (P1K-H09).
+- Prove that intermediate IME composition events (`isComposing: true`) do NOT trigger premature validation runs, premature `setRawValue` commits, parse errors, or presentation snap-back in Vanilla DOM text controls.
+- Prove that exactly 1 raw commit and 1 validation run fire upon composition completion (`isComposing: false`).
+- Verify invariant across Japanese (Hiragana 'ka'), Korean (multi-step jamo 'ga'), Chinese (pinyin 'ni' -> '你'), and parser-backed (`createNumberParser()`) input controls.
+
+### Changes
+
+- Updated `packages/form/src/adapters/vanilla/bind-field.ts`:
+  - Enforced single-commit text handling by checking `(event as { isComposing?: boolean })?.isComposing`.
+  - Early returns from `handleCommit` during active composition (`isComposing: true`), suppressing premature `setRawValue` and validation runs.
+  - Leaves event listener registration count unchanged (exactly 2 listeners: `input` + `blur`), maintaining 100% test compatibility with P1i lifecycle and leak safety tests.
+  - Maintained file line limit <= 250 lines (current: 231 lines).
+- Updated `packages/form/test/unit/vanilla-adapter.test.ts`:
+  - Added unit regression tests asserting that `isComposing: true` suppresses raw commits and validation, while final `isComposing: false` commits and validates exactly once.
+- Created `packages/form/test/browser/fixture/ime-scenarios.ts`:
+  - Separated `mountImeText` and added `mountImeParser` with `rawCommitCount` and `validationCount` tracking to maintain clean file size limits.
+- Updated `packages/form/test/browser/fixture/fixture.ts`:
+  - Routed `scenario === "ime-parser"` to `mountImeParser`.
+- Updated `packages/form/test/browser/ime.spec.ts`:
+  - Replaced assertions with comprehensive stepwise evaluations for Japanese, Korean, Chinese, and parser-backed IME sequences asserting 0 intermediate commits/validations, no presentation snap-back, and exact 1 final commit/validation.
+- Updated documentation:
+  - `packages/form/test/browser/HISTORICAL_REGRESSIONS.md` (P1K-H09 row).
+  - `packages/form/README.md`.
+  - `PROJECT_STATE.md`.
+
+### Validation
+
+- `pnpm nx test-browser form`: passed (31/31 tests in headless Chromium, 0 failures, 0 flaky).
+- `pnpm nx test form`: passed (23 vitest files, 367 tests passed).
+- `pnpm nx lint form`: passed.
+- `pnpm nx typecheck form`: passed.
+- `pnpm nx build form`: passed.
+- `pnpm nx validate-package form`: passed (8 packed consumers verified).
+- `git diff --check`: passed.
+- `NX_DAEMON=false pnpm validate`: passed.
+
+### Architecture / compatibility
+
+- Zero changes to `@vii-labs/core`.
+- Zero new public Form APIs.
+- Full backwards compatibility with all existing P1k test suites.
+- Strict <= 250 lines limit maintained across all changed production and test files.
+
+### Remaining / recovery
+
+- None. Draft PR #191 is ready for final review.
+
 ## 2026-09-04 02:45 CEST | Production Form Phase 1 Slice P1k: Browser, Accessibility, and Historical Regressions Gate
 
 Status: completed

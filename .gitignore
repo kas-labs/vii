@@ -5,6 +5,8 @@ node_modules/
 # Generated build and validation output
 dist/
 coverage/
+test-results/
+playwright-report/
 .nx/
 .artifacts/
 .astro/

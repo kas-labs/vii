@@ -36,6 +36,76 @@ PR: <number or not opened>
 - Exact remaining work, or `None`.
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
+## 2026-09-04 02:45 CEST | Production Form Phase 1 Slice P1k: Browser, Accessibility, and Historical Regressions Gate
+
+Status: completed
+Branch: `feat/form-p1k-browser-a11y-regressions`
+PR: not opened
+
+### Scope
+
+- Implement real-browser acceptance test harness and accessibility gate for `@vii-labs/form` using Playwright in headless Chromium.
+- Verify real DOM event semantics (text, checkbox, radio, select-one, file).
+- Verify raw intermediate presentation input preservation without presentation snap-back.
+- Verify IME composition handling (Japanese, Korean, Chinese) without premature intermediate validation commits.
+- Verify focus/blur preservation and activeElement retention during issue projection.
+- Verify WCAG 2.2 AA accessibility via `@axe-core/playwright` (0 automated violations), `aria-invalid` lifecycle restoration, and additive `aria-describedby` linking.
+- Verify hostile payload plain text sink security (0 DOM elements injected, 0 script execution).
+- Verify real-browser native submission lifecycle (button, Enter key, unexpected exception containment with 0 unhandled Promise rejections).
+- Verify async validation race supersession and cancellation.
+- Verify route unmount and lifecycle teardown without detached DOM mutation, with canonical Form instance survival.
+- Verify React 19 real-browser lifecycle resilience (mount, edit, unmount during async validation, remount).
+- Verify all 15 cataloged historical regressions (`test/browser/HISTORICAL_REGRESSIONS.md`).
+
+### Changes
+
+- Added root devDependencies: `@playwright/test` (^1.62.1) and `@axe-core/playwright` (^4.13.0).
+- Updated `package.json`: added `"test:browser": "nx test-browser form"`.
+- Updated `vitest.config.ts`: excluded `**/test/browser/**` from Node test runner.
+- Updated `packages/form/project.json`: added `test-browser` target running `pnpm test:browser`.
+- Updated `packages/form/package.json`: added `"test:browser": "playwright test --config test/browser/playwright.config.ts"`.
+- Updated `.github/workflows/validate.yml`: added Playwright Chromium install step and `Run Form browser tests` step.
+- Created `packages/form/test/browser/HISTORICAL_REGRESSIONS.md`: cataloged 15 historical regression invariants (P1K-H01 through P1K-H15).
+- Created `packages/form/test/browser/playwright.config.ts`: configured Chromium headless, 1 worker, trace retain-on-failure, screenshot only-on-failure, local Vite webServer on port 4173.
+- Created `packages/form/test/browser/fixture/`: Vite configuration and scenario modules covering Vanilla, React 19, submission, lifecycle, and a11y scenarios.
+- Created 12 browser test specs in `packages/form/test/browser/` (30 tests total):
+  - `vanilla-field.spec.ts` (6 tests: text input commit, checkbox, radio, select-one, file, input vs change event discrimination)
+  - `parser-raw.spec.ts` (1 test: parsed number intermediate input raw presentation retention without snap-back)
+  - `ime.spec.ts` (3 tests: Japanese, Korean, and Chinese simulated composition sequences)
+  - `focus.spec.ts` (3 tests: focus->blur->touched, validateOn blur single invocation, issue projection focus retention)
+  - `vanilla-a11y.spec.ts` (4 tests: axe-core 0 violations, aria-invalid baseline restore, overlapping bindings forward and reverse)
+  - `safe-sink.spec.ts` (2 tests: textContent projection of <img onerror> and <script>, 0 DOM nodes, 0 XSS)
+  - `vanilla-submit.spec.ts` (3 tests: submit button, Enter submit, unexpected rejection containment)
+  - `async-cancellation.spec.ts` (1 test: fresh edit supersedes pending async validation)
+  - `submit-lifecycle.spec.ts` (1 test: edit during submit validation transitions to cancelled)
+  - `lifecycle.spec.ts` (2 tests: route teardown without detached DOM mutation, canonical form survives)
+  - `react-lifecycle.spec.ts` (1 test: React 19 mount, edit, unmount during async validation, remount)
+  - `historical-regressions.spec.ts` (3 tests: localized server issues, unsupported elements TypeError, select-multiple TypeError)
+- Updated documentation: `packages/form/README.md`, `PROJECT_STATE.md`.
+
+### Validation
+
+- `pnpm nx test-browser form`: passed (30/30 tests in headless Chromium, 0 failures, 0 flaky).
+- `pnpm nx lint form`: passed (0 errors, 0 warnings).
+- `pnpm nx typecheck form`: passed (0 errors).
+- `pnpm nx test form`: passed (23 vitest files, 365 tests passed).
+- `pnpm nx build form`: passed.
+- `pnpm nx validate-package form`: passed (8 packed clean consumers: Core, Vanilla DOM, React 18, React 19, Angular 17.3.12, Angular 22.1.4, Vue 3.3.13, Vue 3.5.41).
+- `git diff --check`: passed.
+- `NX_DAEMON=false pnpm validate`: passed.
+
+### Architecture / compatibility
+
+- Zero changes to `@vii-labs/core`.
+- Zero changes to production `@vii-labs/form` runtime files (`packages/form/src/`).
+- Playwright and axe-core remain strictly dev-only infrastructure; zero runtime dependencies added.
+- Packages remain private (`private: true`).
+- P1l and P1m explicitly deferred.
+
+### Remaining / recovery
+
+- Open Draft PR on GitHub.
+
 ## 2026-09-04 02:00 CEST | Production Form Phase 1 Slice P1j: Finalize Public APIs and Verify Minimum Angular 17+ and Vue 3.3+ Contracts
 
 Status: completed

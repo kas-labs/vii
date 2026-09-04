@@ -41,7 +41,7 @@ PR: <number or not opened>
 
 Status: completed
 Branch: `feat/form-p1l-performance-bundle-memory-gate`
-PR: not opened (draft pending)
+PR: https://github.com/kas-labs/vii/pull/192
 
 ### Scope
 

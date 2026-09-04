@@ -4,7 +4,7 @@
   "private": true,
   "license": "Apache-2.0",
   "type": "module",
-  "description": "Experimental reactive headless form state and validation engine for the Vii ecosystem.",
+  "description": "Preview reactive headless form state and validation engine for the Vii ecosystem.",
   "files": [
     "dist",
     "README.md",
@@ -75,7 +75,7 @@
     "vue": "3.5.41"
   },
   "vii": {
-    "stability": "experimental",
+    "stability": "preview",
     "runtime": "runtime-neutral"
   }
 }

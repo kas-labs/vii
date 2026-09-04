@@ -1,9 +1,9 @@
 # Vii Form Production Architecture & Package Contract
 
-> **Status:** Planned Production Architecture Contract (Phase 1 Baseline)
+> **Status:** Phase 1 Production Architecture Implemented / Preview Candidate
 > **Package Target:** `@vii-labs/form` (`packages/form/`)
 > **Prerequisites:** `@vii-labs/core` (Stable Reactive Primitives), Form Research F0–F10 Acceptance (PR #166, SHA `b908a52c`)
-> **Maturity Level:** Experimental / Preview Candidate (under `docs/governance/API_STABILITY.md`)
+> **Maturity Level:** Preview Candidate (under `docs/governance/API_STABILITY.md`)
 > **Governing Strategy:** Small-Core Headless Reactive Engine with Clean Framework Projections
 
 ---
@@ -160,7 +160,7 @@ packages/form/src/
 │   │   ├── lifecycle.ts      # DestroyRef integration (<= 120 lines)
 │   │   └── index.ts          # Angular adapter entrypoint (<= 50 lines)
 │   └── vue/
-│       ├── composables.ts    # createVueField, useViiField, shallowRef bridges (<= 220 lines)
+│       ├── composables.ts    # createVueField, shallowRef bridges (<= 220 lines)
 │       └── index.ts          # Vue adapter entrypoint (<= 50 lines)
 └── index.ts                  # Public core entrypoint barrel (<= 80 lines)
 ```
@@ -539,7 +539,7 @@ P1a (Architecture Contract) ➔ P1b (Package Skeleton) ➔ P1c (Field Core) ➔ 
 | **P1j** | **Angular & Vue Adapters** | Implement Angular signals handle (`/angular`) and Vue shallowRef handle (`/vue`). | P1g | Cross-framework compliance suite passes; NO publication. |
 | **P1k** | **Browser / A11y / Historical Regressions** | Real Playwright browser smoke, IME composition, focus navigation, and all historical F1-F10 regressions. | P1h, P1i, P1j | Headless Chromium tests & 100% regressions pass; NO publication. |
 | **P1l** | **Performance, Bundle & Memory Gate** | Execute standalone bundle builds, leak detection (1,000 cycles), and performance benchmarks. | P1k | All empirical release budgets established; NO publication. |
-| **P1m** | **Production Graduation & Public API Review** | Public API review, Changeset creation, documentation sync, and formal graduation to candidate. | P1l | Final review approval; package publication ONLY upon explicit release gate. |
+| **P1m** | **Production Graduation & Public API Review** | Public API review, Changeset creation, documentation sync, and formal graduation to candidate. | P1l | Completed & verified; Preview Candidate formal graduation; package publication ONLY upon explicit release gate. |
 
 ---
 

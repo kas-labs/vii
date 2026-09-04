@@ -37,6 +37,72 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-09-05 01:10 CEST | Implement Performance, Bundle, and Memory Gate (P1l)
+
+Status: completed
+Branch: `feat/form-p1l-performance-bundle-memory-gate`
+PR: https://github.com/kas-labs/vii/pull/192
+
+### Scope
+
+- Establish reproducible performance, bundle size, and memory lifecycle measurement and enforcement harness for `@vii-labs/form` (Slice P1l).
+- Measure and enforce runtime scaling across 10, 100, 500, and 1000 fields, FieldArray dynamic collections, Model A submission, and framework adapters.
+- Measure and enforce bundle sizes (minified, gzip, brotli, packed tarball) and strict framework/schema isolation.
+- Verify memory leak safety (0 retained subscriptions, scopes, or timers across 500 cycles), timer cancellation, and async validation race supersession.
+- Verify TypeScript compiler check performance and enforce zero TS2589 type recursion errors.
+- Ensure package remains private (`private: true`) with zero new public APIs and zero modifications to `@vii-labs/core`. Defer P1m.
+
+### Changes
+
+- Added `packages/form/performance-budgets.json`: Machine-readable budget definitions with HARD vs ADVISORY classifications.
+- Added benchmark harness and suites in `packages/form/test/performance/`:
+  - `helpers.ts`, `fixtures.ts`: Statistical timing, warmup, environment metadata, homogeneous and realistic form fixtures.
+  - `form-runtime.bench.ts`: Construction, leaf mutation, aggregate mutation, sync/async validation, parsers, server issues.
+  - `field-array.bench.ts`: Push, insert, remove, swap, move across 10, 100, 1000 items with stable identity assertions.
+  - `submission.bench.ts`: Submission state machine (success, blocked, failure, cancellation) and snapshot costs.
+  - `adapters.bench.ts`: React, Vanilla, Angular, Vue adapter bridge overheads.
+  - `memory.test.ts`: 100 and 500 create/dispose cycles, 0 retained subscriptions/scopes/timers, debounce cancellation, async validation supersession.
+  - `bundle.test.ts`: Vitest suite enforcing tree-shaking and framework/schema isolation.
+  - `typescript/` and `types.bench.ts`: TypeScript compiler check metrics and recursion error checks.
+- Added automated measurement and gating scripts in `scripts/benchmarks/`:
+  - `form-performance-bundle.mjs`: Bundler-level measurement via Vite/esbuild, gzip, brotli, tarball, static import inspection.
+  - `form-performance-runtime.mjs`: Automated runtime scaling runner.
+  - `form-performance.mjs`: Master gate orchestrator validating results against budgets and generating `.tmp/form-performance-report.json`.
+- Configuration and CI updates:
+  - Added `"performance"` target in `packages/form/project.json`.
+  - Added `"performance"` script in `packages/form/package.json` and `"benchmark:form"` in root `package.json`.
+  - Added CI step in `.github/workflows/validate.yml` (`pnpm nx performance form`).
+- Documentation:
+  - Added `docs/performance/FORM_P1L_BASELINE.md`: Comprehensive 13-section baseline evidence report.
+  - Updated `packages/form/README.md` and `PROJECT_STATE.md` with P1l status and deferred P1m notice.
+
+### Validation
+
+- `pnpm nx lint form`: PASS
+- `pnpm nx typecheck form`: PASS
+- `pnpm nx test form`: PASS (378 tests passed across 25 files, including clean checkout without pre-existing dist)
+- `pnpm nx build form`: PASS
+- `pnpm nx validate-package form`: PASS
+- `pnpm test:browser`: PASS (31 Playwright tests passed)
+- `pnpm nx performance form`: PASS (all 41 machine-enforced HARD budgets and ADVISORY ceilings passed)
+- `pnpm format:check`: PASS
+- `NX_DAEMON=false pnpm validate`: PASS
+
+### Architecture / compatibility
+
+- Zero modifications to `@vii-labs/core`.
+- Zero public API modifications to `@vii-labs/form`.
+- Package remains private (`"private": true`).
+- Tree-shaking proven: `createField` standalone is 14,341 B minified / 3,778 B gzip (-71.2% vs root).
+- Framework and schema isolation proven: 0 bytes of React, Angular, Vue, Zod, Valibot, ArkType in root bundle; 0 runtime bytes for `@standard-schema/spec`.
+- Memory lifecycle proven: 0 retained subscriptions/scopes/timers over 500 cycles; debounce timer cancelled on disposal; async validation supersession cleanly aborts in-flight controllers.
+- Linear and sub-linear scaling proven: leaf mutation is $O(1)$ (0.48 µs at 1000 fields) with 0 sibling notifications.
+
+### Remaining / recovery
+
+- None for P1l.
+- Slice P1m is explicitly deferred under governance.
+
 ## 2026-09-05 00:35 CEST | Resolve IME Composition Premature Validation Blocker in Draft PR #191
 
 Status: completed

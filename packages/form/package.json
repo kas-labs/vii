@@ -39,7 +39,8 @@
     "test": "vitest run --config ../../vitest.config.ts",
     "build": "tsc -p tsconfig.build.json",
     "validate-package": "node ../../scripts/package-validation/validate-form.mjs",
-    "test:browser": "playwright test --config test/browser/playwright.config.ts"
+    "test:browser": "playwright test --config test/browser/playwright.config.ts",
+    "performance": "node ../../scripts/benchmarks/form-performance.mjs"
   },
   "dependencies": {
     "@standard-schema/spec": "^1.1.0"

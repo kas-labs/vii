@@ -86,16 +86,47 @@ Internal development / experimental candidate (Phase 1 Baseline).
   - **Nested Groups (`createFieldGroup`) & Root Forms (`createForm`):**
     - Hierarchical aggregation of state dimensions.
     - Whole-form baseline reinitialization (`form.reinitialize`) using separate `value` and `rawValue` trees (`FormReinitializeInput`).
+- **Current Implementation (P1l — Performance / Bundle / Memory Gate):**
+  - **Runtime Scaling Invariants:**
+    - Leaf-only mutation: single-field update with local subscriber executes in ~0.48 – 0.81 µs ($O(1)$ size-insensitive across 10 to 1,000 fields) with exactly 0 sibling subscriber notifications.
+    - Aggregate recomputation: synchronous reading of aggregate computeds (`form.value`, `form.dirty`, `form.issues`) scales linearly ($O(N)$) from ~3.27 µs at 10 fields to ~394.29 µs at 1,000 fields.
+    - Full sync validation: tree validation with 1 rule per field scales linearly from 0.037 ms (10 fields) to 6.55 ms (1,000 fields).
+    - FieldArray isolated operations: steady-state mutations execute in ~1.96 µs (`append`), ~1.79 µs (`insert` at 0), ~1.58 µs (`remove`), ~0.71 µs (`swap`), and ~0.88 µs (`move`) at 10 items, preserving stable item identity across operations.
+    - Submission lifecycle: steady-state submission completes in ~0.009 ms for successful submissions, ~0.008 ms when validation blocks, and ~0.022 ms on action rejection.
+    - Server issue routing: routes 1,000 server issues across deeply nested groups and arrays in ~6.75 ms.
+    - Framework adapter bridge overhead: thin projection bridge overhead is ~0.081 ms (React `useField`), ~0.003 ms (Vanilla `bindField`), ~0.009 ms (Angular `createAngularField`), ~0.008 ms (Vue `createVueField`).
+    - Environment sensitivity: microsecond benchmarks depend on host CPU/runner hardware and do not represent absolute latency promises; CI enforces deterministic wide regression ceilings.
+  - **Bundle Footprint & Tree-Shaking Boundaries:**
+    - `createField` standalone consumer (Core external): 14.34 kB minified, 3.78 kB gzip, 3.23 kB brotli (-71.2% minified vs root).
+    - `createField` standalone consumer (including `@vii-labs/core`): 23.52 kB minified, 6.29 kB gzip, 5.51 kB brotli.
+    - Root entry `@vii-labs/form` (Core external): 49.88 kB minified, 11.24 kB gzip, 9.58 kB brotli.
+    - Root entry with Core included: 59.09 kB minified, 13.71 kB gzip, 11.83 kB brotli.
+    - React adapter (`@vii-labs/form/react`): 5.07 kB minified, 1.08 kB gzip (React external).
+    - Vanilla adapter (`@vii-labs/form/vanilla`): 8.45 kB minified, 2.29 kB gzip (zero runtime dependencies).
+    - Angular adapter (`@vii-labs/form/angular`): 6.13 kB minified, 1.25 kB gzip (`@angular/core` external).
+    - Vue adapter (`@vii-labs/form/vue`): 5.71 kB minified, 1.21 kB gzip (`vue` external).
+    - Packed tarball: 90.46 kB compressed, 1.06 MB unpacked, 207 files (zero test/fixture/browser files included).
+  - **Framework & Schema Provider Isolation:**
+    - Root entry bundles 0 imports of React, Angular, Vue, Zod, Valibot, ArkType.
+    - Adapter subpaths are strictly isolated from peer frameworks.
+    - `@standard-schema/spec` is type-only and contributes 0 runtime bytes.
+  - **Deterministic Memory & Resource Retention:**
+    - 500 complete form create/dispose cycles show 0 retained subscriptions, 0 retained scopes, and 0 retained timers.
+    - Debounce timers are cancelled cleanly upon field/form disposal without unhandled rejections.
+    - Rapid async validation supersession cleanly aborts stale generations (200 mutations produce 199 aborted controllers and 1 final commit).
+    - Adapter lifecycle cycles (React mount/unmount, Vanilla bind/dispose, Angular, Vue) return active subscriptions to baseline.
+  - **Automated Performance & Size Gate:**
+    - Machine-readable budget file: `packages/form/performance-budgets.json`.
+    - Local and CI command: `pnpm nx performance form`.
+    - Evidence report: `docs/performance/FORM_P1L_BASELINE.md`.
 - **Subpaths (`/react`, `/vanilla`, `/angular`, `/vue`):**
   - `/react`: Production React 18/19 adapter (`useField`, `useForm`, `useFieldArray`).
   - `/vanilla`: Production Vanilla DOM adapter (`bindField`, `bindForm`).
   - `/angular`: Production Angular 17+ adapter (`createAngularField`, `createAngularForm`, `createAngularFieldArray`).
   - `/vue`: Production Vue 3.3+ adapter (`createVueField`, `createVueForm`, `createVueFieldArray`).
-- **Deferred / Non-Goals for P1k:**
-  - Multi-select controls (`select-multiple` remains an intentional fail-closed TypeError).
-  - Public focus-first-invalid API or DOM element registries (form core remains decoupled from DOM elements).
-  - Angular/Vue browser applications in P1k (already verified via packed consumer matrix in P1j; DOM integration belongs to Vanilla/React layers).
-  - Performance and memory release budgets (deferred to P1l).
+- **Deferred / Non-Goals for P1l:**
   - Production package graduation and public release review (deferred to P1m).
+  - Stable semver bump or un-privating the package (deferred to P1m).
+  - Public documentation site or migration guides (deferred to P1m).
 
-See `docs/architecture/FORM_ARCHITECTURE.md` and `docs/roadmap/FORM_RESEARCH.md` for architecture and roadmap details.
+See `docs/architecture/FORM_ARCHITECTURE.md`, `docs/roadmap/FORM_RESEARCH.md`, and `docs/performance/FORM_P1L_BASELINE.md` for architecture, roadmap, and performance details.

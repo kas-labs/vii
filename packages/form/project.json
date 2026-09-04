@@ -19,6 +19,7 @@
     },
     "test": {
       "executor": "nx:run-commands",
+      "dependsOn": ["build"],
       "options": {
         "command": "pnpm test",
         "cwd": "packages/form"
@@ -42,6 +43,14 @@
       "executor": "nx:run-commands",
       "options": {
         "command": "pnpm test:browser",
+        "cwd": "packages/form"
+      }
+    },
+    "performance": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["build"],
+      "options": {
+        "command": "node ../../scripts/benchmarks/form-performance.mjs",
         "cwd": "packages/form"
       }
     }

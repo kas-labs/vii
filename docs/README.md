@@ -131,7 +131,7 @@ Current explicit research tracks are:
 - Schema, comparing a possible Vii-native runtime contract against mature validators such as Zod, Valibot, ArkType, TypeBox, and Ajv, with zero-copy validation, allocation, bundle, type-system, JSON Schema, and integration claims requiring reproducible evidence;
 - Form, informed by Angular Signal Forms, TanStack Form, React Hook Form, Vue, and VeeValidate while defining its own Vii semantics;
 - HTTP, informed by Fetch, Angular HttpClient, Axios, and small Fetch clients while remaining separate from Query and validation providers;
-- Flow, comparing direct platform primitives, an RxJS Scope/State adapter, and a throwaway prototype for temporal composition, cancellation, disposal, stream interoperability, explicit hot sharing, and late-subscriber ownership;
+- Flow, comparing direct platform primitives, an RxJS Scope/State adapter, and a throwaway prototype for temporal composition, cancellation, disposal, stream interoperability, explicit hot sharing, and late-subscriber ownership. The post-research sequence is evidence-gated in `roadmap/FLOW_GRADUATION_ROADMAP.md`; it remains Research / Deferred and does not enter the active implementation sequence;
 - native template control flow, comparing block, directive, and TSX/JavaScript authoring while sharing one compiler/runtime semantic model;
 - progressive rendering, keeping CSR independently usable and requiring opt-in evidence for SSG, SSR/hydration, streaming, hybrid rendering, and server functions;
 - explicit execution environments so client/server mistakes can fail at build time rather than appear as confusing runtime errors;
@@ -191,6 +191,7 @@ The Security Architecture defines intended controls. The Threat Model defines pr
 - `roadmap/ISSUE_BREAKDOWN.md`
 - `roadmap/DEFINITION_OF_DONE.md`
 - `roadmap/FOUNDATION_COVERAGE_AUDIT.md`
+- `roadmap/FLOW_GRADUATION_ROADMAP.md`, post-research Flow stop/go sequence. It is Research / Deferred and does not reorder current implementation work.
 
 The root `/ROADMAP.md` provides the public phase overview. Cross-phase capability research is intentionally separated from committed implementation milestones.
 

@@ -6,78 +6,82 @@ Experimental reactive headless form state and validation engine for the Vii ecos
 
 Internal development / experimental candidate (Phase 1 Baseline).
 
-- **Current Implementation (P1i — Vanilla DOM Adapter):**
+- **Current Implementation (P1j — Angular & Vue Adapters):**
+  - **Angular 17+ Adapter (`@vii-labs/form/angular`):**
+    - `createAngularField(field, options?)`: projects a canonical leaf `FieldState` into 12 readonly Angular Signals (`value`, `rawValue`, `dirty`, `touched`, `pending`, `valid`, `invalid`, `parseStatus`, `parseIssue`, `validationStatus`, `issues`, `serverIssues`) and stable action delegates (`setValue`, `setRawValue`, `setTouched`, `blur`, `validate`, `reset`, `dispose`). Accepts optional `{ destroyRef?: DestroyRef }` to automate subscription teardown on component destruction; works anywhere outside injection contexts with manual `.dispose()`.
+    - `createAngularForm(form, options?)`: projects a root `FormInstance` into aggregate readonly Signals (`value`, `rawValue`, `dirty`, `touched`, `pending`, `valid`, `invalid`, `issues`, `serverIssues`, `submissionStatus`, `submitting`) and stable actions (`validate`, `submit`, `cancelSubmit`, `reset`, `reinitialize`, `dispose`). Promoted to public API for adapter symmetry and idiomatic root form state consumption.
+    - `createAngularFieldArray(array, options?)`: projects a `FieldArray` into collection-level Signals (`items`, `value`, `rawValue`, `dirty`, `touched`, `pending`, `valid`, `invalid`, `issues`, `serverIssues`, `length`) and structural actions (`append`, `prepend`, `insert`, `remove`, `move`, `swap`, `clear`, `validate`, `reset`, `dispose`). Promoted to public API for adapter symmetry and repeatable collection consumption, preserving exact `FieldArrayItem.id` identities across mutations.
+    - Native Signals primitive: uses `@angular/core` `signal().asReadonly()`; zero RxJS bridge, zero Zone hacks, zero manual change detection. Compatible with Angular 17+ through Angular 22+.
+    - No duplicate domain-state ownership & canonical node survival: framework lifecycle teardown unregisters adapter subscriptions only; canonical Vii Form nodes remain alive and functional.
+    - Idempotent manual disposal: handles provide `.dispose()` for manual cleanup, safe before or after `DestroyRef` teardown.
+  - **Vue 3.3+ Adapter (`@vii-labs/form/vue`):**
+    - `createVueField(field, options?)`: projects a canonical leaf `FieldState` into 12 readonly shallow refs (`shallowReadonly(shallowRef(...))` for `value`, `rawValue`, `dirty`, `touched`, `pending`, `valid`, `invalid`, `parseStatus`, `parseIssue`, `validationStatus`, `issues`, `serverIssues`) and stable action delegates (`setValue`, `setRawValue`, `setTouched`, `blur`, `validate`, `reset`, `dispose`). Auto-detects `getCurrentScope()` to register `onScopeDispose` when executed in an active effect scope, while remaining operable outside scopes with manual `.dispose()`. Accepts optional `{ onDispose? }` callback hook.
+    - `createVueForm(form, options?)`: projects a root `FormInstance` into aggregate readonly shallow refs and stable submission actions. Promoted to public API for adapter symmetry and idiomatic form lifecycle management in Vue applications.
+    - `createVueFieldArray(array, options?)`: projects a `FieldArray` into collection shallow refs and structural actions, preserving `FieldArrayItem.id` stable identities. Promoted to public API for adapter symmetry and repeatable collections.
+    - Shallow ref reactivity: uses Vue `shallowRef` and `shallowReadonly` avoiding deep `reactive()` wrapping or proxying; Vii Form retains authoritative state mutation and reference identity. Compatible with Vue 3.3+ through Vue 3.5+.
+    - No duplicate domain-state ownership & canonical node survival: scope disposal or `.dispose()` unwinds adapter subscriptions only; canonical Vii Form nodes remain alive.
   - **Vanilla DOM Adapter (`@vii-labs/form/vanilla`):**
-    - `bindField(field, element, options?)`: binds supported native form controls (input, textarea, select-one) to a canonical `FieldState`. Fails closed with `TypeError` on unsupported elements (div, span, button, select-multiple, arbitrary objects) before any listener registration, subscription, or DOM mutation.
+    - `bindField(field, element, options?)`: binds supported native form controls (input, textarea, select-one) to a canonical `FieldState`. Fails closed with `TypeError` on unsupported elements before any listener registration, subscription, or DOM mutation.
     - `bindForm(form, formElement, options?)`: binds native `<form>` submit events to canonical `form.submit()`.
     - Supported control categories: HTMLInputElement-compatible (text-like types, checkbox, radio, file), HTMLTextAreaElement-compatible, and HTMLSelectElement-compatible (single-select only).
     - Single commit event contract: strictly binds `"input"` for text-like controls and `"change"` for checkbox, radio, select-one, and file controls; zero duplicate `input` + `change` registration per edit.
     - Bidirectional projection without feedback loops: DOM edits commit to canonical fields (`setRawValue` / `setValue`), and programmatic field updates project back to the DOM without synthetic event dispatches.
     - Raw vs Value preservation: parser-backed fields display `rawValue` in the DOM (e.g. `"-"` or `"05"`), preventing presentation snap-back bugs during typing.
-    - Non-destructive ARIA invalid ownership: projects `aria-invalid="true"` strictly when the field is invalid (client, parse, or server issues); pending async validation alone never marks the control invalid. Captures pre-binding attribute state and restores the original application value (or removes it if absent) whenever the field is valid and upon disposal.
+    - Non-destructive ARIA invalid ownership: projects `aria-invalid="true"` strictly when the field is invalid; captures pre-binding attribute state and restores the original application value whenever the field is valid and upon disposal.
     - Additive `aria-describedby` management: safely appends `issueElement.id` to `aria-describedby` while preserving pre-existing application tokens, and restores original tokens on disposal.
-    - Safe textContent sink: prevents HTML interpretation at the issue-message sink by writing through `issueElement.textContent = ...` (never `innerHTML` or HTML parsing sinks).
-    - Submit error ownership & exception containment: native DOM submit listeners route unexpected action rejections through `onSubmitException` to prevent unhandled Promise rejections.
+    - Safe textContent sink: prevents HTML interpretation at the issue-message sink by writing through `issueElement.textContent = ...`.
+    - Submit error ownership & exception containment: native DOM submit listeners route unexpected action rejections through `onSubmitException`.
     - Deterministic lifecycle cleanup: returns `{ dispose(): void }` which cleanly removes DOM event listeners and signal subscriptions without disposing the canonical Form node.
-    - Transactional preflight: validates field and element capabilities before registration, failing closed with `TypeError` without leaving partial listeners or subscriptions.
   - **React 18/19 Adapter (`@vii-labs/form/react`):**
-    - `useField(field)`: fine-grained leaf field binding exposing live observable snapshot (`value`, `rawValue`, `dirty`, `touched`, `pending`, `valid`, `invalid`, `parseStatus`, `parseIssue`, `validationStatus`, `issues`, `serverIssues`) and stable action references (`setValue`, `setRawValue`, `setTouched`, `blur`, `validate`, `reset`).
-    - `useForm(form)`: root form aggregate binding exposing live snapshot (`value`, `rawValue`, `dirty`, `touched`, `pending`, `valid`, `invalid`, `issues`, `serverIssues`, `submissionStatus`, `submitting`), child `fields`, and stable actions (`validate`, `submit`, `cancelSubmit`, `reset`, `reinitialize`).
-    - `useFieldArray(array)`: repeatable collection binding exposing live snapshot (`items`, `value`, `rawValue`, `dirty`, `touched`, `pending`, `valid`, `invalid`, `issues`, `serverIssues`, `length`) and stable structural actions (`append`, `prepend`, `insert`, `remove`, `move`, `swap`, `clear`, `validate`, `reset`).
+    - `useField(field)`: fine-grained leaf field binding exposing live observable snapshot and stable action references.
+    - `useForm(form)`: root form aggregate binding exposing live snapshot, child `fields`, and stable actions.
+    - `useFieldArray(array)`: repeatable collection binding exposing live snapshot and stable structural actions.
     - `useSyncExternalStore` primitive: tear-free React concurrent rendering with live store evaluation and pre-subscription freshness.
-    - Snapshot referential memoization: live store reads return stable object references when observable values are unchanged (`Object.is` per key), eliminating infinite loops and redundant re-renders.
+    - Snapshot referential memoization: live store reads return stable object references when observable values are unchanged (`Object.is` per key).
     - Fine-grained render isolation: mutating a leaf field triggers re-rendering only in that field's subscribed component (0 sibling re-renders).
-    - Stable item identity: preserves `FieldArrayItem.id` across moves and swaps for canonical React list keys (`key={item.id}`).
-    - StrictMode safety & lifecycle isolation: double-mount/unmount cycles cleanly subscribe and teardown; unmounting a React component unregisters adapter subscriptions only and never disposes the canonical Form node.
-    - SSR safe: `getServerSnapshot` evaluates synchronous in-memory state without browser globals.
-    - Import isolation: root `@vii-labs/form` remains framework-neutral and requires no React installation; `@vii-labs/form/react` declares React as an optional peer dependency.
+    - StrictMode safety & lifecycle isolation: double-mount/unmount cycles cleanly subscribe and teardown without disposing the canonical Form node.
   - **Model A Submission Lifecycle (`form.submit`):**
     - State machine: `idle` -> `validating` -> `submitting` -> `succeeded` | `failed` | `cancelled`.
-    - Model A terminal state invariant: `submissionStatus` represents the outcome of the latest submission attempt. User edits after `succeeded` or `failed` update `dirty: true` but do NOT reset `submissionStatus` to `idle`.
-    - Validation gate: runs recursive tree validation with `trigger: "submit"`, awaits async rules, and blocks submission if invalid or if any field has parse errors (`parseStatus === "invalid"`).
-    - Immutable snapshotting: captures deep-cloned immutable domain output snapshot (`deepCloneSnapshot`) and `FieldArray` identity snapshots after the validation gate successfully passes, ensuring the submitted payload strictly matches the validated submission generation.
-    - Error ownership & structural cancellation: unexpected errors in user submit action rethrow to caller while setting `submissionStatus: "failed"`; cancellation is classified authoritatively via `signal.aborted` or canonical `AbortError` (never arbitrary message-text heuristics).
-    - Fail-closed result discrimination: submit action payloads declaring `ok === false` require an `issues` array where all issues sanitize atomically; malformed failure payloads throw `TypeError` and fail closed, never succeeding.
-    - In-flight cancellation: `form.cancelSubmit()`, duplicate submit policies (`supersede`, `drop`, `reject`), and automatic abort on `form.reset()`, `form.reinitialize()`, or `form.dispose()`.
+    - Model A terminal state invariant: user edits after `succeeded` or `failed` update `dirty: true` but do NOT reset `submissionStatus` to `idle`.
+    - Validation gate: runs recursive tree validation with `trigger: "submit"`, awaits async rules, and blocks submission if invalid or if any field has parse errors.
+    - Immutable snapshotting: captures deep-cloned immutable domain output snapshot and `FieldArray` identity snapshots after validation gate passes.
+    - Error ownership & structural cancellation: unexpected errors in submit action rethrow to caller while setting `submissionStatus: "failed"`; cancellation is classified authoritatively via `signal.aborted` or canonical `AbortError`.
+    - Fail-closed result discrimination: submit action payloads declaring `ok === false` require an `issues` array where all issues sanitize atomically.
+    - In-flight cancellation: `form.cancelSubmit()`, duplicate submit policies (`supersede`, `drop`, `reject`), and automatic abort on `reset()`, `reinitialize()`, or `dispose()`.
   - **Structured Server Issue Taxonomy & Routing:**
     - `ServerIssue` structure: `{ code, message, path?, source: "server" }`.
     - Routing to leaf fields, groups, arrays, and fallback to root `form.serverIssues` for unresolvable/root paths.
-    - Localized clearing on edit: editing a leaf field clears only that field's server issues; siblings and root issues remain intact.
+    - Localized clearing on edit: editing a leaf field clears only that field's server issues.
     - Coexistence with client validation: running client validators does not wipe active server issues.
-    - `FieldArray` in-flight mutation resilience: submission-time identity snapshots map array paths to stable item IDs, ensuring server responses route to the correct item at its live position even if items are reordered mid-flight; deleted items fall back safely to `form.serverIssues`.
+    - `FieldArray` in-flight mutation resilience: submission-time identity snapshots map array paths to stable item IDs even if items are reordered mid-flight.
   - **Dynamic Repeatable Collections (`createFieldArray`):**
-    - Stable logical item identity (`FieldArrayItem<TNode>` with stable `id` and `node`) independent of array positional indices; reordering (`move`, `swap`), insertion, and removal preserve item identity, child Scope, focus state, and client issues.
-    - Opaque internal ID generation (`vii_item_${counter}`) or custom `keyExtractor` (requiring a non-empty string) without ID collisions; IDs never leak into domain `value` or presentation `rawValue`.
-    - Batch-safe array mutations: `append`, `prepend`, `insert`, `remove` (returns `void`), `move`, `swap`, `clear`.
-    - Reactive collection aggregation: `value`, `rawValue`, `touched`, `dirty`, `pending`, `valid`, `invalid`, `issues`, and `serverIssues` (with dynamically updated numeric index prefix paths `[i, ...]`).
-    - Identity-strict dirty tracking: an array is pristine (`dirty === false`) if and only if its length matches baseline, its exact key identity sequence matches baseline, and all child nodes are pristine.
-    - Deterministic child Scope lifecycle and transactional adoption: removed baseline items are retained privately for `reset()` restoration; non-baseline items are cleanly disposed; parent disposal cascades to all child items; direct disposal of adopted items is rejected.
-    - Cancellation & race safety: removing an item while async validation is in flight immediately aborts its controller; moving an item dynamically updates its issue prefix upon resolution.
-    - Array baseline reset (`reset()`): restores canonical baseline items in baseline order, discards non-baseline items, and resets remaining baseline items to baseline values.
-    - Whole-form reinitialization (`form.reinitialize`) integration: recursive two-phase prevalidation across nested array collections with zero partial mutation on failure, replacing canonical baselines and disposing obsolete retained baseline items.
+    - Stable logical item identity (`FieldArrayItem<TNode>` with stable `id` and `node`) independent of array positional indices; reordering (`move`, `swap`), insertion, and removal preserve item identity and child states.
+    - Opaque internal ID generation or custom `keyExtractor` without ID collisions.
+    - Batch-safe array mutations: `append`, `prepend`, `insert`, `remove`, `move`, `swap`, `clear`.
+    - Reactive collection aggregation: `value`, `rawValue`, `touched`, `dirty`, `pending`, `valid`, `invalid`, `issues`, and `serverIssues`.
+    - Identity-strict dirty tracking: pristine if and only if length, key sequence, and all child nodes are pristine.
+    - Deterministic child Scope lifecycle and transactional adoption: removed baseline items are retained privately for `reset()` restoration; non-baseline items are cleanly disposed.
   - **Leaf Field Primitive (`createField`):**
-    - Raw vs Value separation: supports synchronous parsers (`FieldParser<TRaw, TValue>`) where raw presentation input (`"05"`) is preserved in `rawValue` without mutating domain `value` (e.g. `5`), and parse failures retain raw presentation input while preserving the last good domain value. `setRawValue` commits all observable field states atomically in a single batch.
-    - Synchronous validation rules (`SyncValidationRule<TValue>`) and asynchronous validation rules (`AsyncValidationRule<TValue>`). Automatic validation (on change, blur, debounce) contains unexpected synchronous exceptions and asynchronous rejections into structured execution issues (`validation.execution_error`) with `validationStatus: "invalid"`, while manual `validate()` propagates errors directly to the caller.
-    - Standard Schema v1 validation bridge (`standardSchema`) providing provider-neutral support for any `@standard-schema/spec` schema (e.g., Zod 4, Valibot, ArkType) with fail-closed boundary enforcement and zero vendor runtime dependencies.
-    - Validation execution controls: trigger modes (`change`, `blur`, `submit`, `manual`), debounce duration (`debounceMs`), monotonic validation revision counters, AbortSignal cancellation, and stale-result protection.
-    - Reactive state signals: `value`, `rawValue`, `touched`, `dirty`, `pending`, `valid`, `invalid`, `issues`, `serverIssues`, `parseIssue`, `parseStatus`, `validationStatus`. Issue state mutation remains strictly internal (no public `setIssues`).
-    - Trusted baseline contract: explicit `initialValue` + `initialRawValue` at creation and `{ value, rawValue }` in `form.reinitialize` establish the canonical domain + presentation pair as a trusted baseline without running the parser; parsers are used for subsequent raw input mutations.
-    - `field.reset()` restores the current canonical baseline only; baseline replacement belongs to `form.reinitialize`.
-    - Domain dirty semantics: `dirty` compares parsed domain `value` to baseline domain value (presentation-only raw edits with equivalent value stay pristine).
+    - Raw vs Value separation: synchronous parsers (`FieldParser<TRaw, TValue>`) where raw presentation input is preserved in `rawValue` without mutating domain `value`.
+    - Synchronous validation rules (`SyncValidationRule<TValue>`) and asynchronous validation rules (`AsyncValidationRule<TValue>`).
+    - Standard Schema v1 validation bridge (`standardSchema`) providing provider-neutral support for any `@standard-schema/spec` schema.
+    - Reactive state signals: `value`, `rawValue`, `touched`, `dirty`, `pending`, `valid`, `invalid`, `issues`, `serverIssues`, `parseIssue`, `parseStatus`, `validationStatus`.
+    - Trusted baseline contract: explicit `initialValue` + `initialRawValue` at creation and `{ value, rawValue }` in `form.reinitialize`.
   - **Built-in Parsers (public):**
-    - `createNumberParser`: strict decimal grammar parser with options for empty handling, whitespace trimming, and raw input preservation.
-    - `createStringParser`: optional whitespace trimming without silent data loss by default.
+    - `createNumberParser`: strict decimal grammar parser.
+    - `createStringParser`: optional whitespace trimming.
   - **Nested Groups (`createFieldGroup`) & Root Forms (`createForm`):**
-    - Hierarchical aggregation of `value`, `rawValue`, `touched`, `dirty`, `pending`, `valid`, `invalid`, `issues`, and `serverIssues` (with recursive path prefixing).
-    - Granular reactivity: field mutation in one branch does not notify un-mutated branches.
-    - Whole-form baseline reinitialization (`form.reinitialize`) using explicit separate `value` and `rawValue` trees (`FormReinitializeInput`); recursive two-phase prevalidation with zero mutation on malformed input; successful commit is batched for observer atomicity.
+    - Hierarchical aggregation of state dimensions.
+    - Whole-form baseline reinitialization (`form.reinitialize`) using separate `value` and `rawValue` trees (`FormReinitializeInput`).
 - **Subpaths (`/react`, `/vanilla`, `/angular`, `/vue`):**
   - `/react`: Production React 18/19 adapter (`useField`, `useForm`, `useFieldArray`).
   - `/vanilla`: Production Vanilla DOM adapter (`bindField`, `bindForm`).
-  - `/angular`, `/vue`: Skeleton infrastructure entrypoints (adapters deferred to P1j).
-- **Deferred / Non-Goals for P1i:**
-  - Multi-select controls (`select-multiple`) (deferred from P1i; fails closed with `TypeError`).
-  - Angular and Vue adapters (deferred to P1j).
+  - `/angular`: Production Angular 17+ adapter (`createAngularField`, `toAngularField`, `createAngularForm`, `createAngularFieldArray`).
+  - `/vue`: Production Vue 3.3+ adapter (`createVueField`, `useViiField`, `createVueForm`, `createVueFieldArray`).
+- **Deferred / Non-Goals for P1j:**
+  - Angular directives / forms integration (ControlValueAccessor, NgControl, ReactiveFormsModule, template-driven forms).
+  - Vue components / custom directives (v-model directive integration, Pinia, VueUse).
+  - DOM behavior in Angular/Vue adapters (reactive state bridges only; DOM management belongs to Vanilla adapter or UI component bindings).
   - Real-browser automated testing (Playwright Chromium, Korean/Japanese/Chinese IME composition, focus-first-invalid navigation, WCAG 2.2 AA audit deferred to P1k).
   - Performance and memory release budgets (deferred to P1l).
 

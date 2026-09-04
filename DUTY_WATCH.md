@@ -40,7 +40,7 @@ PR: <number or not opened>
 
 Status: completed
 Branch: `feat/form-p1k-browser-a11y-regressions`
-PR: not opened
+PR: https://github.com/kas-labs/vii/pull/191
 
 ### Scope
 
@@ -104,7 +104,7 @@ PR: not opened
 
 ### Remaining / recovery
 
-- Open Draft PR on GitHub.
+- None. Await independent PR review.
 
 ## 2026-09-04 02:00 CEST | Production Form Phase 1 Slice P1j: Finalize Public APIs and Verify Minimum Angular 17+ and Vue 3.3+ Contracts
 

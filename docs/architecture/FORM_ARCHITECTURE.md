@@ -2,6 +2,7 @@
 
 > **Status:** Phase 1 Production Architecture Implemented / Preview Candidate
 > **Package Target:** `@vii-labs/form` (`packages/form/`)
+> **Phase 2 Strategy:** [FORM_PHASE2_ARCHITECTURE.md](./FORM_PHASE2_ARCHITECTURE.md)
 > **Prerequisites:** `@vii-labs/core` (Stable Reactive Primitives), Form Research F0–F10 Acceptance (PR #166, SHA `b908a52c`)
 > **Maturity Level:** Preview Candidate (under `docs/governance/API_STABILITY.md`)
 > **Governing Strategy:** Small-Core Headless Reactive Engine with Clean Framework Projections

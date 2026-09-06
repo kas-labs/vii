@@ -37,6 +37,53 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-09-06 02:05 CEST | Clarify Versioning Contract and Release Gate Sequencing (P1m)
+
+Status: completed
+Branch: `feat/form-p1m-production-graduation-review`
+PR: https://github.com/kas-labs/vii/pull/193 (Draft)
+
+### Scope
+
+- Address graduation review findings on Changesets versioning contract for `@vii-labs/form` (P1m continuation on Draft PR #193).
+- Clarify Changesets configuration behavior (`.changeset/config.json` lacks `privatePackages: { version: true }`, meaning private packages are skipped during versioning).
+- Explicitly delineate the three distinct concepts: API stability tier (`preview`), package publishability (`"private": true`), and npm semver syntax (Path A normal release `0.2.0` vs Path B prerelease `0.2.0-preview.0`).
+- Document the 10-step Stage B publication sequence in `docs/release/FORM_RELEASE_GATE.md`.
+- Refine `.changeset/preview-form-candidate.md` a11y wording to explicitly specify axe checks against the configured WCAG 2.2 AA rule set in Playwright Chromium.
+- Clarify exact 8 packed consumer configurations across documentation.
+- Maintain strict governance boundaries: no publish, no merge, no core changes, no new form features, Phase 2 deferred.
+
+### Changes
+
+- `.changeset/preview-form-candidate.md`: Refined accessibility verification wording from generic WCAG claim to `"real browser/a11y regression gate using Playwright Chromium and axe checks against the configured WCAG 2.2 AA rule set"`.
+- `docs/release/FORM_RELEASE_GATE.md`: Documented repository Changesets configuration behavior, delineated the 3 distinct stability/versioning concepts, updated packed consumer count to 8 configurations, refined a11y wording, and established the explicit 10-step Stage B publication sequence.
+
+### Validation
+
+- `pnpm changeset status`: confirmed zero packages to be bumped while `@vii-labs/form` remains private.
+- `pnpm format:check`: passed (0 formatting errors).
+- `pnpm nx lint form`: passed (0 ESLint errors/warnings).
+- `pnpm nx typecheck form`: passed (0 TypeScript errors).
+- `pnpm nx test form`: passed (26 test files, 385 tests passed).
+- `pnpm nx build form`: passed (clean dist and declarations).
+- `pnpm nx validate-package form`: passed (8 packed consumer configurations verified, deep import rejection verified).
+- `pnpm test:browser`: passed (31/31 Playwright headless Chromium tests passed).
+- `pnpm nx performance form`: passed (41/41 HARD performance, memory, and bundle budgets passed).
+- `git diff --check`: passed (0 whitespace errors).
+- `NX_DAEMON=false pnpm validate`: passed (clean repository-wide validation).
+
+### Architecture / compatibility
+
+- Changesets configuration in `.changeset/config.json` left untouched to preserve repository-wide versioning semantics.
+- Future publication workflow clearly formalized into 10 ordered steps without mutating current private package status.
+- Zero changes to `@vii-labs/core` or form runtime code.
+
+### Remaining / recovery
+
+- Update Draft PR #193 body with clarified versioning contract and 8 packed consumer count.
+- Await independent maintainer audit and approval.
+- Do not merge PR #193, do not publish `@vii-labs/form`, do not start Phase 2.
+
 ## 2026-09-05 02:00 CEST | Form Production Graduation & Public API Review (P1m)
 
 Status: completed

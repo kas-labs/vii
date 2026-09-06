@@ -1,0 +1,119 @@
+{
+  "name": "@vii-labs/form",
+  "stability": "preview",
+  "entrypoints": {
+    ".": {
+      "stability": "preview",
+      "runtimeExports": [
+        "createField",
+        "createFieldArray",
+        "createFieldGroup",
+        "createForm",
+        "createNumberParser",
+        "createStringParser",
+        "standardSchema"
+      ],
+      "publicTypes": [
+        "AnyValidationRule",
+        "AsyncValidationRule",
+        "CreateFieldArrayOptions",
+        "CreateFieldGroupOptions",
+        "CreateFieldOptions",
+        "CreateFormOptions",
+        "DuplicateSubmitPolicy",
+        "FieldArray",
+        "FieldArrayItem",
+        "FieldEqualityFn",
+        "FieldGroup",
+        "FieldIssue",
+        "FieldParser",
+        "FieldPathSegment",
+        "FieldState",
+        "FormFieldsRecord",
+        "FormInstance",
+        "FormIssueBase",
+        "FormNode",
+        "FormRawValueFor",
+        "FormRawValues",
+        "FormReinitializeInput",
+        "FormSubmitResult",
+        "FormValueFor",
+        "FormValues",
+        "IssueSource",
+        "NumberParserOptions",
+        "ParsedCreateFieldOptions",
+        "ParserlessCreateFieldOptions",
+        "ParseIssue",
+        "ParseResult",
+        "ParseStatus",
+        "ServerIssue",
+        "ServerIssueInput",
+        "StandardSchemaV1",
+        "StringParserOptions",
+        "SubmissionStatus",
+        "SubmitAction",
+        "SubmitActionResult",
+        "SubmitContext",
+        "SubmitOptions",
+        "SyncValidationRule",
+        "ValidationIssue",
+        "ValidationIssueInput",
+        "ValidationRule",
+        "ValidationRuleContext",
+        "ValidationStatus",
+        "ValidationTriggerMode"
+      ]
+    },
+    "./react": {
+      "stability": "preview",
+      "runtimeExports": ["useField", "useFieldArray", "useForm"],
+      "publicTypes": [
+        "ReactArrayBinding",
+        "ReactArraySnapshot",
+        "ReactFieldBinding",
+        "ReactFieldSnapshot",
+        "ReactFormBinding",
+        "ReactFormSnapshot"
+      ]
+    },
+    "./vanilla": {
+      "stability": "preview",
+      "runtimeExports": ["bindField", "bindForm"],
+      "publicTypes": [
+        "BindFieldOptions",
+        "BindFormOptions",
+        "VanillaBinding",
+        "VanillaDomControl",
+        "VanillaDomElement",
+        "VanillaFieldElement"
+      ]
+    },
+    "./angular": {
+      "stability": "preview",
+      "runtimeExports": ["createAngularField", "createAngularFieldArray", "createAngularForm"],
+      "publicTypes": [
+        "AngularAdapterOptions",
+        "AngularArrayHandle",
+        "AngularArraySignals",
+        "AngularFieldHandle",
+        "AngularFieldSignals",
+        "AngularFormHandle",
+        "AngularFormSignals"
+      ]
+    },
+    "./vue": {
+      "stability": "preview",
+      "runtimeExports": ["createVueField", "createVueFieldArray", "createVueForm"],
+      "publicTypes": [
+        "VueAdapterOptions",
+        "VueArrayHandle",
+        "VueArrayRefs",
+        "VueFieldHandle",
+        "VueFieldRefs",
+        "VueFormHandle",
+        "VueFormRefs",
+        "VueReadonlyRef"
+      ]
+    }
+  }
+}

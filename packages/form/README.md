@@ -1,132 +1,409 @@
 # @vii-labs/form
 
-Experimental reactive headless form state and validation engine for the Vii ecosystem.
+Preview reactive headless form state and validation engine for the Vii ecosystem.
 
 ## Status
 
-Internal development / experimental candidate (Phase 1 Baseline).
+**Preview Candidate (Phase 1 Graduation — P1m)**
 
-- **Current Implementation (P1k — Browser / A11y / Historical Regressions):**
-  - **Browser Acceptance Suite (`@vii-labs/form` via Playwright & Headless Chromium):**
-    - Headless Chromium acceptance harness running against a dedicated local Vite test fixture (`packages/form/test/browser/fixture`). Command: `pnpm nx test-browser form`.
-    - Real DOM event semantics: verified single commit event model across `HTMLInputElement` (`text`, `checkbox`, `radio`, `file`), `HTMLTextAreaElement`, and `HTMLSelectElement` (`select-one`).
-    - Raw vs Value intermediate input preservation: typing intermediate raw input (e.g. `"-"` or `"05"`) into parsed number fields maintains raw input in the DOM without snap-back while updating domain values.
-    - IME composition resilience: simulated Japanese, Korean, and Chinese composition sequences verify full intermediate composition string updates without premature intermediate validation or raw commits (intermediate validationCount: 0, intermediate rawCommitCount: 0); exactly 1 raw commit and 1 validation invocation fire upon composition completion. Native OS IME input caveat: composition events are simulated in Playwright via DOM composition APIs; OS-level candidate window interactions require native manual verification.
-    - Focus and blur preservation: `validateOn: "blur"` fires exactly once per blur event; active focus state is strictly preserved during field invalidation and issue message DOM projection.
-    - Accessibility (WCAG 2.2 AA) via `@axe-core/playwright` v4.13.0: automated accessibility audit passes with 0 violations; verified non-destructive `aria-invalid` lifecycle restoration (restoring original attribute or removing if absent), additive `aria-describedby` linking, and overlapping field binding preservation.
-    - Hostile payload & safe sink verification: hostile issue messages (`<img src=x onerror=...>`, `<script>`) projected into issue elements write exclusively via `textContent`, producing 0 new DOM elements and 0 script execution.
-    - Real-browser native submission lifecycle: form submission via submit button and Enter key; unexpected submit action rejections are safely contained via `onSubmitException` with 0 unhandled Promise rejections and 0 page errors.
-    - Async validation race and cancellation: fresh user edits supersede in-flight async validation; edits during submit validation transition submission status to `"cancelled"`.
-    - Route unmount and lifecycle teardown: unbinding removes DOM listeners and signal subscriptions without mutating detached DOM; canonical Form instances survive route teardowns.
-    - React 19 real-browser lifecycle: component mount, edit, unmount during in-flight async validation, and remount execute cleanly with 0 console or page errors.
-    - Historical regressions matrix: 15 cataloged failure modes (P1K-H01 through P1K-H15) documented in `test/browser/HISTORICAL_REGRESSIONS.md` verified 100% green.
-  - **Angular 17+ Adapter (`@vii-labs/form/angular`):**
-    - `createAngularField(field, options?)`: projects a canonical leaf `FieldState` into 12 readonly Angular Signals (`value`, `rawValue`, `dirty`, `touched`, `pending`, `valid`, `invalid`, `parseStatus`, `parseIssue`, `validationStatus`, `issues`, `serverIssues`) and stable action delegates (`setValue`, `setRawValue`, `setTouched`, `blur`, `validate`, `reset`, `dispose`). Accepts optional `{ destroyRef?: DestroyRef }` to automate subscription teardown on component destruction; works anywhere outside injection contexts with manual `.dispose()`.
-    - `createAngularForm(form, options?)`: projects a root `FormInstance` into aggregate readonly Signals (`value`, `rawValue`, `dirty`, `touched`, `pending`, `valid`, `invalid`, `issues`, `serverIssues`, `submissionStatus`, `submitting`) and stable actions (`validate`, `submit`, `cancelSubmit`, `reset`, `reinitialize`, `dispose`). Promoted to public API for adapter symmetry and idiomatic root form state consumption.
-    - `createAngularFieldArray(array, options?)`: projects a `FieldArray` into collection-level Signals (`items`, `value`, `rawValue`, `dirty`, `touched`, `pending`, `valid`, `invalid`, `issues`, `serverIssues`, `length`) and structural actions (`append`, `prepend`, `insert`, `remove`, `move`, `swap`, `clear`, `validate`, `reset`, `dispose`). Promoted to public API for adapter symmetry and repeatable collection consumption, preserving exact `FieldArrayItem.id` identities across mutations.
-    - Native Signals primitive: uses `@angular/core` `signal().asReadonly()`; zero RxJS bridge, zero Zone hacks, zero manual change detection. Compatible with Angular 17+ through Angular 22+.
-    - No duplicate domain-state ownership & canonical node survival: framework lifecycle teardown unregisters adapter subscriptions only; canonical Vii Form nodes remain alive and functional.
-    - Idempotent manual disposal: handles provide `.dispose()` for manual cleanup, safe before or after `DestroyRef` teardown.
-  - **Vue 3.3+ Adapter (`@vii-labs/form/vue`):**
-    - `createVueField(field, options?)`: projects a canonical leaf `FieldState` into 12 readonly shallow refs (`shallowReadonly(shallowRef(...))` for `value`, `rawValue`, `dirty`, `touched`, `pending`, `valid`, `invalid`, `parseStatus`, `parseIssue`, `validationStatus`, `issues`, `serverIssues`) and stable action delegates (`setValue`, `setRawValue`, `setTouched`, `blur`, `validate`, `reset`, `dispose`). Auto-detects `getCurrentScope()` to register `onScopeDispose` when executed in an active effect scope, while remaining operable outside scopes with manual `.dispose()`. Accepts optional `{ onDispose? }` callback hook.
-    - `createVueForm(form, options?)`: projects a root `FormInstance` into aggregate readonly shallow refs and stable submission actions. Promoted to public API for adapter symmetry and idiomatic form lifecycle management in Vue applications.
-    - `createVueFieldArray(array, options?)`: projects a `FieldArray` into collection shallow refs and structural actions, preserving `FieldArrayItem.id` stable identities. Promoted to public API for adapter symmetry and repeatable collections.
-    - Shallow ref reactivity: uses Vue `shallowRef` and `shallowReadonly` avoiding deep `reactive()` wrapping or proxying; Vii Form retains authoritative state mutation and reference identity. Compatible with Vue 3.3+ through Vue 3.5+.
-    - No duplicate domain-state ownership & canonical node survival: scope disposal or `.dispose()` unwinds adapter subscriptions only; canonical Vii Form nodes remain alive.
-  - **Vanilla DOM Adapter (`@vii-labs/form/vanilla`):**
-    - `bindField(field, element, options?)`: binds supported native form controls (input, textarea, select-one) to a canonical `FieldState`. Fails closed with `TypeError` on unsupported elements before any listener registration, subscription, or DOM mutation.
-    - `bindForm(form, formElement, options?)`: binds native `<form>` submit events to canonical `form.submit()`.
-    - Supported control categories: HTMLInputElement-compatible (text-like types, checkbox, radio, file), HTMLTextAreaElement-compatible, and HTMLSelectElement-compatible (single-select only).
-    - Single commit event contract: strictly binds `"input"` for text-like controls and `"change"` for checkbox, radio, select-one, and file controls; zero duplicate `input` + `change` registration per edit.
-    - Bidirectional projection without feedback loops: DOM edits commit to canonical fields (`setRawValue` / `setValue`), and programmatic field updates project back to the DOM without synthetic event dispatches.
-    - Raw vs Value preservation: parser-backed fields display `rawValue` in the DOM (e.g. `"-"` or `"05"`), preventing presentation snap-back bugs during typing.
-    - Non-destructive ARIA invalid ownership: projects `aria-invalid="true"` strictly when the field is invalid; captures pre-binding attribute state and restores the original application value whenever the field is valid and upon disposal.
-    - Additive `aria-describedby` management: safely appends `issueElement.id` to `aria-describedby` while preserving pre-existing application tokens, and restores original tokens on disposal.
-    - Safe textContent sink: prevents HTML interpretation at the issue-message sink by writing through `issueElement.textContent = ...`.
-    - Submit error ownership & exception containment: native DOM submit listeners route unexpected action rejections through `onSubmitException`.
-    - Deterministic lifecycle cleanup: returns `{ dispose(): void }` which cleanly removes DOM event listeners and signal subscriptions without disposing the canonical Form node.
-  - **React 18/19 Adapter (`@vii-labs/form/react`):**
-    - `useField(field)`: fine-grained leaf field binding exposing live observable snapshot and stable action references.
-    - `useForm(form)`: root form aggregate binding exposing live snapshot, child `fields`, and stable actions.
-    - `useFieldArray(array)`: repeatable collection binding exposing live snapshot and stable structural actions.
-    - `useSyncExternalStore` primitive: tear-free React concurrent rendering with live store evaluation and pre-subscription freshness.
-    - Snapshot referential memoization: live store reads return stable object references when observable values are unchanged (`Object.is` per key).
-    - Fine-grained render isolation: mutating a leaf field triggers re-rendering only in that field's subscribed component (0 sibling re-renders).
-    - StrictMode safety & lifecycle isolation: double-mount/unmount cycles cleanly subscribe and teardown without disposing the canonical Form node.
-  - **Model A Submission Lifecycle (`form.submit`):**
-    - State machine: `idle` -> `validating` -> `submitting` -> `succeeded` | `failed` | `cancelled`.
-    - Model A terminal state invariant: user edits after `succeeded` or `failed` update `dirty: true` but do NOT reset `submissionStatus` to `idle`.
-    - Validation gate: runs recursive tree validation with `trigger: "submit"`, awaits async rules, and blocks submission if invalid or if any field has parse errors.
-    - Immutable snapshotting: captures deep-cloned immutable domain output snapshot and `FieldArray` identity snapshots after validation gate passes.
-    - Error ownership & structural cancellation: unexpected errors in submit action rethrow to caller while setting `submissionStatus: "failed"`; cancellation is classified authoritatively via `signal.aborted` or canonical `AbortError`.
-    - Fail-closed result discrimination: submit action payloads declaring `ok === false` require an `issues` array where all issues sanitize atomically.
-    - In-flight cancellation: `form.cancelSubmit()`, duplicate submit policies (`supersede`, `drop`, `reject`), and automatic abort on `reset()`, `reinitialize()`, or `dispose()`.
-  - **Structured Server Issue Taxonomy & Routing:**
-    - `ServerIssue` structure: `{ code, message, path?, source: "server" }`.
-    - Routing to leaf fields, groups, arrays, and fallback to root `form.serverIssues` for unresolvable/root paths.
-    - Localized clearing on edit: editing a leaf field clears only that field's server issues.
-    - Coexistence with client validation: running client validators does not wipe active server issues.
-    - `FieldArray` in-flight mutation resilience: submission-time identity snapshots map array paths to stable item IDs even if items are reordered mid-flight.
-  - **Dynamic Repeatable Collections (`createFieldArray`):**
-    - Stable logical item identity (`FieldArrayItem<TNode>` with stable `id` and `node`) independent of array positional indices; reordering (`move`, `swap`), insertion, and removal preserve item identity and child states.
-    - Opaque internal ID generation or custom `keyExtractor` without ID collisions.
-    - Batch-safe array mutations: `append`, `prepend`, `insert`, `remove`, `move`, `swap`, `clear`.
-    - Reactive collection aggregation: `value`, `rawValue`, `touched`, `dirty`, `pending`, `valid`, `invalid`, `issues`, and `serverIssues`.
-    - Identity-strict dirty tracking: pristine if and only if length, key sequence, and all child nodes are pristine.
-    - Deterministic child Scope lifecycle and transactional adoption: removed baseline items are retained privately for `reset()` restoration; non-baseline items are cleanly disposed.
-  - **Leaf Field Primitive (`createField`):**
-    - Raw vs Value separation: synchronous parsers (`FieldParser<TRaw, TValue>`) where raw presentation input is preserved in `rawValue` without mutating domain `value`.
-    - Synchronous validation rules (`SyncValidationRule<TValue>`) and asynchronous validation rules (`AsyncValidationRule<TValue>`).
-    - Standard Schema v1 validation bridge (`standardSchema`) providing provider-neutral support for any `@standard-schema/spec` schema.
-    - Reactive state signals: `value`, `rawValue`, `touched`, `dirty`, `pending`, `valid`, `invalid`, `issues`, `serverIssues`, `parseIssue`, `parseStatus`, `validationStatus`.
-    - Trusted baseline contract: explicit `initialValue` + `initialRawValue` at creation and `{ value, rawValue }` in `form.reinitialize`.
-  - **Built-in Parsers (public):**
-    - `createNumberParser`: strict decimal grammar parser.
-    - `createStringParser`: optional whitespace trimming.
-  - **Nested Groups (`createFieldGroup`) & Root Forms (`createForm`):**
-    - Hierarchical aggregation of state dimensions.
-    - Whole-form baseline reinitialization (`form.reinitialize`) using separate `value` and `rawValue` trees (`FormReinitializeInput`).
-- **Current Implementation (P1l — Performance / Bundle / Memory Gate):**
-  - **Runtime Scaling Invariants:**
-    - Leaf-only mutation: single-field update with local subscriber executes in ~0.48 – 0.81 µs ($O(1)$ size-insensitive across 10 to 1,000 fields) with exactly 0 sibling subscriber notifications.
-    - Aggregate recomputation: synchronous reading of aggregate computeds (`form.value`, `form.dirty`, `form.issues`) scales linearly ($O(N)$) from ~3.27 µs at 10 fields to ~394.29 µs at 1,000 fields.
-    - Full sync validation: tree validation with 1 rule per field scales linearly from 0.037 ms (10 fields) to 6.55 ms (1,000 fields).
-    - FieldArray isolated operations: steady-state mutations execute in ~1.96 µs (`append`), ~1.79 µs (`insert` at 0), ~1.58 µs (`remove`), ~0.71 µs (`swap`), and ~0.88 µs (`move`) at 10 items, preserving stable item identity across operations.
-    - Submission lifecycle: steady-state submission completes in ~0.009 ms for successful submissions, ~0.008 ms when validation blocks, and ~0.022 ms on action rejection.
-    - Server issue routing: routes 1,000 server issues across deeply nested groups and arrays in ~6.75 ms.
-    - Framework adapter bridge overhead: thin projection bridge overhead is ~0.081 ms (React `useField`), ~0.003 ms (Vanilla `bindField`), ~0.009 ms (Angular `createAngularField`), ~0.008 ms (Vue `createVueField`).
-    - Environment sensitivity: microsecond benchmarks depend on host CPU/runner hardware and do not represent absolute latency promises; CI enforces deterministic wide regression ceilings.
-  - **Bundle Footprint & Tree-Shaking Boundaries:**
-    - `createField` standalone consumer (Core external): 14.34 kB minified, 3.78 kB gzip, 3.23 kB brotli (-71.2% minified vs root).
-    - `createField` standalone consumer (including `@vii-labs/core`): 23.52 kB minified, 6.29 kB gzip, 5.51 kB brotli.
-    - Root entry `@vii-labs/form` (Core external): 49.88 kB minified, 11.24 kB gzip, 9.58 kB brotli.
-    - Root entry with Core included: 59.09 kB minified, 13.71 kB gzip, 11.83 kB brotli.
-    - React adapter (`@vii-labs/form/react`): 5.07 kB minified, 1.08 kB gzip (React external).
-    - Vanilla adapter (`@vii-labs/form/vanilla`): 8.45 kB minified, 2.29 kB gzip (zero runtime dependencies).
-    - Angular adapter (`@vii-labs/form/angular`): 6.13 kB minified, 1.25 kB gzip (`@angular/core` external).
-    - Vue adapter (`@vii-labs/form/vue`): 5.71 kB minified, 1.21 kB gzip (`vue` external).
-    - Packed tarball: 90.46 kB compressed, 1.06 MB unpacked, 207 files (zero test/fixture/browser files included).
-  - **Framework & Schema Provider Isolation:**
-    - Root entry bundles 0 imports of React, Angular, Vue, Zod, Valibot, ArkType.
-    - Adapter subpaths are strictly isolated from peer frameworks.
-    - `@standard-schema/spec` is type-only and contributes 0 runtime bytes.
-  - **Deterministic Memory & Resource Retention:**
-    - 500 complete form create/dispose cycles show 0 retained subscriptions, 0 retained scopes, and 0 retained timers.
-    - Debounce timers are cancelled cleanly upon field/form disposal without unhandled rejections.
-    - Rapid async validation supersession cleanly aborts stale generations (200 mutations produce 199 aborted controllers and 1 final commit).
-    - Adapter lifecycle cycles (React mount/unmount, Vanilla bind/dispose, Angular, Vue) return active subscriptions to baseline.
-  - **Automated Performance & Size Gate:**
-    - Machine-readable budget file: `packages/form/performance-budgets.json`.
-    - Local and CI command: `pnpm nx performance form`.
-    - Evidence report: `docs/performance/FORM_P1L_BASELINE.md`.
-- **Subpaths (`/react`, `/vanilla`, `/angular`, `/vue`):**
-  - `/react`: Production React 18/19 adapter (`useField`, `useForm`, `useFieldArray`).
-  - `/vanilla`: Production Vanilla DOM adapter (`bindField`, `bindForm`).
-  - `/angular`: Production Angular 17+ adapter (`createAngularField`, `createAngularForm`, `createAngularFieldArray`).
-  - `/vue`: Production Vue 3.3+ adapter (`createVueField`, `createVueForm`, `createVueFieldArray`).
-- **Deferred / Non-Goals for P1l:**
-  - Production package graduation and public release review (deferred to P1m).
-  - Stable semver bump or un-privating the package (deferred to P1m).
-  - Public documentation site or migration guides (deferred to P1m).
+- **Stability Classification:** `preview` (under [`docs/governance/API_STABILITY.md`](../../docs/governance/API_STABILITY.md)).
+- **Publication Status:** **Private / Unpublished.** Publication remains strictly deferred pending explicit maintainer release approval (`"private": true` in `package.json`).
 
-See `docs/architecture/FORM_ARCHITECTURE.md`, `docs/roadmap/FORM_RESEARCH.md`, and `docs/performance/FORM_P1L_BASELINE.md` for architecture, roadmap, and performance details.
+---
+
+## 1. What Vii Form Is
+
+`@vii-labs/form` is a framework-agnostic, fine-grained headless form state and validation engine. Built directly on top of the push-pull reactivity and deterministic `Scope` lifecycle of `@vii-labs/core`, Vii Form translates complex user interactions into an observable, type-safe form tree.
+
+Vii Form separates presentation text from domain values, schedules synchronous and asynchronous validation with monotonic cancellation, routes structured server issues across dynamic structural mutations, and projects clean, zero-duplicate-state handles into React 18/19, Vanilla DOM, Angular 17+, and Vue 3.3+.
+
+---
+
+## 2. Installation Status & Candidate Caveat
+
+> [!IMPORTANT]
+> `@vii-labs/form` is currently an internal Preview Candidate (`"private": true`). It is not yet published to the public npm registry. Downstream workspace consumers consume the package via workspace linking or packed tarball fixtures.
+
+When published under approved governance, the package contract requires:
+- **Runtime Peer Dependency:** `@vii-labs/core` (`>=0.1.0-experimental.2`)
+- **Type-Resolution Dependency:** `@standard-schema/spec` (`^1.1.0`, consumed type-only)
+- **Optional Framework Peers:** `react` (`>=18.0.0`), `@angular/core` (`>=17.0.0`), `vue` (`>=3.3.0`)
+
+Deep imports into package internals (such as `@vii-labs/form/dist/core/field.js`) are unsupported and disallowed by the package `exports` map.
+
+---
+
+## 3. Core Concepts
+
+- **Push-Pull Reactivity:** Field state dimensions (`value`, `rawValue`, `dirty`, `touched`, `pending`, `valid`, `invalid`, `issues`, `serverIssues`) are powered by `@vii-labs/core` `State` and `Computed` primitives.
+- **Deterministic Scope Lifecycle:** Form trees and collection items allocate child scopes for subscriptions and computeds; disposing a node cleanly detaches its scope and tears down active timers.
+- **Hierarchical Tree Aggregation:** A root `createForm` aggregates `createFieldGroup` objects, `createFieldArray` collections, and leaf `createField` nodes into cohesive tree-level states.
+- **Presentation vs Domain Model:** Intermediate user input lives in `rawValue`, while parsed domain data lives in `value`. Intermediate parse failures preserve raw text in the DOM without snapping back.
+
+---
+
+## 4. `createField`
+
+`createField` creates an observable leaf form node.
+
+```ts
+import { createField } from "@vii-labs/form";
+
+const username = createField({
+  initialValue: "alice",
+  rules: [
+    (val) => (val.length < 3 ? { code: "min_len", message: "Too short" } : null),
+  ],
+});
+
+username.value.get(); // "alice"
+username.valid.get(); // true
+
+username.setValue("al");
+username.valid.get(); // false
+username.issues.get(); // [{ code: "min_len", message: "Too short", source: "rule" }]
+```
+
+Supported state signals:
+- `value`: current domain value.
+- `rawValue`: presentation string/value.
+- `dirty`: boolean, true if value differs from initial baseline.
+- `touched`: boolean, set to true on blur or manual commit.
+- `pending`: boolean, true during in-flight async validation.
+- `valid` / `invalid`: boolean derived status.
+- `issues`: merged array of validation and parse issues.
+- `serverIssues`: active server-routed issues.
+- `parseStatus`: `"parsed"` | `"failed"` | `"unparsed"`.
+
+---
+
+## 5. `createFieldGroup`
+
+`createFieldGroup` groups child form nodes into a structured object while aggregating validation, dirty, touched, and pending states.
+
+```ts
+import { createField, createFieldGroup } from "@vii-labs/form";
+
+const userGroup = createFieldGroup({
+  fields: {
+    username: createField({ initialValue: "alice" }),
+    email: createField({ initialValue: "alice@example.com" }),
+  },
+});
+
+userGroup.value.get(); // { username: "alice", email: "alice@example.com" }
+userGroup.valid.get(); // true
+```
+
+---
+
+## 6. `createFieldArray`
+
+`createFieldArray` manages repeatable dynamic collections with stable logical item identities.
+
+```ts
+import { createField, createFieldArray } from "@vii-labs/form";
+
+const hobbies = createFieldArray({
+  items: [createField({ initialValue: "reading" })],
+});
+
+// Append new item
+hobbies.append(createField({ initialValue: "hiking" }));
+
+// Reorder items without losing focus or child scope identity
+hobbies.move(0, 1);
+
+// Remove item
+hobbies.remove(0);
+
+// Items expose stable opaque IDs:
+const firstItem = hobbies.items.get()[0];
+console.log(firstItem.id); // stable string ID
+```
+
+---
+
+## 7. `createForm`
+
+`createForm` is the root orchestrator coordinating recursive validation, Model A submission lifecycle, baseline reinitialization, and server issue routing.
+
+```ts
+import { createForm, createField, createFieldGroup } from "@vii-labs/form";
+
+const form = createForm({
+  fields: {
+    user: createFieldGroup({
+      fields: {
+        name: createField({ initialValue: "Alice" }),
+      },
+    }),
+  },
+});
+
+// Reinitialize baseline
+form.reinitialize({
+  value: { user: { name: "Bob" } },
+  rawValue: { user: { name: "Bob" } },
+});
+```
+
+---
+
+## 8. Validation
+
+Vii Form executes synchronous and asynchronous validation rules with monotonic revision tracking.
+
+- **Sync Rules:** Synchronous functions returning `ValidationIssueInput | null`.
+- **Async Rules:** Return `Promise<ValidationIssueInput | null>`, receiving `ValidationRuleContext` with `signal: AbortSignal`.
+- **Trigger Modes:** Configurable via `validateOn: "change" | "blur" | "submit" | "manual"`.
+- **Debounce:** Async rules support optional `debounceMs`. In-flight timers are cleanly cancelled on new input, reset, or disposal.
+- **Stale Commit Suppression:** Rapid keystrokes abort previous async operations via `AbortSignal`; stale async resolutions are automatically discarded.
+
+---
+
+## 9. Parsers: Raw vs Value Contract
+
+Vii Form formally segregates user-facing presentation text from parsed domain data.
+
+```ts
+import { createField, createNumberParser } from "@vii-labs/form";
+
+const age = createField<number, string>({
+  initialValue: 25,
+  initialRawValue: "25",
+  parser: createNumberParser({ trim: true }),
+});
+
+// Intermediate invalid typing (e.g. typing "-" or incomplete decimal)
+age.setRawValue("05");
+age.rawValue.get(); // "05" (preserved in DOM)
+age.value.get();    // 5 (parsed domain integer)
+
+age.setRawValue("abc");
+age.rawValue.get(); // "abc" (no DOM snap-back)
+age.value.get();    // 5 (last known valid domain value retained)
+age.valid.get();    // false (parse failure issue active)
+```
+
+Built-in parser factories:
+- `createNumberParser(options?)`: strict decimal grammar parser.
+- `createStringParser(options?)`: whitespace-trimming parser.
+
+---
+
+## 10. Standard Schema Integration
+
+Vii Form natively bridges any validator conforming to the [Standard Schema v1 specification](https://standardschema.dev) (Zod 4, Valibot, ArkType, etc.) using `standardSchema()`.
+
+```ts
+import { createField, standardSchema } from "@vii-labs/form";
+import { z } from "zod"; // schema authoring only
+
+const emailField = createField({
+  initialValue: "",
+  rules: [standardSchema(z.string().email())],
+});
+```
+
+- **Zero Runtime Dependencies:** `@standard-schema/spec` is declared in `dependencies` and consumed strictly type-only (`import type`). Vii Form bundles zero third-party schema runtimes.
+- **Fail-Closed Guarantee:** Malformed schema output (non-array `issues`) throws a structured `TypeError` and never allows invalid input to pass.
+
+---
+
+## 11. Submission: Model A Contract
+
+Vii Form implements **Model A** submission semantics:
+
+1. `form.submit(action, options?)` executes recursive tree validation with `trigger: "submit"`.
+2. Blocks submission if any field has parse or validation issues.
+3. If valid, captures an immutable deep-cloned domain value snapshot and executes `action(outputSnapshot, context)`.
+4. **Model A Invariant:** Terminal submission status (`"succeeded"` or `"failed"`) persists across later field edits. Subsequent edits update `dirty: true` while `submissionStatus` remains `"succeeded"`.
+
+```ts
+const result = await form.submit(async (values) => {
+  return { ok: true, result: values };
+});
+
+if (result.status === "succeeded") {
+  console.log("Submitted:", result.result);
+}
+```
+
+---
+
+## 12. Server Issues
+
+Backend validation issues route deterministically into form nodes via `ServerIssueInput`:
+
+```ts
+await form.submit(async (val) => {
+  return {
+    ok: false,
+    issues: [
+      { code: "unique", message: "Email taken", path: ["user", "email"] },
+    ],
+  };
+});
+```
+
+- **Localized Clearing:** Editing `user.email` immediately clears its server issues without wiping sibling issues.
+- **Collection Identity Mapping:** In-flight array reorders route server issues to the intended logical item via submission-time identity snapshots.
+
+---
+
+## 13. React Adapter (`@vii-labs/form/react`)
+
+Provides React 18 & 19 hooks backed by `useSyncExternalStore`:
+
+```tsx
+import { useField, useForm } from "@vii-labs/form/react";
+
+function UserProfile({ form }) {
+  const { fields, valid, submitting, submit } = useForm(form);
+  const name = useField(fields.user.fields.name);
+
+  return (
+    <form onSubmit={(e) => { e.preventDefault(); submit(async () => ({ ok: true })); }}>
+      <input
+        value={name.rawValue}
+        onChange={(e) => name.setRawValue(e.target.value)}
+        onBlur={() => name.blur()}
+      />
+      {name.issues.map((issue) => (
+        <span key={issue.message}>{issue.message}</span>
+      ))}
+    </form>
+  );
+}
+```
+
+- **Fine-Grained Render Isolation:** Modifying a single field re-renders only components subscribing to that field.
+- **StrictMode Safety:** Double mount/unmount cycles safely recreate subscriptions without destroying canonical form nodes.
+
+---
+
+## 14. Vanilla DOM Adapter (`@vii-labs/form/vanilla`)
+
+Binds native form controls directly to canonical fields with accessible ARIA management:
+
+```ts
+import { bindField, bindForm } from "@vii-labs/form/vanilla";
+
+const fieldBinding = bindField(usernameField, inputElement, {
+  issueElement: errorSpanElement,
+});
+
+const formBinding = bindForm(form, formElement, {
+  action: async (val) => ({ ok: true }),
+  onSubmitException: (err) => console.error("Submit exception:", err),
+});
+
+// Teardown
+fieldBinding.dispose();
+formBinding.dispose();
+```
+
+- **Single Commit Event Model:** Binds `"input"` for text controls and `"change"` for checkbox/radio/select-one without duplicate triggers.
+- **Safe Text Sink:** Server and validation issue text is projected strictly through `textContent`, neutralizing script execution or HTML injection.
+- **Non-Destructive ARIA:** Preserves pre-existing `aria-invalid` and `aria-describedby` attributes upon disposal.
+
+---
+
+## 15. Angular Adapter (`@vii-labs/form/angular`)
+
+Projects canonical nodes into native Angular Signals (`@angular/core` `>=17.0.0`):
+
+```ts
+import { createAngularField, createAngularForm } from "@vii-labs/form/angular";
+
+const fieldHandle = createAngularField(field, { destroyRef });
+const formHandle = createAngularForm(form, { destroyRef });
+
+// Read signals:
+console.log(fieldHandle.value());
+console.log(formHandle.submissionStatus());
+```
+
+---
+
+## 16. Vue Adapter (`@vii-labs/form/vue`)
+
+Projects canonical nodes into readonly Vue `shallowRef` handles (`vue` `>=3.3.0`):
+
+```ts
+import { createVueField, createVueForm } from "@vii-labs/form/vue";
+
+const fieldHandle = createVueField(field);
+const formHandle = createVueForm(form);
+
+// Read shallow refs:
+console.log(fieldHandle.value.value);
+console.log(formHandle.submissionStatus.value);
+```
+
+---
+
+## 17. Lifecycle & Ownership Contract
+
+| Node / Handle | Creator / Owner | Who Disposes It? | What Disposal Cancels | Does it Dispose Child Nodes? |
+| :--- | :--- | :--- | :--- | :--- |
+| `FieldState` | `createField` | Application caller | In-flight async validation & debounce timers | N/A (leaf) |
+| `FieldGroup` | `createFieldGroup` | Application caller | All child node subscriptions | Yes (disposes child fields/groups) |
+| `FieldArray` | `createFieldArray` | Application caller | Collection subscriptions & dynamic child scopes | Yes (disposes non-baseline items) |
+| `FormInstance` | `createForm` | Application caller | In-flight submit, validation, root subscriptions | Yes (disposes whole tree) |
+| `React hook` | `useField` / `useForm` | React lifecycle | Component unmount tears down external store listener | **NO** (canonical nodes survive unmount) |
+| `Vanilla binding` | `bindField` / `bindForm` | Application caller | Removes DOM event listeners and signal observers | **NO** (canonical nodes survive unbinding) |
+| `Angular handle` | `createAngular*` | Caller / `DestroyRef` | Unregisters signal sync listeners | **NO** (canonical nodes survive teardown) |
+| `Vue handle` | `createVue*` | Caller / `effectScope` | Unregisters shallowRef sync listeners | **NO** (canonical nodes survive teardown) |
+
+---
+
+## 18. Accessibility (a11y) Scope
+
+The Vanilla DOM adapter implements automated accessibility invariants verified via `@axe-core/playwright` under Chromium:
+- **ARIA Attribute Projection:** `aria-invalid="true"` is asserted only when a field is invalid, and restored to its initial state when valid or disposed.
+- **Describedby Linking:** Additively links `issueElement.id` into `aria-describedby` without clobbering existing application descriptions.
+- **Focus Preservation:** Re-validating or projecting error messages preserves active input focus and caret positions.
+- **Scope Limit:** Vii Form provides accessible state synchronization for native controls. It does not generate visual styles, contrast palettes, or application heading hierarchies.
+
+---
+
+## 19. Performance & Bundle Evidence
+
+All performance metrics and size budgets are enforced by 41 automated HARD budget checks in CI.
+
+- **Leaf Mutation Latency:** Single-field update with local subscriber executes in ~0.45 – 0.81 µs ($O(1)$ size-insensitive across 10 to 1,000 fields) with 0 sibling subscriber notifications.
+- **Memory Retention:** 0 retained scopes, 0 retained subscriptions, and 0 retained timers after 500 complete form lifecycle cycles.
+- **Tree-Shaking Boundaries:**
+  - Standalone `createField` (Core external): ~14.34 kB minified (3.78 kB gzip).
+  - Root `@vii-labs/form` (Core external): ~49.88 kB minified (11.24 kB gzip).
+  - React adapter: ~5.07 kB minified (1.08 kB gzip).
+  - Vanilla adapter: ~8.45 kB minified (2.29 kB gzip).
+  - Angular adapter: ~6.13 kB minified (1.25 kB gzip).
+  - Vue adapter: ~5.71 kB minified (1.21 kB gzip).
+
+See [`docs/performance/FORM_P1L_BASELINE.md`](../../docs/performance/FORM_P1L_BASELINE.md) for full benchmark methodology and runner environment details.
+
+---
+
+## 20. Stability & Migration Policy
+
+- **Current Level:** `preview` (under [`docs/governance/API_STABILITY.md`](../../docs/governance/API_STABILITY.md)).
+- **Pre-1.0 Compatibility:** As a Preview Candidate, APIs are usable and documented but subject to refinement before 1.0. Any breaking changes will include explicit migration notes in changesets and release documentation.
+- **Zero Silent Removals:** Deprecated APIs will provide replacement guidance before scheduled retirement.
+
+---
+
+## 21. Limitations & Non-Goals
+
+### Limitations
+- **Select-Multiple:** Native `<select multiple>` binding is deferred and currently fails closed with an explicit `TypeError`.
+- **Browser Gate Scope:** Automated browser acceptance is executed against headless Chromium via Playwright; cross-browser certification (Safari/Firefox) and native OS IME candidate UI interaction are outside automated scope.
+
+### Non-Goals
+- **NOT a UI Component Library:** Does not provide styled buttons, inputs, modals, or CSS.
+- **NOT an HTTP Client:** Does not perform network requests or fetch operations.
+- **NOT a Schema DSL:** Does not provide a proprietary schema builder; integrates external schemas via Standard Schema v1.
+- **NOT an Auto-Focus Manager:** Does not arbitrarily steal browser focus on validation errors.
+- **NOT an Authorization Boundary:** Client-side validation improves user experience and does not replace backend security validation.

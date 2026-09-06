@@ -79,6 +79,7 @@ try {
   assert.equal(formManifest.license, "Apache-2.0");
   assert.equal(formManifest.private, true);
   assert.equal(formManifest.sideEffects, false);
+  assert.equal(formManifest.vii?.stability, "preview");
   assert.equal(formManifest.dependencies?.["@standard-schema/spec"], "^1.1.0");
   assert.equal(formManifest.peerDependencies?.["@vii-labs/core"], ">=0.1.0-experimental.2");
 
@@ -611,6 +612,23 @@ export async function runVanillaScenario() {
     consumer.vanillaKeys,
     ["bindField", "bindForm"].sort(),
     "clean consumer vanilla subpath export must contain P1j bindings",
+  );
+
+  // Verify deep internal import rejection via Node resolution from packed consumer
+  let deepImportRejected = false;
+  try {
+    const { createRequire } = await import("node:module");
+    const consumerRequire = createRequire(path.join(consumerDirectory, "package.json"));
+    consumerRequire.resolve("@vii-labs/form/dist/core/field.js");
+  } catch (err) {
+    if (err && err.code === "ERR_PACKAGE_PATH_NOT_EXPORTED") {
+      deepImportRejected = true;
+    }
+  }
+  assert.equal(
+    deepImportRejected,
+    true,
+    "deep internal import into package internals must be rejected with ERR_PACKAGE_PATH_NOT_EXPORTED by exports map",
   );
 
   const scenarioResult = await consumer.runFormTreeScenario();

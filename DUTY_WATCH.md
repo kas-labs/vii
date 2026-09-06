@@ -8123,3 +8123,41 @@ PR: [#121](https://github.com/kas-labs/vii/pull/121) draft
 - Commit changes, push `test/query-build-vs-buy-gate`, and open a draft PR against `main`.
 - Phase 5 research program concluded.
 ```
+
+## 2026-09-06 02:11 CEST | Form Phase 2 Architecture and Roadmap (P2a)
+
+Status: completed
+Branch: docs/form-p2a-phase2-architecture-roadmap
+PR: [TBD] draft
+
+### Scope
+
+- Execute slice P2a: define Phase 2 Architecture and Roadmap.
+- Create `docs/architecture/FORM_PHASE2_ARCHITECTURE.md`.
+- No runtime implementation; research and documentation only.
+- Update `PROJECT_STATE.md` and `docs/architecture/FORM_ARCHITECTURE.md`.
+
+### Changes
+
+- Added `docs/architecture/FORM_PHASE2_ARCHITECTURE.md` establishing gap inventory, competitor analysis (React Hook Form, TanStack Form, Angular Forms, VeeValidate), and prioritized roadmap.
+- Captured ADRs for dynamic registration, focus management, external state sync, and async parsers.
+- Updated `docs/architecture/FORM_ARCHITECTURE.md` to reference Phase 2.
+- Updated `PROJECT_STATE.md` indicating Phase 2 planning underway.
+- Maintained strict package metadata (Preview Candidate, private, deferred publication).
+- Zero production runtime code changed.
+
+### Validation
+
+- `pnpm format:check`: passed.
+- `git diff --check`: passed.
+- `pnpm validate`: passed.
+
+### Architecture / compatibility
+
+- Package `@vii-labs/form` remains Preview Candidate, no version bumps.
+- Zero public API surface changes in this slice.
+- No publication commands executed.
+
+### Remaining / recovery
+
+- P2a PR remains Draft for review before the first runtime slice (P2b) begins.

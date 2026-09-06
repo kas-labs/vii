@@ -28,7 +28,7 @@ Phase 2 explicitly rejects the following:
 - Adding automatic HTTP clients, generic state management sync, or external persistence layers to the Core.
 - Arbitrary "parity" feature creep without a demonstrated Vii ecosystem need.
 - Schema-driven UI generation in Form core.
-- Plugin/extensibility model without concrete extension scenarios.
+- Plugin/extensibility model without concrete evidence.
 - Package publication.
 
 ## 4. Phase 2 Design Principles
@@ -54,8 +54,8 @@ Phase 2 explicitly rejects the following:
 | **G4** | External state synchronization | REJECT | Causes two sources of truth. App layer should observe unidirectionally. |
 | **G5** | Async parser pipeline | REJECT | Validation handles async. True async parsing is synchronous; enrichment is side-effect logic. |
 | **G6** | Advanced parser/formatter codecs | DEFER | Wait for Vii Schema invertible codecs. Built-ins suffice for now. |
-| **G7** | Angular ControlValueAccessor | SHOULD | Important compatibility bridge for existing ecosystem. **Owned by Angular Adapter**. |
-| **G8** | Angular Directives | SHOULD | Useful ergonomic bridge, but depends on Signal Forms direction. **Owned by Angular Adapter**. |
+| **G7** | Angular ControlValueAccessor | SHOULD | CVA remains important for compatibility with Angular's established forms/custom control ecosystem and Angular versions below Signal Forms availability. **Owned by Angular Adapter**. |
+| **G8** | Angular Directives | SHOULD | Useful ergonomic bridge (`[viiField]`). Do not conflate with Signal Forms interoperability. **Owned by Angular Adapter**. |
 | **G9** | Vue directives/composables | SHOULD | Improves Vue DX. **Owned by Vue Adapter**. |
 | **G10** | React convenience abstractions | SHOULD | Controller/Context hooks reduce boilerplate. **Owned by React Adapter**. |
 | **G11** | Dynamic conditional fields | MUST | Schema mutability (creation/removal) is a complex routing/wizard necessity. **Owned by Core**. |
@@ -83,13 +83,22 @@ Phase 2 explicitly rejects the following:
 
 | Library | Version / Date | Primary Source | Observed Behavior / Implication | Decision Influenced |
 | :--- | :--- | :--- | :--- | :--- |
-| **React Hook Form** | `v7.x` (Sep 2026) | https://react-hook-form.com/ | Focuses heavily on `register`/`unregister` lifecycle. Unmounting an input unregisters it unless `shouldUnregister: false`. | Influenced Vii's explicit separation of UI mount vs logical node existence. |
-| **TanStack Form** | `v1.x` / `v2.x alpha` (Sep 2026) | https://tanstack.com/form | v1 is stable, v2 alpha announced Aug 2026. Supports React, Vue, Angular, Solid, Svelte, Lit. Features deeply typed values, validation events, granular subscriptions. Meta-framework adapters (Next.js/Remix) exist. | Reinforces headless core value and strongly typed granular subscriptions. |
-| **Angular Forms** | `v18+` (Sep 2026) | https://angular.dev/ | Signal Forms (`form()`, `FieldTree`) introduced with automatic synchronization, typed access, and schema validation. CVA remains legacy bridge. | Influences prioritizing Signal Forms interoperability over purely CVA/Directive legacy bridges. |
+| **React Hook Form** | `v7.x` (Sep 2026) | https://react-hook-form.com/ | Focuses heavily on `register`/`unregister` lifecycle. Unmounting an input unregisters it unless `shouldUnregister: false`. Core-integrated focus management via refs. | Influenced explicitly avoiding framework lifecycles in Core and keeping focus management explicitly in adapters. |
+| **TanStack Form** | `v1.x` / `v2.x alpha` (Sep 2026) | https://tanstack.com/form | v1 is stable, v2 alpha announced Aug 2026. Supports React, Vue, Angular, Solid, Svelte, Lit. Features deeply typed values, granular subscriptions. Meta-framework adapters exist. | Reinforces headless core value and strongly typed granular subscriptions. |
+| **Angular Signal Forms** | `v18+` (Sep 2026) | [Overview](https://angular.dev/guide/forms/signal-forms), [form API](https://angular.dev/api/forms/form), [Comparison](https://angular.dev/guide/forms/comparison) | Signal Forms require Angular v21+. Stable APIs (`form()`, `Schema`, `FormOptions`) since Angular v22.0. The official comparison states Signal Forms as: Stable (v22+). | Angular adapter P2f must manage version-specific compatibility safely. |
 | **VeeValidate** | `v4.x` (Sep 2026) | https://vee-validate.logaretm.com/ | Built around Composition API (`useField`, `useForm`). Provides dynamic field paths and flexible unmount behavior. | Vue adapter needs `useField` composable DX parity, rejecting global stores. |
 | **Standard Schema** | `v1.0` (Sep 2026) | https://standardschema.dev/ | Unified interface, `issues` array fail-closed pattern. | Standard schema is the provider-neutral boundary. Native Vii rules remain first-class. |
 
-## 7. Competitor Comparison Matrix
+## 7. Angular Version Matrix
+
+The architecture formally distinguishes:
+- **Angular 17.3.12:** Accepted Vii minimum compatibility point. There is no assumption that Signal Forms APIs exist. The current Vii Angular adapter must continue to work.
+- **Angular 21:** Signal Forms available as transitional/new API generation.
+- **Angular 22+:** Signal Forms stable according to current Angular documentation.
+
+**Constraint:** Not all Angular >=17 consumers can import Signal Forms APIs. Signal Forms integration must not silently break the accepted Angular 17.3.12 consumer. Future P2f must not unconditionally import `@angular/forms/signals` if doing so breaks Angular 17 consumers. Future compatibility options include: feature detection, a separate Angular Signal Forms subpath, an optional integration module, an API design that does not statically require Signal Forms for the baseline adapter, or raising the minimum Angular version in a future breaking change. Implementation choice is deferred.
+
+## 8. Competitor Comparison Matrix
 
 | Area | Vii Form (Phase 2 Target) | React Hook Form | TanStack Form | Angular Signal Forms | VeeValidate |
 | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -100,34 +109,48 @@ Phase 2 explicitly rejects the following:
 | **Conditional Reg**| Explicit Logical Unregister | `shouldUnregister` config | Dynamic components | Dynamic schema | `keep-values` config |
 | **Cross-field Val**| Explicit Deps (Planned) | Schema-level or triggers | Form-level validation | Form-level/Schema | Cross-field rules |
 
-## 8. Ownership Matrix & Core vs Adapter
+## 9. Core Lifecycle Operations
 
-A firm boundary is maintained. The Core state engine remains unaware of DOM and frameworks.
+The architecture defines exactly three conceptually separate operations:
 
-- **CORE FORM DOMAIN:** Dynamic/lazy registration, cross-field validation relationships, group state tracking.
-- **REACT ADAPTER:** `Controller` equivalent, Form Context provider, RSC client boundary declaration.
-- **VANILLA ADAPTER:** Focus-first-invalid orchestration, `aria-describedby` wiring, element registry mapping.
-- **ANGULAR ADAPTER:** Interoperability with Signal Forms, `ControlValueAccessor` compatibility bridge.
-- **VUE ADAPTER:** Composition API enhancements (`useField`), template ref binding helpers.
-- **APPLICATION-OWNED:** Multi-step wizard routing, optimistic submissions, persistence sync, `select[multiple]` serialization.
+1. **UI ADAPTER MOUNT / UNMOUNT**
+   - Presentation lifecycle only.
+   - Canonical Core node survives.
+   - Value/raw/dirty/touched/issues survive.
+   - Does NOT alter Form tree.
+   - Does NOT alter submission participation.
+2. **LOGICAL REGISTRATION**
+   - Canonical node becomes part of Group/Array/Form structure.
+   - Participates in aggregation/validation/submission according to current tree contract.
+3. **LOGICAL UNREGISTRATION / REMOVAL**
+   - Canonical structural membership ends.
+   - Node is removed from aggregate values/submission.
+   - Owned Scope/resources are disposed according to selected P2b semantics.
+   - Retained state is destroyed unless a future explicitly different primitive is designed.
 
-## 9. Architectural Decision Records (ADRs)
+*No fourth Core lifecycle state (e.g., active/inactive) is permitted.*
 
-### ADR P2-1: Dynamic Tree & Node Existence (UI Mount vs Logical Existence)
-**Decision:** Do not conflate UI mounting with Form node existence. A node is explicitly registered in Core and survives UI unmounts by default. To remove a node from the submit snapshot and validation, it must be explicitly logically unregistered from the parent group/array.
-**Rationale:** Large forms need conditional sections. If UI conditionally hides a field, its state should typically be retained (scenario A) unless it is structurally removed from the schema (scenario C). The minimal primitive is explicit structural unregistration, not a public `active` boolean flag.
-**Impact:** Avoids introducing an `active` state. Retention semantics: logically unregistered nodes are disposed (Scope destroyed, values cleared, excluded from submission). UI unmounted nodes remain in the form untouched.
+## 10. Architectural Decision Records (ADRs)
+
+### ADR P2-1: Dynamic Tree & Node Existence
+**Decision:** Do not conflate UI mounting with Form node existence. A node is explicitly logically registered in Core and survives UI unmounts by default. To remove a node from the submit snapshot and validation, it must be explicitly logically unregistered from the parent group/array.
+**Rationale:** Large forms need conditional sections. If UI conditionally hides a field, its state should typically be retained (Scenario A) unless it is structurally removed from the schema (Scenario C). The chosen minimal primitive is explicit structural logical unregister, not a public `active` boolean flag, and not a public undefined `attach`/`detach` primitive.
 
 ### ADR P2-2: FieldArray Re-registration & Identity
-**Decision:** When a FieldArray item is UI-unmounted but not logically removed (e.g., virtualized lists), its logical node and Scope survive in Core.
-**Rationale:** Reorder operations while detached operate on the logical nodes in Core. Re-mounting with the same ID reconnects the adapter to the existing node. `dirty`, `touched`, and `issues` are preserved. Duplicate identity registrations throw a descriptive error. Server issue identity mapping remains strictly tied to the stable logical key.
+**Decision:**
+- **UI unmount:** item remains in array.
+- **Reorder while UI-unmounted:** same `FieldArrayItem.id`, same canonical item node, same Scope.
+- **Logical remove:** item leaves array, node disposed, Scope disposed, identity no longer exists.
+- **Subsequent new item:** receives a new logical identity unless explicit supported key semantics map it according to existing key contract.
+- **UI remount:** called "adapter rebind / UI remount" (NOT "re-registration").
+**Rationale:** Reorder operations while without UI binding operate on the logical nodes in Core. Re-mounting with the same ID reconnects the adapter to the existing node. `dirty`, `touched`, and `issues` are preserved. The structural registration mechanism must reject any duplicate logical key that would violate FieldArray stable identity.
 
 ### ADR P2-3: Focus Management Ownership
 **Decision:** Core remains entirely ignorant of focus. Focus orchestration (`focus-first-invalid`, `scroll-to-invalid`) is explicitly owned by the Vanilla adapter and framework adapters.
 **Rationale:** Focus is a DOM/presentation concern. Mixing them violates the headless boundary and inflates the core bundle with DOM interfaces.
 
 ### ADR P2-4: Framework-Native Integration Strategy
-**Decision:** Expand adapter surfaces to match framework idiomatic usage (Angular Signal Forms/CVA, React Context/Controller) without bleeding framework semantics into Core.
+**Decision:** Expand adapter surfaces to match framework idiomatic usage without bleeding framework semantics into Core. Keep Angular directive integration (`[viiField]`) separate from Signal Forms interoperability; do not conflate them as they solve different integration problems.
 **Rationale:** Idiomatic DX reduces application boilerplate. RSC boundaries simply require "use client" directives at the adapter export level, maintaining the client-side nature of Form state.
 
 ### ADR P2-5: Select-Multiple Ownership
@@ -138,42 +161,51 @@ A firm boundary is maintained. The Core state engine remains unaware of DOM and 
 **Decision:** Both explicitly REJECTED.
 **Rationale:** Validation handles async requirements. True async parsing is an enrichment side-effect. External state sync (Redux/URL) introduces lifecycle ambiguity; consumers must implement unidirectional observers from the Form.
 
-## 10. Compatibility Policy (Preview Phase)
+## 11. Compatibility Policy (Preview Phase)
 
 `@vii-labs/form` is a **Preview Candidate** (`0.1.0-experimental.1`).
 - **API Compatibility Rule:** Additive changes are allowed via minor/patch bumps. Preview breaking changes remain possible, but deprecation should be preferred where practical and support cost is reasonable.
 - **API Snapshot Governance:** Every public API change REQUIRES an update to `packages/form/api-surface.json` and its boundary tests. No accidental exports.
 - **Version/Release Separation:** Package remains private and unpublished. Internal slices do not automatically mandate package version bumps until a release gate is executed.
 
-## 11. Performance and Bundle Continuity
+## 12. Performance, Security, and Accessibility Continuity
 
-- **Performance Budget Continuity Rule:** All Phase 2 slices must preserve P1l budgets unless explicitly re-baselined with evidence. Dynamic registration performance benefits (if any) must be measured before claiming them.
-- **Bundle Impact Governance Rule:** Root impact vs adapter-only impact must be isolated. Features isolated to subpaths when framework-specific must not enter root.
-- **Memory/Resource Gate:** P2b introduces a deterministic Core/resource lifecycle stress gate with 1,000 explicit attach/detach cycles to prove 0 retained scopes/subscriptions. This is a deterministic resource test, distinct from P1k Playwright browser tests.
+- **Performance Budget Continuity Rule:** All Phase 2 slices must preserve P1l budgets unless explicitly re-baselined with evidence.
+- **Bundle Impact Governance Rule:** Root impact vs adapter-only impact must be isolated.
+- **Security/Privacy Continuity Rule:** Value-free privacy remains enforced. New features cannot log domain or raw values. Any vanilla adapter extensions must continue to strictly use `textContent`.
+- **Accessibility Continuity Rule:** Accessibility behavior must be non-destructive. Focus management must not hijack native keyboard navigation. `aria-errormessage` is a Phase 2 MAY candidate, not an existing invariant. ARIA updates must happen strictly inline with validation generation completions.
 
-## 12. Security and Privacy Constraints
-
-- **Security/Privacy Continuity Rule:** Value-free privacy remains enforced. New features cannot log domain or raw values.
-- **DOM Sinks:** Any vanilla adapter extensions (e.g., error rendering) must continue to strictly use `textContent` to prevent DOM XSS.
-
-## 13. Accessibility Constraints
-
-- **Accessibility Continuity Rule:** Accessibility behavior must be non-destructive. Focus management must not hijack native keyboard navigation.
-- **ARIA Wording:** Phase 1 established `aria-invalid` and `aria-describedby` preservation. `aria-errormessage` is a Phase 2 MAY candidate, not an existing invariant. ARIA updates must happen strictly inline with validation generation completions.
-
-## 14. Phase 2 Slice Roadmap
+## 13. Phase 2 Slice Roadmap
 
 The Phase 2 roadmap follows a strictly sequential recommended execution order to eliminate dependency ambiguity.
 
 ### **P2b — Core: Dynamic Tree Registration Semantics** (FIRST RUNTIME SLICE)
-- **Objective:** Prove test matrix for attach/detach, UI-unmount retention, and explicit logical unregister semantics.
+- **Objective:** Prove contract-first semantics for dynamic logical registration/unregistration while preserving the rule that UI adapter mount/unmount does not affect canonical Form node existence.
 - **Owner:** Core Form Domain.
 - **Dependencies:** None.
-- **Candidate Public API Impact:** Minimal (new `unregister` primitives on Array/Group). No API changes until the contract is proven in a contract-first test matrix.
-- **Tests Required:** Unit, Contract-first semantic matrix.
+- **Candidate Public API Impact:** Minimal new unregister primitives. P2a does NOT authorize any public `active` signal unless P2b contract-first evidence later proves them necessary. Explicit structural registration/unregistration semantics using the smallest possible extension to existing Group/Array APIs.
+- **Acceptance Matrix:**
+  - [ ] UI unmount does not unregister.
+  - [ ] logical unregister excludes node from aggregate values.
+  - [ ] logical unregister excludes node from validation.
+  - [ ] logical unregister excludes node from submission snapshot.
+  - [ ] logical unregister disposes owned resources.
+  - [ ] pending validation becomes non-authoritative/cancelled.
+  - [ ] UI remount of still-registered node preserves state.
+  - [ ] FieldArray UI unmount preserves stable identity.
+  - [ ] FieldArray reorder without UI binding preserves stable identity.
+  - [ ] FieldArray logical remove disposes identity/node resources.
+  - [ ] reset behavior defined.
+  - [ ] reinitialize behavior defined.
+  - [ ] server issue behavior defined.
+  - [ ] 1,000 logical registration/unregistration stress cycles.
+  - [ ] P1l budgets remain green.
+  - [ ] No undefined attach/detach semantics.
 - **Performance Gate:** Before/after construction cost measurements.
-- **Memory/Resource Gate:** Deterministic Core 1,000-cycle attach/detach stress test (0 leaks).
-- **Stop Condition:** `unregister` semantics and FieldArray logical survival are proven, memory is leak-free, and API snapshot updated. 0 unresolved blocking architecture questions.
+- **Memory/Resource Gate:**
+  - **CORE STRUCTURAL STRESS:** 1,000 cycles of: register logical node, exercise representative state, unregister logical node, verify disposal (Assert: 0 residual subscriptions, 0 residual owned Scopes, 0 stale validation commits, 0 outstanding owned timers/controllers where relevant).
+  - **UI LIFECYCLE REGRESSION:** Use existing adapter lifecycle tests to prove: mount adapter, unmount adapter, canonical node survives.
+- **Stop Condition:** 0 unresolved blocking architecture questions. Contract tests pass.
 
 ### **P2c — Core: Cross-Field Validation & Dependencies**
 - **Objective:** Ergonomic APIs for `confirm password`, dependent date ranges, and field dependency tracking.
@@ -223,7 +255,7 @@ The Phase 2 roadmap follows a strictly sequential recommended execution order to
 - **Tests Required:** Full validation suite.
 - **Stop Condition:** Documentation synchronized, Preview readiness confirmed.
 
-## 15. Graduation Criteria for Phase 2
+## 14. Graduation Criteria for Phase 2
 
 Phase 2 concludes when:
 1. Dynamic conditional trees function without memory leaks via explicit `unregister`.
@@ -232,7 +264,7 @@ Phase 2 concludes when:
 4. P1l performance and bundle budgets are met or explicitly justified via ADR.
 5. Scope is strictly defined by the accepted Phase 2 roadmap slices.
 
-## 16. Open Questions
+## 15. Open Questions
 
 1. **Angular Signal Forms vs CVA Priority:** (Non-blocking) Should Signal Forms interoperability entirely replace the need for CVA in v19+?
 2. **React 19 Form Actions:** (Non-blocking) How deeply should the React adapter integrate with native `useActionState` and `<form action={...}>`? Deferred to P2e investigation.

@@ -27,6 +27,7 @@ export type {
   DuplicateSubmitPolicy,
   FieldArray,
   FieldArrayItem,
+  FieldDependenciesDeclaration,
   FieldEqualityFn,
   FieldGroup,
   FieldIssue,

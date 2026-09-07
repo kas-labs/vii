@@ -187,6 +187,10 @@ try {
     "package/dist/parsers/types.d.ts.map",
     "package/dist/parsers/types.js",
     "package/dist/parsers/types.js.map",
+    "package/dist/validation/dependencies.d.ts",
+    "package/dist/validation/dependencies.d.ts.map",
+    "package/dist/validation/dependencies.js",
+    "package/dist/validation/dependencies.js.map",
     "package/dist/validation/executor.d.ts",
     "package/dist/validation/executor.d.ts.map",
     "package/dist/validation/executor.js",
@@ -442,7 +446,7 @@ export async function runFormTreeScenario() {
   const emptySchemaRule = standardSchema(emptySchema as never);
   let emptySchemaFailedClosed = false;
   try {
-    emptySchemaRule("x", { trigger: "manual" });
+    emptySchemaRule("x", { trigger: "manual", get: () => undefined });
   } catch {
     emptySchemaFailedClosed = true;
   }

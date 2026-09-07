@@ -1,3 +1,4 @@
+import type { FieldState } from "../core/types.js";
 import type { FormIssueBase, IssueSource, ParseIssue } from "../parsers/types.js";
 import type { ServerIssue } from "../submission/types.js";
 
@@ -61,6 +62,15 @@ export interface ValidationRuleContext {
    * AbortSignal tied to this validation revision for async cancellation.
    */
   readonly signal?: AbortSignal | undefined;
+
+  /**
+   * Retrieves the domain value of a declared dependency captured at the start of this validation wave.
+   * Returns undefined if the dependency node is absent/unregistered or disposed.
+   * Throws if the target field is not in the declared dependencies list of this field.
+   */
+  readonly get: <TDepValue, TDepRaw = TDepValue>(
+    field: FieldState<TDepValue, TDepRaw>,
+  ) => TDepValue | undefined;
 }
 
 /**

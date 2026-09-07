@@ -94,13 +94,15 @@ describe("P1e: Standard Schema v1 Validation Bridge", () => {
   });
 
   describe("Fail-Closed Boundary Enforcement", () => {
+    const mockContext = { trigger: "manual" as const, get: () => undefined };
+
     it("fails closed on non-object / null schema results", async () => {
       const invalidNullSchema = createMockSchema<string>(
         () => null as unknown as StandardSchemaV1.Result<string>,
       );
       const rule = standardSchema(invalidNullSchema);
 
-      expect(() => rule("test", { trigger: "manual" })).toThrow(TypeError);
+      expect(() => rule("test", mockContext)).toThrow(TypeError);
     });
 
     it("fails closed on primitive schema results", () => {
@@ -109,7 +111,7 @@ describe("P1e: Standard Schema v1 Validation Bridge", () => {
       );
       const rule = standardSchema(primitiveSchema);
 
-      expect(() => rule("test", { trigger: "manual" })).toThrow(TypeError);
+      expect(() => rule("test", mockContext)).toThrow(TypeError);
     });
 
     it("fails closed on empty object result (sync)", () => {
@@ -118,7 +120,7 @@ describe("P1e: Standard Schema v1 Validation Bridge", () => {
       );
       const rule = standardSchema(emptySchema);
 
-      expect(() => rule("test", { trigger: "manual" })).toThrow(TypeError);
+      expect(() => rule("test", mockContext)).toThrow(TypeError);
     });
 
     it("fails closed on empty object result (async)", async () => {
@@ -127,9 +129,9 @@ describe("P1e: Standard Schema v1 Validation Bridge", () => {
       );
       const rule = standardSchema(emptyAsyncSchema);
 
-      await expect(
-        rule("test", { trigger: "manual" }) as Promise<readonly FieldIssue[]>,
-      ).rejects.toThrow(TypeError);
+      await expect(rule("test", mockContext) as Promise<readonly FieldIssue[]>).rejects.toThrow(
+        TypeError,
+      );
     });
 
     it("fails closed on non-array issues property (sync)", () => {
@@ -138,7 +140,7 @@ describe("P1e: Standard Schema v1 Validation Bridge", () => {
       );
       const rule = standardSchema(malformedIssuesSchema);
 
-      expect(() => rule("test", { trigger: "manual" })).toThrow(TypeError);
+      expect(() => rule("test", mockContext)).toThrow(TypeError);
     });
 
     it("fails closed on non-array issues property (async)", async () => {
@@ -148,9 +150,9 @@ describe("P1e: Standard Schema v1 Validation Bridge", () => {
       );
       const rule = standardSchema(malformedAsyncSchema);
 
-      await expect(
-        rule("test", { trigger: "manual" }) as Promise<readonly FieldIssue[]>,
-      ).rejects.toThrow(TypeError);
+      await expect(rule("test", mockContext) as Promise<readonly FieldIssue[]>).rejects.toThrow(
+        TypeError,
+      );
     });
 
     it("fails closed on malformed issue missing required message", () => {
@@ -159,7 +161,7 @@ describe("P1e: Standard Schema v1 Validation Bridge", () => {
       }));
       const rule = standardSchema(malformedIssueSchema);
 
-      expect(() => rule("test", { trigger: "manual" })).toThrow(TypeError);
+      expect(() => rule("test", mockContext)).toThrow(TypeError);
     });
 
     it("fails closed on malformed issue path", () => {

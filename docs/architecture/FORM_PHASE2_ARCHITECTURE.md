@@ -161,6 +161,14 @@ The architecture defines exactly three conceptually separate operations:
 **Decision:** Both explicitly REJECTED.
 **Rationale:** Validation handles async requirements. True async parsing is an enrichment side-effect. External state sync (Redux/URL) introduces lifecycle ambiguity; consumers must implement unidirectional observers from the Form.
 
+### ADR P2-7: Explicit Cross-Field Validation & Dependency Tracking
+**Decision:** Implement cross-field validation via explicit field dependency declarations (`dependencies: [fieldA] | (self) => [fieldA]`) and snapshot context reads (`ctx.get(depField)`). Hidden signal interception or global dependency graphs are rejected.
+**Rationale:**
+1. **Explicit Ownership:** Issues belong exclusively to the node evaluating the validation rule. Cross-field rules do not pollute sibling or parent issues.
+2. **Deterministic Wave Execution:** Changes to dependencies trigger a topological validation wave using Kahn's algorithm, executing downstream dependents dependencies-first with 0 duplicate executions per wave.
+3. **Cycle & Leak Prevention:** Direct and transitive cycles are detected during registration/validation and throw descriptive errors. Disposed fields cleanly sever dependent registrations without resurrection.
+4. **Consistency & Race Safety:** Asynchronous validation reads an immutable snapshot captured at the start of the validation run via `ctx.get()`, preventing race conditions during in-flight mutations.
+
 ## 11. Compatibility Policy (Preview Phase)
 
 `@vii-labs/form` is a **Preview Candidate** (`0.1.0-experimental.1`).

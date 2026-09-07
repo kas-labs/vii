@@ -1,3 +1,4 @@
+import type { FieldState } from "../core/types.js";
 import { sanitizeValidationIssue, type ValidationRevisionController } from "./revision.js";
 import type {
   AnyValidationRule,
@@ -43,6 +44,8 @@ export function executeFieldValidation<TValue>(
   controller: AbortController,
   revisionCtrl: ValidationRevisionController,
   callbacks: ValidationHostCallbacks,
+  dependencyValues?: ReadonlyMap<FieldState<unknown, unknown>, unknown>,
+  declaredDependencies?: readonly FieldState<unknown, unknown>[],
 ): Promise<readonly FieldIssue[]> | readonly FieldIssue[] {
   if (rules.length === 0) {
     revisionCtrl.cancelActive();
@@ -53,10 +56,27 @@ export function executeFieldValidation<TValue>(
 
   const collectedSyncIssues: ValidationIssue[] = [];
   const pendingAsyncCalls: Array<Promise<unknown>> = [];
+  const declaredDepsSet = declaredDependencies ? new Set(declaredDependencies) : null;
+
+  const get = <TDepValue, TDepRaw = TDepValue>(
+    field: FieldState<TDepValue, TDepRaw>,
+  ): TDepValue | undefined => {
+    if (!declaredDepsSet || !declaredDepsSet.has(field as FieldState<unknown, unknown>)) {
+      throw new Error(
+        "Cannot read field value from validation context: field is not declared as a dependency",
+      );
+    }
+    return dependencyValues?.get(field as FieldState<unknown, unknown>) as TDepValue | undefined;
+  };
+
+  const ctx: ValidationRuleContext = {
+    trigger,
+    signal: controller.signal,
+    get,
+  };
 
   for (let i = 0; i < rules.length; i++) {
     const rule = rules[i]!;
-    const ctx: ValidationRuleContext = { trigger, signal: controller.signal };
     const res = rule(value, ctx as never);
 
     if (isPromiseLike(res)) {

@@ -21,9 +21,9 @@
       "maxBrotliBytes": 12000
     },
     "createFieldOnly": {
-      "maxMinifiedBytes": 18000,
-      "maxGzipBytes": 5000,
-      "maxBrotliBytes": 4500
+      "maxMinifiedBytes": 22000,
+      "maxGzipBytes": 6000,
+      "maxBrotliBytes": 5000
     },
     "reactAdapter": {
       "maxMinifiedBytes": 7000,

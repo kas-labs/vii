@@ -37,6 +37,73 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-09-08 01:15 CEST | Core: Cross-Field Validation & Dependencies (P2c)
+
+Status: completed
+Branch: `feat/form-p2c-cross-field-validation`
+PR: not opened
+
+### Scope
+
+- Execute P2c — Core: Cross-Field Validation & Dependencies for `@vii-labs/form`.
+- Provide explicit field-level dependency declarations (`dependencies: [fieldA]` or `(self) => [fieldA]`).
+- Expose `ctx.get(depField)` to synchronous and asynchronous validation rules, returning immutable snapshots captured at wave start.
+- Implement topological validation waves using Kahn's algorithm, ensuring downstream dependents execute dependencies-first with 0 duplicate executions per wave.
+- Enforce direct and transitive cycle detection throwing descriptive value-free errors.
+- Enforce foreign form tree rejection and disposed node rejection.
+- Maintain monotonic revision tracking and AbortSignal cancellation under rapid dependency mutations.
+- Verify dynamic registration (P2b) integration, ensuring unregistering/disposing fields cleanly severs edges without resurrection.
+- Verify 0 residual subscriptions across 500 create/mutate/dispose cycles.
+- Verify 41/41 HARD performance and bundle budgets, 8 packed consumer configurations, real browser test suite, and clean typecheck/lint.
+- Zero changes to `@vii-labs/core`, 0 new root runtime exports, package remains private with deferred publication.
+
+### Changes
+
+- `packages/form/src/validation/types.ts`: Extended `ValidationRuleContext` with `readonly get: <TDepValue, TDepRaw = TDepValue>(field: FieldState<TDepValue, TDepRaw>) => TDepValue | undefined`.
+- `packages/form/src/validation/dependencies.ts` (NEW): Implemented `validateAndDeduplicateDependencies`, cycle detection (`isReachable`), immutable `captureDependencySnapshot`, topological `collectValidationWave` (Kahn's algorithm), and `executeDependencyWave`.
+- `packages/form/src/validation/executor.ts`: Updated `executeFieldValidation` to accept snapshot maps and declared dependencies, enforcing fail-closed errors if undeclared fields are accessed via `ctx.get()`.
+- `packages/form/src/core/types.ts`: Added `FieldDependenciesDeclaration` and `dependencies` property to `ParserlessCreateFieldOptions` and `ParsedCreateFieldOptions`.
+- `packages/form/src/core/field-validation-runtime.ts`: Added `scheduleDependentValidation` respecting change trigger and validation status, and passing dependency snapshots to validation executor.
+- `packages/form/src/core/field-parserless.ts` & `packages/form/src/core/field-parsed.ts`: Wired dependency registration, lazy evaluation for self-referential factory functions, automatic wave dispatch on `setValue`/`setRawValue`, and cleanup on disposal.
+- `packages/form/src/core/internal.ts`: Extended `FormNodeInternal` with `dependencies`, `dependents`, and `treeRoot`, validating against foreign form tree cross-dependencies on adoption.
+- `packages/form/src/index.ts` & `packages/form/api-surface.json`: Exported `FieldDependenciesDeclaration` and updated machine-readable public API snapshot.
+- `packages/form/README.md`: Added Cross-Field Dependencies documentation and password confirmation example.
+- `docs/architecture/FORM_PHASE2_ARCHITECTURE.md`: Added ADR P2-7: Explicit Cross-Field Validation & Dependency Tracking.
+- `PROJECT_STATE.md`: Updated durable state with P2b and P2c summaries.
+- Test suites added:
+  - `packages/form/test/unit/cross-field-validation.contract.test.ts` (9 tests)
+  - `packages/form/test/unit/cross-field-validation.dependencies.test.ts` (5 tests)
+  - `packages/form/test/unit/cross-field-validation.races.test.ts` (3 tests)
+  - `packages/form/test/unit/cross-field-validation.resources.test.ts` (1 test)
+  - `packages/form/test/unit/type-tests/cross-field.type-test.ts` (2 tests)
+
+### Validation
+
+- `pnpm format:check`: run (passed)
+- `pnpm lint`: run (passed across workspace)
+- `pnpm typecheck`: run (passed across workspace)
+- `pnpm test`: run (passed across workspace, form package: 32 test files, 427 tests passing)
+- `pnpm build`: run (passed)
+- `pnpm nx validate-package form`: run (passed, all 8 packed consumer configurations verified)
+- `pnpm test:browser`: run (passed, 31 browser scenarios passing)
+- `pnpm nx performance form`: run (passed, 41/41 HARD performance and bundle budgets passing)
+- `pnpm validate`: run (passed)
+- `git diff --check`: run (passed)
+
+### Architecture / compatibility
+
+- Zero changes to `@vii-labs/core`.
+- Zero new root runtime factory exports.
+- Public named type `FieldDependenciesDeclaration` added to `@vii-labs/form` root entrypoint.
+- 100% backward compatible for dependency-free fields.
+- 41/41 performance budgets preserved; tree-shaking intact.
+- Package remains private (`"private": true`, stability `"preview"`).
+
+### Remaining / recovery
+
+- Open single Draft PR against `main` for P2c and verify remote CI.
+- Do NOT merge PR. Phase 2d remains next roadmap item.
+
 ## 2026-09-06 02:05 CEST | Clarify Versioning Contract and Release Gate Sequencing (P1m)
 
 Status: completed

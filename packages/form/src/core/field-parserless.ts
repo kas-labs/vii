@@ -1,16 +1,33 @@
 import { batch, computed, createScope, state } from "@vii-labs/core";
 import type { ParseIssue, ParseStatus } from "../parsers/types.js";
 import type { ServerIssue } from "../submission/types.js";
+import {
+  executeDependencyWave,
+  validateAndDeduplicateDependencies,
+} from "../validation/dependencies.js";
 import type { FieldIssue, ValidationIssue, ValidationStatus } from "../validation/types.js";
 import type { InternalFieldBaseline } from "./baseline-types.js";
 import { createValidationRuntime, readSharedConfig } from "./field-validation-runtime.js";
-import { attachInternalNode, type FormNodeInternal, type NodeOwnership } from "./internal.js";
+import {
+  attachInternalNode,
+  getInternalNode,
+  type FormNodeInternal,
+  type NodeOwnership,
+} from "./internal.js";
 import type { FieldState, ParserlessCreateFieldOptions } from "./types.js";
 
 export function createParserlessField<TValue>(
   options: ParserlessCreateFieldOptions<TValue>,
 ): FieldState<TValue, TValue> {
-  const config = readSharedConfig(options);
+  let validatedDependencies: readonly FieldState<unknown, unknown>[] = [];
+  const getDependencies = (): readonly FieldState<unknown, unknown>[] => {
+    if (typeof options.dependencies === "function") {
+      const rawDeps = options.dependencies(fieldState);
+      validatedDependencies = validateAndDeduplicateDependencies(fieldState, rawDeps);
+    }
+    return validatedDependencies;
+  };
+  const config = readSharedConfig(options, getDependencies);
   const initialValue = options.initialValue;
 
   let disposed = false;
@@ -56,17 +73,18 @@ export function createParserlessField<TValue>(
   );
   const invalidComputed = fieldScope.run(() => computed(() => !validComputed.get()));
 
-  const { revisionCtrl, scheduleValidation, validate } = createValidationRuntime(
-    config,
-    valueState,
-    parseStatusState,
-    issuesState,
-    validationIssuesState,
-    validationStatusState,
-    pendingState,
-    syncCombinedIssues,
-    () => disposed,
-  );
+  const { revisionCtrl, scheduleValidation, scheduleDependentValidation, validate } =
+    createValidationRuntime(
+      config,
+      valueState,
+      parseStatusState,
+      issuesState,
+      validationIssuesState,
+      validationStatusState,
+      pendingState,
+      syncCombinedIssues,
+      () => disposed,
+    );
 
   let detachFromParent: (() => void) | undefined;
   const performDisposal = (): void => {
@@ -74,6 +92,17 @@ export function createParserlessField<TValue>(
     disposed = true;
     ownership = "disposed";
     internal.ownership = "disposed";
+    if (internal.dependencies) {
+      for (let i = 0; i < internal.dependencies.length; i++) {
+        const dep = internal.dependencies[i]!;
+        const depInternal = getInternalNode(dep);
+        depInternal?.dependents?.delete(fieldState);
+      }
+      internal.dependencies = [];
+    }
+    if (internal.dependents) {
+      internal.dependents.clear();
+    }
     revisionCtrl.cancelActive();
     if (pendingState.get()) pendingState.set(false);
     detachFromParent?.();
@@ -99,6 +128,9 @@ export function createParserlessField<TValue>(
     internal.notifyMutation?.();
     if (!disposed && config.rules.length > 0 && config.triggerSet.has("change"))
       scheduleValidation("change");
+    if (!disposed) {
+      executeDependencyWave(fieldState);
+    }
   };
 
   const setRawValue = (raw: TValue): void => {
@@ -116,6 +148,9 @@ export function createParserlessField<TValue>(
     internal.notifyMutation?.();
     if (!disposed && config.rules.length > 0 && config.triggerSet.has("change"))
       scheduleValidation("change");
+    if (!disposed) {
+      executeDependencyWave(fieldState);
+    }
   };
 
   const reset = (): void => {
@@ -181,11 +216,43 @@ export function createParserlessField<TValue>(
     },
   };
 
+  if (typeof options.dependencies === "function") {
+    try {
+      const eagerDeps = options.dependencies(fieldState);
+      validatedDependencies = validateAndDeduplicateDependencies(fieldState, eagerDeps);
+      for (let i = 0; i < validatedDependencies.length; i++) {
+        const dep = validatedDependencies[i]!;
+        const depInternal = getInternalNode(dep);
+        if (depInternal) {
+          if (!depInternal.dependents) depInternal.dependents = new Set();
+          depInternal.dependents.add(fieldState);
+        }
+      }
+    } catch (e) {
+      if (e instanceof Error && e.message.includes("Validation self-dependency is not allowed")) {
+        throw e;
+      }
+    }
+  } else {
+    validatedDependencies = validateAndDeduplicateDependencies(fieldState, options.dependencies);
+    for (let i = 0; i < validatedDependencies.length; i++) {
+      const dep = validatedDependencies[i]!;
+      const depInternal = getInternalNode(dep);
+      if (depInternal) {
+        if (!depInternal.dependents) depInternal.dependents = new Set();
+        depInternal.dependents.add(fieldState);
+      }
+    }
+  }
+
   const internal: FormNodeInternal<InternalFieldBaseline<TValue, TValue>> = {
     kind: "field",
     scope: fieldScope,
     ownership,
     assertActive,
+    dependencies: validatedDependencies,
+    dependents: new Set(),
+    scheduleDependentValidation,
     reinitialize: (nextBaseline) => {
       assertActive();
       revisionCtrl.cancelActive();

@@ -41,7 +41,7 @@ PR: <number or not opened>
 
 Status: completed
 Branch: `feat/form-p2c-cross-field-validation`
-PR: not opened
+PR: https://github.com/kas-labs/vii/pull/196 (Draft)
 
 ### Scope
 

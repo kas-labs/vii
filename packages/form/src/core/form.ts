@@ -1,9 +1,10 @@
-import { batch, computed, createScope } from "@vii-labs/core";
+import { batch, computed, createScope, state } from "@vii-labs/core";
 import { SubmissionCoordinator } from "../submission/state-machine.js";
 import type { FieldIssue, ValidationTriggerMode } from "../validation/types.js";
 import type { FormReinitializeInput } from "./baseline-types.js";
 import {
   adoptChildNodes,
+  adoptChildNode,
   attachInternalNode,
   safeDefineProperty,
   type FormNodeInternal,
@@ -16,6 +17,7 @@ import type {
   FormInstance,
   FormRawValues,
   FormValues,
+  OptionalKeys,
 } from "./types.js";
 
 /**
@@ -29,8 +31,9 @@ import type {
 export function createForm<TFields extends FormFieldsRecord>(
   options: CreateFormOptions<TFields>,
 ): FormInstance<TFields> {
-  const { fields, scope } = options;
-  const fieldKeys = Object.keys(fields);
+  const { scope } = options;
+  const fields = { ...options.fields } as TFields;
+  const fieldKeysState = state<readonly string[]>(Object.keys(fields));
   let disposed = false;
   let ownership: NodeOwnership = scope ? "external-scope" : "standalone";
 
@@ -43,9 +46,16 @@ export function createForm<TFields extends FormFieldsRecord>(
   const formScope = scope ? scope.createChild({ name: "form" }) : createScope({ name: "form" });
   let treeMutationRevision = 0;
 
-  adoptChildNodes(formScope, fields, fieldKeys, () => {
+  const detachFns = new Map<string, () => void>();
+
+  const initialDetachFns = adoptChildNodes(formScope, fields, fieldKeysState.get(), () => {
     ++treeMutationRevision;
   });
+
+  const keys = fieldKeysState.get();
+  for (let i = 0; i < keys.length; i++) {
+    detachFns.set(keys[i]!, initialDetachFns[i]!);
+  }
 
   const coordinator = new SubmissionCoordinator<FormValues<TFields>>(formScope, {
     isDisposed: () => disposed,
@@ -86,8 +96,8 @@ export function createForm<TFields extends FormFieldsRecord>(
   const valueComputed = formScope.run(() =>
     computed(() => {
       const result: Record<string, unknown> = {};
-      for (let i = 0; i < fieldKeys.length; i++) {
-        const key = fieldKeys[i]!;
+      for (let i = 0; i < fieldKeysState.get().length; i++) {
+        const key = fieldKeysState.get()[i]!;
         safeDefineProperty(result, key, fields[key]!.value.get());
       }
       return result as FormValues<TFields>;
@@ -97,8 +107,8 @@ export function createForm<TFields extends FormFieldsRecord>(
   const rawValueComputed = formScope.run(() =>
     computed(() => {
       const result: Record<string, unknown> = {};
-      for (let i = 0; i < fieldKeys.length; i++) {
-        const key = fieldKeys[i]!;
+      for (let i = 0; i < fieldKeysState.get().length; i++) {
+        const key = fieldKeysState.get()[i]!;
         safeDefineProperty(result, key, fields[key]!.rawValue.get());
       }
       return result as FormRawValues<TFields>;
@@ -107,8 +117,8 @@ export function createForm<TFields extends FormFieldsRecord>(
 
   const dirtyComputed = formScope.run(() =>
     computed(() => {
-      for (let i = 0; i < fieldKeys.length; i++) {
-        if (fields[fieldKeys[i]!]!.dirty.get()) {
+      for (let i = 0; i < fieldKeysState.get().length; i++) {
+        if (fields[fieldKeysState.get()[i]!]!.dirty.get()) {
           return true;
         }
       }
@@ -118,8 +128,8 @@ export function createForm<TFields extends FormFieldsRecord>(
 
   const touchedComputed = formScope.run(() =>
     computed(() => {
-      for (let i = 0; i < fieldKeys.length; i++) {
-        if (fields[fieldKeys[i]!]!.touched.get()) {
+      for (let i = 0; i < fieldKeysState.get().length; i++) {
+        if (fields[fieldKeysState.get()[i]!]!.touched.get()) {
           return true;
         }
       }
@@ -129,8 +139,8 @@ export function createForm<TFields extends FormFieldsRecord>(
 
   const pendingComputed = formScope.run(() =>
     computed(() => {
-      for (let i = 0; i < fieldKeys.length; i++) {
-        if (fields[fieldKeys[i]!]!.pending.get()) {
+      for (let i = 0; i < fieldKeysState.get().length; i++) {
+        if (fields[fieldKeysState.get()[i]!]!.pending.get()) {
           return true;
         }
       }
@@ -143,8 +153,8 @@ export function createForm<TFields extends FormFieldsRecord>(
       if (coordinator.formServerIssuesState.get().length > 0) {
         return false;
       }
-      for (let i = 0; i < fieldKeys.length; i++) {
-        if (!fields[fieldKeys[i]!]!.valid.get()) {
+      for (let i = 0; i < fieldKeysState.get().length; i++) {
+        if (!fields[fieldKeysState.get()[i]!]!.valid.get()) {
           return false;
         }
       }
@@ -157,8 +167,8 @@ export function createForm<TFields extends FormFieldsRecord>(
   const issuesComputed = formScope.run(() =>
     computed(() => {
       const collected: FieldIssue[] = [];
-      for (let i = 0; i < fieldKeys.length; i++) {
-        const key = fieldKeys[i]!;
+      for (let i = 0; i < fieldKeysState.get().length; i++) {
+        const key = fieldKeysState.get()[i]!;
         const childIssues = fields[key]!.issues.get();
         for (let j = 0; j < childIssues.length; j++) {
           const iss = childIssues[j]!;
@@ -182,8 +192,8 @@ export function createForm<TFields extends FormFieldsRecord>(
   ): Promise<readonly FieldIssue[]> | readonly FieldIssue[] => {
     assertActive();
     const promises: Promise<readonly FieldIssue[]>[] = [];
-    for (let i = 0; i < fieldKeys.length; i++) {
-      const child = fields[fieldKeys[i]!]!;
+    for (let i = 0; i < fieldKeysState.get().length; i++) {
+      const child = fields[fieldKeysState.get()[i]!]!;
       const res = child.validate(trigger);
       if (res && typeof (res as Promise<unknown>).then === "function") {
         promises.push(res as Promise<readonly FieldIssue[]>);
@@ -199,19 +209,68 @@ export function createForm<TFields extends FormFieldsRecord>(
     assertActive();
     batch(() => {
       coordinator.reset();
-      for (let i = 0; i < fieldKeys.length; i++) {
-        fields[fieldKeys[i]!]!.reset();
+      for (let i = 0; i < fieldKeysState.get().length; i++) {
+        fields[fieldKeysState.get()[i]!]!.reset();
       }
     });
   };
 
   const reinitialize = (nextBaseline: FormReinitializeInput<TFields>): void => {
     assertActive();
-    const plan = prepareReinitializePlan(fields, fieldKeys, nextBaseline);
+    const plan = prepareReinitializePlan(fields, fieldKeysState.get(), nextBaseline);
     batch(() => {
       coordinator.reset();
       commitReinitializePlan(plan);
     });
+  };
+
+  const register = <K extends OptionalKeys<TFields>>(
+    key: K,
+    node: NonNullable<TFields[K]>,
+  ): void => {
+    assertActive();
+    const strKey = String(key);
+    const keys = fieldKeysState.get();
+    if (keys.includes(strKey)) {
+      throw new Error(`Duplicate child key "${strKey}" in form`);
+    }
+
+    const { detach: childDetach } = adoptChildNode(formScope, node, strKey, () => {
+      ++treeMutationRevision;
+    });
+
+    batch(() => {
+      fields[key] = node as TFields[K];
+      const nextKeys = [...keys, strKey];
+      fieldKeysState.set(Object.freeze(nextKeys));
+      detachFns.set(strKey, childDetach);
+    });
+
+    ++treeMutationRevision;
+  };
+
+  const unregister = <K extends OptionalKeys<TFields>>(key: K): void => {
+    assertActive();
+    const strKey = String(key);
+    const keys = fieldKeysState.get();
+    const index = keys.indexOf(strKey);
+    if (index === -1) return;
+
+    const detach = detachFns.get(strKey);
+
+    batch(() => {
+      if (detach) {
+        detach();
+        detachFns.delete(strKey);
+      }
+
+      delete fields[key];
+      const nextKeys = [...keys];
+      nextKeys.splice(index, 1);
+      fieldKeysState.set(Object.freeze(nextKeys));
+    });
+
+    ++treeMutationRevision;
   };
 
   const formInstance: FormInstance<TFields> = {
@@ -241,6 +300,8 @@ export function createForm<TFields extends FormFieldsRecord>(
     cancelSubmit: () => coordinator.cancelSubmit(),
     reset,
     reinitialize,
+    register,
+    unregister,
     dispose,
   };
 
@@ -250,7 +311,8 @@ export function createForm<TFields extends FormFieldsRecord>(
     ownership,
     assertActive,
     reinitialize,
-    getDirectChildNodes: () => fieldKeys.map((k) => fields[k]!),
+    getDirectChildNodes: () => fieldKeysState.get().map((k) => fields[k]!),
+    getOwnershipHandleCount: () => detachFns.size,
     disposeFromOwner: () => {
       performDisposal();
     },

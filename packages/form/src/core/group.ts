@@ -4,6 +4,7 @@ import type { FieldIssue, ValidationTriggerMode } from "../validation/types.js";
 import type { InternalGroupReinitializeInput } from "./baseline-types.js";
 import {
   adoptChildNodes,
+  adoptChildNode,
   attachInternalNode,
   safeDefineProperty,
   type FormNodeInternal,
@@ -16,6 +17,7 @@ import type {
   FormFieldsRecord,
   FormRawValues,
   FormValues,
+  OptionalKeys,
 } from "./types.js";
 
 /**
@@ -28,8 +30,9 @@ import type {
 export function createFieldGroup<TFields extends FormFieldsRecord>(
   options: CreateFieldGroupOptions<TFields>,
 ): FieldGroup<TFields> {
-  const { fields, scope } = options;
-  const fieldKeys = Object.keys(fields);
+  const { scope } = options;
+  const fields = { ...options.fields } as TFields;
+  const fieldKeysState = state<readonly string[]>(Object.keys(fields));
   let disposed = false;
   let ownership: NodeOwnership = scope ? "external-scope" : "standalone";
 
@@ -42,9 +45,16 @@ export function createFieldGroup<TFields extends FormFieldsRecord>(
   const groupScope = scope ? scope.createChild({ name: "group" }) : createScope({ name: "group" });
   const serverIssuesState = state<readonly ServerIssue[]>([]);
 
-  adoptChildNodes(groupScope, fields, fieldKeys, () => {
+  const detachFns = new Map<string, () => void>();
+
+  const initialDetachFns = adoptChildNodes(groupScope, fields, fieldKeysState.get(), () => {
     internal.notifyMutation?.();
   });
+
+  const keys = fieldKeysState.get();
+  for (let i = 0; i < keys.length; i++) {
+    detachFns.set(keys[i]!, initialDetachFns[i]!);
+  }
 
   let detachFromParent: (() => void) | undefined;
 
@@ -75,8 +85,8 @@ export function createFieldGroup<TFields extends FormFieldsRecord>(
   const valueComputed = groupScope.run(() =>
     computed(() => {
       const result: Record<string, unknown> = {};
-      for (let i = 0; i < fieldKeys.length; i++) {
-        const key = fieldKeys[i]!;
+      for (let i = 0; i < fieldKeysState.get().length; i++) {
+        const key = fieldKeysState.get()[i]!;
         safeDefineProperty(result, key, fields[key]!.value.get());
       }
       return result as FormValues<TFields>;
@@ -86,8 +96,8 @@ export function createFieldGroup<TFields extends FormFieldsRecord>(
   const rawValueComputed = groupScope.run(() =>
     computed(() => {
       const result: Record<string, unknown> = {};
-      for (let i = 0; i < fieldKeys.length; i++) {
-        const key = fieldKeys[i]!;
+      for (let i = 0; i < fieldKeysState.get().length; i++) {
+        const key = fieldKeysState.get()[i]!;
         safeDefineProperty(result, key, fields[key]!.rawValue.get());
       }
       return result as FormRawValues<TFields>;
@@ -96,8 +106,8 @@ export function createFieldGroup<TFields extends FormFieldsRecord>(
 
   const dirtyComputed = groupScope.run(() =>
     computed(() => {
-      for (let i = 0; i < fieldKeys.length; i++) {
-        if (fields[fieldKeys[i]!]!.dirty.get()) {
+      for (let i = 0; i < fieldKeysState.get().length; i++) {
+        if (fields[fieldKeysState.get()[i]!]!.dirty.get()) {
           return true;
         }
       }
@@ -107,8 +117,8 @@ export function createFieldGroup<TFields extends FormFieldsRecord>(
 
   const touchedComputed = groupScope.run(() =>
     computed(() => {
-      for (let i = 0; i < fieldKeys.length; i++) {
-        if (fields[fieldKeys[i]!]!.touched.get()) {
+      for (let i = 0; i < fieldKeysState.get().length; i++) {
+        if (fields[fieldKeysState.get()[i]!]!.touched.get()) {
           return true;
         }
       }
@@ -118,8 +128,8 @@ export function createFieldGroup<TFields extends FormFieldsRecord>(
 
   const pendingComputed = groupScope.run(() =>
     computed(() => {
-      for (let i = 0; i < fieldKeys.length; i++) {
-        if (fields[fieldKeys[i]!]!.pending.get()) {
+      for (let i = 0; i < fieldKeysState.get().length; i++) {
+        if (fields[fieldKeysState.get()[i]!]!.pending.get()) {
           return true;
         }
       }
@@ -132,8 +142,8 @@ export function createFieldGroup<TFields extends FormFieldsRecord>(
       if (serverIssuesState.get().length > 0) {
         return false;
       }
-      for (let i = 0; i < fieldKeys.length; i++) {
-        if (!fields[fieldKeys[i]!]!.valid.get()) {
+      for (let i = 0; i < fieldKeysState.get().length; i++) {
+        if (!fields[fieldKeysState.get()[i]!]!.valid.get()) {
           return false;
         }
       }
@@ -146,8 +156,8 @@ export function createFieldGroup<TFields extends FormFieldsRecord>(
   const issuesComputed = groupScope.run(() =>
     computed(() => {
       const collected: FieldIssue[] = [];
-      for (let i = 0; i < fieldKeys.length; i++) {
-        const key = fieldKeys[i]!;
+      for (let i = 0; i < fieldKeysState.get().length; i++) {
+        const key = fieldKeysState.get()[i]!;
         const childIssues = fields[key]!.issues.get();
         for (let j = 0; j < childIssues.length; j++) {
           const iss = childIssues[j]!;
@@ -171,8 +181,8 @@ export function createFieldGroup<TFields extends FormFieldsRecord>(
   ): Promise<readonly FieldIssue[]> | readonly FieldIssue[] => {
     assertActive();
     const promises: Promise<readonly FieldIssue[]>[] = [];
-    for (let i = 0; i < fieldKeys.length; i++) {
-      const child = fields[fieldKeys[i]!]!;
+    for (let i = 0; i < fieldKeysState.get().length; i++) {
+      const child = fields[fieldKeysState.get()[i]!]!;
       const res = child.validate(trigger);
       if (res && typeof (res as Promise<unknown>).then === "function") {
         promises.push(res as Promise<readonly FieldIssue[]>);
@@ -188,15 +198,64 @@ export function createFieldGroup<TFields extends FormFieldsRecord>(
     assertActive();
     batch(() => {
       serverIssuesState.set([]);
-      for (let i = 0; i < fieldKeys.length; i++) {
-        fields[fieldKeys[i]!]!.reset();
+      for (let i = 0; i < fieldKeysState.get().length; i++) {
+        fields[fieldKeysState.get()[i]!]!.reset();
       }
     });
   };
 
+  const register = <K extends OptionalKeys<TFields>>(
+    key: K,
+    node: NonNullable<TFields[K]>,
+  ): void => {
+    assertActive();
+    const strKey = String(key);
+    const keys = fieldKeysState.get();
+    if (keys.includes(strKey)) {
+      throw new Error(`Duplicate child key "${strKey}" in group`);
+    }
+
+    const { detach: childDetach } = adoptChildNode(groupScope, node, strKey, () => {
+      internal.notifyMutation?.();
+    });
+
+    batch(() => {
+      fields[key] = node as TFields[K];
+      const nextKeys = [...keys, strKey];
+      fieldKeysState.set(Object.freeze(nextKeys));
+      detachFns.set(strKey, childDetach);
+    });
+
+    internal.notifyMutation?.();
+  };
+
+  const unregister = <K extends OptionalKeys<TFields>>(key: K): void => {
+    assertActive();
+    const strKey = String(key);
+    const keys = fieldKeysState.get();
+    const index = keys.indexOf(strKey);
+    if (index === -1) return; // Idempotent teardown
+
+    const detach = detachFns.get(strKey);
+
+    batch(() => {
+      if (detach) {
+        detach();
+        detachFns.delete(strKey);
+      }
+
+      delete fields[key];
+      const nextKeys = [...keys];
+      nextKeys.splice(index, 1);
+      fieldKeysState.set(Object.freeze(nextKeys));
+    });
+
+    internal.notifyMutation?.();
+  };
+
   const reinitialize = (nextBaseline: InternalGroupReinitializeInput<TFields>): void => {
     assertActive();
-    const plan = prepareReinitializePlan(fields, fieldKeys, nextBaseline);
+    const plan = prepareReinitializePlan(fields, fieldKeysState.get(), nextBaseline);
     batch(() => {
       serverIssuesState.set([]);
       commitReinitializePlan(plan);
@@ -225,6 +284,8 @@ export function createFieldGroup<TFields extends FormFieldsRecord>(
     },
     validate,
     reset,
+    register,
+    unregister,
     dispose,
   };
 
@@ -234,7 +295,9 @@ export function createFieldGroup<TFields extends FormFieldsRecord>(
     ownership,
     assertActive,
     reinitialize,
-    getDirectChildNodes: () => fieldKeys.map((k) => fields[k]!),
+
+    getDirectChildNodes: () => fieldKeysState.get().map((k) => fields[k]!),
+    getOwnershipHandleCount: () => detachFns.size,
     disposeFromOwner: () => {
       performDisposal();
     },

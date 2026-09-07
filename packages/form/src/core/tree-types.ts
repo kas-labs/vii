@@ -25,6 +25,15 @@ export type FormNode = FieldState<any, any> | FieldGroup<any> | FieldArray<any> 
 export type FormFieldsRecord = Record<string, any>;
 
 /**
+ * Extracts the keys of T that are structurally optional (or arbitrarily dynamic).
+ */
+export type OptionalKeys<T> = {
+  [
+    K in keyof T /* eslint-disable-next-line @typescript-eslint/no-empty-object-type */
+  ]-?: {} extends Pick<T, K> ? K : never;
+}[keyof T];
+
+/**
  * Recursively maps a form node type to its corresponding materialized domain value type.
  */
 export type FormValueFor<T> = T extends { readonly kind: "field"; getValue(): infer V }
@@ -137,6 +146,18 @@ export interface FieldGroup<TFields extends Record<string, any> = Record<string,
   readonly serverIssues: ReadableState<readonly ServerIssue[]>;
 
   /**
+   * Dynamically registers a new child node into this group.
+   * Fails if the key is already registered.
+   */
+  register<K extends OptionalKeys<TFields>>(key: K, node: NonNullable<TFields[K]>): void;
+
+  /**
+   * Logically unregisters a child node from this group.
+   * If the key is not currently registered, this is a no-op.
+   */
+  unregister<K extends OptionalKeys<TFields>>(key: K): void;
+
+  /**
    * Returns current aggregate domain values synchronously.
    */
   getValue(): FormValues<TFields>;
@@ -240,6 +261,18 @@ export interface FormInstance<TFields extends Record<string, any> = Record<strin
    * Reactive state signal returning server issues owned at the root form level.
    */
   readonly serverIssues: ReadableState<readonly ServerIssue[]>;
+
+  /**
+   * Dynamically registers a new child node into this group.
+   * Fails if the key is already registered.
+   */
+  register<K extends OptionalKeys<TFields>>(key: K, node: NonNullable<TFields[K]>): void;
+
+  /**
+   * Logically unregisters a child node from this group.
+   * If the key is not currently registered, this is a no-op.
+   */
+  unregister<K extends OptionalKeys<TFields>>(key: K): void;
 
   /**
    * Reactive state signal reflecting the latest submission lifecycle status under Model A.

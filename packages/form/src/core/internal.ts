@@ -24,6 +24,7 @@ export interface FormNodeInternal<T = unknown> {
   reinitialize(nextBaseline: T): void;
   getDirectChildNodes(): readonly FormNode[];
   disposeFromOwner(): void;
+  getOwnershipHandleCount?(): number;
   clearServerIssues?(): void;
   setServerIssues?(issues: readonly ServerIssue[]): void;
   notifyMutation?(): void;
@@ -126,9 +127,13 @@ export function commitChildAdoption(
   if (onMutation) {
     childInternal.onMutation = onMutation;
   }
-  return parentScope.use(() => {
+  const detachFromScope = parentScope.use(() => {
     childInternal.disposeFromOwner();
   });
+  return (): void => {
+    detachFromScope();
+    childInternal.disposeFromOwner();
+  };
 }
 
 /**
@@ -139,10 +144,10 @@ export function adoptChildNode(
   child: unknown,
   label = "node",
   onMutation?: () => void,
-): FormNodeInternal {
+): { internal: FormNodeInternal; detach: () => void } {
   const childInternal = validateAdoptableChild(child, label);
-  commitChildAdoption(parentScope, childInternal, onMutation);
-  return childInternal;
+  const detach = commitChildAdoption(parentScope, childInternal, onMutation);
+  return { internal: childInternal, detach };
 }
 
 /**
@@ -154,7 +159,7 @@ export function adoptChildNodes<TFields extends FormFieldsRecord>(
   fields: TFields,
   fieldKeys: readonly string[],
   onMutation?: () => void,
-): void {
+): (() => void)[] {
   // Phase 1: Validate all children without mutating any ownership state
   const childInternals: FormNodeInternal[] = [];
   for (let i = 0; i < fieldKeys.length; i++) {
@@ -164,7 +169,9 @@ export function adoptChildNodes<TFields extends FormFieldsRecord>(
   }
 
   // Phase 2: Commit all adoptions transactionally
+  const detachFns: (() => void)[] = [];
   for (let i = 0; i < childInternals.length; i++) {
-    commitChildAdoption(parentScope, childInternals[i]!, onMutation);
+    detachFns.push(commitChildAdoption(parentScope, childInternals[i]!, onMutation));
   }
+  return detachFns;
 }

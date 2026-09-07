@@ -58,6 +58,10 @@ export function sanitizeValidationIssue(
  * Manages monotonic validation revision tracking, active AbortControllers, and debounce timers.
  */
 export class ValidationRevisionController {
+  // Diagnostic counters
+  public static activeTimers = 0;
+  public static activeControllers = 0;
+
   private _revision = 0;
   private _activeController: AbortController | null = null;
   private _debounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -69,10 +73,12 @@ export class ValidationRevisionController {
   public cancelActive(): void {
     if (this._debounceTimer !== null) {
       clearTimeout(this._debounceTimer);
+      ValidationRevisionController.activeTimers--;
       this._debounceTimer = null;
     }
     if (this._activeController !== null) {
       this._activeController.abort();
+      ValidationRevisionController.activeControllers--;
       this._activeController = null;
     }
   }
@@ -81,6 +87,7 @@ export class ValidationRevisionController {
     this.cancelActive();
     const revision = ++this._revision;
     const controller = new AbortController();
+    ValidationRevisionController.activeControllers++;
     this._activeController = controller;
     return { revision, controller };
   }
@@ -88,13 +95,16 @@ export class ValidationRevisionController {
   public setDebounceTimer(timer: ReturnType<typeof setTimeout>): void {
     if (this._debounceTimer !== null) {
       clearTimeout(this._debounceTimer);
+      ValidationRevisionController.activeTimers--;
     }
     this._debounceTimer = timer;
+    ValidationRevisionController.activeTimers++;
   }
 
   public clearDebounceTimer(): void {
     if (this._debounceTimer !== null) {
       clearTimeout(this._debounceTimer);
+      ValidationRevisionController.activeTimers--;
       this._debounceTimer = null;
     }
   }
@@ -105,6 +115,7 @@ export class ValidationRevisionController {
 
   public releaseController(controller: AbortController): void {
     if (this._activeController === controller) {
+      ValidationRevisionController.activeControllers--;
       this._activeController = null;
     }
   }

@@ -43,6 +43,7 @@ export type {
   FormSubmitResult,
   FormValueFor,
   FormValues,
+  OptionalKeys,
   IssueSource,
   NumberParserOptions,
   ParsedCreateFieldOptions,

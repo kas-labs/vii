@@ -22,6 +22,7 @@ export type {
   FormRawValues,
   FormValueFor,
   FormValues,
+  OptionalKeys,
 } from "./tree-types.js";
 
 export type { FormReinitializeInput } from "./baseline-types.js";

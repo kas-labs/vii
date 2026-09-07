@@ -41,6 +41,7 @@
         "FormValues",
         "IssueSource",
         "NumberParserOptions",
+        "OptionalKeys",
         "ParsedCreateFieldOptions",
         "ParserlessCreateFieldOptions",
         "ParseIssue",

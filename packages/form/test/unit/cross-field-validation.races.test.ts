@@ -113,4 +113,41 @@ describe("P2c: Cross-Field Races & Cancellation", () => {
     expect(result).toBeDefined();
     expect(typeof result.status).toBe("string");
   });
+
+  test("source disposal while dependent async validation is in-flight aborts controller and prevents stale commit", async () => {
+    const a = createField<string>({ initialValue: "initialA" });
+    let abortedInRule = false;
+    let committedIssuesCount = 0;
+
+    const b = createField<string>({
+      initialValue: "valB",
+      dependencies: [a],
+      rules: [
+        async (_val: string, ctx: ValidationRuleContext) => {
+          const signal = ctx.signal!;
+          ctx.get(a);
+          await new Promise((r) => setTimeout(r, 30));
+          if (signal.aborted) {
+            abortedInRule = true;
+            return null;
+          }
+          committedIssuesCount++;
+          return { code: "stale_error", message: "Should never commit" };
+        },
+      ],
+    });
+
+    const valPromise = b.validate();
+    expect(b.pending.get()).toBe(true);
+
+    // Dispose source while validation is in flight
+    a.dispose();
+
+    await valPromise;
+
+    expect(abortedInRule).toBe(true);
+    expect(b.pending.get()).toBe(false);
+    expect(committedIssuesCount).toBe(0);
+    expect(b.issues.get()).toHaveLength(0);
+  });
 });

@@ -37,6 +37,61 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-09-09 01:00 CEST | Core: Cross-Field Validation Blockers Resolved & Original Budgets Restored (P2c)
+
+Status: completed
+Branch: `feat/form-p2c-cross-field-validation`
+PR: https://github.com/kas-labs/vii/pull/196 (Draft)
+
+### Scope
+
+- Fix blockers in the P2c implementation on PR #196 (`feat/form-p2c-cross-field-validation`).
+- Restore original P1l performance budget thresholds for `createFieldOnly` in `packages/form/performance-budgets.json`:
+  `{ "maxMinifiedBytes": 18000, "maxGzipBytes": 5000, "maxBrotliBytes": 4500 }`.
+- Optimize bundle size of `@vii-labs/form` so `createFieldOnly` passes original limits with 0 budget weakening.
+- Enforce symmetric edge ownership for cross-field dependencies (A <-> B: disposing/unregistering either endpoint removes the edge from both sides).
+- Enforce deterministic dependency factory semantics (resolve once, validate, detect cycles, register edges atomically, freeze for field lifetime; 0 re-evaluation during validation).
+- Enforce in-flight async validation cancellation on dependent fields when dependency sources are disposed (`signal.abort`, settle pending state).
+- Preserve exact 211 tarball entries in package distribution.
+- Verify all 41/41 P1l performance gates, 8 packed consumers, browser tests, and repository validation.
+
+### Changes
+
+- `packages/form/performance-budgets.json`: Restored `createFieldOnly` budget limits to `{ "maxMinifiedBytes": 18000, "maxGzipBytes": 5000, "maxBrotliBytes": 4500 }`.
+- `packages/form/src/core/field-parserless.ts`: Extracted shared `createFieldCore` eliminating duplicate field logic between parsed and parserless fields, reducing `createFieldOnly` bundle size by 3,841 bytes minified.
+- `packages/form/src/core/field-parsed.ts`: Delegated parsed field instantiation to shared `createFieldCore`, keeping file size to 12 lines.
+- `packages/form/src/validation/dependencies.ts`: Implemented `createDependencyManager` providing symmetric edge management (`activeDeps`, `declaredDeps`), single-pass factory resolution (`resolveOnce`), `detachAll` with dependent cancellation, and immutable snapshot capture.
+- `packages/form/src/validation/executor.ts`: Supported `WeakSet<FieldState>` for `declaredDependencies` avoiding memory retention of declared dependency tokens; returns `undefined` for detached/disposed nodes.
+- `packages/form/src/core/internal.ts`: Added `cancelActiveValidation?: () => void` and `dependencies?: Set<FieldState<unknown, unknown>>` to `FormNodeInternal`.
+- `packages/form/src/core/field-validation-runtime.ts`: Integrated `depManager` and `hostField` with revision tracking and cancellation abort signals.
+- `packages/form/test/unit/cross-field-validation.resources.test.ts`: Added source disposal test and 500-cycle source-disposal stress test verifying 0 retained references, clean edges, and no resurrection.
+- `packages/form/test/unit/cross-field-validation.races.test.ts`: Added test verifying in-flight async validation cancellation when dependency source is disposed.
+- `packages/form/test/unit/cross-field-validation.dependencies.test.ts`: Added deterministic factory lifecycle tests verifying exactly-once resolution and non-swallowed errors.
+
+### Validation
+
+- `pnpm format:check`: PASS (0 errors, code style confirmed across all files).
+- `pnpm --filter @vii-labs/form run lint`: PASS (0 warnings, 0 errors).
+- `pnpm --filter @vii-labs/form run typecheck`: PASS (0 errors).
+- `pnpm --filter @vii-labs/form run test`: PASS (32 files, 432 tests passed).
+- `pnpm --filter @vii-labs/form run performance`: PASS (ALL 41/41 HARD GATES PASSED).
+  - `createFieldOnly`: 15,960 B minified (limit: 18,000 B), 4,588 B gzip (limit: 5,000 B), 4,114 B brotli (limit: 4,500 B).
+- `pnpm --filter @vii-labs/form run test:browser`: PASS (31/31 Playwright real-browser tests passed).
+- `pnpm --filter @vii-labs/form run validate-package`: PASS (all 8 packed consumers validated against exact 211 tarball entries).
+- `pnpm validate`: PASS (repo-wide format, lint, typecheck, test, build, pack:check passed).
+- `git diff --check`: PASS (0 whitespace errors).
+
+### Architecture / compatibility
+
+- Zero changes to `@vii-labs/core`.
+- Zero changes to public runtime export signatures; package remains `0.1.0-experimental.1`, `"private": true`, stability `"preview"`.
+- Clean symmetric dependency teardown prevents memory leaks and stale async validation resolutions.
+- Re-established tree-shaking efficiency satisfying all original P1l bundle budgets.
+
+### Remaining / recovery
+
+- None for P2c blocker resolution. Branch is ready for push and CI verification. Keep PR #196 in Draft status. Do not start P2d until official signoff.
+
 ## 2026-09-08 01:15 CEST | Core: Cross-Field Validation & Dependencies (P2c)
 
 Status: completed

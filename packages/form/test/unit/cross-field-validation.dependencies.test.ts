@@ -186,4 +186,50 @@ describe("P2c: Cross-Field Dependencies & Topology", () => {
       });
     }).toThrow(/Cannot depend on a disposed field/);
   });
+
+  test("deterministic factory semantics: dependencies factory executes once and is frozen for field lifetime", () => {
+    const a = createField<number>({ initialValue: 10 });
+    let factoryInvocations = 0;
+
+    const b = createField<number>({
+      initialValue: 20,
+      dependencies: () => {
+        factoryInvocations++;
+        return [a];
+      },
+      rules: [
+        (_val: number, ctx: ValidationRuleContext) => {
+          ctx.get(a);
+          return null;
+        },
+      ],
+    });
+
+    // Factory executed exactly once on creation
+    expect(factoryInvocations).toBe(1);
+
+    // Validation runs must NOT re-evaluate dependencies factory
+    b.validate();
+    expect(factoryInvocations).toBe(1);
+
+    b.setValue(25);
+    expect(factoryInvocations).toBe(1);
+
+    a.setValue(30);
+    expect(factoryInvocations).toBe(1);
+
+    b.validate();
+    expect(factoryInvocations).toBe(1);
+  });
+
+  test("factory errors are never swallowed at creation", () => {
+    expect(() => {
+      createField({
+        initialValue: "val",
+        dependencies: () => {
+          throw new Error("Custom factory error");
+        },
+      });
+    }).toThrow(/Custom factory error/);
+  });
 });

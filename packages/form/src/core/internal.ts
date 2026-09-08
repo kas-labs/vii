@@ -30,9 +30,10 @@ export interface FormNodeInternal<T = unknown> {
   setServerIssues?(issues: readonly ServerIssue[]): void;
   notifyMutation?(): void;
   onMutation?: () => void;
-  dependencies?: readonly FieldState<unknown, unknown>[];
+  dependencies?: Set<FieldState<unknown, unknown>>;
   dependents?: Set<FieldState<unknown, unknown>>;
   scheduleDependentValidation?: (trigger: ValidationTriggerMode) => void;
+  cancelActiveValidation?: () => void;
   treeRoot?: unknown;
 }
 

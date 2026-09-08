@@ -45,7 +45,10 @@ export function executeFieldValidation<TValue>(
   revisionCtrl: ValidationRevisionController,
   callbacks: ValidationHostCallbacks,
   dependencyValues?: ReadonlyMap<FieldState<unknown, unknown>, unknown>,
-  declaredDependencies?: readonly FieldState<unknown, unknown>[],
+  declaredDependencies?:
+    | WeakSet<FieldState<unknown, unknown>>
+    | Set<FieldState<unknown, unknown>>
+    | readonly FieldState<unknown, unknown>[],
 ): Promise<readonly FieldIssue[]> | readonly FieldIssue[] {
   if (rules.length === 0) {
     revisionCtrl.cancelActive();
@@ -56,7 +59,11 @@ export function executeFieldValidation<TValue>(
 
   const collectedSyncIssues: ValidationIssue[] = [];
   const pendingAsyncCalls: Array<Promise<unknown>> = [];
-  const declaredDepsSet = declaredDependencies ? new Set(declaredDependencies) : null;
+  const declaredDepsSet = declaredDependencies
+    ? declaredDependencies instanceof WeakSet || declaredDependencies instanceof Set
+      ? declaredDependencies
+      : new Set(declaredDependencies)
+    : null;
 
   const get = <TDepValue, TDepRaw = TDepValue>(
     field: FieldState<TDepValue, TDepRaw>,

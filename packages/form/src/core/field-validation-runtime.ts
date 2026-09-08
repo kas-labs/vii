@@ -1,6 +1,6 @@
 import { batch, type Scope } from "@vii-labs/core";
 import type { ParseIssue, ParseStatus } from "../parsers/types.js";
-import { captureDependencySnapshot } from "../validation/dependencies.js";
+import type { DependencyManager } from "../validation/dependencies.js";
 import { executeFieldValidation, type ValidationHostCallbacks } from "../validation/executor.js";
 import { ValidationRevisionController } from "../validation/revision.js";
 import type {
@@ -51,13 +51,21 @@ export function resolveValidationTriggers(
   return triggerSet;
 }
 
-export function readSharedConfig<TRaw, TValue>(
-  options: ParserlessCreateFieldOptions<TValue> | ParsedCreateFieldOptions<TRaw, TValue>,
-  getDependencies: () => readonly FieldState<unknown, unknown>[],
+export interface SharedOptionsInput<TValue> {
+  readonly rules?: readonly AnyValidationRule<TValue>[] | undefined;
+  readonly debounceMs?: number | undefined;
+  readonly scope?: Scope | undefined;
+  readonly equality?: FieldEqualityFn<TValue> | undefined;
+  readonly validateOn?: ValidationTriggerMode | readonly ValidationTriggerMode[] | undefined;
+}
+
+export function readSharedConfig<TValue>(
+  options: SharedOptionsInput<TValue>,
+  getDependencies?: () => readonly FieldState<unknown, unknown>[],
 ): SharedFieldConfig<TValue> {
   return {
     rules: options.rules ?? [],
-    getDependencies,
+    getDependencies: getDependencies ?? (() => []),
     debounceMs: options.debounceMs ?? 0,
     scope: options.scope,
     equality: options.equality ?? (defaultFieldEquality as FieldEqualityFn<TValue>),
@@ -104,6 +112,8 @@ export function createValidationRuntime<TValue>(
     parseIss?: ParseIssue | null,
   ) => readonly FieldIssue[],
   isDisposed: () => boolean,
+  depManager?: DependencyManager,
+  hostField?: () => FieldState<unknown, unknown>,
 ) {
   const revisionCtrl = new ValidationRevisionController();
   const hostCallbacks: ValidationHostCallbacks = {
@@ -125,8 +135,11 @@ export function createValidationRuntime<TValue>(
     controller: AbortController,
   ): Promise<readonly FieldIssue[]> | readonly FieldIssue[] => {
     if (parseStatusState.get() === "invalid") return issuesState.get();
-    const deps = config.getDependencies();
-    const dependencySnapshots = captureDependencySnapshot(deps);
+    if (depManager && hostField) {
+      depManager.resolveOnce(hostField());
+    }
+    const dependencySnapshots = depManager ? depManager.getSnapshot() : undefined;
+    const declaredDeps = depManager ? depManager.declaredDeps : undefined;
     return executeFieldValidation(
       config.rules,
       valueState.get(),
@@ -136,7 +149,7 @@ export function createValidationRuntime<TValue>(
       revisionCtrl,
       hostCallbacks,
       dependencySnapshots,
-      deps,
+      declaredDeps,
     );
   };
 

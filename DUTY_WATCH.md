@@ -41,7 +41,7 @@ PR: <number or not opened>
 
 Status: completed
 Branch: `feat/form-p2d-dom-focus-a11y`
-PR: not opened
+PR: https://github.com/kas-labs/vii/pull/197 (Draft)
 
 ### Scope
 

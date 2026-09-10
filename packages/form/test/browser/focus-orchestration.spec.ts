@@ -111,4 +111,68 @@ test.describe("DOM Focus & Accessibility Orchestration (P2d Real Browser)", () =
 
     expect(accessibilityScanResults.violations).toEqual([]);
   });
+
+  test("skips plain div without tabindex and focuses div with tabindex=-1 in real browser", async ({
+    page,
+  }) => {
+    await page.goto("/?scenario=focus-plain-div");
+
+    const result = await page.evaluate(() => {
+      return window.__viiP1k!.formBinding!.focusInvalid();
+    });
+
+    expect(result.focused).toBe(true);
+    expect(result.hasEligibleTarget).toBe(true);
+
+    const activeId = await page.evaluate(() => document.activeElement?.id);
+    expect(activeId).toBe("tabindex-div");
+  });
+
+  test("skips control inside disabled fieldset and focuses control inside first legend", async ({
+    page,
+  }) => {
+    await page.goto("/?scenario=focus-fieldset-disabled");
+
+    const result = await page.evaluate(() => {
+      return window.__viiP1k!.formBinding!.focusInvalid();
+    });
+
+    expect(result.focused).toBe(true);
+    expect(result.hasEligibleTarget).toBe(true);
+
+    const activeId = await page.evaluate(() => document.activeElement?.id);
+    expect(activeId).toBe("legend-input");
+  });
+
+  test("verifies activeElement and falls back when focus attempt fails silently", async ({
+    page,
+  }) => {
+    await page.goto("/?scenario=focus-silent-failure");
+
+    const result = await page.evaluate(() => {
+      return window.__viiP1k!.formBinding!.focusInvalid();
+    });
+
+    expect(result.focused).toBe(true);
+    expect(result.hasEligibleTarget).toBe(true);
+
+    const activeId = await page.evaluate(() => document.activeElement?.id);
+    expect(activeId).toBe("fallback-input");
+  });
+
+  test("skips disabled checked radio and focuses first eligible enabled radio", async ({
+    page,
+  }) => {
+    await page.goto("/?scenario=focus-radio-disabled");
+
+    const result = await page.evaluate(() => {
+      return window.__viiP1k!.formBinding!.focusInvalid();
+    });
+
+    expect(result.focused).toBe(true);
+    expect(result.hasEligibleTarget).toBe(true);
+
+    const activeId = await page.evaluate(() => document.activeElement?.id);
+    expect(activeId).toBe("radio-free-enabled");
+  });
 });

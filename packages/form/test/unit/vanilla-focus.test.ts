@@ -7,6 +7,7 @@ import {
   type VanillaDomControl,
   type VanillaDomElement,
 } from "../../src/adapters/vanilla/index.js";
+import { isElementFocusable } from "../../src/adapters/vanilla/focus.js";
 
 class MockFocusElement implements VanillaDomControl, VanillaDomElement {
   value: unknown = "";
@@ -32,6 +33,8 @@ class MockFocusElement implements VanillaDomControl, VanillaDomElement {
   public parentElement?: MockFocusElement | null = null;
   public docOrderIndex = 0;
   public throwOnFocus = false;
+  public failFocusSilently = false;
+  public children: MockFocusElement[] = [];
 
   private attributes = new Map<string, string>();
   private listeners = new Map<string, Set<(event: unknown) => void>>();
@@ -89,8 +92,29 @@ class MockFocusElement implements VanillaDomControl, VanillaDomElement {
     if (this.throwOnFocus) {
       throw new Error("Focus operation threw unexpectedly");
     }
+    if (this.failFocusSilently) {
+      this.focused = false;
+      return;
+    }
     this.focused = true;
     this.focusOptionsReceived = options;
+  }
+
+  contains(other: unknown): boolean {
+    if (other === this) return true;
+    for (const child of this.children) {
+      if (child === other || (typeof child.contains === "function" && child.contains(other))) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  matches(selector: string): boolean {
+    if (selector === ":disabled") {
+      return this.disabled || this.hasAttribute("disabled");
+    }
+    return false;
   }
 
   scrollIntoView(options?: unknown): void {
@@ -680,5 +704,176 @@ describe("Vanilla DOM Focus & A11y Contract Matrix (P2d)", () => {
     expect(result.focused).toBe(true);
     expect(input1.focused).toBe(false);
     expect(input2.focused).toBe(true);
+  });
+
+  test("Focusability detection: distinguishes genuinely focusable elements from plain non-focusable containers", () => {
+    const plainDiv = new MockFocusElement();
+    plainDiv.tagName = "DIV";
+    plainDiv.nodeName = "DIV";
+    expect(isElementFocusable(plainDiv)).toBe(false);
+
+    const plainSpan = new MockFocusElement();
+    plainSpan.tagName = "SPAN";
+    plainSpan.nodeName = "SPAN";
+    expect(isElementFocusable(plainSpan)).toBe(false);
+
+    const divWithNegativeTabindex = new MockFocusElement();
+    divWithNegativeTabindex.tagName = "DIV";
+    divWithNegativeTabindex.setAttribute("tabindex", "-1");
+    expect(isElementFocusable(divWithNegativeTabindex)).toBe(true);
+
+    const divWithZeroTabindex = new MockFocusElement();
+    divWithZeroTabindex.tagName = "DIV";
+    divWithZeroTabindex.setAttribute("tabindex", "0");
+    expect(isElementFocusable(divWithZeroTabindex)).toBe(true);
+
+    const divWithPositiveTabindex = new MockFocusElement();
+    divWithPositiveTabindex.tagName = "DIV";
+    divWithPositiveTabindex.setAttribute("tabindex", "2");
+    expect(isElementFocusable(divWithPositiveTabindex)).toBe(true);
+
+    const divWithInvalidTabindex = new MockFocusElement();
+    divWithInvalidTabindex.tagName = "DIV";
+    divWithInvalidTabindex.setAttribute("tabindex", "invalid");
+    expect(isElementFocusable(divWithInvalidTabindex)).toBe(false);
+
+    const divWithEmptyTabindex = new MockFocusElement();
+    divWithEmptyTabindex.tagName = "DIV";
+    divWithEmptyTabindex.setAttribute("tabindex", "");
+    expect(isElementFocusable(divWithEmptyTabindex)).toBe(false);
+
+    const buttonEl = new MockFocusElement();
+    buttonEl.tagName = "BUTTON";
+    expect(isElementFocusable(buttonEl)).toBe(true);
+
+    const anchorWithHref = new MockFocusElement();
+    anchorWithHref.tagName = "A";
+    anchorWithHref.setAttribute("href", "/target");
+    expect(isElementFocusable(anchorWithHref)).toBe(true);
+
+    const anchorWithoutHref = new MockFocusElement();
+    anchorWithoutHref.tagName = "A";
+    expect(isElementFocusable(anchorWithoutHref)).toBe(false);
+  });
+
+  test("Fieldset disabled semantics: skips disabled fieldset controls unless in first legend", () => {
+    const fieldset = new MockFocusElement();
+    fieldset.tagName = "FIELDSET";
+    fieldset.disabled = true;
+
+    const normalInputInDisabledFieldset = new MockFocusElement();
+    normalInputInDisabledFieldset.parentElement = fieldset;
+    fieldset.children.push(normalInputInDisabledFieldset);
+    expect(isElementFocusable(normalInputInDisabledFieldset)).toBe(false);
+
+    const legend = new MockFocusElement();
+    legend.tagName = "LEGEND";
+    fieldset.children.unshift(legend); // First legend of disabled fieldset
+
+    const inputInsideLegend = new MockFocusElement();
+    inputInsideLegend.parentElement = legend;
+    legend.children.push(inputInsideLegend);
+    expect(isElementFocusable(inputInsideLegend)).toBe(true);
+  });
+
+  test("Silent focus failure: falls back to next candidate when focus() does not transfer focus", () => {
+    const f1 = createField({ initialValue: "", rules: [() => ({ code: "err" })] });
+    const f2 = createField({ initialValue: "", rules: [() => ({ code: "err" })] });
+    const form = createForm({ fields: { f1, f2 } });
+    const formEl = createMockFormElement();
+    const formBinding = bindForm(form, formEl);
+
+    const input1 = new MockFocusElement();
+    input1.docOrderIndex = 1;
+    input1.failFocusSilently = true; // Simulates silent focus rejection
+
+    const input2 = new MockFocusElement();
+    input2.docOrderIndex = 2;
+
+    formBinding.bindField(f1, input1);
+    formBinding.bindField(f2, input2);
+
+    f1.validate();
+    f2.validate();
+
+    const result = formBinding.focusInvalid();
+    expect(result.hasInvalidFields).toBe(true);
+    expect(result.hasEligibleTarget).toBe(true);
+    expect(result.focused).toBe(true);
+    expect(input1.focused).toBe(false);
+    expect(input2.focused).toBe(true);
+  });
+
+  test("Silent focus failure on all candidates reports focused: false and hasEligibleTarget: true", () => {
+    const f1 = createField({ initialValue: "", rules: [() => ({ code: "err" })] });
+    const form = createForm({ fields: { f1 } });
+    const formEl = createMockFormElement();
+    const formBinding = bindForm(form, formEl);
+
+    const input1 = new MockFocusElement();
+    input1.failFocusSilently = true;
+
+    formBinding.bindField(f1, input1);
+    f1.validate();
+
+    const result = formBinding.focusInvalid();
+    expect(result.hasInvalidFields).toBe(true);
+    expect(result.hasEligibleTarget).toBe(true);
+    expect(result.focused).toBe(false);
+    expect(input1.focused).toBe(false);
+  });
+
+  test("Radio group skips disabled checked radio in favor of first eligible radio", () => {
+    const radioField = createField({ initialValue: "opt2", rules: [() => ({ code: "err" })] });
+    const form = createForm({ fields: { radio: radioField } });
+    const formEl = createMockFormElement();
+    const formBinding = bindForm(form, formEl);
+
+    const r1 = new MockFocusElement();
+    r1.type = "radio";
+    r1.value = "opt1";
+    r1.docOrderIndex = 1;
+
+    const r2 = new MockFocusElement();
+    r2.type = "radio";
+    r2.value = "opt2";
+    r2.checked = true;
+    r2.disabled = true; // Checked but disabled!
+    r2.docOrderIndex = 2;
+
+    formBinding.bindField(radioField, r1);
+    formBinding.bindField(radioField, r2);
+
+    radioField.validate();
+
+    const result = formBinding.focusInvalid();
+    expect(result.focused).toBe(true);
+    expect(r2.focused).toBe(false);
+    expect(r1.focused).toBe(true);
+  });
+
+  test("Radio group with all members disabled returns hasEligibleTarget: false", () => {
+    const radioField = createField({ initialValue: "", rules: [() => ({ code: "err" })] });
+    const form = createForm({ fields: { radio: radioField } });
+    const formEl = createMockFormElement();
+    const formBinding = bindForm(form, formEl);
+
+    const r1 = new MockFocusElement();
+    r1.type = "radio";
+    r1.disabled = true;
+
+    const r2 = new MockFocusElement();
+    r2.type = "radio";
+    r2.hidden = true;
+
+    formBinding.bindField(radioField, r1);
+    formBinding.bindField(radioField, r2);
+
+    radioField.validate();
+
+    const result = formBinding.focusInvalid();
+    expect(result.hasInvalidFields).toBe(true);
+    expect(result.hasEligibleTarget).toBe(false);
+    expect(result.focused).toBe(false);
   });
 });

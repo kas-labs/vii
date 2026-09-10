@@ -1,5 +1,6 @@
 import { createField, createForm } from "@vii-labs/form";
 import { bindForm } from "@vii-labs/form/vanilla";
+import { getRegistryForFormBinding } from "../../../src/adapters/vanilla/focus.js";
 import type { ViiP1kBridge } from "./types.js";
 
 export function mountFocusFirstInvalid(container: HTMLElement, bridge: ViiP1kBridge): void {
@@ -264,6 +265,154 @@ export function mountFocusA11yAudit(container: HTMLElement, bridge: ViiP1kBridge
   });
 
   nameField.validate();
+
+  bridge.form = form;
+  bridge.formBinding = formBinding;
+}
+
+export function mountFocusPlainDivVsTabindex(container: HTMLElement, bridge: ViiP1kBridge): void {
+  const formEl = document.createElement("form");
+  formEl.id = "plain-div-form";
+
+  const plainDiv = document.createElement("div");
+  plainDiv.id = "plain-div";
+  plainDiv.textContent = "Plain Div Without Tabindex";
+
+  const tabindexDiv = document.createElement("div");
+  tabindexDiv.id = "tabindex-div";
+  tabindexDiv.setAttribute("tabindex", "-1");
+  tabindexDiv.textContent = "Div with tabindex -1";
+
+  formEl.appendChild(plainDiv);
+  formEl.appendChild(tabindexDiv);
+  container.appendChild(formEl);
+
+  const f1 = createField({ initialValue: "", rules: [() => ({ code: "err1" })] });
+  const f2 = createField({ initialValue: "", rules: [() => ({ code: "err2" })] });
+  const form = createForm({ fields: { f1, f2 } });
+  const formBinding = bindForm(form, formEl);
+
+  const registry = getRegistryForFormBinding(formBinding);
+  if (registry) {
+    registry.register(f1, plainDiv);
+    registry.register(f2, tabindexDiv);
+  }
+
+  f1.validate();
+  f2.validate();
+
+  bridge.form = form;
+  bridge.formBinding = formBinding;
+}
+
+export function mountFocusFieldsetDisabled(container: HTMLElement, bridge: ViiP1kBridge): void {
+  const formEl = document.createElement("form");
+  formEl.id = "fieldset-disabled-form";
+
+  const fieldset = document.createElement("fieldset");
+  fieldset.disabled = true;
+
+  const normalInput = document.createElement("input");
+  normalInput.id = "disabled-fieldset-input";
+  normalInput.type = "text";
+
+  const legend = document.createElement("legend");
+  const legendInput = document.createElement("input");
+  legendInput.id = "legend-input";
+  legendInput.type = "text";
+  legend.appendChild(legendInput);
+
+  fieldset.appendChild(normalInput);
+  fieldset.appendChild(legend);
+  formEl.appendChild(fieldset);
+  container.appendChild(formEl);
+
+  const f1 = createField({ initialValue: "", rules: [() => ({ code: "err1" })] });
+  const f2 = createField({ initialValue: "", rules: [() => ({ code: "err2" })] });
+  const form = createForm({ fields: { f1, f2 } });
+  const formBinding = bindForm(form, formEl);
+
+  formBinding.bindField(f1, normalInput);
+  formBinding.bindField(f2, legendInput);
+
+  f1.validate();
+  f2.validate();
+
+  bridge.form = form;
+  bridge.formBinding = formBinding;
+}
+
+export function mountFocusSilentFailureFallback(
+  container: HTMLElement,
+  bridge: ViiP1kBridge,
+): void {
+  const formEl = document.createElement("form");
+  formEl.id = "silent-failure-form";
+
+  const failInput = document.createElement("input");
+  failInput.id = "silent-fail-input";
+  failInput.type = "text";
+  // Immediately blur whenever focused, simulating silent rejection / focus prevention
+  failInput.addEventListener("focus", () => {
+    failInput.blur();
+  });
+
+  const fallbackInput = document.createElement("input");
+  fallbackInput.id = "fallback-input";
+  fallbackInput.type = "text";
+
+  formEl.appendChild(failInput);
+  formEl.appendChild(fallbackInput);
+  container.appendChild(formEl);
+
+  const f1 = createField({ initialValue: "", rules: [() => ({ code: "err1" })] });
+  const f2 = createField({ initialValue: "", rules: [() => ({ code: "err2" })] });
+  const form = createForm({ fields: { f1, f2 } });
+  const formBinding = bindForm(form, formEl);
+
+  formBinding.bindField(f1, failInput);
+  formBinding.bindField(f2, fallbackInput);
+
+  f1.validate();
+  f2.validate();
+
+  bridge.form = form;
+  bridge.formBinding = formBinding;
+}
+
+export function mountFocusRadioDisabledCheck(container: HTMLElement, bridge: ViiP1kBridge): void {
+  const formEl = document.createElement("form");
+  formEl.id = "radio-disabled-form";
+
+  const r1 = document.createElement("input");
+  r1.type = "radio";
+  r1.name = "plan";
+  r1.value = "pro";
+  r1.id = "radio-pro-disabled";
+  r1.checked = true;
+  r1.disabled = true; // Checked but disabled!
+
+  const r2 = document.createElement("input");
+  r2.type = "radio";
+  r2.name = "plan";
+  r2.value = "free";
+  r2.id = "radio-free-enabled";
+
+  formEl.appendChild(r1);
+  formEl.appendChild(r2);
+  container.appendChild(formEl);
+
+  const planField = createField({
+    initialValue: "pro",
+    rules: [() => ({ code: "err" })],
+  });
+  const form = createForm({ fields: { plan: planField } });
+  const formBinding = bindForm(form, formEl);
+
+  formBinding.bindField(planField, r1);
+  formBinding.bindField(planField, r2);
+
+  planField.validate();
 
   bridge.form = form;
   bridge.formBinding = formBinding;

@@ -6,6 +6,7 @@ import {
   makeResult,
   orchestrateFocusInvalid,
   registerFormElement,
+  removeFormBinding,
 } from "./focus.js";
 import type {
   BindFieldOptions,
@@ -129,6 +130,7 @@ export function bindForm<TFields extends FormFieldsRecord, TResult = void>(
       isDisposed = true;
       domElement.removeEventListener("submit", handleSubmit);
       unregisterFormElement();
+      removeFormBinding(formBinding);
       registry.clear();
     },
   };

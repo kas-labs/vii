@@ -69,6 +69,10 @@ export function associateFormBinding(binding: object, registry: FormFocusRegistr
   registryMap.set(binding, registry);
 }
 
+export function removeFormBinding(binding: object): void {
+  registryMap.delete(binding);
+}
+
 export function getRegistryForFormBinding(binding: object): FormFocusRegistry | undefined {
   return registryMap.get(binding);
 }
@@ -96,6 +100,14 @@ export function findRegistryForElement(element: unknown): FormFocusRegistry | un
   return undefined;
 }
 
+const hasAttr = (node: unknown, attr: string): boolean =>
+  typeof (node as Element)?.hasAttribute === "function" && (node as Element).hasAttribute(attr);
+
+const getAttr = (node: unknown, attr: string): string | null =>
+  typeof (node as Element)?.getAttribute === "function"
+    ? (node as Element).getAttribute(attr)
+    : null;
+
 export function isElementFocusable(element: unknown): boolean {
   if (!element || typeof element !== "object") return false;
 
@@ -107,30 +119,57 @@ export function isElementFocusable(element: unknown): boolean {
     readonly hidden?: boolean | undefined;
     readonly type?: string | undefined;
     readonly inert?: boolean | undefined;
-    readonly hasAttribute?: ((name: string) => boolean) | undefined;
-    readonly getAttribute?: ((name: string) => string | null) | undefined;
+    readonly tagName?: string | undefined;
+    readonly nodeName?: string | undefined;
+    readonly parentElement?: Element | null | undefined;
     readonly closest?: ((selector: string) => Element | null) | undefined;
+    readonly matches?: ((selector: string) => boolean) | undefined;
   };
 
-  if (typeof el.focus !== "function") return false;
-  if (el.isConnected === false) return false;
+  if (typeof el.focus !== "function" || el.isConnected === false) return false;
   if (el.ownerDocument?.contains && !el.ownerDocument.contains(element as Node)) {
     return false;
   }
 
   if (el.disabled || el.hidden || el.inert || el.type === "hidden") return false;
 
-  const has = (name: string) => typeof el.hasAttribute === "function" && el.hasAttribute(name);
-  const get = (name: string) =>
-    typeof el.getAttribute === "function" ? el.getAttribute(name) : null;
-
   if (
-    has("disabled") ||
-    has("hidden") ||
-    get("aria-disabled") === "true" ||
-    get("aria-hidden") === "true"
+    hasAttr(el, "disabled") ||
+    hasAttr(el, "hidden") ||
+    hasAttr(el, "inert") ||
+    getAttr(el, "aria-disabled") === "true" ||
+    getAttr(el, "aria-hidden") === "true"
   ) {
     return false;
+  }
+
+  if (typeof el.matches === "function") {
+    try {
+      if (el.matches(":disabled")) return false;
+    } catch {
+      // Safe fallback
+    }
+  }
+
+  let cur: Element | null = (el as Element).parentElement ?? null;
+  while (cur) {
+    if (
+      cur.tagName === "FIELDSET" &&
+      ((cur as HTMLFieldSetElement).disabled || hasAttr(cur, "disabled"))
+    ) {
+      const firstLegend = Array.from(cur.children).find((c) => c.tagName === "LEGEND");
+      if (!firstLegend || !firstLegend.contains(element as Node)) return false;
+    }
+    if (
+      (cur as HTMLElement).hidden ||
+      (cur as HTMLElement).inert ||
+      hasAttr(cur, "hidden") ||
+      hasAttr(cur, "inert") ||
+      getAttr(cur, "aria-hidden") === "true"
+    ) {
+      return false;
+    }
+    cur = cur.parentElement;
   }
 
   if (typeof el.closest === "function") {
@@ -147,16 +186,36 @@ export function isElementFocusable(element: unknown): boolean {
     element instanceof Element
   ) {
     try {
-      const s = window.getComputedStyle(element);
-      if (s.display === "none" || s.visibility === "hidden" || s.visibility === "collapse") {
-        return false;
+      let node: Element | null = element;
+      while (node) {
+        const s = window.getComputedStyle(node);
+        if (s.display === "none" || s.visibility === "hidden" || s.visibility === "collapse") {
+          return false;
+        }
+        node = node.parentElement;
       }
     } catch {
       return false;
     }
   }
 
-  return true;
+  if (hasAttr(el, "tabindex")) {
+    const rawTab = getAttr(el, "tabindex");
+    if (rawTab !== null && rawTab !== "") {
+      const trimmed = rawTab.trim();
+      if (/^-?\d+$/.test(trimmed)) {
+        const parsed = parseInt(trimmed, 10);
+        if (Number.isInteger(parsed) && parsed >= -1) return true;
+      }
+    }
+  }
+
+  const tag = (el.tagName || el.nodeName || "").toUpperCase();
+  if (tag === "INPUT") return el.type !== "hidden";
+  if (tag === "SELECT" || tag === "TEXTAREA" || tag === "BUTTON") return true;
+  if (tag === "A") return hasAttr(el, "href");
+
+  return false;
 }
 
 export function compareDomOrder(a: unknown, b: unknown): number {
@@ -218,6 +277,19 @@ export const makeResult = (
   hasEligibleTarget: boolean,
 ): FocusInvalidResult => ({ focused, scrolled, hasInvalidFields, hasEligibleTarget });
 
+function isFocused(target: Element): boolean {
+  try {
+    const root = typeof target.getRootNode === "function" ? target.getRootNode() : null;
+    const active =
+      (root as unknown as DocumentOrShadowRoot)?.activeElement ??
+      target.ownerDocument?.activeElement;
+    if (active === target) return true;
+  } catch {
+    // Safe ignore
+  }
+  return (target as { focused?: boolean }).focused === true;
+}
+
 export function orchestrateFocusInvalid(
   registry: FormFocusRegistry,
   form: FormInstance<Record<string, unknown>>,
@@ -269,9 +341,13 @@ export function orchestrateFocusInvalid(
       try {
         if (typeof (candidate as HTMLElement).focus === "function") {
           (candidate as HTMLElement).focus({ preventScroll });
-          focused = true;
+          focused = isFocused(candidate as Element);
         }
       } catch {
+        focused = false;
+      }
+
+      if (!focused) {
         continue;
       }
     }
@@ -291,7 +367,7 @@ export function orchestrateFocusInvalid(
     return makeResult(focused, scrolled, true, true);
   }
 
-  return makeResult(false, false, true, candidates.length > 0);
+  return makeResult(false, false, true, true);
 }
 
 export function focusInvalid(

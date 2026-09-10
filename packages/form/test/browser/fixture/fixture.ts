@@ -28,9 +28,13 @@ import {
   mountFocusA11yAudit,
   mountFocusDomOrder,
   mountFocusDynamicUnregister,
+  mountFocusFieldsetDisabled,
   mountFocusFirstInvalid,
+  mountFocusPlainDivVsTabindex,
+  mountFocusRadioDisabledCheck,
   mountFocusRadioGroup,
   mountFocusScroll,
+  mountFocusSilentFailureFallback,
 } from "./focus-scenarios.js";
 import { mountReactLifecycle } from "./react-scenarios.js";
 
@@ -175,6 +179,18 @@ switch (scenario) {
     break;
   case "focus-a11y-audit":
     mountFocusA11yAudit(app, bridge);
+    break;
+  case "focus-plain-div":
+    mountFocusPlainDivVsTabindex(app, bridge);
+    break;
+  case "focus-fieldset-disabled":
+    mountFocusFieldsetDisabled(app, bridge);
+    break;
+  case "focus-silent-failure":
+    mountFocusSilentFailureFallback(app, bridge);
+    break;
+  case "focus-radio-disabled":
+    mountFocusRadioDisabledCheck(app, bridge);
     break;
   default:
     app.textContent = `Unknown scenario: ${scenario}`;

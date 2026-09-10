@@ -37,6 +37,73 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-09-11 01:25 CEST | Form: DOM Focus Eligibility & Real-Browser Hardening (P2d)
+
+Status: completed
+Branch: `feat/form-p2d-dom-focus-a11y`
+PR: https://github.com/kas-labs/vii/pull/197 (Draft)
+
+### Scope
+
+- Harden focus eligibility detection and real-browser correctness for Vii Form Phase 2 Slice P2d.
+- Correct `isElementFocusable()` to distinguish genuinely focusable targets from plain non-focusable containers (`<div>`, `<span>` without explicit `tabindex >= -1`).
+- Enforce strict `tabindex` parsing (`hasAttribute("tabindex")`, integer format, `>= -1`), rejecting invalid or empty tabindex strings.
+- Verify actual focus success via `document.activeElement === candidate` (and shadow DOM `root.activeElement`), eliminating false positive `focused: true` reports on silent focus failures.
+- Implement silent focus fallback: if the first eligible candidate fails focus silently, fall through to the next eligible invalid candidate in DOM order.
+- Implement HTML `<fieldset disabled>` semantics respecting the first `<legend>` child exemption.
+- Ensure ancestor checking for `hidden`, `inert`, and `aria-hidden="true"`, plus `window.getComputedStyle` (`display === "none"`, `visibility: hidden/collapse`).
+- Harden radio group resolution: skip disabled/hidden radios and prefer checked eligible radio or first eligible radio in DOM order.
+- Guarantee 0 retained DOM elements or listeners on `VanillaFormBinding.dispose()` by explicitly clearing `registryMap`.
+- Maintain strict zero budget inflation: all 41/41 HARD performance, bundle, and memory gates pass with Brotli at 3,183 B (budget: 3,200 B).
+
+### Changes
+
+- `packages/form/src/adapters/vanilla/focus.ts`:
+  - Updated `isElementFocusable()`: checks semantic focusability (`INPUT`, `SELECT`, `TEXTAREA`, `BUTTON`, `A[href]`), explicit integer `tabindex >= -1`, rejects invalid/empty tabindex and plain divs/spans.
+  - Added ancestor `<fieldset disabled>` traversal with HTML first-legend exception.
+  - Added ancestor walking for `hidden`, `inert`, `aria-hidden`, and computed style `display: none` / `visibility: hidden/collapse`.
+  - Added `isFocused(target)`: asserts `activeElement === target` across light DOM and shadow roots with safe mock fallback.
+  - Updated `orchestrateFocusInvalid()`: verifies actual focus transfer; if silent failure occurs, advances to the next candidate in DOM order.
+  - Added `removeFormBinding(binding)` to purge binding from `registryMap` upon disposal.
+- `packages/form/src/adapters/vanilla/bind-form.ts`:
+  - Integrated `removeFormBinding(formBinding)` inside `VanillaFormBinding.dispose()`.
+- `packages/form/test/unit/vanilla-focus.test.ts`:
+  - Enhanced `MockFocusElement` with `failFocusSilently`, `children`, `contains()`, and `matches()`.
+  - Added unit tests for focusability discrimination (plain div/span vs tabindex vs invalid tabindex vs form controls).
+  - Added unit tests for `<fieldset disabled>` with first `<legend>` exemption.
+  - Added unit tests for silent focus failure fallback and all-candidates silent failure handling.
+  - Added unit tests for radio groups with disabled checked members and all-disabled groups.
+- `packages/form/test/browser/fixture/focus-scenarios.ts` & `fixture.ts`:
+  - Added mount functions and scenario routing for `focus-plain-div`, `focus-fieldset-disabled`, `focus-silent-failure`, `focus-radio-disabled`.
+- `packages/form/test/browser/focus-orchestration.spec.ts`:
+  - Added 4 Playwright real-browser tests validating plain div skipping, fieldset disabled legend exemption, silent focus failure activeElement verification & fallback, and disabled radio skipping.
+
+### Validation
+
+- `pnpm format:check`: PASS (All matched files use Prettier code style).
+- `pnpm lint`: PASS (0 warnings, 0 errors across 12 projects).
+- `pnpm typecheck`: PASS (0 errors across 12 projects).
+- `pnpm test`: PASS (459/459 tests passed in @vii-labs/form, 33 test files; 0 failures workspace-wide).
+- `pnpm --filter @vii-labs/form run test:browser`: PASS (41/41 Playwright real-browser tests passed; 0 Axe a11y violations).
+- `pnpm --filter @vii-labs/form run performance`: PASS (41/41 HARD GATES PASSED).
+  - `bundle.vanillaAdapter.maxBrotliBytes`: 3,183 B (threshold: 3,200 B)
+  - `bundle.vanillaAdapter.maxGzipBytes`: 3,609 B (threshold: 3,800 B)
+  - `bundle.vanillaAdapter.maxMinifiedBytes`: 13,190 B (threshold: 14,000 B)
+- `pnpm --filter @vii-labs/form run validate-package`: PASS (8 clean consumer matrix targets passed).
+- `pnpm validate`: PASS (canonical root validation passed).
+- `git diff --check`: PASS (clean diff, zero whitespace errors).
+
+### Architecture / compatibility
+
+- Zero modifications to `@vii-labs/core` or `packages/form/src/core/`.
+- Zero bundle budget increases or threshold modifications.
+- Complete backward compatibility with existing vanilla form and field bindings.
+- Fully adheres to HTML5 specification for focusability, disabled fieldsets, and radio group semantics.
+
+### Remaining / recovery
+
+- None. PR #197 remains in Draft state awaiting human review.
+
 ## 2026-09-11 00:55 CEST | Form: DOM Focus & Accessibility Orchestration (P2d)
 
 Status: completed

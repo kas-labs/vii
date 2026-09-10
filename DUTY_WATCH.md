@@ -37,6 +37,73 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-09-11 00:55 CEST | Form: DOM Focus & Accessibility Orchestration (P2d)
+
+Status: completed
+Branch: `feat/form-p2d-dom-focus-a11y`
+PR: not opened
+
+### Scope
+
+- Implement Vii Form Phase 2 roadmap slice P2d: Adapters: DOM Focus & Accessibility Orchestration.
+- In accordance with ADR P2-3, focus management is presentation-only, owned exclusively by the `@vii-labs/form/vanilla` adapter without touching or polluting `@vii-labs/core` or Form Core headless runtime.
+- Support opt-in `focusInvalidOnSubmit` on `bindForm()` with customizable fallback, first-invalid target resolver, and scroll behavior.
+- Support programmatic `focusInvalid()` and `focusFirstInvalid()` on `VanillaFormBinding` and as standalone functions.
+- Determine focus targets using physical DOM document position via `compareDocumentPosition` rather than form object field key order.
+- Dynamically adapt to DOM reorders, collection mutations, and responsive element toggling.
+- Resolve radio group focus to the currently checked radio, or fallback to the first radio in DOM order if none is checked.
+- Skip disabled, hidden, `<div hidden>`, `<fieldset disabled>`, inert, and `aria-hidden="true"` controls.
+- Support non-focusable custom controls and containers with `tabindex="-1"`.
+- Support smooth scrolling (`scroll: true | ScrollIntoViewOptions`) and scroll-only mode (`focus: false`).
+- Automatically manage focus registry associations in `bindField()` and clean up on binding disposal.
+- Enforce zero budget weakening: 100% pass across all 41 hard performance, bundle, and memory gates.
+- Verify zero WCAG accessibility violations via Playwright `@axe-core/playwright` audit.
+- Verify clean consumer compilation and execution across all 8 workspace targets.
+
+### Changes
+
+- `packages/form/src/adapters/vanilla/types.ts`: Added `VanillaFormBinding`, `FocusInvalidOptions`, `FocusInvalidResult`; updated `BindFormOptions` with `focusInvalidOnSubmit?: boolean | FocusInvalidOptions` and `BindFieldOptions` with `formBinding?: VanillaFormBinding`.
+- `packages/form/src/adapters/vanilla/focus.ts`: Implemented `createFormFocusRegistry`, `registerFormElement`, `associateFormBinding`, `getRegistryForFormBinding`, `findRegistryForElement`, `isElementFocusable`, `compareDomOrder`, `resolveFieldTarget`, `orchestrateFocusInvalid`, `focusInvalid`, `focusFirstInvalid`.
+- `packages/form/src/adapters/vanilla/bind-form.ts`: Updated `bindForm` to return `VanillaFormBinding` with `focusInvalid`, `focusFirstInvalid`, `bindField`, and `dispose`; integrated `focusInvalidOnSubmit` on submit validation failure.
+- `packages/form/src/adapters/vanilla/bind-field.ts`: Integrated focus registry association (via `options.formBinding` or enclosing `<form>` element lookup) and unregistration on `dispose()`.
+- `packages/form/src/adapters/vanilla/index.ts`: Exported `focusInvalid`, `focusFirstInvalid` and types `FocusInvalidOptions`, `FocusInvalidResult`, `VanillaFormBinding`.
+- `packages/form/api-surface.json`: Added `focusFirstInvalid`, `focusInvalid` to `./vanilla` runtimeExports; added `FocusInvalidOptions`, `FocusInvalidResult`, `VanillaFormBinding` to `./vanilla` publicTypes.
+- `packages/form/test/package-boundary.test.ts`: Updated to verify new vanilla exports.
+- `packages/form/test/unit/vanilla-adapter.test.ts`: Updated export key assertion to match new public vanilla exports.
+- `packages/form/test/unit/vanilla-focus.test.ts`: Created comprehensive unit test suite covering full contract matrix (Scenarios A through X, scroll options, radio group, DOM order, dynamic unregister, custom tabindex="-1" controls).
+- `packages/form/test/browser/fixture/focus-scenarios.ts` & `fixture.ts`: Created and mounted 6 browser scenarios (`focus-first-invalid`, `focus-dom-order`, `focus-radio-group`, `focus-scroll`, `focus-dynamic-unregister`, `focus-a11y-audit`).
+- `packages/form/test/browser/focus-orchestration.spec.ts`: Created Playwright real-browser tests for all focus orchestration features + Axe a11y audit.
+- `scripts/package-validation/validate-form.mjs`: Added `focus.*` dist artifacts to expected tarball entries and added clean consumer focus assertions.
+- `packages/form/README.md`: Documented DOM focus and accessibility orchestration APIs in Sections 14, 18, and 21.
+- `docs/architecture/FORM_PHASE2_ARCHITECTURE.md`: Updated Section 13 P2d slice to completed with verified acceptance criteria and architecture rules.
+- `PROJECT_STATE.md`: Recorded completion of Slice P2d.
+
+### Validation
+
+- `pnpm format:check`: PASS (0 errors, all files formatted).
+- `pnpm lint`: PASS (0 warnings, 0 errors across 12 projects).
+- `pnpm typecheck`: PASS (0 errors across 12 projects).
+- `pnpm test`: PASS (all unit tests passed across 12 projects; 33 files, 453 tests in @vii-labs/form).
+- `pnpm --filter @vii-labs/form run test:browser`: PASS (37/37 Playwright real-browser tests passed, 0 Axe a11y violations).
+- `pnpm --filter @vii-labs/form run performance`: PASS (ALL 41/41 HARD GATES PASSED).
+  - `vanillaAdapter`: 13,190 B minified (limit: 14,000 B), 3,609 B gzip (limit: 3,800 B), 3,183 B brotli (limit: 3,200 B).
+  - `root`: 54,065 B minified (limit: 60,000 B), 12,464 B gzip (limit: 14,000 B), 10,822 B brotli (limit: 12,000 B).
+  - `createFieldOnly`: 15,997 B minified (limit: 18,000 B), 4,589 B gzip (limit: 5,000 B), 4,113 B brotli (limit: 4,500 B).
+- `pnpm --filter @vii-labs/form run validate-package`: PASS (all 8 packed consumers validated against exact 215 tarball entries).
+- `pnpm validate`: PASS (repo-wide format, lint, typecheck, test, build, pack:check passed).
+- `git diff --check`: PASS (0 whitespace errors).
+
+### Architecture / compatibility
+
+- Strictly conforms to ADR P2-3: Focus management is presentation-only, living entirely in the Vanilla adapter.
+- Zero modifications to `@vii-labs/core` or Form Core headless domain models.
+- Package version remains `0.1.0-experimental.1`, private (`"private": true`), stability `"preview"`.
+- Satisfies all original P1l performance, bundle, and memory budgets with zero budget inflation.
+
+### Remaining / recovery
+
+- None for P2d. Branch is ready for push, PR creation (Draft), and CI verification.
+
 ## 2026-09-09 01:00 CEST | Core: Cross-Field Validation Blockers Resolved & Original Budgets Restored (P2c)
 
 Status: completed

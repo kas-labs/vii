@@ -24,6 +24,14 @@ import {
   mountRouteTeardown,
 } from "./lifecycle-scenarios.js";
 import { mountA11yFull, mountOverlappingAria } from "./a11y-scenarios.js";
+import {
+  mountFocusA11yAudit,
+  mountFocusDomOrder,
+  mountFocusDynamicUnregister,
+  mountFocusFirstInvalid,
+  mountFocusRadioGroup,
+  mountFocusScroll,
+} from "./focus-scenarios.js";
 import { mountReactLifecycle } from "./react-scenarios.js";
 
 const bridge: ViiP1kBridge = {
@@ -149,6 +157,24 @@ switch (scenario) {
     break;
   case "react-lifecycle":
     mountReactLifecycle(app, bridge);
+    break;
+  case "focus-first-invalid":
+    mountFocusFirstInvalid(app, bridge);
+    break;
+  case "focus-dom-order":
+    mountFocusDomOrder(app, bridge);
+    break;
+  case "focus-radio-group":
+    mountFocusRadioGroup(app, bridge);
+    break;
+  case "focus-scroll":
+    mountFocusScroll(app, bridge);
+    break;
+  case "focus-dynamic-unregister":
+    mountFocusDynamicUnregister(app, bridge);
+    break;
+  case "focus-a11y-audit":
+    mountFocusA11yAudit(app, bridge);
     break;
   default:
     app.textContent = `Unknown scenario: ${scenario}`;

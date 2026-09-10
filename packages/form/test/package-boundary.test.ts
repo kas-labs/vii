@@ -32,7 +32,9 @@ describe("@vii-labs/form package boundary (P1m)", () => {
     expect(Object.keys(formReact).sort()).toEqual(["useField", "useFieldArray", "useForm"].sort());
 
     expect(formVanilla).toBeDefined();
-    expect(Object.keys(formVanilla).sort()).toEqual(["bindField", "bindForm"].sort());
+    expect(Object.keys(formVanilla).sort()).toEqual(
+      ["bindField", "bindForm", "focusFirstInvalid", "focusInvalid"].sort(),
+    );
 
     expect(formAngular).toBeDefined();
     expect(Object.keys(formAngular).sort()).toEqual(

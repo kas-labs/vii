@@ -1,4 +1,10 @@
-import type { FieldIssue, FormValues, SubmitAction, SubmitOptions } from "../../core/types.js";
+import type {
+  FieldIssue,
+  FieldState,
+  FormValues,
+  SubmitAction,
+  SubmitOptions,
+} from "../../core/types.js";
 
 /**
  * Disposable handle returned by DOM bindings (`bindField`, `bindForm`).
@@ -9,6 +15,82 @@ export interface VanillaBinding {
    * Does NOT dispose the canonical FieldState or FormInstance.
    */
   readonly dispose: () => void;
+}
+
+/**
+ * Configuration options for focus and scroll orchestration.
+ */
+export interface FocusInvalidOptions {
+  /**
+   * Whether to scroll the target element into view.
+   * Accepts boolean or native `ScrollIntoViewOptions`.
+   * Defaults to false.
+   */
+  readonly scroll?: boolean | ScrollIntoViewOptions | undefined;
+
+  /**
+   * Whether to prevent browser default scroll when focusing.
+   * Defaults to true if `scroll` is requested to prevent duplicate scrolling, false otherwise.
+   */
+  readonly preventScroll?: boolean | undefined;
+
+  /**
+   * Whether to focus the target element.
+   * Defaults to true. If false, only scrolling is performed (scroll-only mode).
+   */
+  readonly focus?: boolean | undefined;
+}
+
+/**
+ * Diagnostic outcome returned by focus invalid orchestration.
+ * Contains purely boolean indicators without exposing field or DOM values.
+ */
+export interface FocusInvalidResult {
+  /**
+   * Whether an eligible invalid form control was successfully focused.
+   */
+  readonly focused: boolean;
+
+  /**
+   * Whether an eligible invalid form control was scrolled into view.
+   */
+  readonly scrolled: boolean;
+
+  /**
+   * Whether at least one invalid field was found in the form.
+   */
+  readonly hasInvalidFields: boolean;
+
+  /**
+   * Whether an eligible DOM control matching an invalid field was found.
+   */
+  readonly hasEligibleTarget: boolean;
+}
+
+/**
+ * Disposable handle returned by `bindForm`.
+ * Extends `VanillaBinding` with focus and accessibility orchestration capabilities.
+ */
+export interface VanillaFormBinding extends VanillaBinding {
+  /**
+   * Imperatively orchestrates focus (and optional scrolling) to the first eligible
+   * invalid bound form control according to current DOM presentation order.
+   */
+  readonly focusInvalid: (options?: FocusInvalidOptions) => FocusInvalidResult;
+
+  /**
+   * Convenience alias for `focusInvalid`.
+   */
+  readonly focusFirstInvalid: (options?: FocusInvalidOptions) => FocusInvalidResult;
+
+  /**
+   * Binds a field control element within the scope of this form binding.
+   */
+  readonly bindField: <TValue, TRaw = TValue>(
+    field: FieldState<TValue, TRaw>,
+    element: VanillaFieldElement,
+    options?: BindFieldOptions,
+  ) => VanillaBinding;
 }
 
 /**
@@ -104,6 +186,12 @@ export interface BindFieldOptions {
    * Defaults to `true` when both elements support attributes and issueElement has a non-empty `id`.
    */
   readonly ariaDescribedBy?: boolean | undefined;
+
+  /**
+   * Optional form binding handle to associate this field's control with for focus orchestration.
+   * If omitted, automatic association via the control's enclosing `<form>` element is attempted.
+   */
+  readonly formBinding?: VanillaFormBinding | undefined;
 }
 
 /**
@@ -139,4 +227,11 @@ export interface BindFormOptions<
    * ownership and prevents unhandled Promise rejections.
    */
   readonly onSubmitException?: ((error: unknown) => void) | undefined;
+
+  /**
+   * If true or configured with options, automatically focuses (and optionally scrolls to)
+   * the first invalid bound control upon submit validation failure.
+   * Defaults to false (explicit opt-in).
+   */
+  readonly focusInvalidOnSubmit?: boolean | FocusInvalidOptions | undefined;
 }

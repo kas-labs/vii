@@ -326,6 +326,29 @@ formBinding.dispose();
 - **Single Commit Event Model:** Binds `"input"` for text controls and `"change"` for checkbox/radio/select-one without duplicate triggers.
 - **Safe Text Sink:** Server and validation issue text is projected strictly through `textContent`, neutralizing script execution or HTML injection.
 - **Non-Destructive ARIA:** Preserves pre-existing `aria-invalid` and `aria-describedby` attributes upon disposal.
+- **DOM Focus & Accessibility Orchestration (P2d):**
+  - **Opt-in Submit Focus:** Configure `focusInvalidOnSubmit: true` (or pass `{ scroll: true }`) in `bindForm` options to automatically transfer focus to the first invalid control upon submit validation failure.
+  - **Programmatic Focus APIs:** Call `formBinding.focusInvalid(options?)` or standalone `focusInvalid(formBinding, options?)` at any point.
+  - **DOM Order Resolution:** Focus target selection uses native `compareDocumentPosition` so physical DOM layout governs focus order, dynamically adapting to dynamic arrays, reorders, or responsive layouts.
+  - **Radio Group Cohesion:** Resolves to the currently checked radio within an invalid radio group; falls back to the first eligible radio in DOM order if none is checked.
+  - **Visibility & Inert Awareness:** Automatically skips controls that are `disabled`, `hidden`, inside `<div hidden>`, inside `<fieldset disabled>`, inert, or have `aria-hidden="true"`.
+  - **Custom / Container Controls:** Non-focusable custom controls or error containers can receive focus if given `tabindex="-1"`.
+  - **Scroll Coordination:** Pass `scroll: true` or custom `ScrollIntoViewOptions` (e.g. `{ behavior: "smooth", block: "center" }`) to scroll the invalid element into view. Supports `focus: false` for scroll-only mode.
+
+```ts
+import { bindField, bindForm, focusInvalid } from "@vii-labs/form/vanilla";
+
+const formBinding = bindForm(form, formElement, {
+  action: async (val) => ({ ok: true }),
+  focusInvalidOnSubmit: {
+    scroll: { behavior: "smooth", block: "center" },
+  },
+});
+
+// Programmatic focus transfer
+const result = formBinding.focusInvalid();
+console.log(result.focused); // true if an eligible invalid element was focused
+```
 
 ---
 
@@ -383,7 +406,8 @@ console.log(formHandle.submissionStatus.value);
 The Vanilla DOM adapter implements automated accessibility invariants verified via `@axe-core/playwright` under Chromium:
 - **ARIA Attribute Projection:** `aria-invalid="true"` is asserted only when a field is invalid, and restored to its initial state when valid or disposed.
 - **Describedby Linking:** Additively links `issueElement.id` into `aria-describedby` without clobbering existing application descriptions.
-- **Focus Preservation:** Re-validating or projecting error messages preserves active input focus and caret positions.
+- **Focus Preservation & Orchestration:** Re-validating or projecting error messages preserves active input focus and caret positions. When submit fails, opt-in focus orchestration gracefully transfers focus to the first invalid control according to DOM document order, skipping inert, disabled, or hidden elements.
+- **Zero WCAG Violations:** All browser scenarios and focus orchestration fixtures pass full Axe accessibility audits with 0 violations.
 - **Scope Limit:** Vii Form provides accessible state synchronization for native controls. It does not generate visual styles, contrast palettes, or application heading hierarchies.
 
 ---
@@ -395,10 +419,10 @@ All performance metrics and size budgets are enforced by 41 automated HARD budge
 - **Leaf Mutation Latency:** Single-field update with local subscriber executes in ~0.45 – 0.81 µs ($O(1)$ size-insensitive across 10 to 1,000 fields) with 0 sibling subscriber notifications.
 - **Memory Retention:** 0 retained scopes, 0 retained subscriptions, and 0 retained timers after 500 complete form lifecycle cycles.
 - **Tree-Shaking Boundaries:**
-  - Standalone `createField` (Core external): ~14.34 kB minified (3.78 kB gzip).
-  - Root `@vii-labs/form` (Core external): ~49.88 kB minified (11.24 kB gzip).
+  - Standalone `createField` (Core external): ~15.99 kB minified (4.58 kB gzip).
+  - Root `@vii-labs/form` (Core external): ~54.06 kB minified (12.46 kB gzip).
   - React adapter: ~5.07 kB minified (1.08 kB gzip).
-  - Vanilla adapter: ~8.45 kB minified (2.29 kB gzip).
+  - Vanilla adapter: ~13.19 kB minified (3.61 kB gzip).
   - Angular adapter: ~6.13 kB minified (1.25 kB gzip).
   - Vue adapter: ~5.71 kB minified (1.21 kB gzip).
 
@@ -424,5 +448,5 @@ See [`docs/performance/FORM_P1L_BASELINE.md`](../../docs/performance/FORM_P1L_BA
 - **NOT a UI Component Library:** Does not provide styled buttons, inputs, modals, or CSS.
 - **NOT an HTTP Client:** Does not perform network requests or fetch operations.
 - **NOT a Schema DSL:** Does not provide a proprietary schema builder; integrates external schemas via Standard Schema v1.
-- **NOT an Auto-Focus Manager:** Does not arbitrarily steal browser focus on validation errors.
+- **NOT a Core Auto-Focus Manager:** Core Form domain remains completely headless and DOM-free. Focus orchestration is strictly presentation-adapter-owned and opt-in (ADR P2-3). It never arbitrarily steals browser focus during user typing or background revalidation.
 - **NOT an Authorization Boundary:** Client-side validation improves user experience and does not replace backend security validation.

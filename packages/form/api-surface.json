@@ -80,14 +80,17 @@
     },
     "./vanilla": {
       "stability": "preview",
-      "runtimeExports": ["bindField", "bindForm"],
+      "runtimeExports": ["bindField", "bindForm", "focusFirstInvalid", "focusInvalid"],
       "publicTypes": [
         "BindFieldOptions",
         "BindFormOptions",
+        "FocusInvalidOptions",
+        "FocusInvalidResult",
         "VanillaBinding",
         "VanillaDomControl",
         "VanillaDomElement",
-        "VanillaFieldElement"
+        "VanillaFieldElement",
+        "VanillaFormBinding"
       ]
     },
     "./angular": {

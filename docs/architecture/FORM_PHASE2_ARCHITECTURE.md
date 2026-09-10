@@ -223,13 +223,26 @@ The Phase 2 roadmap follows a strictly sequential recommended execution order to
 - **Tests Required:** Async dependency races, cyclic detection.
 - **Stop Condition:** Cyclic dependencies throw descriptively; dependent fields evaluate correctly.
 
-### **P2d — Adapters: DOM Focus & Accessibility Orchestration**
+### **P2d — Adapters: DOM Focus & Accessibility Orchestration** [COMPLETED]
 - **Objective:** Vanilla adapter implementation of `focus-first-invalid`, `scroll-to-invalid`, and enhanced ARIA coordination.
 - **Owner:** Vanilla Adapter.
 - **Dependencies:** P2c.
-- **Public API Impact:** Low (Vanilla adapter config).
-- **Tests Required:** Playwright browser focus and screen reader semantics.
-- **Stop Condition:** Standard submit failures can optionally focus the first invalid DOM node.
+- **Architecture Continuity:**
+  - Strictly follows ADR P2-3: Focus orchestration is presentation-only, owned entirely by the Vanilla DOM adapter without touching or polluting `@vii-labs/core` or Form Core domain models.
+  - Zero modifications to Form Core runtime or state primitives.
+- **Public API Impact:** Low (New Vanilla adapter exports: `focusInvalid`, `focusFirstInvalid`, types `FocusInvalidOptions`, `FocusInvalidResult`, `VanillaFormBinding`; new options `focusInvalidOnSubmit` on `BindFormOptions`, `formBinding` on `BindFieldOptions`).
+- **Acceptance Matrix:**
+  - [x] Standard submit failures optionally focus the first invalid DOM node via `focusInvalidOnSubmit: true | FocusInvalidOptions`.
+  - [x] Focus order respects physical DOM document position via `compareDocumentPosition` rather than form object field key order.
+  - [x] Dynamic field array reorders and DOM mutations automatically adjust focus target selection.
+  - [x] Radio groups resolve to the currently checked radio, or fallback to the first radio in DOM order if none checked.
+  - [x] Automatically skips disabled, hidden, `<div hidden>`, `<fieldset disabled>`, inert, or `aria-hidden="true"` controls.
+  - [x] Supports custom controls / error containers with `tabindex="-1"`.
+  - [x] Supports smooth scrolling via `scroll: true | ScrollIntoViewOptions` and scroll-only mode (`focus: false`).
+  - [x] Disposed bindings and unregistered fields (P2b) are cleaned up from focus registries.
+  - [x] 0 WCAG accessibility violations verified via Playwright `@axe-core/playwright` audit.
+  - [x] 41/41 hard performance, bundle, and memory gates pass with zero budget expansion.
+- **Stop Condition:** Standard submit failures can optionally focus the first invalid DOM node. (Achieved and verified across unit, browser, and clean consumer fixtures).
 
 ### **P2e — Frameworks: Idiomatic React & Vue Integrations**
 - **Objective:** React `Controller` / `FormProvider` and Vue `useField` composition enhancements.

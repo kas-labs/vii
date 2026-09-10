@@ -1524,10 +1524,14 @@ describe("@vii-labs/form/vanilla - Vanilla DOM Adapter", () => {
   describe("Package Boundary & Type Encapsulation", () => {
     test("does not expose internal classifier types or helpers through public /vanilla exports", async () => {
       const formVanilla = await import("../../src/adapters/vanilla/index.js");
-      expect(Object.keys(formVanilla).sort()).toEqual(["bindField", "bindForm"].sort());
+      expect(Object.keys(formVanilla).sort()).toEqual(
+        ["bindField", "bindForm", "focusFirstInvalid", "focusInvalid"].sort(),
+      );
       expect("classifyControl" in formVanilla).toBe(false);
       expect("VanillaControlKind" in formVanilla).toBe(false);
       expect("applyAriaInvalid" in formVanilla).toBe(false);
+      expect("createFormFocusRegistry" in formVanilla).toBe(false);
+      expect("orchestrateFocusInvalid" in formVanilla).toBe(false);
     });
   });
 });

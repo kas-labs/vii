@@ -1,13 +1,13 @@
 import type { FieldState, FormInstance } from "@vii-labs/form";
-import type { FormBindingHandle } from "@vii-labs/form/vanilla";
+import type { VanillaBinding, VanillaFormBinding } from "@vii-labs/form/vanilla";
 
 export interface ViiP1kBridge {
   field?: FieldState<unknown>;
   form?: FormInstance<Record<string, FieldState<unknown>>>;
-  binding?: FormBindingHandle;
-  bindingA?: FormBindingHandle;
-  bindingB?: FormBindingHandle;
-  formBinding?: FormBindingHandle;
+  binding?: VanillaBinding;
+  bindingA?: VanillaBinding;
+  bindingB?: VanillaBinding;
+  formBinding?: VanillaFormBinding;
   validationCount: number;
   inputEventCount: number;
   changeEventCount: number;

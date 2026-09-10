@@ -6,6 +6,7 @@ import {
   setupAriaInvalid,
 } from "./a11y.js";
 import { classifyControl } from "./control.js";
+import { findRegistryForElement, getRegistryForFormBinding } from "./focus.js";
 import type {
   BindFieldOptions,
   VanillaBinding,
@@ -103,6 +104,15 @@ export function bindField<TValue, TRaw = TValue>(
     options?.issueElement as VanillaDomElement | undefined,
     field.issues.get(),
     options?.formatIssues,
+  );
+
+  // Register presentation control in form focus registry for focus invalid orchestration
+  const targetRegistry =
+    (options?.formBinding ? getRegistryForFormBinding(options.formBinding) : undefined) ??
+    findRegistryForElement(element);
+  const unregisterFocus = targetRegistry?.register(
+    field as unknown as FieldState<unknown, unknown>,
+    domElement,
   );
 
   // DOM -> Field commit handler
@@ -224,6 +234,7 @@ export function bindField<TValue, TRaw = TValue>(
 
     cleanupDescribedBy();
     ariaInvalidController.dispose();
+    unregisterFocus?.();
   };
 
   return { dispose };

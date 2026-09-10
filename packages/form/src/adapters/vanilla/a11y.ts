@@ -61,28 +61,17 @@ export function setupAriaInvalid(
   element: VanillaDomControl | VanillaDomElement,
   enabled: boolean,
 ): AriaInvalidController {
-  if (
-    !enabled ||
-    typeof element !== "object" ||
-    element === null ||
-    typeof element.setAttribute !== "function"
-  ) {
-    return {
-      update: () => undefined,
-      dispose: () => undefined,
-    };
+  if (!enabled || typeof element?.setAttribute !== "function") {
+    return { update: () => undefined, dispose: () => undefined };
   }
 
   const target = element as object;
-  const hasGet = typeof element.getAttribute === "function";
-  const hasHas = typeof element.hasAttribute === "function";
-
+  const attr = "aria-invalid";
   let ownership = ariaInvalidOwnershipMap.get(target);
   if (!ownership) {
-    const baselineHadAttr = hasHas
-      ? Boolean(element.hasAttribute!("aria-invalid"))
-      : hasGet && element.getAttribute!("aria-invalid") !== null;
-    const baselineValue = hasGet ? element.getAttribute!("aria-invalid") : null;
+    const baselineValue =
+      typeof element.getAttribute === "function" ? element.getAttribute(attr) : null;
+    const baselineHadAttr = Boolean(element.hasAttribute?.(attr) ?? baselineValue !== null);
 
     ownership = {
       baselineHadAttr,
@@ -92,18 +81,23 @@ export function setupAriaInvalid(
     ariaInvalidOwnershipMap.set(target, ownership);
   }
 
-  const bindingId = Symbol("aria-invalid-binding");
+  const bindingId = Symbol();
   ownership.bindings.set(bindingId, false);
   let isDisposed = false;
 
+  const restoreBaseline = (): void => {
+    if (ownership!.baselineHadAttr && ownership!.baselineValue !== null) {
+      element.setAttribute!(attr, ownership!.baselineValue);
+    } else {
+      element.removeAttribute?.(attr);
+    }
+  };
+
   const syncEffectiveState = (): void => {
-    const hasAnyInvalid = Array.from(ownership!.bindings.values()).some(Boolean);
-    if (hasAnyInvalid) {
-      element.setAttribute!("aria-invalid", "true");
-    } else if (ownership!.baselineHadAttr && ownership!.baselineValue !== null) {
-      element.setAttribute!("aria-invalid", ownership!.baselineValue);
-    } else if (typeof element.removeAttribute === "function") {
-      element.removeAttribute("aria-invalid");
+    if (Array.from(ownership!.bindings.values()).some(Boolean)) {
+      element.setAttribute!(attr, "true");
+    } else {
+      restoreBaseline();
     }
   };
 
@@ -116,15 +110,10 @@ export function setupAriaInvalid(
     dispose: (): void => {
       if (isDisposed) return;
       isDisposed = true;
-
       ownership!.bindings.delete(bindingId);
       if (ownership!.bindings.size === 0) {
         ariaInvalidOwnershipMap.delete(target);
-        if (ownership!.baselineHadAttr && ownership!.baselineValue !== null) {
-          element.setAttribute!("aria-invalid", ownership!.baselineValue);
-        } else if (typeof element.removeAttribute === "function") {
-          element.removeAttribute("aria-invalid");
-        }
+        restoreBaseline();
       } else {
         syncEffectiveState();
       }
@@ -141,40 +130,26 @@ export function setupAriaDescribedBy(
   issueElement: VanillaDomElement | undefined,
   enabled: boolean,
 ): () => void {
-  if (
-    !enabled ||
-    !issueElement ||
-    typeof issueElement.id !== "string" ||
-    issueElement.id.trim() === "" ||
-    typeof element.getAttribute !== "function" ||
-    typeof element.setAttribute !== "function"
-  ) {
-    return () => undefined;
-  }
+  const id = issueElement?.id?.trim();
+  const el = element as {
+    getAttribute?: (name: string) => string | null;
+    setAttribute?: (name: string, value: string) => void;
+    removeAttribute?: (name: string) => void;
+  };
+  const attr = "aria-describedby";
+  if (!enabled || !id || !el.getAttribute || !el.setAttribute) return () => undefined;
 
-  const describedById = issueElement.id.trim();
-  const existing = element.getAttribute("aria-describedby");
-  const tokens = existing ? existing.split(/\s+/).filter(Boolean) : [];
+  const initial = (el.getAttribute(attr) || "").split(/\s+/).filter(Boolean);
+  if (initial.includes(id)) return () => undefined;
 
-  if (tokens.includes(describedById)) {
-    // Token already pre-existed on the element; do not remove on disposal
-    return () => undefined;
-  }
-
-  tokens.push(describedById);
-  element.setAttribute("aria-describedby", tokens.join(" "));
+  el.setAttribute(attr, [...initial, id].join(" "));
 
   return () => {
-    if (typeof element.getAttribute !== "function") return;
-    const current = element.getAttribute("aria-describedby");
-    const remaining = (current ? current.split(/\s+/).filter(Boolean) : []).filter(
-      (token) => token !== describedById,
-    );
-
-    if (remaining.length > 0 && typeof element.setAttribute === "function") {
-      element.setAttribute("aria-describedby", remaining.join(" "));
-    } else if (typeof element.removeAttribute === "function") {
-      element.removeAttribute("aria-describedby");
+    const remaining = (el.getAttribute?.(attr) || "").split(/\s+/).filter((t) => t && t !== id);
+    if (remaining.length > 0) {
+      el.setAttribute!(attr, remaining.join(" "));
+    } else {
+      el.removeAttribute?.(attr);
     }
   };
 }
@@ -190,15 +165,10 @@ export function renderSafeIssues(
   formatIssues?: ((issues: readonly FieldIssue[]) => string) | undefined,
 ): void {
   if (!issueElement) return;
-
-  if (issues.length === 0) {
-    issueElement.textContent = "";
-    return;
-  }
-
-  if (typeof formatIssues === "function") {
-    issueElement.textContent = String(formatIssues(issues));
-  } else {
-    issueElement.textContent = issues.map((iss) => iss.message ?? iss.code).join(", ");
-  }
+  issueElement.textContent =
+    issues.length === 0
+      ? ""
+      : typeof formatIssues === "function"
+        ? String(formatIssues(issues))
+        : issues.map((iss) => iss.message ?? iss.code).join(", ");
 }

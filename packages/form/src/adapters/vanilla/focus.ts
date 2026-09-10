@@ -22,35 +22,20 @@ export interface FormFocusRegistry {
 
 export function createFormFocusRegistry(): FormFocusRegistry {
   const map = new Map<FieldState<unknown, unknown>, Set<VanillaDomControl | Element>>();
-
   return {
     register: (field, element) => {
       let set = map.get(field);
-      if (!set) {
-        set = new Set();
-        map.set(field, set);
-      }
+      if (!set) map.set(field, (set = new Set()));
       set.add(element);
-
       return () => {
-        const s = map.get(field);
-        if (s) {
-          s.delete(element);
-          if (s.size === 0) map.delete(field);
-        }
+        set!.delete(element);
+        if (set!.size === 0) map.delete(field);
       };
     },
-    unregisterField: (field) => {
-      map.delete(field);
-    },
-    getElementsForField: (field) => {
-      const s = map.get(field);
-      return s ? Array.from(s) : [];
-    },
+    unregisterField: (field) => map.delete(field),
+    getElementsForField: (field) => Array.from(map.get(field) || []),
     getRegisteredFields: () => Array.from(map.keys()),
-    clear: () => {
-      map.clear();
-    },
+    clear: () => map.clear(),
   };
 }
 
@@ -59,178 +44,124 @@ const registryMap = new WeakMap<object, FormFocusRegistry>();
 export function registerFormElement(formElement: object, registry: FormFocusRegistry): () => void {
   registryMap.set(formElement, registry);
   return () => {
-    if (registryMap.get(formElement) === registry) {
-      registryMap.delete(formElement);
-    }
+    if (registryMap.get(formElement) === registry) registryMap.delete(formElement);
   };
 }
 
-export function associateFormBinding(binding: object, registry: FormFocusRegistry): void {
+export const associateFormBinding = (binding: object, registry: FormFocusRegistry): void => {
   registryMap.set(binding, registry);
-}
+};
 
-export function removeFormBinding(binding: object): void {
+export const removeFormBinding = (binding: object): void => {
   registryMap.delete(binding);
-}
+};
 
-export function getRegistryForFormBinding(binding: object): FormFocusRegistry | undefined {
-  return registryMap.get(binding);
-}
+export const getRegistryForFormBinding = (binding: object): FormFocusRegistry | undefined =>
+  registryMap.get(binding);
 
 export function findRegistryForElement(element: unknown): FormFocusRegistry | undefined {
   if (!element || typeof element !== "object") return undefined;
   const el = element as {
-    readonly form?: object | null | undefined;
-    readonly closest?: ((selector: string) => object | null) | undefined;
+    readonly form?: object | null;
+    readonly closest?: (selector: string) => object | null;
   };
-
-  if (el.form && registryMap.has(el.form)) {
-    return registryMap.get(el.form);
+  if (el.form && registryMap.has(el.form)) return registryMap.get(el.form);
+  try {
+    const form = el.closest?.("form");
+    if (form) return registryMap.get(form);
+  } catch {
+    // Safe fallback
   }
-
-  if (typeof el.closest === "function") {
-    try {
-      const form = el.closest("form");
-      if (form) return registryMap.get(form);
-    } catch {
-      // Safe fallback
-    }
-  }
-
   return undefined;
 }
 
-const hasAttr = (node: unknown, attr: string): boolean =>
-  typeof (node as Element)?.hasAttribute === "function" && (node as Element).hasAttribute(attr);
-
-const getAttr = (node: unknown, attr: string): string | null =>
-  typeof (node as Element)?.getAttribute === "function"
-    ? (node as Element).getAttribute(attr)
-    : null;
-
 export function isElementFocusable(element: unknown): boolean {
   if (!element || typeof element !== "object") return false;
-
   const el = element as {
-    readonly focus?: unknown;
-    readonly isConnected?: boolean | undefined;
-    readonly ownerDocument?: Document | null | undefined;
-    readonly disabled?: boolean | undefined;
-    readonly hidden?: boolean | undefined;
-    readonly type?: string | undefined;
-    readonly inert?: boolean | undefined;
-    readonly tagName?: string | undefined;
-    readonly nodeName?: string | undefined;
-    readonly parentElement?: Element | null | undefined;
-    readonly closest?: ((selector: string) => Element | null) | undefined;
-    readonly matches?: ((selector: string) => boolean) | undefined;
+    readonly focus?: (options?: unknown) => void;
+    readonly isConnected?: boolean;
+    readonly ownerDocument?: Document | null;
+    readonly disabled?: boolean;
+    readonly hidden?: boolean;
+    readonly inert?: boolean;
+    readonly type?: string;
+    readonly tagName?: string;
+    readonly nodeName?: string;
+    readonly parentElement?: Element | null;
+    readonly hasAttribute?: (name: string) => boolean;
+    readonly getAttribute?: (name: string) => string | null;
+    readonly matches?: (sel: string) => boolean;
+    readonly closest?: (sel: string) => Element | null;
   };
 
   if (typeof el.focus !== "function" || el.isConnected === false) return false;
-  if (el.ownerDocument?.contains && !el.ownerDocument.contains(element as Node)) {
-    return false;
-  }
-
+  if (el.ownerDocument?.contains && !el.ownerDocument.contains(element as Node)) return false;
   if (el.disabled || el.hidden || el.inert || el.type === "hidden") return false;
 
+  const has = (n: string) => Boolean(el.hasAttribute?.(n));
+  const get = (n: string) => el.getAttribute?.(n);
+
   if (
-    hasAttr(el, "disabled") ||
-    hasAttr(el, "hidden") ||
-    hasAttr(el, "inert") ||
-    getAttr(el, "aria-disabled") === "true" ||
-    getAttr(el, "aria-hidden") === "true"
+    has("disabled") ||
+    has("hidden") ||
+    has("inert") ||
+    get("aria-disabled") === "true" ||
+    get("aria-hidden") === "true"
   ) {
     return false;
   }
 
-  if (typeof el.matches === "function") {
-    try {
-      if (el.matches(":disabled")) return false;
-    } catch {
-      // Safe fallback
+  try {
+    if (el.matches?.(":disabled") || el.closest?.("[hidden],[inert],[aria-hidden='true']")) {
+      return false;
     }
+  } catch {
+    // Safe ignore
   }
 
-  let cur: Element | null = (el as Element).parentElement ?? null;
+  let cur = (el as Element).parentElement;
   while (cur) {
-    if (
-      cur.tagName === "FIELDSET" &&
-      ((cur as HTMLFieldSetElement).disabled || hasAttr(cur, "disabled"))
-    ) {
-      const firstLegend = Array.from(cur.children).find((c) => c.tagName === "LEGEND");
-      if (!firstLegend || !firstLegend.contains(element as Node)) return false;
-    }
-    if (
-      (cur as HTMLElement).hidden ||
-      (cur as HTMLElement).inert ||
-      hasAttr(cur, "hidden") ||
-      hasAttr(cur, "inert") ||
-      getAttr(cur, "aria-hidden") === "true"
-    ) {
-      return false;
+    const fs = cur as HTMLFieldSetElement;
+    if (cur.tagName === "FIELDSET" && (fs.disabled || fs.hasAttribute?.("disabled"))) {
+      if (
+        !Array.from(cur.children)
+          .find((c) => c.tagName === "LEGEND")
+          ?.contains(element as Node)
+      ) {
+        return false;
+      }
     }
     cur = cur.parentElement;
   }
 
-  if (typeof el.closest === "function") {
+  if (typeof window !== "undefined" && element instanceof Element) {
     try {
-      if (el.closest("[hidden],[inert],[aria-hidden='true']")) return false;
-    } catch {
-      // Safe fallback
-    }
-  }
-
-  if (
-    typeof window !== "undefined" &&
-    typeof window.getComputedStyle === "function" &&
-    element instanceof Element
-  ) {
-    try {
-      let node: Element | null = element;
-      while (node) {
-        const s = window.getComputedStyle(node);
-        if (s.display === "none" || s.visibility === "hidden" || s.visibility === "collapse") {
-          return false;
-        }
-        node = node.parentElement;
-      }
+      const s = window.getComputedStyle?.(element);
+      if (s && (s.display === "none" || /^(hidden|collapse)$/.test(s.visibility))) return false;
     } catch {
       return false;
     }
   }
 
-  if (hasAttr(el, "tabindex")) {
-    const rawTab = getAttr(el, "tabindex");
-    if (rawTab !== null && rawTab !== "") {
-      const trimmed = rawTab.trim();
-      if (/^-?\d+$/.test(trimmed)) {
-        const parsed = parseInt(trimmed, 10);
-        if (Number.isInteger(parsed) && parsed >= -1) return true;
-      }
-    }
+  if (has("tabindex")) {
+    const raw = get("tabindex")?.trim();
+    if (raw && /^-?\d+$/.test(raw) && parseInt(raw, 10) >= -1) return true;
   }
 
   const tag = (el.tagName || el.nodeName || "").toUpperCase();
   if (tag === "INPUT") return el.type !== "hidden";
-  if (tag === "SELECT" || tag === "TEXTAREA" || tag === "BUTTON") return true;
-  if (tag === "A") return hasAttr(el, "href");
-
-  return false;
+  return /^(SELECT|TEXTAREA|BUTTON)$/.test(tag) || (tag === "A" && has("href"));
 }
 
 export function compareDomOrder(a: unknown, b: unknown): number {
   if (a === b) return 0;
-  const nodeA = a as Node;
-  if (typeof nodeA?.compareDocumentPosition === "function") {
-    try {
-      const pos = nodeA.compareDocumentPosition(b as Node);
-      if (pos & 4) return -1;
-      if (pos & 2) return 1;
-    } catch {
-      // Safe fallback
-    }
+  try {
+    const pos = (a as Node | null)?.compareDocumentPosition?.(b as Node);
+    if (pos === undefined) return 0;
+    return pos & 4 ? -1 : pos & 2 ? 1 : 0;
+  } catch {
+    return 0;
   }
-  return 0;
 }
 
 export function resolveFieldTarget(
@@ -238,37 +169,27 @@ export function resolveFieldTarget(
   elements: readonly (VanillaDomControl | Element)[],
 ): (VanillaDomControl | Element) | undefined {
   const eligible = elements.filter(isElementFocusable);
-  if (eligible.length === 0) return undefined;
-  if (eligible.length === 1) return eligible[0];
+  if (eligible.length <= 1) return eligible[0];
 
-  const checkedRadio = eligible.find(
-    (el) => (el as HTMLInputElement).type === "radio" && (el as HTMLInputElement).checked,
+  return (
+    eligible.find(
+      (el) => (el as HTMLInputElement).type === "radio" && (el as HTMLInputElement).checked,
+    ) || [...eligible].sort(compareDomOrder)[0]
   );
-  if (checkedRadio) return checkedRadio;
-
-  const sorted = [...eligible].sort(compareDomOrder);
-  return sorted[0];
 }
 
-function isFieldInTree(target: FieldState<unknown, unknown>, node: unknown): boolean {
-  if (target === (node as unknown)) return true;
-  if (!node || typeof node !== "object") return false;
-
-  const n = node as Record<string, unknown>;
-  const fields = n["fields"];
-  if (fields && typeof fields === "object") {
-    for (const key of Object.keys(fields)) {
-      if (isFieldInTree(target, (fields as Record<string, unknown>)[key])) return true;
-    }
-  }
-  const itemsProp = n["items"] as { get?: () => Array<{ node?: unknown }> } | undefined;
-  if (typeof itemsProp?.get === "function") {
-    for (const item of itemsProp.get()) {
-      if (item && isFieldInTree(target, item.node)) return true;
-    }
-  }
-  return false;
+interface TreeNode {
+  readonly fields?: Record<string, unknown>;
+  readonly items?: {
+    readonly get?: () => readonly { readonly node?: unknown }[];
+  };
 }
+
+const inTree = (t: unknown, n: unknown): boolean =>
+  t === n ||
+  (Boolean(n && typeof n === "object") &&
+    (Object.values((n as TreeNode).fields || {}).some((c) => inTree(t, c)) ||
+      ((n as TreeNode).items?.get?.() || []).some((it) => inTree(t, it?.node))));
 
 export const makeResult = (
   focused: boolean,
@@ -277,17 +198,19 @@ export const makeResult = (
   hasEligibleTarget: boolean,
 ): FocusInvalidResult => ({ focused, scrolled, hasInvalidFields, hasEligibleTarget });
 
-function isFocused(target: Element): boolean {
+function isFocused(t: unknown): boolean {
   try {
-    const root = typeof target.getRootNode === "function" ? target.getRootNode() : null;
-    const active =
-      (root as unknown as DocumentOrShadowRoot)?.activeElement ??
-      target.ownerDocument?.activeElement;
-    if (active === target) return true;
+    const el = t as Node & {
+      readonly ownerDocument?: Document | null;
+      readonly focused?: boolean;
+    };
+    const root = (el as { getRootNode?: (options?: unknown) => unknown }).getRootNode?.() as
+      Document | ShadowRoot | null | undefined;
+    if ((root?.activeElement ?? el.ownerDocument?.activeElement) === t) return true;
+    return el.focused === true;
   } catch {
-    // Safe ignore
+    return false;
   }
-  return (target as { focused?: boolean }).focused === true;
 }
 
 export function orchestrateFocusInvalid(
@@ -295,75 +218,51 @@ export function orchestrateFocusInvalid(
   form: FormInstance<Record<string, unknown>>,
   options?: FocusInvalidOptions,
 ): FocusInvalidResult {
-  const registeredFields = registry.getRegisteredFields();
-  const invalidFields: FieldState<unknown, unknown>[] = [];
-
-  for (const field of registeredFields) {
-    if (!isFieldInTree(field, form)) {
-      registry.unregisterField(field);
-      continue;
+  const invalidFields = registry.getRegisteredFields().filter((f) => {
+    if (!inTree(f, form)) {
+      registry.unregisterField(f);
+      return false;
     }
-    if (isFieldInvalid(field)) {
-      invalidFields.push(field);
-    }
-  }
+    return isFieldInvalid(f);
+  });
 
-  const hasFormLevel = form.issues.get().length > 0 || form.invalid.get();
-  const hasInvalid = hasFormLevel || invalidFields.length > 0;
+  const hasInvalid = form.issues.get().length > 0 || form.invalid.get() || invalidFields.length > 0;
+  if (!hasInvalid || invalidFields.length === 0) return makeResult(false, false, hasInvalid, false);
 
-  if (!hasInvalid || invalidFields.length === 0) {
-    return makeResult(false, false, hasInvalid, false);
-  }
+  const candidates = invalidFields
+    .map((f) => resolveFieldTarget(f, registry.getElementsForField(f)))
+    .filter((t): t is VanillaDomControl | Element => Boolean(t))
+    .sort(compareDomOrder);
 
-  const candidates: (VanillaDomControl | Element)[] = [];
-  for (const field of invalidFields) {
-    const target = resolveFieldTarget(field, registry.getElementsForField(field));
-    if (target) candidates.push(target);
-  }
-
-  if (candidates.length === 0) {
-    return makeResult(false, false, true, false);
-  }
-
-  candidates.sort(compareDomOrder);
+  if (candidates.length === 0) return makeResult(false, false, true, false);
 
   const shouldScroll = Boolean(options?.scroll);
   const shouldFocus = options?.focus !== false;
-  const preventScroll = options?.preventScroll ?? (shouldScroll ? true : false);
+  const preventScroll = options?.preventScroll ?? shouldScroll;
 
-  for (const candidate of candidates) {
-    if (!isElementFocusable(candidate)) continue;
-
+  for (const c of candidates) {
+    if (!isElementFocusable(c)) continue;
+    const el = c as HTMLElement;
     let focused = false;
-    let scrolled = false;
-
     if (shouldFocus) {
       try {
-        if (typeof (candidate as HTMLElement).focus === "function") {
-          (candidate as HTMLElement).focus({ preventScroll });
-          focused = isFocused(candidate as Element);
-        }
+        el.focus?.({ preventScroll });
+        focused = isFocused(c);
       } catch {
-        focused = false;
+        // Safe ignore
       }
-
-      if (!focused) {
-        continue;
-      }
+      if (!focused) continue;
     }
 
+    let scrolled = false;
     if (shouldScroll) {
       try {
-        if (typeof (candidate as HTMLElement).scrollIntoView === "function") {
-          const scrollArgs = typeof options?.scroll === "object" ? options.scroll : undefined;
-          (candidate as HTMLElement).scrollIntoView(scrollArgs);
-          scrolled = true;
-        }
+        el.scrollIntoView?.(typeof options?.scroll === "object" ? options.scroll : undefined);
+        scrolled = true;
       } catch {
         // Safe ignore
       }
     }
-
     return makeResult(focused, scrolled, true, true);
   }
 
@@ -374,7 +273,7 @@ export function focusInvalid(
   formBinding: VanillaFormBinding,
   options?: FocusInvalidOptions,
 ): FocusInvalidResult {
-  if (!formBinding || typeof formBinding.focusInvalid !== "function") {
+  if (!formBinding?.focusInvalid) {
     throw new TypeError("Invalid formBinding: expected VanillaFormBinding instance");
   }
   return formBinding.focusInvalid(options);

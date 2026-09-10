@@ -76,35 +76,58 @@ export function bindField<TValue, TRaw = TValue>(
   const commitsOnChange = controlKind !== "text";
   const inputEventName = commitsOnChange ? "change" : "input";
 
+  const updateDom = (fn: () => void): void => {
+    isUpdatingFromStore = true;
+    try {
+      fn();
+    } finally {
+      isUpdatingFromStore = false;
+    }
+  };
+
+  const setDomVal = (str: unknown) => {
+    const s = str != null ? String(str) : "";
+    if (domElement.value !== s)
+      updateDom(() => {
+        domElement.value = s;
+      });
+  };
+
+  const setChecked = (b: boolean) => {
+    if (domElement.checked !== b)
+      updateDom(() => {
+        domElement.checked = b;
+      });
+  };
+
   // Initial Field -> DOM projection
-  if (controlKind === "checkbox") {
-    domElement.checked = Boolean(field.value.get());
-  } else if (controlKind === "radio") {
-    domElement.checked = Object.is(field.value.get(), domElement.value);
-  } else if (controlKind !== "file") {
-    const isUnparsed = field.parseStatus.get() === "unparsed";
-    const initialDisplay = isUnparsed ? field.value.get() : field.rawValue.get();
-    domElement.value =
-      initialDisplay !== undefined && initialDisplay !== null ? String(initialDisplay) : "";
+  if (controlKind === "checkbox") setChecked(Boolean(field.value.get()));
+  else if (controlKind === "radio") setChecked(Object.is(field.value.get(), domElement.value));
+  else if (controlKind !== "file") {
+    setDomVal(field.parseStatus.get() === "unparsed" ? field.value.get() : field.rawValue.get());
   }
+
+  const issueEl = options?.issueElement as VanillaDomElement | undefined;
+  const fieldAny = field as unknown as FieldState<unknown, unknown>;
 
   // Initial A11y / ARIA projection with non-destructive restoration tracking
   const projectAriaInvalid =
     (options?.ariaInvalid ?? true) && typeof domElement.setAttribute === "function";
   const ariaInvalidController = setupAriaInvalid(domElement, projectAriaInvalid);
-  ariaInvalidController.update(isFieldInvalid(field as unknown as FieldState<unknown, unknown>));
 
   const cleanupDescribedBy = setupAriaDescribedBy(
     domElement,
-    options?.issueElement as VanillaDomElement | undefined,
+    issueEl,
     options?.ariaDescribedBy ?? true,
   );
 
-  renderSafeIssues(
-    options?.issueElement as VanillaDomElement | undefined,
-    field.issues.get(),
-    options?.formatIssues,
-  );
+  const updateAriaAndIssues = (): void => {
+    if (isDisposed) return;
+    renderSafeIssues(issueEl, field.issues.get(), options?.formatIssues);
+    ariaInvalidController.update(isFieldInvalid(fieldAny));
+  };
+
+  updateAriaAndIssues();
 
   // Register presentation control in form focus registry for focus invalid orchestration
   const targetRegistry =
@@ -118,29 +141,27 @@ export function bindField<TValue, TRaw = TValue>(
   // DOM -> Field commit handler
   const handleCommit = (event: unknown): void => {
     if (isDisposed || isUpdatingFromStore) return;
-    const evt = event as EventWithTarget | undefined;
+    const target = ((event as EventWithTarget | undefined)?.target ??
+      domElement) as VanillaDomControl;
 
     if (controlKind === "checkbox") {
-      const nextChecked = Boolean(evt?.target?.checked ?? domElement.checked);
-      if (Object.is(nextChecked, Boolean(field.value.get()))) return;
-      field.setValue(nextChecked as unknown as TValue);
+      const nextChecked = Boolean(target.checked);
+      if (!Object.is(nextChecked, Boolean(field.value.get())))
+        field.setValue(nextChecked as unknown as TValue);
     } else if (controlKind === "radio") {
-      const target = (evt?.target ?? domElement) as VanillaDomControl;
-      if (target.checked) {
-        field.setValue(target.value as unknown as TValue);
-      }
+      if (target.checked) field.setValue(target.value as unknown as TValue);
     } else if (controlKind === "select-one") {
-      const nextVal = (evt?.target?.value ?? domElement.value) as unknown as TValue;
-      if (Object.is(nextVal, field.value.get())) return;
-      field.setValue(nextVal);
+      if (!Object.is(target.value, field.value.get()))
+        field.setValue(target.value as unknown as TValue);
     } else if (controlKind === "file") {
-      const files = evt?.target?.files ?? domElement.files;
-      field.setValue(files as unknown as TValue);
+      field.setValue(target.files as unknown as TValue);
     } else {
-      if ((event as { isComposing?: boolean })?.isComposing) return;
-      const nextRaw = (evt?.target?.value ?? domElement.value) as unknown as TRaw;
-      if (Object.is(nextRaw, field.rawValue.get())) return;
-      field.setRawValue(nextRaw);
+      if (
+        !(event as { isComposing?: boolean })?.isComposing &&
+        !Object.is(target.value, field.rawValue.get())
+      ) {
+        field.setRawValue(target.value as unknown as TRaw);
+      }
     }
   };
 
@@ -153,71 +174,22 @@ export function bindField<TValue, TRaw = TValue>(
   domElement.addEventListener(inputEventName, handleCommit);
   domElement.addEventListener("blur", handleBlur);
 
-  // Field -> DOM subscriptions
-  const unsubRaw = field.rawValue.subscribe((nextRaw) => {
-    if (isDisposed || commitsOnChange) return;
-    if (field.parseStatus.get() !== "unparsed") {
-      const nextStr = nextRaw !== undefined && nextRaw !== null ? String(nextRaw) : "";
-      if (domElement.value !== nextStr) {
-        isUpdatingFromStore = true;
-        try {
-          domElement.value = nextStr;
-        } finally {
-          isUpdatingFromStore = false;
-        }
+  const unsubs = [
+    field.rawValue.subscribe((nextRaw) => {
+      if (!isDisposed && !commitsOnChange && field.parseStatus.get() !== "unparsed") {
+        setDomVal(nextRaw);
       }
-    }
-  });
-
-  const unsubVal = field.value.subscribe((nextVal) => {
-    if (isDisposed) return;
-
-    if (controlKind === "checkbox") {
-      const nextBool = Boolean(nextVal);
-      if (domElement.checked !== nextBool) {
-        isUpdatingFromStore = true;
-        try {
-          domElement.checked = nextBool;
-        } finally {
-          isUpdatingFromStore = false;
-        }
-      }
-    } else if (controlKind === "radio") {
-      const shouldBeChecked = Object.is(nextVal, domElement.value);
-      if (domElement.checked !== shouldBeChecked) {
-        isUpdatingFromStore = true;
-        try {
-          domElement.checked = shouldBeChecked;
-        } finally {
-          isUpdatingFromStore = false;
-        }
-      }
-    } else if (controlKind !== "file" && field.parseStatus.get() === "unparsed") {
-      const nextStr = nextVal !== undefined && nextVal !== null ? String(nextVal) : "";
-      if (domElement.value !== nextStr) {
-        isUpdatingFromStore = true;
-        try {
-          domElement.value = nextStr;
-        } finally {
-          isUpdatingFromStore = false;
-        }
-      }
-    }
-  });
-
-  const updateAriaAndIssues = (): void => {
-    if (isDisposed) return;
-    renderSafeIssues(
-      options?.issueElement as VanillaDomElement | undefined,
-      field.issues.get(),
-      options?.formatIssues,
-    );
-    ariaInvalidController.update(isFieldInvalid(field as unknown as FieldState<unknown, unknown>));
-  };
-
-  const unsubIssues = field.issues.subscribe(updateAriaAndIssues);
-  const unsubServerIssues = field.serverIssues.subscribe(updateAriaAndIssues);
-  const unsubParseStatus = field.parseStatus.subscribe(updateAriaAndIssues);
+    }),
+    field.value.subscribe((nextVal) => {
+      if (isDisposed) return;
+      if (controlKind === "checkbox") setChecked(Boolean(nextVal));
+      else if (controlKind === "radio") setChecked(Object.is(nextVal, domElement.value));
+      else if (controlKind !== "file" && field.parseStatus.get() === "unparsed") setDomVal(nextVal);
+    }),
+    ...[field.issues, field.serverIssues, field.parseStatus].map((s) =>
+      s.subscribe(updateAriaAndIssues),
+    ),
+  ];
 
   const dispose = (): void => {
     if (isDisposed) return;
@@ -226,11 +198,7 @@ export function bindField<TValue, TRaw = TValue>(
     domElement.removeEventListener(inputEventName, handleCommit);
     domElement.removeEventListener("blur", handleBlur);
 
-    unsubRaw();
-    unsubVal();
-    unsubIssues();
-    unsubServerIssues();
-    unsubParseStatus();
+    unsubs.forEach((u) => u());
 
     cleanupDescribedBy();
     ariaInvalidController.dispose();

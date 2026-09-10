@@ -37,6 +37,67 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-09-11 01:50 CEST | Form: Vanilla Adapter Bundle Optimization (P2d)
+
+Status: completed
+Branch: `feat/form-p2d-dom-focus-a11y`
+PR: https://github.com/kas-labs/vii/pull/197 (Draft)
+
+### Scope
+
+- Optimize vanilla adapter implementation in `@vii-labs/form` to pass all 41/41 HARD performance and bundle size gates without loosening `packages/form/performance-budgets.json`.
+- Reduce minified, gzip, and Brotli size of `vanillaAdapter` entrypoint below official ceilings (max minified: 14,000 B, max gzip: 3,800 B, max Brotli: 3,200 B).
+- Maintain all focus eligibility rules (plain div skipping, fieldset disabled legend exemption, silent focus fallback, activeElement verification) and browser test invariants.
+
+### Changes
+
+- `packages/form/src/adapters/vanilla/control.ts`:
+  - Replaced `SUPPORTED_INPUT_TYPES` Set with compact RegExp `/^(text|password|...)$/`.
+  - Streamlined tag and type extraction using `String(...)` coercions.
+  - Unified fallback error messages matching identical string literals for high Brotli compression efficiency.
+- `packages/form/src/adapters/vanilla/a11y.ts`:
+  - Streamlined `setupAriaInvalid`: unified baseline presence and value detection, simplified `restoreBaseline` and `syncEffectiveState`.
+  - Streamlined `setupAriaDescribedBy`: eliminated redundant helper closure and simplified token list transformations.
+  - Streamlined `renderSafeIssues`: consolidated empty issues check and formatter application into a concise ternary.
+- `packages/form/src/adapters/vanilla/bind-field.ts`:
+  - Unified checkbox and radio initial projection and store subscription handlers via `setChecked` helper.
+  - Streamlined `handleCommit` using unified event target extraction and boolean coercion.
+  - Subscribed a11y and issues updater concisely using array mapping across signals.
+  - Streamlined disposal using `forEach` on unsubs.
+- `packages/form/src/adapters/vanilla/focus.ts`:
+  - Streamlined `findRegistryForElement` with safe optional chaining.
+  - Streamlined `isElementFocusable`: simplified disabled ancestor checks, legend child verification, and getComputedStyle inspection.
+  - Streamlined `compareDomOrder`, `resolveFieldTarget`, and `isFocused` using strict typed interfaces without `any`.
+  - Streamlined `orchestrateFocusInvalid` candidate aggregation, focus loop, and scroll triggering.
+- `packages/form/src/adapters/vanilla/bind-form.ts`:
+  - Unified error message string literals with `bind-field.ts` for dictionary sharing in Brotli.
+  - Simplified `handleSubmit` event handling and `preventDefault` execution.
+
+### Validation
+
+- `pnpm format:check`: PASS (All matched files use Prettier code style).
+- `pnpm lint`: PASS (0 warnings, 0 errors across 12 projects).
+- `pnpm typecheck`: PASS (0 errors across 12 projects).
+- `pnpm test`: PASS (459/459 tests passed in @vii-labs/form, 33 test files).
+- `pnpm --filter @vii-labs/form run test:browser`: PASS (41/41 Playwright real-browser tests passed).
+- `pnpm --filter @vii-labs/form run performance`: PASS (41/41 HARD GATES PASSED).
+  - `bundle.vanillaAdapter.maxMinifiedBytes`: 10,904 B (threshold: 14,000 B)
+  - `bundle.vanillaAdapter.maxGzipBytes`: 3,550 B (threshold: 3,800 B)
+  - `bundle.vanillaAdapter.maxBrotliBytes`: 3,159 B (threshold: 3,200 B)
+- `pnpm --filter @vii-labs/form run validate-package`: PASS (8 clean consumer matrix targets passed).
+- `pnpm validate`: PASS (canonical root validation passed).
+- `git diff --check`: PASS (clean diff, zero whitespace errors).
+
+### Architecture / compatibility
+
+- Zero modifications to `@vii-labs/core` or `packages/form/src/core/`.
+- Zero bundle budget increases or threshold modifications in `packages/form/performance-budgets.json`.
+- Complete backward compatibility with existing vanilla form and field bindings.
+
+### Remaining / recovery
+
+- None. PR #197 remains in Draft status as instructed. Ready for human review.
+
 ## 2026-09-11 01:25 CEST | Form: DOM Focus Eligibility & Real-Browser Hardening (P2d)
 
 Status: completed

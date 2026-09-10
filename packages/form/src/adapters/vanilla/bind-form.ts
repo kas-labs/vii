@@ -8,14 +8,7 @@ import {
   registerFormElement,
   removeFormBinding,
 } from "./focus.js";
-import type {
-  BindFieldOptions,
-  BindFormOptions,
-  VanillaBinding,
-  VanillaDomElement,
-  VanillaFieldElement,
-  VanillaFormBinding,
-} from "./types.js";
+import type { BindFormOptions, VanillaDomElement, VanillaFormBinding } from "./types.js";
 
 interface EventWithPreventDefault {
   readonly preventDefault?: () => void;
@@ -56,7 +49,7 @@ export function bindForm<TFields extends FormFieldsRecord, TResult = void>(
     typeof formElement.removeEventListener !== "function"
   ) {
     throw new TypeError(
-      "Invalid formElement: expected DOM element with addEventListener and removeEventListener",
+      "Invalid element: expected DOM element with addEventListener and removeEventListener",
     );
   }
 
@@ -65,13 +58,11 @@ export function bindForm<TFields extends FormFieldsRecord, TResult = void>(
   const unregisterFormElement = registerFormElement(domElement, registry);
   let isDisposed = false;
 
+  const formAny = form as unknown as FormInstance<Record<string, unknown>>;
+
   const handleSubmit = (event: unknown): void => {
     if (isDisposed) return;
-    const evt = event as EventWithPreventDefault | undefined;
-
-    if (evt && typeof evt.preventDefault === "function") {
-      evt.preventDefault();
-    }
+    (event as EventWithPreventDefault | undefined)?.preventDefault?.();
 
     void form
       .submit<TResult>(options?.action, options?.submitOptions)
@@ -81,26 +72,23 @@ export function bindForm<TFields extends FormFieldsRecord, TResult = void>(
           options?.onSubmitSuccess?.(res.result);
         } else if (res.status === "invalid" || res.status === "server-invalid") {
           if (options?.focusInvalidOnSubmit) {
-            const focusOpts =
-              typeof options.focusInvalidOnSubmit === "object"
-                ? options.focusInvalidOnSubmit
-                : undefined;
             orchestrateFocusInvalid(
               registry,
-              form as unknown as FormInstance<Record<string, unknown>>,
-              focusOpts,
+              formAny,
+              typeof options.focusInvalidOnSubmit === "object"
+                ? options.focusInvalidOnSubmit
+                : undefined,
             );
           }
           options?.onSubmitError?.(res.issues);
         }
       })
       .catch((err: unknown) => {
-        if (isDisposed) return;
-        if (options?.onSubmitException) {
+        if (!isDisposed && options?.onSubmitException) {
           try {
             options.onSubmitException(err);
           } catch {
-            // Contain synchronous errors thrown by user onSubmitException handler
+            // Contain synchronous errors
           }
         }
       });
@@ -112,19 +100,10 @@ export function bindForm<TFields extends FormFieldsRecord, TResult = void>(
     focusInvalid: (focusOpts) =>
       isDisposed
         ? makeResult(false, false, false, false)
-        : orchestrateFocusInvalid(
-            registry,
-            form as unknown as FormInstance<Record<string, unknown>>,
-            focusOpts,
-          ),
+        : orchestrateFocusInvalid(registry, formAny, focusOpts),
     focusFirstInvalid: (focusOpts) => formBinding.focusInvalid(focusOpts),
-    bindField: <TValue, TRaw = TValue>(
-      field: Parameters<typeof bindField<TValue, TRaw>>[0],
-      element: VanillaFieldElement,
-      fieldOptions?: BindFieldOptions,
-    ): VanillaBinding => {
-      return bindField(field, element, { ...fieldOptions, formBinding });
-    },
+    bindField: (field, element, fieldOptions) =>
+      bindField(field, element, { ...fieldOptions, formBinding }),
     dispose: (): void => {
       if (isDisposed) return;
       isDisposed = true;

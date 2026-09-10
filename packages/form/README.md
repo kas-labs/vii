@@ -159,6 +159,25 @@ Vii Form executes synchronous and asynchronous validation rules with monotonic r
 - **Trigger Modes:** Configurable via `validateOn: "change" | "blur" | "submit" | "manual"`.
 - **Debounce:** Async rules support optional `debounceMs`. In-flight timers are cleanly cancelled on new input, reset, or disposal.
 - **Stale Commit Suppression:** Rapid keystrokes abort previous async operations via `AbortSignal`; stale async resolutions are automatically discarded.
+- **Cross-Field Dependencies:** Explicitly declare dependent fields via `dependencies: [fieldA]`. The validator receives `ctx.get(fieldA)` returning an immutable snapshot captured at wave start:
+
+```ts
+// Password confirmation example
+const password = createField<string>({ initialValue: "" });
+const confirmPassword = createField<string>({
+  initialValue: "",
+  dependencies: [password],
+  rules: [
+    (val, ctx) => {
+      const pwd = ctx.get(password);
+      if (pwd !== undefined && val !== pwd) {
+        return { code: "password_mismatch", message: "Passwords do not match" };
+      }
+      return null;
+    },
+  ],
+});
+```
 
 ---
 

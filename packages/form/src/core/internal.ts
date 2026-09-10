@@ -1,6 +1,7 @@
 import type { Scope } from "@vii-labs/core";
 import type { ServerIssue } from "../submission/types.js";
-import type { FormFieldsRecord, FormNode } from "./types.js";
+import type { ValidationTriggerMode } from "../validation/types.js";
+import type { FieldState, FormFieldsRecord, FormNode } from "./types.js";
 
 /**
  * Unique symbol used to attach and retrieve internal node lifecycle metadata.
@@ -29,6 +30,11 @@ export interface FormNodeInternal<T = unknown> {
   setServerIssues?(issues: readonly ServerIssue[]): void;
   notifyMutation?(): void;
   onMutation?: () => void;
+  dependencies?: Set<FieldState<unknown, unknown>>;
+  dependents?: Set<FieldState<unknown, unknown>>;
+  scheduleDependentValidation?: (trigger: ValidationTriggerMode) => void;
+  cancelActiveValidation?: () => void;
+  treeRoot?: unknown;
 }
 
 /**
@@ -123,15 +129,43 @@ export function commitChildAdoption(
   childInternal: FormNodeInternal,
   onMutation?: () => void,
 ): () => void {
+  if (childInternal.dependencies) {
+    for (const dep of childInternal.dependencies) {
+      const depInternal = getInternalNode(dep);
+      if (
+        depInternal &&
+        depInternal.treeRoot !== undefined &&
+        depInternal.treeRoot !== parentScope
+      ) {
+        throw new Error("Cannot adopt field: dependency belongs to a different form tree");
+      }
+    }
+  }
+  if (childInternal.dependents) {
+    for (const dep of childInternal.dependents) {
+      const depInternal = getInternalNode(dep);
+      if (
+        depInternal &&
+        depInternal.treeRoot !== undefined &&
+        depInternal.treeRoot !== parentScope
+      ) {
+        throw new Error("Cannot adopt field: dependent belongs to a different form tree");
+      }
+    }
+  }
+
   childInternal.ownership = "tree";
+  childInternal.treeRoot = parentScope;
   if (onMutation) {
     childInternal.onMutation = onMutation;
   }
   const detachFromScope = parentScope.use(() => {
+    childInternal.treeRoot = undefined;
     childInternal.disposeFromOwner();
   });
   return (): void => {
     detachFromScope();
+    childInternal.treeRoot = undefined;
     childInternal.disposeFromOwner();
   };
 }

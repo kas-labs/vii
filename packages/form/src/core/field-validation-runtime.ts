@@ -1,5 +1,6 @@
 import { batch, type Scope } from "@vii-labs/core";
 import type { ParseIssue, ParseStatus } from "../parsers/types.js";
+import type { DependencyManager } from "../validation/dependencies.js";
 import { executeFieldValidation, type ValidationHostCallbacks } from "../validation/executor.js";
 import { ValidationRevisionController } from "../validation/revision.js";
 import type {
@@ -11,6 +12,7 @@ import type {
 } from "../validation/types.js";
 import type {
   FieldEqualityFn,
+  FieldState,
   ParsedCreateFieldOptions,
   ParserlessCreateFieldOptions,
 } from "./types.js";
@@ -20,6 +22,7 @@ const EXECUTION_ERROR_CODE = "validation.execution_error";
 
 export interface SharedFieldConfig<TValue> {
   readonly rules: readonly AnyValidationRule<TValue>[];
+  readonly getDependencies: () => readonly FieldState<unknown, unknown>[];
   readonly debounceMs: number;
   readonly scope: Scope | undefined;
   readonly equality: FieldEqualityFn<TValue>;
@@ -48,11 +51,21 @@ export function resolveValidationTriggers(
   return triggerSet;
 }
 
-export function readSharedConfig<TRaw, TValue>(
-  options: ParserlessCreateFieldOptions<TValue> | ParsedCreateFieldOptions<TRaw, TValue>,
+export interface SharedOptionsInput<TValue> {
+  readonly rules?: readonly AnyValidationRule<TValue>[] | undefined;
+  readonly debounceMs?: number | undefined;
+  readonly scope?: Scope | undefined;
+  readonly equality?: FieldEqualityFn<TValue> | undefined;
+  readonly validateOn?: ValidationTriggerMode | readonly ValidationTriggerMode[] | undefined;
+}
+
+export function readSharedConfig<TValue>(
+  options: SharedOptionsInput<TValue>,
+  getDependencies?: () => readonly FieldState<unknown, unknown>[],
 ): SharedFieldConfig<TValue> {
   return {
     rules: options.rules ?? [],
+    getDependencies: getDependencies ?? (() => []),
     debounceMs: options.debounceMs ?? 0,
     scope: options.scope,
     equality: options.equality ?? (defaultFieldEquality as FieldEqualityFn<TValue>),
@@ -92,13 +105,15 @@ export function createValidationRuntime<TValue>(
     get(): readonly ValidationIssue[];
     set(v: readonly ValidationIssue[]): void;
   },
-  validationStatusState: { set(v: ValidationStatus): void },
+  validationStatusState: { get(): ValidationStatus; set(v: ValidationStatus): void },
   pendingState: { set(v: boolean): void },
   syncCombinedIssues: (
     validationIss?: readonly ValidationIssue[],
     parseIss?: ParseIssue | null,
   ) => readonly FieldIssue[],
   isDisposed: () => boolean,
+  depManager?: DependencyManager,
+  hostField?: () => FieldState<unknown, unknown>,
 ) {
   const revisionCtrl = new ValidationRevisionController();
   const hostCallbacks: ValidationHostCallbacks = {
@@ -120,6 +135,11 @@ export function createValidationRuntime<TValue>(
     controller: AbortController,
   ): Promise<readonly FieldIssue[]> | readonly FieldIssue[] => {
     if (parseStatusState.get() === "invalid") return issuesState.get();
+    if (depManager && hostField) {
+      depManager.resolveOnce(hostField());
+    }
+    const dependencySnapshots = depManager ? depManager.getSnapshot() : undefined;
+    const declaredDeps = depManager ? depManager.declaredDeps : undefined;
     return executeFieldValidation(
       config.rules,
       valueState.get(),
@@ -128,6 +148,8 @@ export function createValidationRuntime<TValue>(
       controller,
       revisionCtrl,
       hostCallbacks,
+      dependencySnapshots,
+      declaredDeps,
     );
   };
 
@@ -179,6 +201,13 @@ export function createValidationRuntime<TValue>(
     }
   };
 
+  const scheduleDependentValidation = (trigger: ValidationTriggerMode): void => {
+    if (isDisposed()) return;
+    if (config.triggerSet.has("change") || validationStatusState.get() !== "unvalidated") {
+      scheduleValidation(trigger);
+    }
+  };
+
   const validate = (
     trigger: ValidationTriggerMode = "manual",
   ): Promise<readonly FieldIssue[]> | readonly FieldIssue[] => {
@@ -186,5 +215,5 @@ export function createValidationRuntime<TValue>(
     return executeValidation(trigger, revision, controller);
   };
 
-  return { revisionCtrl, scheduleValidation, validate };
+  return { revisionCtrl, scheduleValidation, scheduleDependentValidation, validate };
 }

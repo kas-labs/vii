@@ -1,17 +1,44 @@
-import { batch, computed, createScope, state } from "@vii-labs/core";
-import type { ParseIssue, ParseStatus } from "../parsers/types.js";
+import { batch, computed, createScope, state, type Scope } from "@vii-labs/core";
+import { sanitizeParseIssue } from "../parsers/builtins.js";
+import type { ParseIssue, ParseResult, ParseStatus } from "../parsers/types.js";
 import type { ServerIssue } from "../submission/types.js";
-import type { FieldIssue, ValidationIssue, ValidationStatus } from "../validation/types.js";
+import { createDependencyManager, executeDependencyWave } from "../validation/dependencies.js";
+import type {
+  AnyValidationRule,
+  FieldIssue,
+  ValidationIssue,
+  ValidationStatus,
+  ValidationTriggerMode,
+} from "../validation/types.js";
 import type { InternalFieldBaseline } from "./baseline-types.js";
 import { createValidationRuntime, readSharedConfig } from "./field-validation-runtime.js";
 import { attachInternalNode, type FormNodeInternal, type NodeOwnership } from "./internal.js";
-import type { FieldState, ParserlessCreateFieldOptions } from "./types.js";
+import type {
+  FieldDependenciesDeclaration,
+  FieldEqualityFn,
+  FieldState,
+  ParserlessCreateFieldOptions,
+} from "./types.js";
 
-export function createParserlessField<TValue>(
-  options: ParserlessCreateFieldOptions<TValue>,
-): FieldState<TValue, TValue> {
-  const config = readSharedConfig(options);
-  const initialValue = options.initialValue;
+export interface CreateFieldCoreOptions<TValue, TRaw> {
+  readonly initialValue: TValue;
+  readonly initialRawValue: TRaw;
+  readonly parser?: ((raw: TRaw) => ParseResult<TValue>) | undefined;
+  readonly parseStatus: ParseStatus;
+  readonly rules?: readonly AnyValidationRule<TValue>[] | undefined;
+  readonly dependencies?: FieldDependenciesDeclaration<TValue, TRaw> | undefined;
+  readonly debounceMs?: number | undefined;
+  readonly scope?: Scope | undefined;
+  readonly equality?: FieldEqualityFn<TValue> | undefined;
+  readonly validateOn?: ValidationTriggerMode | readonly ValidationTriggerMode[] | undefined;
+}
+
+export function createFieldCore<TValue, TRaw>(
+  options: CreateFieldCoreOptions<TValue, TRaw>,
+): FieldState<TValue, TRaw> {
+  const depManager = createDependencyManager(options.dependencies as never);
+  const config = readSharedConfig(options, depManager.getDependencies);
+  const parser = options.parser;
 
   let disposed = false;
   let ownership: NodeOwnership = config.scope ? "external-scope" : "standalone";
@@ -23,17 +50,17 @@ export function createParserlessField<TValue>(
     ? config.scope.createChild({ name: "field" })
     : createScope({ name: "field" });
 
-  const valueState = state<TValue>(initialValue);
-  const rawValueState = state<TValue>(initialValue);
-  const baselineValueState = state<TValue>(initialValue);
-  const baselineRawState = state<TValue>(initialValue);
+  const valueState = state<TValue>(options.initialValue);
+  const rawValueState = state<TRaw>(options.initialRawValue);
+  const baselineValueState = state<TValue>(options.initialValue);
+  const baselineRawState = state<TRaw>(options.initialRawValue);
   const touchedState = state<boolean>(false);
   const pendingState = state<boolean>(false);
   const issuesState = state<readonly FieldIssue[]>([]);
   const validationIssuesState = state<readonly ValidationIssue[]>([]);
   const serverIssuesState = state<readonly ServerIssue[]>([]);
   const parseIssueState = state<ParseIssue | null>(null);
-  const parseStatusState = state<ParseStatus>("unparsed");
+  const parseStatusState = state<ParseStatus>(options.parseStatus);
   const validationStatusState = state<ValidationStatus>("unvalidated");
 
   const syncCombinedIssues = (
@@ -56,17 +83,20 @@ export function createParserlessField<TValue>(
   );
   const invalidComputed = fieldScope.run(() => computed(() => !validComputed.get()));
 
-  const { revisionCtrl, scheduleValidation, validate } = createValidationRuntime(
-    config,
-    valueState,
-    parseStatusState,
-    issuesState,
-    validationIssuesState,
-    validationStatusState,
-    pendingState,
-    syncCombinedIssues,
-    () => disposed,
-  );
+  const { revisionCtrl, scheduleValidation, scheduleDependentValidation, validate } =
+    createValidationRuntime(
+      config,
+      valueState,
+      parseStatusState,
+      issuesState,
+      validationIssuesState,
+      validationStatusState,
+      pendingState,
+      syncCombinedIssues,
+      () => disposed,
+      depManager,
+      () => fieldState,
+    );
 
   let detachFromParent: (() => void) | undefined;
   const performDisposal = (): void => {
@@ -74,6 +104,7 @@ export function createParserlessField<TValue>(
     disposed = true;
     ownership = "disposed";
     internal.ownership = "disposed";
+    depManager.detachAll(fieldState);
     revisionCtrl.cancelActive();
     if (pendingState.get()) pendingState.set(false);
     detachFromParent?.();
@@ -84,38 +115,81 @@ export function createParserlessField<TValue>(
     detachFromParent = config.scope.use(() => performDisposal());
   }
 
+  const triggerPostMutation = (): void => {
+    internal.notifyMutation?.();
+    if (!disposed && config.rules.length > 0 && config.triggerSet.has("change")) {
+      scheduleValidation("change");
+    }
+    if (!disposed && internal.dependents && internal.dependents.size > 0) {
+      executeDependencyWave(fieldState);
+    }
+  };
+
   const setValue = (next: TValue): void => {
     assertActive();
     revisionCtrl.cancelActive();
     batch(() => {
       valueState.set(next);
-      rawValueState.set(next);
+      if (!parser) {
+        rawValueState.set(next as unknown as TRaw);
+        parseStatusState.set("unparsed");
+      } else {
+        parseStatusState.set("parsed");
+      }
       parseIssueState.set(null);
-      parseStatusState.set("unparsed");
       serverIssuesState.set([]);
       syncCombinedIssues(validationIssuesState.get(), null, []);
       if (validationIssuesState.get().length === 0) validationStatusState.set("unvalidated");
     });
-    internal.notifyMutation?.();
-    if (!disposed && config.rules.length > 0 && config.triggerSet.has("change"))
-      scheduleValidation("change");
+    triggerPostMutation();
   };
 
-  const setRawValue = (raw: TValue): void => {
+  const setRawValue = (raw: TRaw): void => {
     assertActive();
     revisionCtrl.cancelActive();
-    batch(() => {
-      rawValueState.set(raw);
-      valueState.set(raw);
-      parseIssueState.set(null);
-      parseStatusState.set("unparsed");
-      serverIssuesState.set([]);
-      syncCombinedIssues(validationIssuesState.get(), null, []);
-      if (validationIssuesState.get().length === 0) validationStatusState.set("unvalidated");
-    });
-    internal.notifyMutation?.();
-    if (!disposed && config.rules.length > 0 && config.triggerSet.has("change"))
-      scheduleValidation("change");
+    if (!parser) {
+      batch(() => {
+        rawValueState.set(raw);
+        valueState.set(raw as unknown as TValue);
+        parseIssueState.set(null);
+        parseStatusState.set("unparsed");
+        serverIssuesState.set([]);
+        syncCombinedIssues(validationIssuesState.get(), null, []);
+        if (validationIssuesState.get().length === 0) validationStatusState.set("unvalidated");
+      });
+      triggerPostMutation();
+      return;
+    }
+
+    const result = parser(raw);
+    if (result.ok) {
+      batch(() => {
+        rawValueState.set(raw);
+        valueState.set(result.value);
+        parseIssueState.set(null);
+        parseStatusState.set("parsed");
+        serverIssuesState.set([]);
+        syncCombinedIssues(validationIssuesState.get(), null, []);
+        if (validationIssuesState.get().length === 0) validationStatusState.set("unvalidated");
+      });
+      triggerPostMutation();
+    } else {
+      const issue = sanitizeParseIssue(result.issue);
+      batch(() => {
+        rawValueState.set(raw);
+        parseIssueState.set(issue);
+        parseStatusState.set("invalid");
+        validationIssuesState.set([]);
+        serverIssuesState.set([]);
+        syncCombinedIssues([], issue, []);
+        validationStatusState.set("invalid");
+        pendingState.set(false);
+      });
+      internal.notifyMutation?.();
+      if (!disposed && internal.dependents && internal.dependents.size > 0) {
+        executeDependencyWave(fieldState);
+      }
+    }
   };
 
   const reset = (): void => {
@@ -128,14 +202,14 @@ export function createParserlessField<TValue>(
       validationIssuesState.set([]);
       serverIssuesState.set([]);
       issuesState.set([]);
-      parseStatusState.set("unparsed");
+      parseStatusState.set(options.parseStatus);
       touchedState.set(false);
       pendingState.set(false);
       validationStatusState.set("unvalidated");
     });
   };
 
-  const fieldState: FieldState<TValue, TValue> = {
+  const fieldState: FieldState<TValue, TRaw> = {
     kind: "field",
     value: valueState,
     rawValue: rawValueState,
@@ -162,8 +236,9 @@ export function createParserlessField<TValue>(
     setTouched: (touched = true) => {
       assertActive();
       touchedState.set(touched);
-      if (!disposed && touched && config.rules.length > 0 && config.triggerSet.has("blur"))
+      if (!disposed && touched && config.rules.length > 0 && config.triggerSet.has("blur")) {
         scheduleValidation("blur");
+      }
     },
     markTouched: () => fieldState.setTouched(true),
     validate: (trigger) => {
@@ -181,11 +256,27 @@ export function createParserlessField<TValue>(
     },
   };
 
-  const internal: FormNodeInternal<InternalFieldBaseline<TValue, TValue>> = {
+  if (typeof options.dependencies === "function") {
+    const eager = options.dependencies(fieldState as never);
+    if (eager && eager.length > 0) {
+      depManager.resolveWith(fieldState, eager);
+    }
+  } else if (options.dependencies !== undefined) {
+    depManager.resolveOnce(fieldState);
+  }
+
+  const internal: FormNodeInternal<InternalFieldBaseline<TValue, TRaw>> = {
     kind: "field",
     scope: fieldScope,
     ownership,
     assertActive,
+    dependencies: depManager.dependencies,
+    dependents: new Set(),
+    scheduleDependentValidation,
+    cancelActiveValidation: () => {
+      revisionCtrl.cancelActive();
+      if (pendingState.get()) pendingState.set(false);
+    },
     reinitialize: (nextBaseline) => {
       assertActive();
       revisionCtrl.cancelActive();
@@ -208,7 +299,7 @@ export function createParserlessField<TValue>(
         validationIssuesState.set([]);
         serverIssuesState.set([]);
         issuesState.set([]);
-        parseStatusState.set("unparsed");
+        parseStatusState.set(options.parseStatus);
         touchedState.set(false);
         pendingState.set(false);
         validationStatusState.set("unvalidated");
@@ -235,4 +326,15 @@ export function createParserlessField<TValue>(
 
   attachInternalNode(fieldState, internal);
   return fieldState;
+}
+
+export function createParserlessField<TValue>(
+  options: ParserlessCreateFieldOptions<TValue>,
+): FieldState<TValue, TValue> {
+  return createFieldCore<TValue, TValue>({
+    ...options,
+    initialRawValue: options.initialValue,
+    parseStatus: "unparsed",
+    parser: undefined,
+  });
 }

@@ -70,6 +70,13 @@ export type {
 export type FieldEqualityFn<T> = (a: T, b: T) => boolean;
 
 /**
+ * Explicit dependency list or factory function receiving the created field.
+ */
+export type FieldDependenciesDeclaration<TValue = unknown, TRaw = unknown> =
+  | readonly FieldState<unknown, unknown>[]
+  | ((self: FieldState<TValue, TRaw>) => readonly FieldState<unknown, unknown>[]);
+
+/**
  * Parserless field configuration: Raw === Value with no parser.
  */
 export interface ParserlessCreateFieldOptions<TValue> {
@@ -77,6 +84,7 @@ export interface ParserlessCreateFieldOptions<TValue> {
   readonly parser?: undefined;
   readonly initialRawValue?: undefined;
   readonly rules?: readonly AnyValidationRule<TValue>[] | undefined;
+  readonly dependencies?: FieldDependenciesDeclaration<TValue, TValue> | undefined;
   readonly validateOn?: ValidationTriggerMode | readonly ValidationTriggerMode[] | undefined;
   readonly debounceMs?: number | undefined;
   readonly equality?: FieldEqualityFn<TValue> | undefined;
@@ -91,6 +99,7 @@ export interface ParsedCreateFieldOptions<TRaw, TValue> {
   readonly initialRawValue: TRaw;
   readonly parser: FieldParser<TRaw, TValue>;
   readonly rules?: readonly AnyValidationRule<TValue>[] | undefined;
+  readonly dependencies?: FieldDependenciesDeclaration<TValue, TRaw> | undefined;
   readonly validateOn?: ValidationTriggerMode | readonly ValidationTriggerMode[] | undefined;
   readonly debounceMs?: number | undefined;
   readonly equality?: FieldEqualityFn<TValue> | undefined;

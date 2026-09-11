@@ -41,7 +41,7 @@ PR: <number or not opened>
 
 Status: completed
 Branch: `feat/form-p2e-react-vue-integrations`
-PR: not opened (Draft PR will be opened upon push)
+PR: https://github.com/kas-labs/vii/pull/198 (Draft)
 
 ### Scope
 

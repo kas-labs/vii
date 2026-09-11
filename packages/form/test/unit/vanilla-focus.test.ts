@@ -876,4 +876,55 @@ describe("Vanilla DOM Focus & A11y Contract Matrix (P2d)", () => {
     expect(result.hasEligibleTarget).toBe(false);
     expect(result.focused).toBe(false);
   });
+
+  test("scroll-only mode skips ineligible target and scrolls to next eligible target without focusing", () => {
+    const f1 = createField({ initialValue: "", rules: [() => ({ code: "err1" })] });
+    const f2 = createField({ initialValue: "", rules: [() => ({ code: "err2" })] });
+    const form = createForm({ fields: { f1, f2 } });
+    const formEl = createMockFormElement();
+    const formBinding = bindForm(form, formEl);
+
+    const input1 = new MockFocusElement();
+    input1.disabled = true;
+    input1.docOrderIndex = 1;
+
+    const input2 = new MockFocusElement();
+    input2.docOrderIndex = 2;
+
+    formBinding.bindField(f1, input1);
+    formBinding.bindField(f2, input2);
+
+    f1.validate();
+    f2.validate();
+
+    const result = formBinding.focusInvalid({ focus: false, scroll: true });
+    expect(result.hasInvalidFields).toBe(true);
+    expect(result.hasEligibleTarget).toBe(true);
+    expect(result.focused).toBe(false);
+    expect(result.scrolled).toBe(true);
+    expect(input1.focused).toBe(false);
+    expect(input1.scrolled).toBe(false);
+    expect(input2.focused).toBe(false);
+    expect(input2.scrolled).toBe(true);
+  });
+
+  test("scroll-only mode returns scrolled: false and hasEligibleTarget: false when all targets ineligible", () => {
+    const f1 = createField({ initialValue: "", rules: [() => ({ code: "err1" })] });
+    const form = createForm({ fields: { f1 } });
+    const formEl = createMockFormElement();
+    const formBinding = bindForm(form, formEl);
+
+    const input1 = new MockFocusElement();
+    input1.hidden = true;
+
+    formBinding.bindField(f1, input1);
+    f1.validate();
+
+    const result = formBinding.focusInvalid({ focus: false, scroll: true });
+    expect(result.hasInvalidFields).toBe(true);
+    expect(result.hasEligibleTarget).toBe(false);
+    expect(result.focused).toBe(false);
+    expect(result.scrolled).toBe(false);
+    expect(input1.scrolled).toBe(false);
+  });
 });

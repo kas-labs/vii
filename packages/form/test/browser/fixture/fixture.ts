@@ -36,6 +36,12 @@ import {
   mountFocusScroll,
   mountFocusSilentFailureFallback,
 } from "./focus-scenarios.js";
+import {
+  mountFocusAllCssHidden,
+  mountFocusAncestorDisplayNone,
+  mountFocusAncestorVisibilityHidden,
+  mountFocusScrollFallback,
+} from "./focus-visibility-scenarios.js";
 import { mountReactLifecycle } from "./react-scenarios.js";
 
 const bridge: ViiP1kBridge = {
@@ -191,6 +197,18 @@ switch (scenario) {
     break;
   case "focus-radio-disabled":
     mountFocusRadioDisabledCheck(app, bridge);
+    break;
+  case "focus-ancestor-display-none":
+    mountFocusAncestorDisplayNone(app, bridge);
+    break;
+  case "focus-ancestor-visibility-hidden":
+    mountFocusAncestorVisibilityHidden(app, bridge);
+    break;
+  case "focus-scroll-fallback":
+    mountFocusScrollFallback(app, bridge);
+    break;
+  case "focus-all-css-hidden":
+    mountFocusAllCssHidden(app, bridge);
     break;
   default:
     app.textContent = `Unknown scenario: ${scenario}`;

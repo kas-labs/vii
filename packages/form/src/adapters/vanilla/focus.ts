@@ -96,17 +96,15 @@ export function isElementFocusable(element: unknown): boolean {
 
   if (typeof el.focus !== "function" || el.isConnected === false) return false;
   if (el.ownerDocument?.contains && !el.ownerDocument.contains(element as Node)) return false;
-  if (el.disabled || el.hidden || el.inert || el.type === "hidden") return false;
-
   const has = (n: string) => Boolean(el.hasAttribute?.(n));
-  const get = (n: string) => el.getAttribute?.(n);
 
   if (
+    el.disabled ||
+    el.hidden ||
+    el.inert ||
+    el.type === "hidden" ||
     has("disabled") ||
-    has("hidden") ||
-    has("inert") ||
-    get("aria-disabled") === "true" ||
-    get("aria-hidden") === "true"
+    el.getAttribute?.("aria-disabled") === "true"
   ) {
     return false;
   }
@@ -119,32 +117,32 @@ export function isElementFocusable(element: unknown): boolean {
     // Safe ignore
   }
 
-  let cur = (el as Element).parentElement;
+  const hasWin = typeof window !== "undefined";
+  let cur: Element | null = element as Element;
   while (cur) {
-    const fs = cur as HTMLFieldSetElement;
-    if (cur.tagName === "FIELDSET" && (fs.disabled || fs.hasAttribute?.("disabled"))) {
-      if (
-        !Array.from(cur.children)
-          .find((c) => c.tagName === "LEGEND")
-          ?.contains(element as Node)
-      ) {
+    if (hasWin) {
+      try {
+        const s = window.getComputedStyle?.(cur);
+        if (s && (s.display === "none" || /^(hidden|collapse)$/.test(s.visibility))) return false;
+      } catch {
         return false;
       }
+    }
+    if (
+      cur !== element &&
+      cur.tagName === "FIELDSET" &&
+      ((cur as HTMLFieldSetElement).disabled || cur.hasAttribute?.("disabled")) &&
+      !Array.from(cur.children)
+        .find((c) => c.tagName === "LEGEND")
+        ?.contains(element as Node)
+    ) {
+      return false;
     }
     cur = cur.parentElement;
   }
 
-  if (typeof window !== "undefined" && element instanceof Element) {
-    try {
-      const s = window.getComputedStyle?.(element);
-      if (s && (s.display === "none" || /^(hidden|collapse)$/.test(s.visibility))) return false;
-    } catch {
-      return false;
-    }
-  }
-
   if (has("tabindex")) {
-    const raw = get("tabindex")?.trim();
+    const raw = el.getAttribute?.("tabindex")?.trim();
     if (raw && /^-?\d+$/.test(raw) && parseInt(raw, 10) >= -1) return true;
   }
 
@@ -240,8 +238,10 @@ export function orchestrateFocusInvalid(
   const shouldFocus = options?.focus !== false;
   const preventScroll = options?.preventScroll ?? shouldScroll;
 
+  let hadEligible = false;
   for (const c of candidates) {
     if (!isElementFocusable(c)) continue;
+    hadEligible = true;
     const el = c as HTMLElement;
     let focused = false;
     if (shouldFocus) {
@@ -266,7 +266,7 @@ export function orchestrateFocusInvalid(
     return makeResult(focused, scrolled, true, true);
   }
 
-  return makeResult(false, false, true, true);
+  return makeResult(false, false, true, hadEligible);
 }
 
 export function focusInvalid(

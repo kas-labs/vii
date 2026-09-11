@@ -175,4 +175,99 @@ test.describe("DOM Focus & Accessibility Orchestration (P2d Real Browser)", () =
     const activeId = await page.evaluate(() => document.activeElement?.id);
     expect(activeId).toBe("radio-free-enabled");
   });
+
+  test("skips input inside ancestor with display:none and focuses next visible invalid target", async ({
+    page,
+  }) => {
+    await page.goto("/?scenario=focus-ancestor-display-none");
+
+    const result = await page.evaluate(() => {
+      return window.__viiP1k!.formBinding!.focusInvalid();
+    });
+
+    expect(result.focused).toBe(true);
+    expect(result.hasEligibleTarget).toBe(true);
+
+    const activeId = await page.evaluate(() => document.activeElement?.id);
+    expect(activeId).toBe("visible-fallback-display");
+  });
+
+  test("skips input inside ancestor with visibility:hidden and focuses next visible invalid target", async ({
+    page,
+  }) => {
+    await page.goto("/?scenario=focus-ancestor-visibility-hidden");
+
+    const result = await page.evaluate(() => {
+      return window.__viiP1k!.formBinding!.focusInvalid();
+    });
+
+    expect(result.focused).toBe(true);
+    expect(result.hasEligibleTarget).toBe(true);
+
+    const activeId = await page.evaluate(() => document.activeElement?.id);
+    expect(activeId).toBe("visible-fallback-visibility");
+  });
+
+  test("in scroll-only mode, skips CSS-hidden invalid target, does not scroll to it, and scrolls to next visible target", async ({
+    page,
+  }) => {
+    await page.goto("/?scenario=focus-scroll-fallback");
+
+    const initialScrollY = await page.evaluate(() => window.scrollY);
+    expect(initialScrollY).toBe(0);
+
+    const result = await page.evaluate(() => {
+      return window.__viiP1k!.formBinding!.focusInvalid({ focus: false, scroll: true });
+    });
+
+    expect(result.focused).toBe(false);
+    expect(result.scrolled).toBe(true);
+    expect(result.hasEligibleTarget).toBe(true);
+    expect(result.hasInvalidFields).toBe(true);
+
+    await page.waitForFunction(() => window.scrollY > 100);
+    const scrolledY = await page.evaluate(() => window.scrollY);
+    expect(scrolledY).toBeGreaterThan(100);
+
+    const activeId = await page.evaluate(() => document.activeElement?.id);
+    expect(activeId).not.toBe("scroll-hidden-input");
+    expect(activeId).not.toBe("scroll-visible-input");
+  });
+
+  test("returns hasInvalidFields=true, hasEligibleTarget=false, focused=false, scrolled=false when all invalid bindings are CSS-hidden", async ({
+    page,
+  }) => {
+    await page.goto("/?scenario=focus-all-css-hidden");
+
+    const result = await page.evaluate(() => {
+      return window.__viiP1k!.formBinding!.focusInvalid();
+    });
+
+    expect(result.focused).toBe(false);
+    expect(result.scrolled).toBe(false);
+    expect(result.hasInvalidFields).toBe(true);
+    expect(result.hasEligibleTarget).toBe(false);
+
+    const activeId = await page.evaluate(() => document.activeElement?.id);
+    expect(activeId).not.toBe("all-hidden-input-1");
+    expect(activeId).not.toBe("all-hidden-input-2");
+  });
+
+  test("in scroll-only mode returns scrolled=false and hasEligibleTarget=false when all invalid bindings are CSS-hidden", async ({
+    page,
+  }) => {
+    await page.goto("/?scenario=focus-all-css-hidden");
+
+    const result = await page.evaluate(() => {
+      return window.__viiP1k!.formBinding!.focusInvalid({ focus: false, scroll: true });
+    });
+
+    expect(result.focused).toBe(false);
+    expect(result.scrolled).toBe(false);
+    expect(result.hasInvalidFields).toBe(true);
+    expect(result.hasEligibleTarget).toBe(false);
+
+    const scrollY = await page.evaluate(() => window.scrollY);
+    expect(scrollY).toBe(0);
+  });
 });

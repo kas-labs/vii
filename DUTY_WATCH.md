@@ -37,6 +37,60 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-09-11 18:35 CEST | Form: Ancestor Computed Visibility & Scroll-Only Fallback (P2d)
+
+Status: completed
+Branch: `feat/form-p2d-dom-focus-a11y`
+PR: https://github.com/kas-labs/vii/pull/197 (Draft)
+
+### Scope
+
+- Fix computed visibility through ancestors in `isElementFocusable`: walk the DOM tree ancestor chain and reject targets when the element or any ancestor has computed `display: none`, `visibility: hidden`, or `visibility: collapse`.
+- Fix scroll-only fallback and eligibility in `orchestrateFocusInvalid`: in scroll-only mode (`focus: false, scroll: true`), skip CSS-hidden targets, do not scroll to them, and scroll to the first visible eligible invalid target.
+- If all invalid bindings are CSS-hidden, return `{ focused: false, scrolled: false, hasInvalidFields: true, hasEligibleTarget: false }`.
+- Add real-browser Playwright test coverage for ancestor CSS visibility, scroll-only fallback, and all-hidden invalid targets.
+- Maintain all 41/41 HARD performance gates without budget inflation (vanillaAdapter Brotli <= 3,200 B).
+
+### Changes
+
+- `packages/form/src/adapters/vanilla/focus.ts`:
+  - `isElementFocusable`: unified ancestor traversal loop inspecting `window.getComputedStyle(cur)` for `display: "none"` or `visibility: "hidden"|"collapse"` on the element and all ancestors, along with fieldset disabled/legend checks. Streamlined attribute checks.
+  - `orchestrateFocusInvalid`: tracked `hadEligible` during candidate evaluation; returns `hasEligibleTarget: hadEligible` when loop completes without returning an active focus/scroll target.
+- `packages/form/test/browser/fixture/focus-visibility-scenarios.ts`:
+  - Added test fixture scenarios: `mountFocusAncestorDisplayNone`, `mountFocusAncestorVisibilityHidden`, `mountFocusScrollFallback`, and `mountFocusAllCssHidden`.
+- `packages/form/test/browser/fixture/fixture.ts`:
+  - Registered the 4 new visibility scenarios in the scenario router.
+- `packages/form/test/browser/focus-orchestration.spec.ts`:
+  - Added 5 real-browser Playwright tests verifying ancestor `display: none` skipping, ancestor `visibility: hidden` skipping, scroll-only fallback to visible invalid target, and `hasEligibleTarget: false` when all invalid targets are CSS-hidden.
+- `packages/form/test/unit/vanilla-focus.test.ts`:
+  - Added unit tests for scroll-only mode fallback and all-ineligible targets.
+
+### Validation
+
+- `pnpm format:check`: PASS (All matched files use Prettier code style).
+- `NX_DAEMON=false pnpm lint`: PASS (0 warnings, 0 errors across 12 projects).
+- `NX_DAEMON=false pnpm typecheck`: PASS (0 errors across 12 projects).
+- `pnpm --filter @vii-labs/form test`: PASS (461/461 tests passed in @vii-labs/form, 33 test files).
+- `NX_DAEMON=false pnpm test`: PASS (all 12 monorepo projects passed).
+- `pnpm --filter @vii-labs/form run test:browser`: PASS (46/46 Playwright real-browser tests passed, up from 41).
+- `pnpm --filter @vii-labs/form run performance`: PASS (41/41 HARD GATES PASSED).
+  - `bundle.vanillaAdapter.maxMinifiedBytes`: 10,918 B (threshold: 14,000 B)
+  - `bundle.vanillaAdapter.maxGzipBytes`: 3,567 B (threshold: 3,800 B)
+  - `bundle.vanillaAdapter.maxBrotliBytes`: 3,182 B (threshold: 3,200 B)
+- `pnpm --filter @vii-labs/form run validate-package`: PASS (8 clean packed consumers passed).
+- `NX_DAEMON=false pnpm validate`: PASS (canonical root validation passed).
+- `git diff --check`: PASS (clean diff, zero whitespace errors).
+
+### Architecture / compatibility
+
+- Zero modifications to `@vii-labs/core` or `packages/form/src/core/`.
+- Zero bundle budget increases or threshold modifications in `packages/form/performance-budgets.json`.
+- Complete adherence to DOM accessibility and browser focusability standards.
+
+### Remaining / recovery
+
+- None. PR #197 remains in Draft status as instructed. Ready for review.
+
 ## 2026-09-11 01:50 CEST | Form: Vanilla Adapter Bundle Optimization (P2d)
 
 Status: completed

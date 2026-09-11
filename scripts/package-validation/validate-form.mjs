@@ -247,6 +247,10 @@ try {
     "package/dist/adapters/vanilla/control.d.ts.map",
     "package/dist/adapters/vanilla/control.js",
     "package/dist/adapters/vanilla/control.js.map",
+    "package/dist/adapters/vanilla/focus.d.ts",
+    "package/dist/adapters/vanilla/focus.d.ts.map",
+    "package/dist/adapters/vanilla/focus.js",
+    "package/dist/adapters/vanilla/focus.js.map",
     "package/dist/adapters/vanilla/index.d.ts",
     "package/dist/adapters/vanilla/index.d.ts.map",
     "package/dist/adapters/vanilla/index.js",
@@ -311,7 +315,7 @@ import {
   standardSchema,
 } from "@vii-labs/form";
 import * as formVanilla from "@vii-labs/form/vanilla";
-import { bindField, bindForm } from "@vii-labs/form/vanilla";
+import { bindField, bindForm, focusFirstInvalid, focusInvalid } from "@vii-labs/form/vanilla";
 
 export const rootKeys = Object.keys(form).sort();
 export const vanillaKeys = Object.keys(formVanilla).sort();
@@ -563,6 +567,10 @@ export async function runVanillaScenario() {
   formElem.dispatch("submit");
   await new Promise((r) => setTimeout(r, 10));
 
+  const hasFocusInvalid = typeof formBinding.focusInvalid === "function";
+  const hasFocusFirstInvalid = typeof formBinding.focusFirstInvalid === "function";
+  const hasStandaloneFocus = typeof focusInvalid === "function" && typeof focusFirstInvalid === "function";
+
   formBinding.dispose();
   field.dispose();
   form.dispose();
@@ -574,6 +582,9 @@ export async function runVanillaScenario() {
     postDisposeDescribedBy,
     submitSucceeded,
     submitResultText,
+    hasFocusInvalid,
+    hasFocusFirstInvalid,
+    hasStandaloneFocus,
   };
 }
 `;
@@ -614,8 +625,8 @@ export async function runVanillaScenario() {
   );
   assert.deepEqual(
     consumer.vanillaKeys,
-    ["bindField", "bindForm"].sort(),
-    "clean consumer vanilla subpath export must contain P1j bindings",
+    ["bindField", "bindForm", "focusFirstInvalid", "focusInvalid"].sort(),
+    "clean consumer vanilla subpath export must contain P1j bindings and P2d focus orchestration",
   );
 
   // Verify deep internal import rejection via Node resolution from packed consumer
@@ -646,6 +657,9 @@ export async function runVanillaScenario() {
       postDisposeDescribedBy: null,
       submitSucceeded: true,
       submitResultText: "Published: post title",
+      hasFocusInvalid: true,
+      hasFocusFirstInvalid: true,
+      hasStandaloneFocus: true,
     },
     "clean consumer vanilla scenario must execute correctly against packed artifact",
   );

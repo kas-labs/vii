@@ -24,6 +24,24 @@ import {
   mountRouteTeardown,
 } from "./lifecycle-scenarios.js";
 import { mountA11yFull, mountOverlappingAria } from "./a11y-scenarios.js";
+import {
+  mountFocusA11yAudit,
+  mountFocusDomOrder,
+  mountFocusDynamicUnregister,
+  mountFocusFieldsetDisabled,
+  mountFocusFirstInvalid,
+  mountFocusPlainDivVsTabindex,
+  mountFocusRadioDisabledCheck,
+  mountFocusRadioGroup,
+  mountFocusScroll,
+  mountFocusSilentFailureFallback,
+} from "./focus-scenarios.js";
+import {
+  mountFocusAllCssHidden,
+  mountFocusAncestorDisplayNone,
+  mountFocusAncestorVisibilityHidden,
+  mountFocusScrollFallback,
+} from "./focus-visibility-scenarios.js";
 import { mountReactLifecycle } from "./react-scenarios.js";
 
 const bridge: ViiP1kBridge = {
@@ -149,6 +167,48 @@ switch (scenario) {
     break;
   case "react-lifecycle":
     mountReactLifecycle(app, bridge);
+    break;
+  case "focus-first-invalid":
+    mountFocusFirstInvalid(app, bridge);
+    break;
+  case "focus-dom-order":
+    mountFocusDomOrder(app, bridge);
+    break;
+  case "focus-radio-group":
+    mountFocusRadioGroup(app, bridge);
+    break;
+  case "focus-scroll":
+    mountFocusScroll(app, bridge);
+    break;
+  case "focus-dynamic-unregister":
+    mountFocusDynamicUnregister(app, bridge);
+    break;
+  case "focus-a11y-audit":
+    mountFocusA11yAudit(app, bridge);
+    break;
+  case "focus-plain-div":
+    mountFocusPlainDivVsTabindex(app, bridge);
+    break;
+  case "focus-fieldset-disabled":
+    mountFocusFieldsetDisabled(app, bridge);
+    break;
+  case "focus-silent-failure":
+    mountFocusSilentFailureFallback(app, bridge);
+    break;
+  case "focus-radio-disabled":
+    mountFocusRadioDisabledCheck(app, bridge);
+    break;
+  case "focus-ancestor-display-none":
+    mountFocusAncestorDisplayNone(app, bridge);
+    break;
+  case "focus-ancestor-visibility-hidden":
+    mountFocusAncestorVisibilityHidden(app, bridge);
+    break;
+  case "focus-scroll-fallback":
+    mountFocusScrollFallback(app, bridge);
+    break;
+  case "focus-all-css-hidden":
+    mountFocusAllCssHidden(app, bridge);
     break;
   default:
     app.textContent = `Unknown scenario: ${scenario}`;

@@ -1,4 +1,4 @@
-import type { ShallowRef } from "vue";
+import type { ShallowRef, WritableComputedRef } from "vue";
 import type {
   FieldArray,
   FieldArrayItem,
@@ -66,6 +66,30 @@ export interface VueFieldHandle<TValue, TRaw = TValue> extends VueFieldRefs<TVal
   validate(trigger?: ValidationTriggerMode): Promise<readonly FieldIssue[]> | readonly FieldIssue[];
   reset(): void;
   dispose(): void;
+}
+
+/**
+ * Event and value bindings returned by Vue field bind() helper.
+ */
+export interface VueFieldBindProps<TRaw> {
+  readonly value: TRaw;
+  readonly onInput: (event: Event) => void;
+  readonly onChange: (event: Event) => void;
+  readonly onBlur: () => void;
+}
+
+/**
+ * Idiomatic Vue composable return type extending VueFieldHandle with model and bind() helpers.
+ */
+export interface VueFieldComposable<TValue, TRaw = TValue> extends VueFieldHandle<TValue, TRaw> {
+  /**
+   * Writable computed ref for direct two-way v-model binding.
+   */
+  readonly model: WritableComputedRef<TRaw>;
+  /**
+   * Generates input event and value attributes for v-bind.
+   */
+  readonly bind: () => VueFieldBindProps<TRaw>;
 }
 
 /**

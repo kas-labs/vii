@@ -7,14 +7,18 @@
  * - createVueFieldArray (repeatable collection refs & stable identity actions)
  */
 
-export { createVueField } from "./field.js";
-export { createVueForm } from "./form.js";
-export { createVueFieldArray } from "./array.js";
+export { createVueField, useViiField } from "./field.js";
+export { createVueForm, useViiForm } from "./form.js";
+export { createVueFieldArray, useViiFieldArray } from "./array.js";
+export { provideForm, useFormContext } from "./context.js";
+export { vViiField } from "./directive.js";
 
 export type {
   VueAdapterOptions,
   VueArrayHandle,
   VueArrayRefs,
+  VueFieldBindProps,
+  VueFieldComposable,
   VueFieldHandle,
   VueFieldRefs,
   VueFormHandle,

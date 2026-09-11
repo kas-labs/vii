@@ -231,6 +231,14 @@ try {
     "package/dist/adapters/react/use-form.d.ts.map",
     "package/dist/adapters/react/use-form.js",
     "package/dist/adapters/react/use-form.js.map",
+    "package/dist/adapters/react/context.d.ts",
+    "package/dist/adapters/react/context.d.ts.map",
+    "package/dist/adapters/react/context.js",
+    "package/dist/adapters/react/context.js.map",
+    "package/dist/adapters/react/use-controller.d.ts",
+    "package/dist/adapters/react/use-controller.d.ts.map",
+    "package/dist/adapters/react/use-controller.js",
+    "package/dist/adapters/react/use-controller.js.map",
     "package/dist/adapters/vanilla/a11y.d.ts",
     "package/dist/adapters/vanilla/a11y.d.ts.map",
     "package/dist/adapters/vanilla/a11y.js",
@@ -299,6 +307,14 @@ try {
     "package/dist/adapters/vue/types.d.ts.map",
     "package/dist/adapters/vue/types.js",
     "package/dist/adapters/vue/types.js.map",
+    "package/dist/adapters/vue/context.d.ts",
+    "package/dist/adapters/vue/context.d.ts.map",
+    "package/dist/adapters/vue/context.js",
+    "package/dist/adapters/vue/context.js.map",
+    "package/dist/adapters/vue/directive.d.ts",
+    "package/dist/adapters/vue/directive.d.ts.map",
+    "package/dist/adapters/vue/directive.js",
+    "package/dist/adapters/vue/directive.js.map",
   ]);
 
   assertPackageEntries(formArtifactPath, expectedFormEntries, "Form");
@@ -716,7 +732,15 @@ import React, { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createField, createFieldArray, createForm } from "@vii-labs/form";
 import * as formReact from "@vii-labs/form/react";
-import { useField, useForm, useFieldArray } from "@vii-labs/form/react";
+import {
+  useField,
+  useForm,
+  useFieldArray,
+  FormProvider,
+  useFormContext,
+  useController,
+  Controller,
+} from "@vii-labs/form/react";
 
 export const reactKeys = Object.keys(formReact).sort();
 
@@ -735,6 +759,20 @@ export function runReactApp() {
     return createElement("span", { "data-field": "username" }, binding.value);
   }
 
+  function ControlledView({ target }: { target: typeof form.fields.username }) {
+    const ctrl = useController(target);
+    return createElement("input", {
+      "data-ctrl": "controlled",
+      value: ctrl.field.value,
+      readOnly: true,
+    });
+  }
+
+  function ContextView() {
+    const ctx = useFormContext();
+    return createElement("div", { "data-ctx": "present" }, ctx ? "ok" : "err");
+  }
+
   function ListView({ target }: { target: typeof form.fields.items }) {
     const arrayBinding = useFieldArray(target);
     return createElement(
@@ -747,11 +785,22 @@ export function runReactApp() {
   function App({ target }: { target: typeof form }) {
     const formBinding = useForm(target);
     return createElement(
-      "div",
-      null,
-      createElement(UserView, { target: target.fields.username }),
-      createElement(ListView, { target: target.fields.items }),
-      createElement("span", { "data-status": formBinding.submissionStatus }, formBinding.submissionStatus),
+      FormProvider,
+      { form: target },
+      createElement(
+        "div",
+        null,
+        createElement(UserView, { target: target.fields.username }),
+        createElement(ControlledView, { target: target.fields.username }),
+        createElement(Controller, {
+          field: target.fields.username,
+          render: ({ field }) =>
+            createElement("input", { "data-controller": "rendered", value: field.value, readOnly: true }),
+        }),
+        createElement(ContextView, null),
+        createElement(ListView, { target: target.fields.items }),
+        createElement("span", { "data-status": formBinding.submissionStatus }, formBinding.submissionStatus),
+      ),
     );
   }
 
@@ -790,8 +839,16 @@ export function runReactApp() {
   const reactConsumer = await import(path.join(reactConsumerDirectory, "dist/main.js"));
   assert.deepEqual(
     reactConsumer.reactKeys,
-    ["useField", "useFieldArray", "useForm"].sort(),
-    "clean React consumer subpath export must contain P1h hooks",
+    [
+      "Controller",
+      "FormProvider",
+      "useController",
+      "useField",
+      "useFieldArray",
+      "useForm",
+      "useFormContext",
+    ].sort(),
+    "clean React consumer subpath export must contain P1h and P2e exports",
   );
 
   const reactScenarioResult = reactConsumer.runReactApp();
@@ -841,8 +898,16 @@ export function runReactApp() {
   const react18Consumer = await import(path.join(react18ConsumerDirectory, "dist/main.js"));
   assert.deepEqual(
     react18Consumer.reactKeys,
-    ["useField", "useFieldArray", "useForm"].sort(),
-    "clean React 18 consumer subpath export must contain P1h hooks",
+    [
+      "Controller",
+      "FormProvider",
+      "useController",
+      "useField",
+      "useFieldArray",
+      "useForm",
+      "useFormContext",
+    ].sort(),
+    "clean React 18 consumer subpath export must contain P1h and P2e exports",
   );
 
   const react18ScenarioResult = react18Consumer.runReactApp();
@@ -969,6 +1034,12 @@ import {
   createVueField,
   createVueFieldArray,
   createVueForm,
+  useViiField,
+  useViiForm,
+  useViiFieldArray,
+  provideForm,
+  useFormContext,
+  vViiField,
 } from "@vii-labs/form/vue";
 import { effectScope } from "vue";
 
@@ -996,21 +1067,25 @@ export function runVueSmoke() {
 
   const scope = effectScope();
   let scopedHandle!: ReturnType<typeof createVueField<string>>;
+  let composableHandle!: ReturnType<typeof useViiField<string>>;
   scope.run(() => {
     scopedHandle = createVueField(form.fields.username);
+    composableHandle = useViiField(form.fields.username);
   });
   const scopedInitial = scopedHandle.value.value;
+  const composableInitial = composableHandle.model.value;
+  const bindProps = composableHandle.bind();
   scope.stop();
   form.fields.username.setValue("after-scope-stop");
   const scopedAfterStop = scopedHandle.value.value;
   const canonicalAfterScope = form.fields.username.getValue();
 
-  const formHandle = createVueForm(form);
+  const formHandle = useViiForm(form);
   const formValue = formHandle.value.value;
   const submissionStatus = formHandle.submissionStatus.value;
   formHandle.dispose();
 
-  const arrayHandle = createVueFieldArray(form.fields.items);
+  const arrayHandle = useViiFieldArray(form.fields.items);
   const arrayLen = arrayHandle.length.value;
   const firstItemId = arrayHandle.items.value[0]?.id;
   arrayHandle.dispose();
@@ -1029,6 +1104,9 @@ export function runVueSmoke() {
     submissionStatus,
     arrayLen,
     firstItemId,
+    composableInitial,
+    hasBindProps: Boolean(bindProps && typeof bindProps.onInput === "function"),
+    hasDirective: Boolean(vViiField && typeof vViiField.mounted === "function"),
   };
 }
 `;
@@ -1057,8 +1135,18 @@ export function runVueSmoke() {
     const vueConsumer = await import(path.join(consumerDir, "dist/main.js"));
     assert.deepEqual(
       vueConsumer.vueKeys,
-      ["createVueField", "createVueFieldArray", "createVueForm"].sort(),
-      `clean ${label} consumer subpath export must contain P1j shallowRef functions`,
+      [
+        "createVueField",
+        "createVueFieldArray",
+        "createVueForm",
+        "provideForm",
+        "useFormContext",
+        "useViiField",
+        "useViiFieldArray",
+        "useViiForm",
+        "vViiField",
+      ].sort(),
+      `clean ${label} consumer subpath export must contain P1j and P2e exports`,
     );
 
     const vueSmokeResult = vueConsumer.runVueSmoke();
@@ -1072,6 +1160,9 @@ export function runVueSmoke() {
     assert.equal(vueSmokeResult.submissionStatus, "idle");
     assert.equal(vueSmokeResult.arrayLen, 1);
     assert.ok(vueSmokeResult.firstItemId);
+    assert.equal(vueSmokeResult.composableInitial, "post-dispose");
+    assert.ok(vueSmokeResult.hasBindProps);
+    assert.ok(vueSmokeResult.hasDirective);
   }
 
   // 1. Angular 17 minimum supported consumer

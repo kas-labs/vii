@@ -37,6 +37,80 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-09-12 00:35 CEST | Form: Frameworks Idiomatic React & Vue Integrations (P2e)
+
+Status: completed
+Branch: `feat/form-p2e-react-vue-integrations`
+PR: not opened (Draft PR will be opened upon push)
+
+### Scope
+
+- Implement official Vii Form Phase 2 roadmap slice P2e: Frameworks: Idiomatic React & Vue Integrations in `@vii-labs/form`.
+- React Adapter (`@vii-labs/form/react`):
+  - `FormProvider` and `useFormContext` / `useOptionalFormContext` for transport of form instance without causing unnecessary re-renders.
+  - `useController` hook and `<Controller>` declarative render-prop component bridging Vii form fields to UI component libraries (MUI, Radix, Shadcn) and custom controls. Exposes `field` (`value`, `onChange`, `onBlur`, `ref`) and `fieldState` (`invalid`, `isTouched`, `isDirty`, `isValid`, `isPending`, `error`, `issues`).
+  - Strict preservation of one canonical state tree; zero duplicate state; zero automatic unregistration on UI component unmount (ADR P2-1).
+- Vue Adapter (`@vii-labs/form/vue`):
+  - `useViiField` composable with fine-grained reactive shallow refs, a two-way writable `model` computed for `v-model` binding, and a `bind()` helper returning `{ value, onInput, onBlur }`.
+  - `useViiForm` and `useViiFieldArray` composables for form-level aggregate state and dynamic array management.
+  - `provideForm` and `useFormContext` dependency injection helpers.
+  - `vViiField` custom directive enabling declarative two-way DOM binding directly to a canonical `FieldState`.
+- Zero modifications to `@vii-labs/core` or Form Core headless runtime.
+- Maintain strict adapter isolation (adapters do not import vanilla focus or DOM traversal runtimes).
+- All 41/41 HARD performance, bundle, and memory gates must pass with 0 budget weakening.
+- All 8 packed consumer targets (Root, Vanilla, React 18, React 19, Angular 17, Angular 22, Vue 3.3, Vue 3.5) must pass cleanly.
+
+### Changes
+
+- `packages/form/src/adapters/react/context.ts`: implemented `FormProvider`, `useFormContext`, and `useOptionalFormContext`.
+- `packages/form/src/adapters/react/use-controller.ts`: implemented `useController` and `Controller`.
+- `packages/form/src/adapters/react/types.ts`: declared `FormProviderProps`, `FormContextValue`, `UseControllerOptions`, `ControllerRenderProps`, `ControllerFieldState`, `UseControllerReturn`, `ControllerProps`.
+- `packages/form/src/adapters/react/index.ts`: exported all new React runtime members and types.
+- `packages/form/src/adapters/vue/context.ts`: implemented `provideForm`, `useFormContext`, `VII_FORM_KEY`.
+- `packages/form/src/adapters/vue/directive.ts`: implemented `vViiField` custom directive with clean listener/subscription teardown.
+- `packages/form/src/adapters/vue/field.ts`: implemented `useViiField` composable with writable `model` computed and `bind()` helper.
+- `packages/form/src/adapters/vue/form.ts`: implemented `useViiForm` composable.
+- `packages/form/src/adapters/vue/array.ts`: implemented `useViiFieldArray` composable.
+- `packages/form/src/adapters/vue/types.ts`: declared `VueFieldBindProps`, `VueFieldComposable`.
+- `packages/form/src/adapters/vue/index.ts`: exported all new Vue runtime members and types.
+- `packages/form/api-surface.json`: updated `./react` and `./vue` runtime export and public type snapshots.
+- `scripts/package-validation/validate-form.mjs`: updated validation scripts to exercise the new React and Vue integrations in clean packed consumers.
+- `packages/form/test/unit/react-p2e-integrations.test.ts`: comprehensive unit and 100-field isolation tests for React P2e integrations.
+- `packages/form/test/unit/vue-p2e-integrations.test.ts`: comprehensive unit, directive, 100-field isolation, and 1,000-cycle resource stress tests for Vue P2e integrations.
+- `packages/form/test/package-boundary.test.ts`: updated boundary expectations.
+- `packages/form/README.md`: documented React and Vue P2e integrations with comprehensive code examples.
+- `docs/architecture/FORM_PHASE2_ARCHITECTURE.md`: updated P2e status to [COMPLETED] with acceptance matrix.
+- `PROJECT_STATE.md`: recorded P2e durable implementation details.
+
+### Validation
+
+- `pnpm format:check`: PASS (All matched files use Prettier code style).
+- `NX_DAEMON=false pnpm lint`: PASS (0 errors, 0 warnings across all monorepo projects).
+- `pnpm -r typecheck`: PASS (0 errors across 13 monorepo projects).
+- `pnpm --filter @vii-labs/form test`: PASS (35 test files, 480/480 tests passed).
+- `pnpm --filter @vii-labs/form run test:browser`: PASS (46/46 real Chromium Playwright tests passed).
+- `pnpm --filter @vii-labs/form run performance`: PASS (41/41 HARD GATES PASSED).
+  - `bundle.reactAdapter.maxMinifiedBytes`: 6,814 B (threshold: 7,000 B)
+  - `bundle.reactAdapter.maxGzipBytes`: 1,684 B (threshold: 2,000 B)
+  - `bundle.reactAdapter.maxBrotliBytes`: 1,526 B (threshold: 1,800 B)
+  - `bundle.vueAdapter.maxMinifiedBytes`: 7,562 B (threshold: 8,000 B)
+  - `bundle.vueAdapter.maxGzipBytes`: 1,932 B (threshold: 2,000 B)
+  - `bundle.vueAdapter.maxBrotliBytes`: 1,626 B (threshold: 1,800 B)
+  - `bundle.tarball.maxCompressedBytes`: 111,897 B (threshold: 120,000 B)
+- `pnpm --filter @vii-labs/form run validate-package`: PASS (all 8 clean packed consumers passed: Root, Vanilla, React 18, React 19, Angular 17, Angular 22, Vue 3.3, Vue 3.5).
+- `git diff --check`: PASS (0 whitespace errors).
+
+### Architecture / compatibility
+
+- Zero changes to `@vii-labs/core` or Form Core runtime (`packages/form/src/core/`).
+- Full adherence to ADR P2-1: single canonical Form state tree; no duplicate state; no unregister on unmount.
+- Strict adapter isolation: zero DOM or vanilla focus imports in React/Vue adapters.
+- Zero budget expansions: all 41 hard performance, bundle, and memory thresholds remain strictly enforced.
+
+### Remaining / recovery
+
+- None. Ready for Git commit, push, and opening DRAFT pull request.
+
 ## 2026-09-11 18:35 CEST | Form: Ancestor Computed Visibility & Scroll-Only Fallback (P2d)
 
 Status: completed

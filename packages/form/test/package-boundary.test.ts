@@ -29,7 +29,17 @@ describe("@vii-labs/form package boundary (P1m)", () => {
     );
 
     expect(formReact).toBeDefined();
-    expect(Object.keys(formReact).sort()).toEqual(["useField", "useFieldArray", "useForm"].sort());
+    expect(Object.keys(formReact).sort()).toEqual(
+      [
+        "Controller",
+        "FormProvider",
+        "useController",
+        "useField",
+        "useFieldArray",
+        "useForm",
+        "useFormContext",
+      ].sort(),
+    );
 
     expect(formVanilla).toBeDefined();
     expect(Object.keys(formVanilla).sort()).toEqual(
@@ -43,7 +53,17 @@ describe("@vii-labs/form package boundary (P1m)", () => {
 
     expect(formVue).toBeDefined();
     expect(Object.keys(formVue).sort()).toEqual(
-      ["createVueField", "createVueFieldArray", "createVueForm"].sort(),
+      [
+        "createVueField",
+        "createVueFieldArray",
+        "createVueForm",
+        "provideForm",
+        "useFormContext",
+        "useViiField",
+        "useViiFieldArray",
+        "useViiForm",
+        "vViiField",
+      ].sort(),
     );
   });
 

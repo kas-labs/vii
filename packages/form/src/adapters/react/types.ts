@@ -1,7 +1,9 @@
+import type { ReactElement, ReactNode } from "react";
 import type {
   FieldArrayItem,
   FieldIssue,
   FieldPathSegment,
+  FieldState,
   FormFieldsRecord,
   FormInstance,
   FormNode,
@@ -120,4 +122,62 @@ export interface ReactArrayBinding<
   clear(): void;
   validate(trigger?: ValidationTriggerMode): Promise<readonly FieldIssue[]> | readonly FieldIssue[];
   reset(): void;
+}
+
+/**
+ * Props for the FormProvider component.
+ */
+export interface FormProviderProps<TFields extends FormFieldsRecord = FormFieldsRecord> {
+  readonly form: FormInstance<TFields>;
+  readonly formBinding?: unknown;
+  readonly children?: ReactNode | undefined;
+}
+
+/**
+ * Options for useController hook.
+ */
+export interface UseControllerOptions {
+  readonly name?: string;
+  readonly formBinding?: unknown;
+}
+
+/**
+ * Render props for binding to a DOM control or UI component.
+ */
+export interface ControllerRenderProps<TValue, TRaw = TValue> {
+  readonly name?: string | undefined;
+  readonly value: TRaw;
+  readonly onChange: (eventOrValue: unknown) => void;
+  readonly onBlur: () => void;
+  readonly ref: (element: HTMLElement | null) => void;
+}
+
+/**
+ * Fine-grained validation and touch status for a controlled field.
+ */
+export interface ControllerFieldState {
+  readonly invalid: boolean;
+  readonly isTouched: boolean;
+  readonly isDirty: boolean;
+  readonly isValid: boolean;
+  readonly isPending: boolean;
+  readonly error: FieldIssue | undefined;
+  readonly issues: readonly FieldIssue[];
+}
+
+/**
+ * Return shape of the useController hook.
+ */
+export interface UseControllerReturn<TValue, TRaw = TValue> {
+  readonly field: ControllerRenderProps<TValue, TRaw>;
+  readonly fieldState: ControllerFieldState;
+}
+
+/**
+ * Props for declarative <Controller> component.
+ */
+export interface ControllerProps<TValue, TRaw = TValue> {
+  readonly field: FieldState<TValue, TRaw>;
+  readonly options?: UseControllerOptions;
+  readonly render: (props: UseControllerReturn<TValue, TRaw>) => ReactElement | null;
 }

@@ -145,3 +145,8 @@ export function createVueFieldArray<TItemNode extends FormNode = FormNode>(
     dispose,
   };
 }
+
+/**
+ * Idiomatic Vue 3 composable alias for createVueFieldArray.
+ */
+export const useViiFieldArray = createVueFieldArray;

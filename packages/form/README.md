@@ -273,7 +273,9 @@ await form.submit(async (val) => {
 
 ## 13. React Adapter (`@vii-labs/form/react`)
 
-Provides React 18 & 19 hooks backed by `useSyncExternalStore`:
+Provides React 18 & 19 hooks backed by `useSyncExternalStore` and idiomatic component integrations:
+
+### Basic Hooks
 
 ```tsx
 import { useField, useForm } from "@vii-labs/form/react";
@@ -293,6 +295,45 @@ function UserProfile({ form }) {
         <span key={issue.message}>{issue.message}</span>
       ))}
     </form>
+  );
+}
+```
+
+### Context & Controller (`FormProvider`, `useFormContext`, `useController`, `Controller`)
+
+For deeply nested form component hierarchies and complex UI libraries:
+
+- **`FormProvider` & `useFormContext`:** Transports the canonical `form` (and optional `formBinding`) instance down the component tree via React Context without subscribing the provider component to state changes.
+- **`useController`:** Bridges a canonical `FieldState` to custom inputs, UI component libraries (MUI, Radix, Shadcn), or native controls without whole-form re-renders. Exposes `field` (`value`, `onChange`, `onBlur`, `ref`) and fine-grained `fieldState` (`invalid`, `isTouched`, `isDirty`, `isValid`, `isPending`, `error`, `issues`).
+- **`Controller`:** Declarative render-prop component wrapping `useController`.
+
+```tsx
+import { FormProvider, useFormContext, Controller } from "@vii-labs/form/react";
+
+function MyForm({ form }) {
+  return (
+    <FormProvider form={form}>
+      <NestedInputs />
+    </FormProvider>
+  );
+}
+
+function NestedInputs() {
+  const { form } = useFormContext();
+
+  return (
+    <Controller
+      field={form.fields.email}
+      render={({ field, fieldState }) => (
+        <div>
+          <input
+            {...field}
+            aria-invalid={fieldState.invalid}
+          />
+          {fieldState.error && <span>{fieldState.error.message}</span>}
+        </div>
+      )}
+    />
   );
 }
 ```
@@ -371,7 +412,65 @@ console.log(formHandle.submissionStatus());
 
 ## 16. Vue Adapter (`@vii-labs/form/vue`)
 
-Projects canonical nodes into readonly Vue `shallowRef` handles (`vue` `>=3.3.0`):
+Projects canonical nodes into reactive Vue handles (`vue` `>=3.3.0`) with idiomatic Composition API utilities:
+
+### Composables (`useViiField`, `useViiForm`, `useViiFieldArray`)
+
+Idiomatic Vue 3 composables that automatically manage reactivity lifecycles using `onScopeDispose` (or explicit scope):
+
+- **`useViiField`:** Returns reactive handles for all field signals (`value`, `rawValue`, `dirty`, `touched`, `issues`, etc.), a two-way writable `model` computed property for `v-model` binding, and a `bind()` helper returning `{ value, onInput, onBlur }`.
+- **`useViiForm`:** Returns reactive handles for form aggregate state (`values`, `dirty`, `touched`, `valid`, `submitting`, `submissionStatus`) and actions (`submit`, `reset`, `reinitialize`).
+- **`useViiFieldArray`:** Returns reactive array items and collection manipulation methods (`append`, `remove`, `move`, `swap`).
+
+```vue
+<script setup lang="ts">
+import { createField, createForm } from "@vii-labs/form";
+import { useViiField, useViiForm } from "@vii-labs/form/vue";
+
+const form = createForm({
+  fields: {
+    username: createField<string>({ initialValue: "" }),
+  },
+});
+
+const formHandle = useViiForm(form);
+const username = useViiField(form.fields.username);
+</script>
+
+<template>
+  <form @submit.prevent="formHandle.submit(async () => ({ ok: true }))">
+    <!-- Writable computed model for v-model -->
+    <input v-model="username.model.value" @blur="username.blur" />
+    <span v-if="username.invalid.value">{{ username.issues.value[0]?.message }}</span>
+  </form>
+</template>
+```
+
+### Dependency Injection (`provideForm`, `useFormContext`)
+
+Transport form instances down deeply nested Vue component trees without prop drilling:
+
+```ts
+// In parent component:
+provideForm(form, formBinding);
+
+// In child component:
+const { form, formBinding } = useFormContext();
+```
+
+### Directive (`vViiField`)
+
+Declarative two-way DOM binding directly to a canonical `FieldState`:
+
+```vue
+<template>
+  <input v-vii-field="form.fields.username" type="text" />
+</template>
+```
+
+### Low-Level Signal Projections (`createVueField`, `createVueForm`, `createVueFieldArray`)
+
+For advanced use cases requiring manual disposal or custom lifecycle management without active effect scopes:
 
 ```ts
 import { createVueField, createVueForm } from "@vii-labs/form/vue";

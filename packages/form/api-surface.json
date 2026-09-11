@@ -68,14 +68,28 @@
     },
     "./react": {
       "stability": "preview",
-      "runtimeExports": ["useField", "useFieldArray", "useForm"],
+      "runtimeExports": [
+        "Controller",
+        "FormProvider",
+        "useController",
+        "useField",
+        "useFieldArray",
+        "useForm",
+        "useFormContext"
+      ],
       "publicTypes": [
+        "ControllerFieldState",
+        "ControllerProps",
+        "ControllerRenderProps",
+        "FormProviderProps",
         "ReactArrayBinding",
         "ReactArraySnapshot",
         "ReactFieldBinding",
         "ReactFieldSnapshot",
         "ReactFormBinding",
-        "ReactFormSnapshot"
+        "ReactFormSnapshot",
+        "UseControllerOptions",
+        "UseControllerReturn"
       ]
     },
     "./vanilla": {
@@ -108,11 +122,23 @@
     },
     "./vue": {
       "stability": "preview",
-      "runtimeExports": ["createVueField", "createVueFieldArray", "createVueForm"],
+      "runtimeExports": [
+        "createVueField",
+        "createVueFieldArray",
+        "createVueForm",
+        "provideForm",
+        "useFormContext",
+        "useViiField",
+        "useViiFieldArray",
+        "useViiForm",
+        "vViiField"
+      ],
       "publicTypes": [
         "VueAdapterOptions",
         "VueArrayHandle",
         "VueArrayRefs",
+        "VueFieldBindProps",
+        "VueFieldComposable",
         "VueFieldHandle",
         "VueFieldRefs",
         "VueFormHandle",

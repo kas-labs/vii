@@ -1,6 +1,11 @@
-import { getCurrentScope, onScopeDispose, shallowReadonly, shallowRef } from "vue";
+import { computed, getCurrentScope, onScopeDispose, shallowReadonly, shallowRef } from "vue";
 import type { FieldState, ValidationTriggerMode } from "../../core/types.js";
-import type { VueAdapterOptions, VueFieldHandle } from "./types.js";
+import type {
+  VueAdapterOptions,
+  VueFieldBindProps,
+  VueFieldComposable,
+  VueFieldHandle,
+} from "./types.js";
 
 /**
  * Creates a Vue shallowRef projection over a standalone canonical Vii Form leaf field.
@@ -129,4 +134,41 @@ export function createVueField<TValue, TRaw = TValue>(
     reset,
     dispose,
   };
+}
+
+/**
+ * Idiomatic Vue 3 composable for binding components and templates to a Vii FieldState.
+ *
+ * Exposes:
+ * - all reactive refs from createVueField (value, rawValue, dirty, touched, issues, etc.)
+ * - `model`: writable computed ref for direct v-model binding (<input v-model="field.model.value" />)
+ * - `bind()`: props helper returning value, onInput, onChange, onBlur for v-bind (<input v-bind="field.bind()" />)
+ */
+export function useViiField<TValue, TRaw = TValue>(
+  field: FieldState<TValue, TRaw>,
+  options?: VueAdapterOptions,
+): VueFieldComposable<TValue, TRaw> {
+  const handle = createVueField(field, options);
+  const model = computed<TRaw>({
+    get: () => handle.rawValue.value,
+    set: (val: TRaw) => handle.setRawValue(val),
+  });
+  const onInput = (event: Event): void => {
+    const target = event.target as { value?: unknown; checked?: boolean; type?: string } | null;
+    if (!target) return;
+    handle.setRawValue(
+      (target.type === "checkbox"
+        ? Boolean(target.checked)
+        : (target.value ?? "")) as unknown as TRaw,
+    );
+  };
+  const onBlur = (): void => handle.blur();
+  const bind = (): VueFieldBindProps<TRaw> => ({
+    value: handle.rawValue.value,
+    onInput,
+    onChange: onInput,
+    onBlur,
+  });
+
+  return { ...handle, model, bind };
 }

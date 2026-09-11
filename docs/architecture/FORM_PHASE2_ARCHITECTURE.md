@@ -244,13 +244,29 @@ The Phase 2 roadmap follows a strictly sequential recommended execution order to
   - [x] 41/41 hard performance, bundle, and memory gates pass with zero budget expansion.
 - **Stop Condition:** Standard submit failures can optionally focus the first invalid DOM node. (Achieved and verified across unit, browser, and clean consumer fixtures).
 
-### **P2e — Frameworks: Idiomatic React & Vue Integrations**
-- **Objective:** React `Controller` / `FormProvider` and Vue `useField` composition enhancements.
+### **P2e — Frameworks: Idiomatic React & Vue Integrations** [COMPLETED]
+- **Objective:** React `Controller` / `FormProvider` and Vue `useViiField` / `provideForm` / `vViiField` composition and integration enhancements.
 - **Owner:** React & Vue Adapters.
 - **Dependencies:** P2d.
-- **Public API Impact:** High within `/react` and `/vue` subpaths.
-- **Tests Required:** SSR import safety, strict-mode.
-- **Stop Condition:** Controller correctly bridges generic components without parent renders.
+- **Architecture Continuity:**
+  - Preserves one canonical state tree: zero duplicated form state, zero hidden external stores, zero automatic structural unregistration on UI component unmount (ADR P2-1).
+  - Preserves strict adapter isolation: React and Vue adapters remain 100% framework-isolated and do not import DOM or vanilla focus implementation modules.
+  - Granular reactivity: field mutation triggers re-renders or effect runs strictly in affected subscriber components without whole-form re-renders.
+- **Public API Impact:** High within `/react` and `/vue` subpaths (Additive, 0 breaking changes).
+  - React exports: `FormProvider`, `useFormContext`, `useOptionalFormContext`, `useController`, `Controller`, plus types `FormProviderProps`, `FormContextValue`, `UseControllerOptions`, `ControllerRenderProps`, `ControllerFieldState`, `UseControllerReturn`, `ControllerProps`.
+  - Vue exports: `useViiField`, `useViiForm`, `useViiFieldArray`, `provideForm`, `useFormContext`, `vViiField`, plus types `VueFieldBindProps`, `VueFieldComposable`.
+- **Acceptance Matrix:**
+  - [x] `FormProvider` transports canonical form (and optional binding) via React Context without subscribing to state changes.
+  - [x] `useController` bridges canonical fields to custom inputs and UI component libraries with granular `field` and `fieldState` props.
+  - [x] `Controller` render-prop component wraps `useController` cleanly.
+  - [x] `useViiField` provides reactive handles, two-way writable `model` computed, and `bind()` helper in active Vue `effectScope`.
+  - [x] `provideForm` and `useFormContext` transport form instances down Vue component hierarchies with descriptive errors on missing context.
+  - [x] `vViiField` Vue directive enables declarative two-way DOM binding directly to `FieldState` with clean listener teardown.
+  - [x] 100-field isolation verified: mutating a single field among 100 executes effects/re-renders strictly for that field.
+  - [x] 1,000-cycle resource stress tests prove 0 subscription leaks upon unmount/teardown.
+  - [x] All 41/41 hard performance, bundle, and memory gates pass with 0 budget weakening.
+  - [x] All 8 packed consumers (Root, Vanilla, React 18, React 19, Angular 17, Angular 22, Vue 3.3, Vue 3.5) pass cleanly.
+- **Stop Condition:** Controller correctly bridges generic components without parent renders; Vue composables provide full idiomatic reactivity with 0 leaks. (Achieved and verified).
 
 ### **P2f — Frameworks: Angular Ecosystem Integration**
 - **Objective:** Angular Signal Forms interoperability, `ControlValueAccessor` bridge.

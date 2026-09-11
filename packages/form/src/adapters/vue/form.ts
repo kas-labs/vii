@@ -133,3 +133,8 @@ export function createVueForm<TFields extends FormFieldsRecord = FormFieldsRecor
     dispose,
   };
 }
+
+/**
+ * Idiomatic Vue 3 composable alias for createVueForm.
+ */
+export const useViiForm = createVueForm;

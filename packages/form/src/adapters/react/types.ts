@@ -147,7 +147,6 @@ export interface ControllerRenderProps<TValue, TRaw = TValue> {
   readonly value: TRaw;
   readonly onChange: (eventOrValue: unknown) => void;
   readonly onBlur: () => void;
-  readonly ref: (element: HTMLElement | null) => void;
 }
 
 /**

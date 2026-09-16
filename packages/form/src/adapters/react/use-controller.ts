@@ -19,11 +19,6 @@ export function useController<TValue, TRaw = TValue>(
 ): UseControllerReturn<TValue, TRaw> {
   const binding = useField(field);
 
-  const ref = useCallback((): void => {
-    // Pure consumer ref callback: no-op default that allows UI libraries
-    // and custom components to attach ref callbacks cleanly.
-  }, []);
-
   const onChange = useCallback(
     (e: unknown): void => {
       const t = (e as { target?: { value?: unknown; checked?: boolean; type?: string } })?.target;
@@ -62,9 +57,8 @@ export function useController<TValue, TRaw = TValue>(
       value: binding.rawValue,
       onChange,
       onBlur,
-      ref,
     }),
-    [options?.name, binding.rawValue, onChange, onBlur, ref],
+    [options?.name, binding.rawValue, onChange, onBlur],
   );
 
   return useMemo(

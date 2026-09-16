@@ -246,7 +246,7 @@ describe("React P2e Integrations (@vii-labs/form/react)", () => {
       field.dispose();
     });
 
-    it("provides stable ref callback that attaches to DOM controls and unmounts cleanly", () => {
+    it("composes cleanly with direct consumer DOM ref attachment", () => {
       const field = createField<string>({ initialValue: "ref-test" });
 
       let refReceived: HTMLElement | null = null;
@@ -254,7 +254,6 @@ describe("React P2e Integrations (@vii-labs/form/react)", () => {
         const ctrl = useController(field);
         return createElement("input", {
           ref: (el: HTMLElement | null) => {
-            ctrl.field.ref(el);
             refReceived = el;
           },
           defaultValue: ctrl.field.value,

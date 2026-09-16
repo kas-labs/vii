@@ -1,4 +1,4 @@
-import type { ShallowRef, WritableComputedRef } from "vue";
+import type { ObjectDirective, ShallowRef, WritableComputedRef } from "vue";
 import type {
   FieldArray,
   FieldArrayItem,
@@ -176,3 +176,14 @@ export type SupportedVueFieldElement = HTMLInputElement | HTMLTextAreaElement;
  * and boolean raw representation (checkboxes).
  */
 export type SupportedVueFieldState = FieldState<unknown, string> | FieldState<unknown, boolean>;
+
+/**
+ * Directive contract for `v-vii-field`.
+ *
+ * Provides overloaded template typing for `<textarea>` (string fields)
+ * and `<input>` (string or boolean fields). Note that DOM `<input>` elements cannot
+ * be statically differentiated between text and checkbox in TypeScript's standard DOM
+ * library, so runtime type guards guarantee fail-closed safety for mismatched controls.
+ */
+export type ViiFieldDirective = ObjectDirective<HTMLTextAreaElement, FieldState<unknown, string>> &
+  ObjectDirective<HTMLInputElement, SupportedVueFieldState>;

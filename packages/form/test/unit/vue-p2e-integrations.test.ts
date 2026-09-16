@@ -5,7 +5,6 @@ import {
   useFormContext,
   useViiField,
   vViiField,
-  type SupportedVueFieldElement,
   type SupportedVueFieldState,
 } from "../../src/adapters/vue/index.js";
 
@@ -126,18 +125,18 @@ describe("Vue P2e Integrations (@vii-labs/form/vue)", () => {
         },
       } as unknown as HTMLInputElement;
 
-      const createBinding = (
-        value: SupportedVueFieldState,
-        oldValue: SupportedVueFieldState | null = null,
-      ): DirectiveBinding<SupportedVueFieldState> => ({
+      const createBinding = <T extends SupportedVueFieldState>(
+        value: T,
+        oldValue: T | null = null,
+      ): DirectiveBinding<T> => ({
         value,
         oldValue,
         modifiers: {},
         arg: undefined,
         instance: null,
-        dir: vViiField,
+        dir: vViiField as never,
       });
-      const dummyVNode = null as unknown as VNode<unknown, SupportedVueFieldElement>;
+      const dummyVNode = null as unknown as VNode<unknown, HTMLInputElement>;
 
       // Mount directive
       vViiField.mounted!(dummyInput, createBinding(field), dummyVNode, null);
@@ -195,18 +194,18 @@ describe("Vue P2e Integrations (@vii-labs/form/vue)", () => {
         },
       } as unknown as HTMLInputElement;
 
-      const createBinding = (
-        value: SupportedVueFieldState,
-        oldValue: SupportedVueFieldState | null = null,
-      ): DirectiveBinding<SupportedVueFieldState> => ({
+      const createBinding = <T extends SupportedVueFieldState>(
+        value: T,
+        oldValue: T | null = null,
+      ): DirectiveBinding<T> => ({
         value,
         oldValue,
         modifiers: {},
         arg: undefined,
         instance: null,
-        dir: vViiField,
+        dir: vViiField as never,
       });
-      const dummyVNode = null as unknown as VNode<unknown, SupportedVueFieldElement>;
+      const dummyVNode = null as unknown as VNode<unknown, HTMLInputElement>;
 
       // Mount fieldA
       vViiField.mounted!(dummyInput, createBinding(fieldA), dummyVNode, null);
@@ -245,17 +244,15 @@ describe("Vue P2e Integrations (@vii-labs/form/vue)", () => {
         },
       } as unknown as HTMLInputElement;
 
-      const createBinding = (
-        value: SupportedVueFieldState,
-      ): DirectiveBinding<SupportedVueFieldState> => ({
+      const createBinding = <T extends SupportedVueFieldState>(value: T): DirectiveBinding<T> => ({
         value,
         oldValue: null,
         modifiers: {},
         arg: undefined,
         instance: null,
-        dir: vViiField,
+        dir: vViiField as never,
       });
-      const dummyVNode = null as unknown as VNode<unknown, SupportedVueFieldElement>;
+      const dummyVNode = null as unknown as VNode<unknown, HTMLInputElement>;
 
       vViiField.mounted!(dummyCheckbox, createBinding(field), dummyVNode, null);
       expect(dummyCheckbox.checked).toBe(false);
@@ -293,16 +290,16 @@ describe("Vue P2e Integrations (@vii-labs/form/vue)", () => {
       } as unknown as HTMLTextAreaElement;
 
       const createBinding = (
-        value: SupportedVueFieldState,
-      ): DirectiveBinding<SupportedVueFieldState> => ({
+        value: FieldState<unknown, string>,
+      ): DirectiveBinding<FieldState<unknown, string>> => ({
         value,
         oldValue: null,
         modifiers: {},
         arg: undefined,
         instance: null,
-        dir: vViiField,
+        dir: vViiField as never,
       });
-      const dummyVNode = null as unknown as VNode<unknown, SupportedVueFieldElement>;
+      const dummyVNode = null as unknown as VNode<unknown, HTMLTextAreaElement>;
 
       vViiField.mounted!(dummyTextarea, createBinding(field), dummyVNode, null);
       expect(dummyTextarea.value).toBe("notes");
@@ -335,15 +332,118 @@ describe("Vue P2e Integrations (@vii-labs/form/vue)", () => {
         modifiers: {},
         arg: undefined,
         instance: null,
-        dir: vViiField,
+        dir: vViiField as never,
       });
-      const dummyVNode = null as unknown as VNode<unknown, SupportedVueFieldElement>;
+      const dummyVNode = null as unknown as VNode<unknown, HTMLInputElement>;
 
       vViiField.mounted!(unsupportedDiv as never, createBinding(field), dummyVNode, null);
       expect(Object.keys(listeners).length).toBe(0);
 
       vViiField.unmounted!(unsupportedDiv as never, createBinding(field), dummyVNode, null);
       field.dispose();
+    });
+
+    it("fails closed when element type and field state raw type mismatch at runtime", () => {
+      const stringField = createField<string>({ initialValue: "not a bool" });
+      const boolField = createField<boolean>({ initialValue: false });
+
+      const checkboxListeners: Record<string, ((e: Event) => void)[]> = {};
+      const dummyCheckbox = {
+        tagName: "INPUT",
+        type: "checkbox",
+        checked: false,
+        addEventListener: (event: string, fn: (e: Event) => void) => {
+          (checkboxListeners[event] = checkboxListeners[event] || []).push(fn);
+        },
+        removeEventListener: (event: string, fn: (e: Event) => void) => {
+          checkboxListeners[event] = (checkboxListeners[event] || []).filter((l) => l !== fn);
+        },
+      } as unknown as HTMLInputElement;
+
+      const textListeners: Record<string, ((e: Event) => void)[]> = {};
+      const dummyTextInput = {
+        tagName: "INPUT",
+        type: "text",
+        value: "",
+        addEventListener: (event: string, fn: (e: Event) => void) => {
+          (textListeners[event] = textListeners[event] || []).push(fn);
+        },
+        removeEventListener: (event: string, fn: (e: Event) => void) => {
+          textListeners[event] = (textListeners[event] || []).filter((l) => l !== fn);
+        },
+      } as unknown as HTMLInputElement;
+
+      const textareaListeners: Record<string, ((e: Event) => void)[]> = {};
+      const dummyTextarea = {
+        tagName: "TEXTAREA",
+        value: "",
+        addEventListener: (event: string, fn: (e: Event) => void) => {
+          (textareaListeners[event] = textareaListeners[event] || []).push(fn);
+        },
+        removeEventListener: (event: string, fn: (e: Event) => void) => {
+          textareaListeners[event] = (textareaListeners[event] || []).filter((l) => l !== fn);
+        },
+      } as unknown as HTMLTextAreaElement;
+
+      const createBinding = <T extends SupportedVueFieldState>(value: T): DirectiveBinding<T> => ({
+        value,
+        oldValue: null,
+        modifiers: {},
+        arg: undefined,
+        instance: null,
+        dir: vViiField as never,
+      });
+      const dummyInputVNode = null as unknown as VNode<unknown, HTMLInputElement>;
+      const dummyTextareaVNode = null as unknown as VNode<unknown, HTMLTextAreaElement>;
+
+      // 1. Checkbox + string field: fails closed, 0 listeners, no dom mutation
+      vViiField.mounted!(dummyCheckbox, createBinding(stringField), dummyInputVNode, null);
+      expect(Object.keys(checkboxListeners).length).toBe(0);
+      stringField.setRawValue("changed");
+      expect(dummyCheckbox.checked).toBe(false);
+
+      // 2. Text input + boolean field: fails closed, 0 listeners, no dom mutation
+      vViiField.mounted!(dummyTextInput, createBinding(boolField), dummyInputVNode, null);
+      expect(Object.keys(textListeners).length).toBe(0);
+      boolField.setRawValue(true);
+      expect(dummyTextInput.value).toBe("");
+
+      // 3. Textarea + boolean field: fails closed at runtime
+      vViiField.mounted!(
+        dummyTextarea,
+        createBinding(boolField) as never,
+        dummyTextareaVNode,
+        null,
+      );
+      expect(Object.keys(textareaListeners).length).toBe(0);
+      boolField.setRawValue(false);
+      expect(dummyTextarea.value).toBe("");
+
+      stringField.dispose();
+      boolField.dispose();
+    });
+
+    it("statically rejects incompatible field types on textarea at compile time", () => {
+      const boolField = createField<boolean>({ initialValue: true });
+      const dummyTextarea = {
+        tagName: "TEXTAREA",
+        value: "",
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      } as unknown as HTMLTextAreaElement;
+      const dummyVNode = null as unknown as VNode<unknown, HTMLTextAreaElement>;
+      const createBinding = <T extends SupportedVueFieldState>(value: T): DirectiveBinding<T> => ({
+        value,
+        oldValue: null,
+        modifiers: {},
+        arg: undefined,
+        instance: null,
+        dir: vViiField as never,
+      });
+
+      // @ts-expect-error textarea directive requires FieldState with string rawValue, rejecting boolean
+      vViiField.mounted!(dummyTextarea, createBinding(boolField), dummyVNode, null);
+      boolField.dispose();
     });
   });
 

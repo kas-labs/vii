@@ -37,6 +37,58 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-09-17 01:20 CEST | Form: React Controller Ref Removal & Vue Directive Type Safety (P2e)
+
+Status: completed
+Branch: `feat/form-p2e-react-vue-integrations`
+PR: https://github.com/kas-labs/vii/pull/198 (Draft)
+
+### Scope
+
+- Finalize the public-contract refinement of React `useController` and Vue `vViiField` directive for official Vii Form Phase 2 roadmap slice P2e in `@vii-labs/form`:
+  - React Controller `ref`: Adopt Preferred Option A and completely eliminate `ref` from `ControllerRenderProps` and `useController`. Consumers attach standard React refs directly to DOM controls or UI elements without fake no-op callbacks.
+  - Vue Directive (`vViiField`) Raw-Type Safety: Define and export overloaded `ViiFieldDirective` interface (`ObjectDirective<HTMLTextAreaElement, FieldState<unknown, string>> & ObjectDirective<HTMLInputElement, SupportedVueFieldState>`). Implement runtime discriminated type guards (`isBooleanField`, `isStringField`) with zero `as (v: unknown) => void` setter casts. Guarantee fail-closed safety (no listeners, no subscriptions) for mismatched element/field combinations.
+  - Tests: Add runtime mismatch tests (checkbox + string field, text + boolean field, textarea + boolean field) and compile-time type-level negative tests (`@ts-expect-error` on textarea + boolean field). Update React controller tests to attach consumer ref directly.
+  - Maintain 100% compliance across all 41/41 HARD performance, bundle, and memory gates with 0 budget weakening and all 8 clean consumers.
+
+### Changes Made
+
+- `packages/form/src/adapters/react/types.ts`: Removed `readonly ref: ...` from `ControllerRenderProps`.
+- `packages/form/src/adapters/react/use-controller.ts`: Removed `ref` callback and `ref` property from `controllerField` object.
+- `packages/form/src/adapters/vue/types.ts`: Exported `ViiFieldDirective` overloaded directive type.
+- `packages/form/src/adapters/vue/directive.ts`: Typed `vViiField: ViiFieldDirective`. Added `isBooleanField` and `isStringField` runtime type guards. Completely eliminated `as (v: unknown) => void` cast in setter calls. Enforced fail-closed return on type mismatch. Streamlined directive methods.
+- `packages/form/src/adapters/vue/index.ts`: Re-exported `ViiFieldDirective`.
+- `packages/form/src/adapters/vue/field.ts`, `form.ts`, `array.ts`: Inlined action delegates in returned handles to reduce bundle size and keep gzip within strict 2,000 B budget.
+- `packages/form/api-surface.json`: Added `ViiFieldDirective` to `./vue.publicTypes`.
+- `packages/form/test/unit/react-p2e-integrations.test.ts`: Updated test to attach consumer DOM ref directly.
+- `packages/form/test/unit/vue-p2e-integrations.test.ts`: Added runtime fail-closed mismatch tests and compile-time `@ts-expect-error` test for textarea with boolean field.
+- `packages/form/README.md`: Updated Section 13 (React `useController` clean props without `ref`) and Section 16 (Vue `vViiField` DOM limitation note and runtime narrowing).
+- `docs/architecture/FORM_PHASE2_ARCHITECTURE.md`: Documented Preferred Option A and `ViiFieldDirective` type safety.
+- `PROJECT_STATE.md`: Updated P2e status with clean controller props and type-safe directive contracts.
+
+### Validation Results
+
+- `pnpm format:check`: passed.
+- `CI=true NX_DAEMON=false pnpm lint`: passed.
+- `pnpm -r typecheck`: passed.
+- `pnpm --filter @vii-labs/form test`: 35 files, 485 tests passed.
+- `pnpm --filter @vii-labs/form run test:browser`: 46 tests passed.
+- `pnpm --filter @vii-labs/form run performance`: 41/41 HARD gates passed.
+  - `bundle.reactAdapter.maxMinifiedBytes`: 6,285 B (threshold: 7,000 B)
+  - `bundle.reactAdapter.maxGzipBytes`: 1,503 B (threshold: 2,000 B)
+  - `bundle.reactAdapter.maxBrotliBytes`: 1,355 B (threshold: 1,800 B)
+  - `bundle.vueAdapter.maxMinifiedBytes`: 7,462 B (threshold: 8,000 B)
+  - `bundle.vueAdapter.maxGzipBytes`: 1,863 B (threshold: 2,000 B)
+  - `bundle.vueAdapter.maxBrotliBytes`: 1,577 B (threshold: 1,800 B)
+- `pnpm --filter @vii-labs/form run validate-package`: all 8 clean consumers passed (Root, Vanilla, React 18, React 19, Angular 17, Angular 22, Vue 3.3, Vue 3.5).
+- `CI=true pnpm validate`: passed.
+
+### Remaining Work
+
+- None for P2e refinement.
+- PR #198 kept in DRAFT state per instructions. Do not merge, do not mark ready.
+- Next slice: P2f (Angular Signal Forms Interoperability) once authorized.
+
 ## 2026-09-16 23:15 CEST | Form: React Controller & Vue Directive Contract Refinement (P2e)
 
 Status: completed

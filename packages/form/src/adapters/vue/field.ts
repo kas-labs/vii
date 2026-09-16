@@ -87,32 +87,6 @@ export function createVueField<TValue, TRaw = TValue>(
     onScopeDispose(dispose);
   }
 
-  const setValue = (next: TValue): void => {
-    field.setValue(next);
-  };
-
-  const setRawValue = (raw: TRaw): void => {
-    field.setRawValue(raw);
-  };
-
-  const setTouched = (touched: boolean = true): void => {
-    field.setTouched(touched);
-  };
-
-  const blur = (): void => {
-    field.setTouched(true);
-  };
-
-  const validate = (
-    trigger?: ValidationTriggerMode,
-  ): ReturnType<FieldState<TValue, TRaw>["validate"]> => {
-    return field.validate(trigger);
-  };
-
-  const reset = (): void => {
-    field.reset();
-  };
-
   return {
     value: shallowReadonly(valueRef),
     rawValue: shallowReadonly(rawValueRef),
@@ -126,12 +100,12 @@ export function createVueField<TValue, TRaw = TValue>(
     validationStatus: shallowReadonly(validationStatusRef),
     issues: shallowReadonly(issuesRef),
     serverIssues: shallowReadonly(serverIssuesRef),
-    setValue,
-    setRawValue,
-    setTouched,
-    blur,
-    validate,
-    reset,
+    setValue: (next: TValue) => field.setValue(next),
+    setRawValue: (raw: TRaw) => field.setRawValue(raw),
+    setTouched: (touched: boolean = true) => field.setTouched(touched),
+    blur: () => field.setTouched(true),
+    validate: (trigger?: ValidationTriggerMode) => field.validate(trigger),
+    reset: () => field.reset(),
     dispose,
   };
 }

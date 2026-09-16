@@ -26,4 +26,5 @@ export type {
   VueReadonlyRef,
   SupportedVueFieldElement,
   SupportedVueFieldState,
+  ViiFieldDirective,
 } from "./types.js";

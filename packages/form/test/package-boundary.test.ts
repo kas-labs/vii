@@ -48,7 +48,17 @@ describe("@vii-labs/form package boundary (P1m)", () => {
 
     expect(formAngular).toBeDefined();
     expect(Object.keys(formAngular).sort()).toEqual(
-      ["createAngularField", "createAngularFieldArray", "createAngularForm"].sort(),
+      [
+        "VII_FORM_TOKEN",
+        "ViiControlValueAccessor",
+        "ViiFieldDirective",
+        "createAngularField",
+        "createAngularFieldArray",
+        "createAngularForm",
+        "createViiControlValueAccessor",
+        "injectViiForm",
+        "provideViiForm",
+      ].sort(),
     );
 
     expect(formVue).toBeDefined();

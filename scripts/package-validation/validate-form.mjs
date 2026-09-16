@@ -271,6 +271,22 @@ try {
     "package/dist/adapters/angular/array.d.ts.map",
     "package/dist/adapters/angular/array.js",
     "package/dist/adapters/angular/array.js.map",
+    "package/dist/adapters/angular/context.d.ts",
+    "package/dist/adapters/angular/context.d.ts.map",
+    "package/dist/adapters/angular/context.js",
+    "package/dist/adapters/angular/context.js.map",
+    "package/dist/adapters/angular/cva.d.ts",
+    "package/dist/adapters/angular/cva.d.ts.map",
+    "package/dist/adapters/angular/cva.js",
+    "package/dist/adapters/angular/cva.js.map",
+    "package/dist/adapters/angular/destroy.d.ts",
+    "package/dist/adapters/angular/destroy.d.ts.map",
+    "package/dist/adapters/angular/destroy.js",
+    "package/dist/adapters/angular/destroy.js.map",
+    "package/dist/adapters/angular/directive.d.ts",
+    "package/dist/adapters/angular/directive.d.ts.map",
+    "package/dist/adapters/angular/directive.js",
+    "package/dist/adapters/angular/directive.js.map",
     "package/dist/adapters/angular/field.d.ts",
     "package/dist/adapters/angular/field.d.ts.map",
     "package/dist/adapters/angular/field.js",
@@ -936,6 +952,12 @@ import {
   createAngularField,
   createAngularFieldArray,
   createAngularForm,
+  createViiControlValueAccessor,
+  ViiControlValueAccessor,
+  ViiFieldDirective,
+  provideViiForm,
+  injectViiForm,
+  VII_FORM_TOKEN,
 } from "@vii-labs/form/angular";
 
 export const angularKeys = Object.keys(formAngular).sort();
@@ -970,6 +992,27 @@ export function runAngularSmoke() {
   const firstItemId = arrayHandle.items()[0]?.id;
   arrayHandle.dispose();
 
+  const cva = createViiControlValueAccessor(form.fields.username);
+  cva.writeValue("cva-user");
+  const cvaWrittenValue = form.fields.username.getValue();
+  cva.setDisabledState(true);
+  const cvaDisabled = cva.disabled();
+  cva.dispose();
+
+  const directive = new ViiFieldDirective();
+  const hasDirective = Boolean(
+    directive &&
+    typeof directive.ngOnChanges === "function" &&
+    typeof directive.ngOnDestroy === "function"
+  );
+
+  const provider = provideViiForm(form);
+  const hasProvider = Boolean(
+    provider &&
+    (provider as any).provide === VII_FORM_TOKEN &&
+    (provider as any).useValue === form
+  );
+
   form.dispose();
 
   return {
@@ -981,6 +1024,10 @@ export function runAngularSmoke() {
     submissionStatus,
     arrayLen,
     firstItemId,
+    cvaWrittenValue,
+    cvaDisabled,
+    hasDirective,
+    hasProvider,
   };
 }
 `;
@@ -1009,8 +1056,18 @@ export function runAngularSmoke() {
     const angularConsumer = await import(path.join(consumerDir, "dist/main.js"));
     assert.deepEqual(
       angularConsumer.angularKeys,
-      ["createAngularField", "createAngularFieldArray", "createAngularForm"].sort(),
-      `clean ${label} consumer subpath export must contain P1j signals functions`,
+      [
+        "VII_FORM_TOKEN",
+        "ViiControlValueAccessor",
+        "ViiFieldDirective",
+        "createAngularField",
+        "createAngularFieldArray",
+        "createAngularForm",
+        "createViiControlValueAccessor",
+        "injectViiForm",
+        "provideViiForm",
+      ].sort(),
+      `clean ${label} consumer subpath export must contain P1j and P2f exports`,
     );
 
     const angularSmokeResult = angularConsumer.runAngularSmoke();
@@ -1021,6 +1078,10 @@ export function runAngularSmoke() {
     assert.equal(angularSmokeResult.submissionStatus, "idle");
     assert.equal(angularSmokeResult.arrayLen, 1);
     assert.ok(angularSmokeResult.firstItemId);
+    assert.equal(angularSmokeResult.cvaWrittenValue, "cva-user");
+    assert.equal(angularSmokeResult.cvaDisabled, true);
+    assert.ok(angularSmokeResult.hasDirective);
+    assert.ok(angularSmokeResult.hasProvider);
   }
 
   async function validateVueVersion({ version, consumerDir, fixtureDir, label }) {

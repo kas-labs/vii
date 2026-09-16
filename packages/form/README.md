@@ -398,8 +398,14 @@ console.log(result.focused); // true if an eligible invalid element was focused
 
 Projects canonical nodes into native Angular Signals (`@angular/core` `>=17.0.0`):
 
+### Signal Handles (`createAngularField`, `createAngularForm`, `createAngularFieldArray`)
+
 ```ts
-import { createAngularField, createAngularForm } from "@vii-labs/form/angular";
+import {
+  createAngularField,
+  createAngularForm,
+  createAngularFieldArray,
+} from "@vii-labs/form/angular";
 
 const fieldHandle = createAngularField(field, { destroyRef });
 const formHandle = createAngularForm(form, { destroyRef });
@@ -408,6 +414,76 @@ const formHandle = createAngularForm(form, { destroyRef });
 console.log(fieldHandle.value());
 console.log(formHandle.submissionStatus());
 ```
+
+### Directive (`ViiFieldDirective` / `[viiField]`)
+
+Standalone directive providing two-way binding between native form controls (`<input>`, `<textarea>`) and canonical Vii `FieldState`.
+
+- **DOM Synchronization:** Listens to `input` / `change` events and propagates to `field.setRawValue()`. Subscribes to `field.rawValue` and updates DOM property `value` or `checked`.
+- **Blur & Touch:** Listens to `blur` events and calls `field.markTouched()`.
+- **Fail-Closed Safety:** Validates element and field compatibility; silently ignores unsupported elements or incompatible types (e.g. non-boolean field bound to checkbox) to prevent DOM corruption.
+- **Node & SSR Safe:** Defined via native Ivy `ɵdir` definition, requiring zero JIT compiler overhead and operating safely in SSR/Node environments where `ElementRef` may not be present.
+- **Teardown Invariant:** Directive destruction detaches DOM listeners and unregisters signal effects, but **never** disposes or unregisters the underlying canonical `FieldState`.
+
+```html
+<input [viiField]="nameField" type="text" />
+<input [viiField]="termsField" type="checkbox" />
+<textarea [viiField]="bioField"></textarea>
+```
+
+### ControlValueAccessor Bridge (`createViiControlValueAccessor`)
+
+Implements Angular's `ControlValueAccessor` interface to bridge canonical Vii fields with custom form controls and UI component libraries.
+
+- **Anti-Loop Reentrancy Guard:** Prevents infinite ping-pong cycles between Angular form controls and Vii Form's canonical signal store via internal reentrancy flags.
+- **Disabled State:** Exposes a presentation-owned `disabled()` signal controlled by `setDisabledState()`.
+- **Clean Lifecycle:** Calling `.destroy()` cleanly unbinds change/touch callbacks and canonical subscriptions without mutating the canonical field.
+
+```ts
+import { createViiControlValueAccessor } from "@vii-labs/form/angular";
+
+@Component({
+  selector: "my-custom-input",
+  providers: [
+    {
+      provide: NG_VALUE_ACCESSOR,
+      useExisting: forwardRef(() => MyCustomInput),
+      multi: true,
+    },
+  ],
+})
+export class MyCustomInput implements ControlValueAccessor {
+  private cva = createViiControlValueAccessor(this.field, { destroyRef: inject(DestroyRef) });
+
+  writeValue(value: unknown) { this.cva.writeValue(value); }
+  registerOnChange(fn: any) { this.cva.registerOnChange(fn); }
+  registerOnTouched(fn: any) { this.cva.registerOnTouched(fn); }
+  setDisabledState(isDisabled: boolean) { this.cva.setDisabledState(isDisabled); }
+}
+```
+
+### Scoped Dependency Injection (`provideViiForm`, `injectViiForm`)
+
+Scoped DI helpers for providing and injecting canonical `FormInstance` trees in Angular component hierarchies:
+
+```ts
+import { provideViiForm, injectViiForm, VII_FORM_TOKEN } from "@vii-labs/form/angular";
+
+// In parent component:
+@Component({
+  providers: [provideViiForm(checkoutForm)],
+})
+export class CheckoutPageComponent {}
+
+// In child / deeply nested component:
+@Component({...})
+export class PaymentStepComponent {
+  private form = injectViiForm<CheckoutFormValues>();
+}
+```
+
+> [!NOTE]
+> **Signal Forms Compatibility:** Angular's experimental Signal Forms are formally deferred (Option A) to preserve strict compatibility with the Angular 17.3.12 minimum baseline without introducing unstable experimental compiler dependencies.
 
 ---
 

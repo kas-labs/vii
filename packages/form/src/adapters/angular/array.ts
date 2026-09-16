@@ -1,11 +1,6 @@
-import { signal } from "@angular/core";
-import type {
-  FieldArray,
-  FieldArrayItem,
-  FieldIssue,
-  FormNode,
-  ValidationTriggerMode,
-} from "../../core/types.js";
+import { computed } from "@angular/core";
+import type { FieldArray, FormNode } from "../../core/types.js";
+import { bridgeSignal, createTeardown } from "./destroy.js";
 import type { AngularAdapterOptions, AngularArrayHandle } from "./types.js";
 
 /**
@@ -18,138 +13,32 @@ export function createAngularFieldArray<TItemNode extends FormNode = FormNode>(
   array: FieldArray<TItemNode>,
   options?: AngularAdapterOptions,
 ): AngularArrayHandle<TItemNode> {
-  const itemsSig = signal(array.items.get());
-  const valueSig = signal(array.value.get());
-  const rawValueSig = signal(array.rawValue.get());
-  const dirtySig = signal(array.dirty.get());
-  const touchedSig = signal(array.touched.get());
-  const pendingSig = signal(array.pending.get());
-  const validSig = signal(array.valid.get());
-  const invalidSig = signal(array.invalid.get());
-  const issuesSig = signal(array.issues.get());
-  const serverIssuesSig = signal(array.serverIssues.get());
-  const lengthSig = signal(array.items.get().length);
+  const { isDisposed, unsubs, dispose } = createTeardown(options);
 
-  let isDisposed = false;
-  let unregisterDestroy: (() => void) | undefined;
-
-  const dispose = (): void => {
-    if (isDisposed) return;
-    isDisposed = true;
-    for (const unsubscribe of unsubs) {
-      unsubscribe();
-    }
-    if (unregisterDestroy) {
-      const clean = unregisterDestroy;
-      unregisterDestroy = undefined;
-      clean();
-    }
-  };
-
-  const unsubs = [
-    array.items.subscribe((items) => {
-      if (!isDisposed) {
-        itemsSig.set(items);
-        lengthSig.set(items.length);
-      }
-    }),
-    array.value.subscribe((v) => {
-      if (!isDisposed) valueSig.set(v);
-    }),
-    array.rawValue.subscribe((r) => {
-      if (!isDisposed) rawValueSig.set(r);
-    }),
-    array.dirty.subscribe((d) => {
-      if (!isDisposed) dirtySig.set(d);
-    }),
-    array.touched.subscribe((t) => {
-      if (!isDisposed) touchedSig.set(t);
-    }),
-    array.pending.subscribe((p) => {
-      if (!isDisposed) pendingSig.set(p);
-    }),
-    array.valid.subscribe((v) => {
-      if (!isDisposed) validSig.set(v);
-    }),
-    array.invalid.subscribe((iv) => {
-      if (!isDisposed) invalidSig.set(iv);
-    }),
-    array.issues.subscribe((iss) => {
-      if (!isDisposed) issuesSig.set(iss);
-    }),
-    array.serverIssues.subscribe((si) => {
-      if (!isDisposed) serverIssuesSig.set(si);
-    }),
-  ];
-
-  if (options?.destroyRef) {
-    if (options.destroyRef.destroyed) {
-      dispose();
-    } else {
-      unregisterDestroy = options.destroyRef.onDestroy(dispose);
-    }
-  }
-
-  const append = (node: TItemNode): FieldArrayItem<TItemNode> => {
-    return array.append(node);
-  };
-
-  const prepend = (node: TItemNode): FieldArrayItem<TItemNode> => {
-    return array.prepend(node);
-  };
-
-  const insert = (index: number, node: TItemNode): FieldArrayItem<TItemNode> => {
-    return array.insert(index, node);
-  };
-
-  const remove = (index: number): void => {
-    array.remove(index);
-  };
-
-  const move = (fromIndex: number, toIndex: number): void => {
-    array.move(fromIndex, toIndex);
-  };
-
-  const swap = (indexA: number, indexB: number): void => {
-    array.swap(indexA, indexB);
-  };
-
-  const clear = (): void => {
-    array.clear();
-  };
-
-  const validate = (
-    trigger?: ValidationTriggerMode,
-  ): Promise<readonly FieldIssue[]> | readonly FieldIssue[] => {
-    return array.validate(trigger);
-  };
-
-  const reset = (): void => {
-    array.reset();
-  };
+  const items = bridgeSignal(array.items, unsubs, isDisposed);
 
   return {
-    items: itemsSig.asReadonly(),
-    value: valueSig.asReadonly(),
-    rawValue: rawValueSig.asReadonly(),
-    dirty: dirtySig.asReadonly(),
-    touched: touchedSig.asReadonly(),
-    pending: pendingSig.asReadonly(),
-    valid: validSig.asReadonly(),
-    invalid: invalidSig.asReadonly(),
-    issues: issuesSig.asReadonly(),
-    serverIssues: serverIssuesSig.asReadonly(),
-    length: lengthSig.asReadonly(),
+    items,
+    value: bridgeSignal(array.value, unsubs, isDisposed),
+    rawValue: bridgeSignal(array.rawValue, unsubs, isDisposed),
+    dirty: bridgeSignal(array.dirty, unsubs, isDisposed),
+    touched: bridgeSignal(array.touched, unsubs, isDisposed),
+    pending: bridgeSignal(array.pending, unsubs, isDisposed),
+    valid: bridgeSignal(array.valid, unsubs, isDisposed),
+    invalid: bridgeSignal(array.invalid, unsubs, isDisposed),
+    issues: bridgeSignal(array.issues, unsubs, isDisposed),
+    serverIssues: bridgeSignal(array.serverIssues, unsubs, isDisposed),
+    length: computed(() => items().length),
     array,
-    append,
-    prepend,
-    insert,
-    remove,
-    move,
-    swap,
-    clear,
-    validate,
-    reset,
+    append: (node) => array.append(node),
+    prepend: (node) => array.prepend(node),
+    insert: (index, node) => array.insert(index, node),
+    remove: (index) => array.remove(index),
+    move: (from, to) => array.move(from, to),
+    swap: (iA, iB) => array.swap(iA, iB),
+    clear: () => array.clear(),
+    validate: (trigger) => array.validate(trigger),
+    reset: () => array.reset(),
     dispose,
   };
 }

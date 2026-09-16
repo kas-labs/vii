@@ -1,15 +1,5 @@
-import { signal } from "@angular/core";
-import type {
-  FieldIssue,
-  FormFieldsRecord,
-  FormInstance,
-  FormReinitializeInput,
-  FormSubmitResult,
-  FormValues,
-  SubmitAction,
-  SubmitOptions,
-  ValidationTriggerMode,
-} from "../../core/types.js";
+import type { FormFieldsRecord, FormInstance } from "../../core/types.js";
+import { bridgeSignal, createTeardown } from "./destroy.js";
 import type { AngularAdapterOptions, AngularFormHandle } from "./types.js";
 
 /**
@@ -22,122 +12,27 @@ export function createAngularForm<TFields extends FormFieldsRecord = FormFieldsR
   form: FormInstance<TFields>,
   options?: AngularAdapterOptions,
 ): AngularFormHandle<TFields> {
-  const valueSig = signal(form.value.get());
-  const rawValueSig = signal(form.rawValue.get());
-  const dirtySig = signal(form.dirty.get());
-  const touchedSig = signal(form.touched.get());
-  const pendingSig = signal(form.pending.get());
-  const validSig = signal(form.valid.get());
-  const invalidSig = signal(form.invalid.get());
-  const issuesSig = signal(form.issues.get());
-  const serverIssuesSig = signal(form.serverIssues.get());
-  const submissionStatusSig = signal(form.submissionStatus.get());
-  const submittingSig = signal(form.submitting.get());
-
-  let isDisposed = false;
-  let unregisterDestroy: (() => void) | undefined;
-
-  const dispose = (): void => {
-    if (isDisposed) return;
-    isDisposed = true;
-    for (const unsubscribe of unsubs) {
-      unsubscribe();
-    }
-    if (unregisterDestroy) {
-      const clean = unregisterDestroy;
-      unregisterDestroy = undefined;
-      clean();
-    }
-  };
-
-  const unsubs = [
-    form.value.subscribe((v) => {
-      if (!isDisposed) valueSig.set(v);
-    }),
-    form.rawValue.subscribe((r) => {
-      if (!isDisposed) rawValueSig.set(r);
-    }),
-    form.dirty.subscribe((d) => {
-      if (!isDisposed) dirtySig.set(d);
-    }),
-    form.touched.subscribe((t) => {
-      if (!isDisposed) touchedSig.set(t);
-    }),
-    form.pending.subscribe((p) => {
-      if (!isDisposed) pendingSig.set(p);
-    }),
-    form.valid.subscribe((v) => {
-      if (!isDisposed) validSig.set(v);
-    }),
-    form.invalid.subscribe((iv) => {
-      if (!isDisposed) invalidSig.set(iv);
-    }),
-    form.issues.subscribe((iss) => {
-      if (!isDisposed) issuesSig.set(iss);
-    }),
-    form.serverIssues.subscribe((si) => {
-      if (!isDisposed) serverIssuesSig.set(si);
-    }),
-    form.submissionStatus.subscribe((ss) => {
-      if (!isDisposed) submissionStatusSig.set(ss);
-    }),
-    form.submitting.subscribe((sub) => {
-      if (!isDisposed) submittingSig.set(sub);
-    }),
-  ];
-
-  if (options?.destroyRef) {
-    if (options.destroyRef.destroyed) {
-      dispose();
-    } else {
-      unregisterDestroy = options.destroyRef.onDestroy(dispose);
-    }
-  }
-
-  const validate = (
-    trigger?: ValidationTriggerMode,
-  ): Promise<readonly FieldIssue[]> | readonly FieldIssue[] => {
-    return form.validate(trigger);
-  };
-
-  const submit = <TResult = void>(
-    action?: SubmitAction<FormValues<TFields>, TResult>,
-    submitOptions?: SubmitOptions,
-  ): Promise<FormSubmitResult<TResult, FieldIssue>> => {
-    return form.submit(action, submitOptions);
-  };
-
-  const cancelSubmit = (): void => {
-    form.cancelSubmit();
-  };
-
-  const reset = (): void => {
-    form.reset();
-  };
-
-  const reinitialize = (newBaseline: FormReinitializeInput<TFields>): void => {
-    form.reinitialize(newBaseline);
-  };
+  const { isDisposed, unsubs, dispose } = createTeardown(options);
 
   return {
-    value: valueSig.asReadonly(),
-    rawValue: rawValueSig.asReadonly(),
-    dirty: dirtySig.asReadonly(),
-    touched: touchedSig.asReadonly(),
-    pending: pendingSig.asReadonly(),
-    valid: validSig.asReadonly(),
-    invalid: invalidSig.asReadonly(),
-    issues: issuesSig.asReadonly(),
-    serverIssues: serverIssuesSig.asReadonly(),
-    submissionStatus: submissionStatusSig.asReadonly(),
-    submitting: submittingSig.asReadonly(),
+    value: bridgeSignal(form.value, unsubs, isDisposed),
+    rawValue: bridgeSignal(form.rawValue, unsubs, isDisposed),
+    dirty: bridgeSignal(form.dirty, unsubs, isDisposed),
+    touched: bridgeSignal(form.touched, unsubs, isDisposed),
+    pending: bridgeSignal(form.pending, unsubs, isDisposed),
+    valid: bridgeSignal(form.valid, unsubs, isDisposed),
+    invalid: bridgeSignal(form.invalid, unsubs, isDisposed),
+    issues: bridgeSignal(form.issues, unsubs, isDisposed),
+    serverIssues: bridgeSignal(form.serverIssues, unsubs, isDisposed),
+    submissionStatus: bridgeSignal(form.submissionStatus, unsubs, isDisposed),
+    submitting: bridgeSignal(form.submitting, unsubs, isDisposed),
     form,
     fields: form.fields,
-    validate,
-    submit,
-    cancelSubmit,
-    reset,
-    reinitialize,
+    validate: (trigger) => form.validate(trigger),
+    submit: (action, submitOptions) => form.submit(action, submitOptions),
+    cancelSubmit: () => form.cancelSubmit(),
+    reset: () => form.reset(),
+    reinitialize: (newBaseline) => form.reinitialize(newBaseline),
     dispose,
   };
 }

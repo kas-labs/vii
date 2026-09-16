@@ -109,7 +109,17 @@
     },
     "./angular": {
       "stability": "preview",
-      "runtimeExports": ["createAngularField", "createAngularFieldArray", "createAngularForm"],
+      "runtimeExports": [
+        "VII_FORM_TOKEN",
+        "ViiControlValueAccessor",
+        "ViiFieldDirective",
+        "createAngularField",
+        "createAngularFieldArray",
+        "createAngularForm",
+        "createViiControlValueAccessor",
+        "injectViiForm",
+        "provideViiForm"
+      ],
       "publicTypes": [
         "AngularAdapterOptions",
         "AngularArrayHandle",
@@ -117,7 +127,9 @@
         "AngularFieldHandle",
         "AngularFieldSignals",
         "AngularFormHandle",
-        "AngularFormSignals"
+        "AngularFormSignals",
+        "SupportedAngularFieldElement",
+        "SupportedAngularFieldState"
       ]
     },
     "./vue": {

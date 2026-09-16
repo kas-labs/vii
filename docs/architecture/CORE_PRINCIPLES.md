@@ -25,6 +25,8 @@ The production runtime must not depend on AI, cloud services, telemetry, or exte
 
 Core behavior must not depend on React, Angular, Vue, or another rendering system. Framework adapters translate Vii contracts without redefining them.
 
+For framework-neutral public packages, `Vanilla` means use without a UI/application framework and includes both ordinary JavaScript and TypeScript consumers where technically applicable. JavaScript and TypeScript consume the same canonical runtime; TypeScript adds declarations, inference, and static tooling rather than a separate implementation. See [Vanilla JavaScript and TypeScript Consumer Compatibility](VANILLA_CONSUMER_COMPATIBILITY.md).
+
 ## 5. Runtime neutrality
 
 Runtime-neutral packages use ECMAScript, Web Platform APIs where appropriate, and injected capability contracts. Platform globals belong in adapters.

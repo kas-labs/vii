@@ -1,10 +1,8 @@
 import { getCurrentScope, onScopeDispose, shallowReadonly, shallowRef } from "vue";
 import type {
-  FieldIssue,
   FormFieldsRecord,
   FormInstance,
   FormReinitializeInput,
-  FormSubmitResult,
   FormValues,
   SubmitAction,
   SubmitOptions,
@@ -86,31 +84,6 @@ export function createVueForm<TFields extends FormFieldsRecord = FormFieldsRecor
     onScopeDispose(dispose);
   }
 
-  const validate = (
-    trigger?: ValidationTriggerMode,
-  ): Promise<readonly FieldIssue[]> | readonly FieldIssue[] => {
-    return form.validate(trigger);
-  };
-
-  const submit = <TResult = void>(
-    action?: SubmitAction<FormValues<TFields>, TResult>,
-    submitOptions?: SubmitOptions,
-  ): Promise<FormSubmitResult<TResult, FieldIssue>> => {
-    return form.submit(action, submitOptions);
-  };
-
-  const cancelSubmit = (): void => {
-    form.cancelSubmit();
-  };
-
-  const reset = (): void => {
-    form.reset();
-  };
-
-  const reinitialize = (newBaseline: FormReinitializeInput<TFields>): void => {
-    form.reinitialize(newBaseline);
-  };
-
   return {
     value: shallowReadonly(valueRef),
     rawValue: shallowReadonly(rawValueRef),
@@ -125,11 +98,19 @@ export function createVueForm<TFields extends FormFieldsRecord = FormFieldsRecor
     submitting: shallowReadonly(submittingRef),
     form,
     fields: form.fields,
-    validate,
-    submit,
-    cancelSubmit,
-    reset,
-    reinitialize,
+    validate: (trigger?: ValidationTriggerMode) => form.validate(trigger),
+    submit: <TResult = void>(
+      action?: SubmitAction<FormValues<TFields>, TResult>,
+      submitOptions?: SubmitOptions,
+    ) => form.submit(action, submitOptions),
+    cancelSubmit: () => form.cancelSubmit(),
+    reset: () => form.reset(),
+    reinitialize: (newBaseline: FormReinitializeInput<TFields>) => form.reinitialize(newBaseline),
     dispose,
   };
 }
+
+/**
+ * Idiomatic Vue 3 composable alias for createVueForm.
+ */
+export const useViiForm = createVueForm;

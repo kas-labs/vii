@@ -1,11 +1,5 @@
 import { getCurrentScope, onScopeDispose, shallowReadonly, shallowRef } from "vue";
-import type {
-  FieldArray,
-  FieldArrayItem,
-  FieldIssue,
-  FormNode,
-  ValidationTriggerMode,
-} from "../../core/types.js";
+import type { FieldArray, FormNode, ValidationTriggerMode } from "../../core/types.js";
 import type { VueAdapterOptions, VueArrayHandle } from "./types.js";
 
 /**
@@ -82,44 +76,6 @@ export function createVueFieldArray<TItemNode extends FormNode = FormNode>(
     onScopeDispose(dispose);
   }
 
-  const append = (node: TItemNode): FieldArrayItem<TItemNode> => {
-    return array.append(node);
-  };
-
-  const prepend = (node: TItemNode): FieldArrayItem<TItemNode> => {
-    return array.prepend(node);
-  };
-
-  const insert = (index: number, node: TItemNode): FieldArrayItem<TItemNode> => {
-    return array.insert(index, node);
-  };
-
-  const remove = (index: number): void => {
-    array.remove(index);
-  };
-
-  const move = (fromIndex: number, toIndex: number): void => {
-    array.move(fromIndex, toIndex);
-  };
-
-  const swap = (indexA: number, indexB: number): void => {
-    array.swap(indexA, indexB);
-  };
-
-  const clear = (): void => {
-    array.clear();
-  };
-
-  const validate = (
-    trigger?: ValidationTriggerMode,
-  ): Promise<readonly FieldIssue[]> | readonly FieldIssue[] => {
-    return array.validate(trigger);
-  };
-
-  const reset = (): void => {
-    array.reset();
-  };
-
   return {
     items: shallowReadonly(itemsRef),
     value: shallowReadonly(valueRef),
@@ -133,15 +89,20 @@ export function createVueFieldArray<TItemNode extends FormNode = FormNode>(
     serverIssues: shallowReadonly(serverIssuesRef),
     length: shallowReadonly(lengthRef),
     array,
-    append,
-    prepend,
-    insert,
-    remove,
-    move,
-    swap,
-    clear,
-    validate,
-    reset,
+    append: (node: TItemNode) => array.append(node),
+    prepend: (node: TItemNode) => array.prepend(node),
+    insert: (index: number, node: TItemNode) => array.insert(index, node),
+    remove: (index: number) => array.remove(index),
+    move: (fromIndex: number, toIndex: number) => array.move(fromIndex, toIndex),
+    swap: (indexA: number, indexB: number) => array.swap(indexA, indexB),
+    clear: () => array.clear(),
+    validate: (trigger?: ValidationTriggerMode) => array.validate(trigger),
+    reset: () => array.reset(),
     dispose,
   };
 }
+
+/**
+ * Idiomatic Vue 3 composable alias for createVueFieldArray.
+ */
+export const useViiFieldArray = createVueFieldArray;

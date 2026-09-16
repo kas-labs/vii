@@ -25,6 +25,7 @@ Vii Form separates presentation text from domain values, schedules synchronous a
 > `@vii-labs/form` is currently an internal Preview Candidate (`"private": true`). It is not yet published to the public npm registry. Downstream workspace consumers consume the package via workspace linking or packed tarball fixtures.
 
 When published under approved governance, the package contract requires:
+
 - **Runtime Peer Dependency:** `@vii-labs/core` (`>=0.1.0-experimental.2`)
 - **Type-Resolution Dependency:** `@standard-schema/spec` (`^1.1.0`, consumed type-only)
 - **Optional Framework Peers:** `react` (`>=18.0.0`), `@angular/core` (`>=17.0.0`), `vue` (`>=3.3.0`)
@@ -51,9 +52,7 @@ import { createField } from "@vii-labs/form";
 
 const username = createField({
   initialValue: "alice",
-  rules: [
-    (val) => (val.length < 3 ? { code: "min_len", message: "Too short" } : null),
-  ],
+  rules: [(val) => (val.length < 3 ? { code: "min_len", message: "Too short" } : null)],
 });
 
 username.value.get(); // "alice"
@@ -65,6 +64,7 @@ username.issues.get(); // [{ code: "min_len", message: "Too short", source: "rul
 ```
 
 Supported state signals:
+
 - `value`: current domain value.
 - `rawValue`: presentation string/value.
 - `dirty`: boolean, true if value differs from initial baseline.
@@ -197,15 +197,16 @@ const age = createField<number, string>({
 // Intermediate invalid typing (e.g. typing "-" or incomplete decimal)
 age.setRawValue("05");
 age.rawValue.get(); // "05" (preserved in DOM)
-age.value.get();    // 5 (parsed domain integer)
+age.value.get(); // 5 (parsed domain integer)
 
 age.setRawValue("abc");
 age.rawValue.get(); // "abc" (no DOM snap-back)
-age.value.get();    // 5 (last known valid domain value retained)
-age.valid.get();    // false (parse failure issue active)
+age.value.get(); // 5 (last known valid domain value retained)
+age.valid.get(); // false (parse failure issue active)
 ```
 
 Built-in parser factories:
+
 - `createNumberParser(options?)`: strict decimal grammar parser.
 - `createStringParser(options?)`: whitespace-trimming parser.
 
@@ -259,9 +260,7 @@ Backend validation issues route deterministically into form nodes via `ServerIss
 await form.submit(async (val) => {
   return {
     ok: false,
-    issues: [
-      { code: "unique", message: "Email taken", path: ["user", "email"] },
-    ],
+    issues: [{ code: "unique", message: "Email taken", path: ["user", "email"] }],
   };
 });
 ```
@@ -273,7 +272,9 @@ await form.submit(async (val) => {
 
 ## 13. React Adapter (`@vii-labs/form/react`)
 
-Provides React 18 & 19 hooks backed by `useSyncExternalStore`:
+Provides React 18 & 19 hooks backed by `useSyncExternalStore` and idiomatic component integrations:
+
+### Basic Hooks
 
 ```tsx
 import { useField, useForm } from "@vii-labs/form/react";
@@ -283,7 +284,12 @@ function UserProfile({ form }) {
   const name = useField(fields.user.fields.name);
 
   return (
-    <form onSubmit={(e) => { e.preventDefault(); submit(async () => ({ ok: true })); }}>
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        submit(async () => ({ ok: true }));
+      }}
+    >
       <input
         value={name.rawValue}
         onChange={(e) => name.setRawValue(e.target.value)}
@@ -293,6 +299,42 @@ function UserProfile({ form }) {
         <span key={issue.message}>{issue.message}</span>
       ))}
     </form>
+  );
+}
+```
+
+### Context & Controller (`FormProvider`, `useFormContext`, `useController`, `Controller`)
+
+For deeply nested form component hierarchies and complex UI libraries:
+
+- **`FormProvider` & `useFormContext`:** Transports the canonical `form` instance down the component tree via React Context without subscribing the provider component to state changes.
+- **`useController`:** Bridges a canonical `FieldState` to custom inputs, UI component libraries (MUI, Radix, Shadcn), or native controls without whole-form re-renders. Exposes `field` (`name`, `value`, `onChange`, `onBlur`) and fine-grained `fieldState` (`invalid`, `isTouched`, `isDirty`, `isValid`, `isPending`, `error`, `issues`). Consumers attach standard React `ref` directly to components or DOM elements as needed.
+- **`Controller`:** Declarative render-prop component wrapping `useController`.
+
+```tsx
+import { FormProvider, useFormContext, Controller } from "@vii-labs/form/react";
+
+function MyForm({ form }) {
+  return (
+    <FormProvider form={form}>
+      <NestedInputs />
+    </FormProvider>
+  );
+}
+
+function NestedInputs() {
+  const form = useFormContext();
+
+  return (
+    <Controller
+      field={form.fields.email}
+      render={({ field, fieldState }) => (
+        <div>
+          <input {...field} aria-invalid={fieldState.invalid} />
+          {fieldState.error && <span>{fieldState.error.message}</span>}
+        </div>
+      )}
+    />
   );
 }
 ```
@@ -371,7 +413,74 @@ console.log(formHandle.submissionStatus());
 
 ## 16. Vue Adapter (`@vii-labs/form/vue`)
 
-Projects canonical nodes into readonly Vue `shallowRef` handles (`vue` `>=3.3.0`):
+Projects canonical nodes into reactive Vue handles (`vue` `>=3.3.0`) with idiomatic Composition API utilities:
+
+### Composables (`useViiField`, `useViiForm`, `useViiFieldArray`)
+
+Idiomatic Vue 3 composables that automatically manage reactivity lifecycles using `onScopeDispose` (or explicit scope):
+
+- **`useViiField`:** Returns reactive handles for all field signals (`value`, `rawValue`, `dirty`, `touched`, `issues`, etc.), a two-way writable `model` computed property for `v-model` binding, and a `bind()` helper returning `{ value, onInput, onBlur }`.
+- **`useViiForm`:** Returns reactive handles for form aggregate state (`values`, `dirty`, `touched`, `valid`, `submitting`, `submissionStatus`) and actions (`submit`, `reset`, `reinitialize`).
+- **`useViiFieldArray`:** Returns reactive array items and collection manipulation methods (`append`, `remove`, `move`, `swap`).
+
+```vue
+<script setup lang="ts">
+import { createField, createForm } from "@vii-labs/form";
+import { useViiField, useViiForm } from "@vii-labs/form/vue";
+
+const form = createForm({
+  fields: {
+    username: createField<string>({ initialValue: "" }),
+  },
+});
+
+const formHandle = useViiForm(form);
+const username = useViiField(form.fields.username);
+</script>
+
+<template>
+  <form @submit.prevent="formHandle.submit(async () => ({ ok: true }))">
+    <!-- Writable computed model for v-model -->
+    <input v-model="username.model.value" @blur="username.blur" />
+    <span v-if="username.invalid.value">{{ username.issues.value[0]?.message }}</span>
+  </form>
+</template>
+```
+
+### Dependency Injection (`provideForm`, `useFormContext`)
+
+Transport form instances down deeply nested Vue component trees without prop drilling:
+
+```ts
+// In parent component:
+provideForm(form);
+
+// In child component:
+const form = useFormContext();
+```
+
+### Directive (`vViiField`)
+
+Declarative two-way DOM binding directly to a canonical `FieldState`:
+
+```vue
+<template>
+  <!-- Text-like inputs (string raw value) -->
+  <input v-vii-field="form.fields.username" type="text" />
+
+  <!-- Textarea elements (string raw value) -->
+  <textarea v-vii-field="form.fields.bio" />
+
+  <!-- Checkbox inputs (boolean raw value) -->
+  <input v-vii-field="form.fields.agree" type="checkbox" />
+</template>
+```
+
+> **Supported Controls & Type Safety:** `vViiField` supports text-like inputs and `<textarea>` (bound to `FieldState<unknown, string>`) and `<input type="checkbox">` (bound to `FieldState<unknown, boolean>`). It synchronizes DOM input/change events to `field.setRawValue()`, updates DOM on `field.rawValue` subscription, and marks the field touched on blur. Because TypeScript's standard DOM library types `HTMLInputElement.type` as generic `string`, the directive enforces runtime type discrimination: if a checkbox element is paired with a string field, or a text-like input / textarea is paired with a boolean field, the directive fails closed without attaching listeners or subscribing to state updates. Radio groups, file inputs, and select[multiple] are not supported by this directive; for those controls, use the `useViiField` composable with standard `v-model` or explicit bindings.
+
+### Low-Level Signal Projections (`createVueField`, `createVueForm`, `createVueFieldArray`)
+
+For advanced use cases requiring manual disposal or custom lifecycle management without active effect scopes:
 
 ```ts
 import { createVueField, createVueForm } from "@vii-labs/form/vue";
@@ -388,22 +497,23 @@ console.log(formHandle.submissionStatus.value);
 
 ## 17. Lifecycle & Ownership Contract
 
-| Node / Handle | Creator / Owner | Who Disposes It? | What Disposal Cancels | Does it Dispose Child Nodes? |
-| :--- | :--- | :--- | :--- | :--- |
-| `FieldState` | `createField` | Application caller | In-flight async validation & debounce timers | N/A (leaf) |
-| `FieldGroup` | `createFieldGroup` | Application caller | All child node subscriptions | Yes (disposes child fields/groups) |
-| `FieldArray` | `createFieldArray` | Application caller | Collection subscriptions & dynamic child scopes | Yes (disposes non-baseline items) |
-| `FormInstance` | `createForm` | Application caller | In-flight submit, validation, root subscriptions | Yes (disposes whole tree) |
-| `React hook` | `useField` / `useForm` | React lifecycle | Component unmount tears down external store listener | **NO** (canonical nodes survive unmount) |
-| `Vanilla binding` | `bindField` / `bindForm` | Application caller | Removes DOM event listeners and signal observers | **NO** (canonical nodes survive unbinding) |
-| `Angular handle` | `createAngular*` | Caller / `DestroyRef` | Unregisters signal sync listeners | **NO** (canonical nodes survive teardown) |
-| `Vue handle` | `createVue*` | Caller / `effectScope` | Unregisters shallowRef sync listeners | **NO** (canonical nodes survive teardown) |
+| Node / Handle     | Creator / Owner          | Who Disposes It?       | What Disposal Cancels                                | Does it Dispose Child Nodes?               |
+| :---------------- | :----------------------- | :--------------------- | :--------------------------------------------------- | :----------------------------------------- |
+| `FieldState`      | `createField`            | Application caller     | In-flight async validation & debounce timers         | N/A (leaf)                                 |
+| `FieldGroup`      | `createFieldGroup`       | Application caller     | All child node subscriptions                         | Yes (disposes child fields/groups)         |
+| `FieldArray`      | `createFieldArray`       | Application caller     | Collection subscriptions & dynamic child scopes      | Yes (disposes non-baseline items)          |
+| `FormInstance`    | `createForm`             | Application caller     | In-flight submit, validation, root subscriptions     | Yes (disposes whole tree)                  |
+| `React hook`      | `useField` / `useForm`   | React lifecycle        | Component unmount tears down external store listener | **NO** (canonical nodes survive unmount)   |
+| `Vanilla binding` | `bindField` / `bindForm` | Application caller     | Removes DOM event listeners and signal observers     | **NO** (canonical nodes survive unbinding) |
+| `Angular handle`  | `createAngular*`         | Caller / `DestroyRef`  | Unregisters signal sync listeners                    | **NO** (canonical nodes survive teardown)  |
+| `Vue handle`      | `createVue*`             | Caller / `effectScope` | Unregisters shallowRef sync listeners                | **NO** (canonical nodes survive teardown)  |
 
 ---
 
 ## 18. Accessibility (a11y) Scope
 
 The Vanilla DOM adapter implements automated accessibility invariants verified via `@axe-core/playwright` under Chromium:
+
 - **ARIA Attribute Projection:** `aria-invalid="true"` is asserted only when a field is invalid, and restored to its initial state when valid or disposed.
 - **Describedby Linking:** Additively links `issueElement.id` into `aria-describedby` without clobbering existing application descriptions.
 - **Focus Preservation & Orchestration:** Re-validating or projecting error messages preserves active input focus and caret positions. When submit fails, opt-in focus orchestration gracefully transfers focus to the first invalid control according to DOM document order, skipping inert, disabled, or hidden elements.
@@ -441,10 +551,12 @@ See [`docs/performance/FORM_P1L_BASELINE.md`](../../docs/performance/FORM_P1L_BA
 ## 21. Limitations & Non-Goals
 
 ### Limitations
+
 - **Select-Multiple:** Native `<select multiple>` binding is deferred and currently fails closed with an explicit `TypeError`.
 - **Browser Gate Scope:** Automated browser acceptance is executed against headless Chromium via Playwright; cross-browser certification (Safari/Firefox) and native OS IME candidate UI interaction are outside automated scope.
 
 ### Non-Goals
+
 - **NOT a UI Component Library:** Does not provide styled buttons, inputs, modals, or CSS.
 - **NOT an HTTP Client:** Does not perform network requests or fetch operations.
 - **NOT a Schema DSL:** Does not provide a proprietary schema builder; integrates external schemas via Standard Schema v1.

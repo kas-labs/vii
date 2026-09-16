@@ -10,12 +10,20 @@
 export { useField } from "./use-field.js";
 export { useForm } from "./use-form.js";
 export { useFieldArray } from "./use-field-array.js";
+export { FormProvider, useFormContext } from "./context.js";
+export { useController, Controller } from "./use-controller.js";
 
 export type {
+  ControllerFieldState,
+  ControllerProps,
+  ControllerRenderProps,
+  FormProviderProps,
   ReactArrayBinding,
   ReactArraySnapshot,
   ReactFieldBinding,
   ReactFieldSnapshot,
   ReactFormBinding,
   ReactFormSnapshot,
+  UseControllerOptions,
+  UseControllerReturn,
 } from "./types.js";

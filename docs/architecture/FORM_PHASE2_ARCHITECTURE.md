@@ -22,6 +22,7 @@ The mission of Phase 2 is to **address proven consumer friction points and enabl
 ## 3. Non-Goals
 
 Phase 2 explicitly rejects the following:
+
 - Transforming the Form engine into a component library, layout framework, or schema DSL.
 - Expanding the root bundle size for framework-specific or narrow-use-case conveniences.
 - Mutating the Phase 1 public API snapshot arbitrarily (Preview compatibility rules apply).
@@ -46,52 +47,53 @@ Phase 2 explicitly rejects the following:
 
 ## 5. Consumer Gap Inventory & Classification
 
-| ID | Feature Candidate | Classification | Rationale & Ownership |
-| :--- | :--- | :--- | :--- |
-| **G1** | `select[multiple]` support | DEFER | High adapter complexity, low value over explicit Array checkboxes. Can be application-owned. |
-| **G2** | Automatic focus-first-invalid | SHOULD | High UX value, but must not hijack expected keyboard navigation. **Owned by Adapters/Vanilla**. |
-| **G3** | Scroll-to-invalid behavior | SHOULD | Natural pairing with G2. **Owned by Adapters/Vanilla**. |
-| **G4** | External state synchronization | REJECT | Causes two sources of truth. App layer should observe unidirectionally. |
-| **G5** | Async parser pipeline | REJECT | Validation handles async. True async parsing is synchronous; enrichment is side-effect logic. |
-| **G6** | Advanced parser/formatter codecs | DEFER | Wait for Vii Schema invertible codecs. Built-ins suffice for now. |
-| **G7** | Angular ControlValueAccessor | SHOULD | CVA remains important for compatibility with Angular's established forms/custom control ecosystem and Angular versions below Signal Forms availability. **Owned by Angular Adapter**. |
-| **G8** | Angular Directives | SHOULD | Useful ergonomic bridge (`[viiField]`). Do not conflate with Signal Forms interoperability. **Owned by Angular Adapter**. |
-| **G9** | Vue directives/composables | SHOULD | Improves Vue DX. **Owned by Vue Adapter**. |
-| **G10** | React convenience abstractions | SHOULD | Controller/Context hooks reduce boilerplate. **Owned by React Adapter**. |
-| **G11** | Dynamic conditional fields | MUST | Schema mutability (creation/removal) is a complex routing/wizard necessity. **Owned by Core**. |
-| **G12** | Lazy field registration | MUST | Enables forms that cannot mount the entire tree upfront. **Owned by Core**. |
-| **G13** | Form wizard / multi-step semantics | DEFER | UI routing concern, not a form state concern. Form provides scoping primitives. |
-| **G14** | Cross-field validation ergonomics | SHOULD | High friction currently. **Owned by Core**. |
-| **G15** | Dependent validation | SHOULD | Optimization over global validation. **Owned by Core**. |
-| **G16** | Validation orchestration for large forms | MAY | Relates to lazy registration. **Owned by Core**. |
-| **G17** | Array item-level validation | SHOULD | Syntax/DX improvement. **Owned by Core**. |
-| **G18** | Server issue reconciliation | DEFER | Existing array snapshot mapping is sufficient for now. |
-| **G19** | Optimistic submission/retry | REJECT | Application/Network layer concern. |
-| **G20** | Persistence integration boundaries | REJECT | Core remains purely in-memory state. |
-| **G21** | Devtools/diagnostics integration | MAY | Useful but not blocking for production adoption. |
-| **G22** | Schema-driven form generation | REJECT | Beyond headless scope; belongs in an independent package. |
-| **G23** | SSR/hydration integration | SHOULD | Next.js/Nuxt hydration is highly requested. (Import-safety proved in P1h). **Owned by Adapters**. |
-| **G24** | React Server Components boundary | MAY | Form adapter sits below client boundary ("use client"). Purely documentation/packaging. |
-| **G25** | Accessibility enhancements | SHOULD | Aria-describedby, fieldset grouping. **Owned by Vanilla Adapter**. |
-| **G26** | Browser matrix expansion | SHOULD | Safari/Firefox coverage. **Owned by Test Infrastructure**. |
-| **G27** | Native/mobile adapter implications | DEFER | React Native adapter can follow web maturation. |
-| **G28** | Future Vii-native UI integration | DEFER | Wait for Vii UI project. |
-| **G29** | Plugin/extensibility model | REJECT | Core composition is preferred over rigid plugin APIs. |
-| **G30** | Testing utilities for consumers | DEFER | Standard DOM testing should suffice. |
+| ID      | Feature Candidate                        | Classification | Rationale & Ownership                                                                                                                                                                 |
+| :------ | :--------------------------------------- | :------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **G1**  | `select[multiple]` support               | DEFER          | High adapter complexity, low value over explicit Array checkboxes. Can be application-owned.                                                                                          |
+| **G2**  | Automatic focus-first-invalid            | SHOULD         | High UX value, but must not hijack expected keyboard navigation. **Owned by Adapters/Vanilla**.                                                                                       |
+| **G3**  | Scroll-to-invalid behavior               | SHOULD         | Natural pairing with G2. **Owned by Adapters/Vanilla**.                                                                                                                               |
+| **G4**  | External state synchronization           | REJECT         | Causes two sources of truth. App layer should observe unidirectionally.                                                                                                               |
+| **G5**  | Async parser pipeline                    | REJECT         | Validation handles async. True async parsing is synchronous; enrichment is side-effect logic.                                                                                         |
+| **G6**  | Advanced parser/formatter codecs         | DEFER          | Wait for Vii Schema invertible codecs. Built-ins suffice for now.                                                                                                                     |
+| **G7**  | Angular ControlValueAccessor             | SHOULD         | CVA remains important for compatibility with Angular's established forms/custom control ecosystem and Angular versions below Signal Forms availability. **Owned by Angular Adapter**. |
+| **G8**  | Angular Directives                       | SHOULD         | Useful ergonomic bridge (`[viiField]`). Do not conflate with Signal Forms interoperability. **Owned by Angular Adapter**.                                                             |
+| **G9**  | Vue directives/composables               | SHOULD         | Improves Vue DX. **Owned by Vue Adapter**.                                                                                                                                            |
+| **G10** | React convenience abstractions           | SHOULD         | Controller/Context hooks reduce boilerplate. **Owned by React Adapter**.                                                                                                              |
+| **G11** | Dynamic conditional fields               | MUST           | Schema mutability (creation/removal) is a complex routing/wizard necessity. **Owned by Core**.                                                                                        |
+| **G12** | Lazy field registration                  | MUST           | Enables forms that cannot mount the entire tree upfront. **Owned by Core**.                                                                                                           |
+| **G13** | Form wizard / multi-step semantics       | DEFER          | UI routing concern, not a form state concern. Form provides scoping primitives.                                                                                                       |
+| **G14** | Cross-field validation ergonomics        | SHOULD         | High friction currently. **Owned by Core**.                                                                                                                                           |
+| **G15** | Dependent validation                     | SHOULD         | Optimization over global validation. **Owned by Core**.                                                                                                                               |
+| **G16** | Validation orchestration for large forms | MAY            | Relates to lazy registration. **Owned by Core**.                                                                                                                                      |
+| **G17** | Array item-level validation              | SHOULD         | Syntax/DX improvement. **Owned by Core**.                                                                                                                                             |
+| **G18** | Server issue reconciliation              | DEFER          | Existing array snapshot mapping is sufficient for now.                                                                                                                                |
+| **G19** | Optimistic submission/retry              | REJECT         | Application/Network layer concern.                                                                                                                                                    |
+| **G20** | Persistence integration boundaries       | REJECT         | Core remains purely in-memory state.                                                                                                                                                  |
+| **G21** | Devtools/diagnostics integration         | MAY            | Useful but not blocking for production adoption.                                                                                                                                      |
+| **G22** | Schema-driven form generation            | REJECT         | Beyond headless scope; belongs in an independent package.                                                                                                                             |
+| **G23** | SSR/hydration integration                | SHOULD         | Next.js/Nuxt hydration is highly requested. (Import-safety proved in P1h). **Owned by Adapters**.                                                                                     |
+| **G24** | React Server Components boundary         | MAY            | Form adapter sits below client boundary ("use client"). Purely documentation/packaging.                                                                                               |
+| **G25** | Accessibility enhancements               | SHOULD         | Aria-describedby, fieldset grouping. **Owned by Vanilla Adapter**.                                                                                                                    |
+| **G26** | Browser matrix expansion                 | SHOULD         | Safari/Firefox coverage. **Owned by Test Infrastructure**.                                                                                                                            |
+| **G27** | Native/mobile adapter implications       | DEFER          | React Native adapter can follow web maturation.                                                                                                                                       |
+| **G28** | Future Vii-native UI integration         | DEFER          | Wait for Vii UI project.                                                                                                                                                              |
+| **G29** | Plugin/extensibility model               | REJECT         | Core composition is preferred over rigid plugin APIs.                                                                                                                                 |
+| **G30** | Testing utilities for consumers          | DEFER          | Standard DOM testing should suffice.                                                                                                                                                  |
 
 ## 6. External Primary-Source Research
 
-| Library | Version / Date | Primary Source | Observed Behavior / Implication | Decision Influenced |
-| :--- | :--- | :--- | :--- | :--- |
-| **React Hook Form** | `v7.x` (Sep 2026) | https://react-hook-form.com/ | Focuses heavily on `register`/`unregister` lifecycle. Unmounting an input unregisters it unless `shouldUnregister: false`. Core-integrated focus management via refs. | Influenced explicitly avoiding framework lifecycles in Core and keeping focus management explicitly in adapters. |
-| **TanStack Form** | `v1.x` / `v2.x alpha` (Sep 2026) | https://tanstack.com/form | v1 is stable, v2 alpha announced Aug 2026. Supports React, Vue, Angular, Solid, Svelte, Lit. Features deeply typed values, granular subscriptions. Meta-framework adapters exist. | Reinforces headless core value and strongly typed granular subscriptions. |
-| **Angular Signal Forms** | `v18+` (Sep 2026) | [Overview](https://angular.dev/guide/forms/signal-forms), [form API](https://angular.dev/api/forms/form), [Comparison](https://angular.dev/guide/forms/comparison) | Signal Forms require Angular v21+. Stable APIs (`form()`, `Schema`, `FormOptions`) since Angular v22.0. The official comparison states Signal Forms as: Stable (v22+). | Angular adapter P2f must manage version-specific compatibility safely. |
-| **VeeValidate** | `v4.x` (Sep 2026) | https://vee-validate.logaretm.com/ | Built around Composition API (`useField`, `useForm`). Provides dynamic field paths and flexible unmount behavior. | Vue adapter needs `useField` composable DX parity, rejecting global stores. |
-| **Standard Schema** | `v1.0` (Sep 2026) | https://standardschema.dev/ | Unified interface, `issues` array fail-closed pattern. | Standard schema is the provider-neutral boundary. Native Vii rules remain first-class. |
+| Library                  | Version / Date                   | Primary Source                                                                                                                                                     | Observed Behavior / Implication                                                                                                                                                   | Decision Influenced                                                                                              |
+| :----------------------- | :------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------- |
+| **React Hook Form**      | `v7.x` (Sep 2026)                | https://react-hook-form.com/                                                                                                                                       | Focuses heavily on `register`/`unregister` lifecycle. Unmounting an input unregisters it unless `shouldUnregister: false`. Core-integrated focus management via refs.             | Influenced explicitly avoiding framework lifecycles in Core and keeping focus management explicitly in adapters. |
+| **TanStack Form**        | `v1.x` / `v2.x alpha` (Sep 2026) | https://tanstack.com/form                                                                                                                                          | v1 is stable, v2 alpha announced Aug 2026. Supports React, Vue, Angular, Solid, Svelte, Lit. Features deeply typed values, granular subscriptions. Meta-framework adapters exist. | Reinforces headless core value and strongly typed granular subscriptions.                                        |
+| **Angular Signal Forms** | `v18+` (Sep 2026)                | [Overview](https://angular.dev/guide/forms/signal-forms), [form API](https://angular.dev/api/forms/form), [Comparison](https://angular.dev/guide/forms/comparison) | Signal Forms require Angular v21+. Stable APIs (`form()`, `Schema`, `FormOptions`) since Angular v22.0. The official comparison states Signal Forms as: Stable (v22+).            | Angular adapter P2f must manage version-specific compatibility safely.                                           |
+| **VeeValidate**          | `v4.x` (Sep 2026)                | https://vee-validate.logaretm.com/                                                                                                                                 | Built around Composition API (`useField`, `useForm`). Provides dynamic field paths and flexible unmount behavior.                                                                 | Vue adapter needs `useField` composable DX parity, rejecting global stores.                                      |
+| **Standard Schema**      | `v1.0` (Sep 2026)                | https://standardschema.dev/                                                                                                                                        | Unified interface, `issues` array fail-closed pattern.                                                                                                                            | Standard schema is the provider-neutral boundary. Native Vii rules remain first-class.                           |
 
 ## 7. Angular Version Matrix
 
 The architecture formally distinguishes:
+
 - **Angular 17.3.12:** Accepted Vii minimum compatibility point. There is no assumption that Signal Forms APIs exist. The current Vii Angular adapter must continue to work.
 - **Angular 21:** Signal Forms available as transitional/new API generation.
 - **Angular 22+:** Signal Forms stable according to current Angular documentation.
@@ -100,14 +102,14 @@ The architecture formally distinguishes:
 
 ## 8. Competitor Comparison Matrix
 
-| Area | Vii Form (Phase 2 Target) | React Hook Form | TanStack Form | Angular Signal Forms | VeeValidate |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **Architecture** | Headless, UI-agnostic Core | React-coupled | Headless Core | Angular-coupled | Vue Composition |
-| **Validation** | Native Rules & Standard Schema | Resolver plugins | Standard Schema / Zod | Schema-based | Zod / Yup / Custom |
-| **Identity / Array**| Explicit Key tracking | Positional + Internal IDs | Granular subscriptions | Typed FieldTree | Composition API paths |
-| **Focus Mgmt** | Adapter-owned (SHOULD) | Core-integrated (refs) | Adapter/App-owned | App-owned | App-owned |
-| **Conditional Reg**| Explicit Logical Unregister | `shouldUnregister` config | Dynamic components | Dynamic schema | `keep-values` config |
-| **Cross-field Val**| Explicit Deps (Planned) | Schema-level or triggers | Form-level validation | Form-level/Schema | Cross-field rules |
+| Area                 | Vii Form (Phase 2 Target)      | React Hook Form           | TanStack Form          | Angular Signal Forms | VeeValidate           |
+| :------------------- | :----------------------------- | :------------------------ | :--------------------- | :------------------- | :-------------------- |
+| **Architecture**     | Headless, UI-agnostic Core     | React-coupled             | Headless Core          | Angular-coupled      | Vue Composition       |
+| **Validation**       | Native Rules & Standard Schema | Resolver plugins          | Standard Schema / Zod  | Schema-based         | Zod / Yup / Custom    |
+| **Identity / Array** | Explicit Key tracking          | Positional + Internal IDs | Granular subscriptions | Typed FieldTree      | Composition API paths |
+| **Focus Mgmt**       | Adapter-owned (SHOULD)         | Core-integrated (refs)    | Adapter/App-owned      | App-owned            | App-owned             |
+| **Conditional Reg**  | Explicit Logical Unregister    | `shouldUnregister` config | Dynamic components     | Dynamic schema       | `keep-values` config  |
+| **Cross-field Val**  | Explicit Deps (Planned)        | Schema-level or triggers  | Form-level validation  | Form-level/Schema    | Cross-field rules     |
 
 ## 9. Core Lifecycle Operations
 
@@ -128,42 +130,51 @@ The architecture defines exactly three conceptually separate operations:
    - Owned Scope/resources are disposed according to selected P2b semantics.
    - Retained state is destroyed unless a future explicitly different primitive is designed.
 
-*No fourth Core lifecycle state (e.g., active/inactive) is permitted.*
+_No fourth Core lifecycle state (e.g., active/inactive) is permitted._
 
 ## 10. Architectural Decision Records (ADRs)
 
 ### ADR P2-1: Dynamic Tree & Node Existence
+
 **Decision:** Do not conflate UI mounting with Form node existence. A node is explicitly logically registered in Core and survives UI unmounts by default. To remove a node from the submit snapshot and validation, it must be explicitly logically unregistered from the parent group/array.
 **Rationale:** Large forms need conditional sections. If UI conditionally hides a field, its state should typically be retained (Scenario A) unless it is structurally removed from the schema (Scenario C). The chosen minimal primitive is explicit structural logical unregister, not a public `active` boolean flag, and not a public undefined `attach`/`detach` primitive.
 
 ### ADR P2-2: FieldArray Re-registration & Identity
+
 **Decision:**
+
 - **UI unmount:** item remains in array.
 - **Reorder while UI-unmounted:** same `FieldArrayItem.id`, same canonical item node, same Scope.
 - **Logical remove:** item leaves array, node disposed, Scope disposed, identity no longer exists.
 - **Subsequent new item:** receives a new logical identity unless explicit supported key semantics map it according to existing key contract.
 - **UI remount:** called "adapter rebind / UI remount" (NOT "re-registration").
-**Rationale:** Reorder operations while without UI binding operate on the logical nodes in Core. Re-mounting with the same ID reconnects the adapter to the existing node. `dirty`, `touched`, and `issues` are preserved. The structural registration mechanism must reject any duplicate logical key that would violate FieldArray stable identity.
+  **Rationale:** Reorder operations while without UI binding operate on the logical nodes in Core. Re-mounting with the same ID reconnects the adapter to the existing node. `dirty`, `touched`, and `issues` are preserved. The structural registration mechanism must reject any duplicate logical key that would violate FieldArray stable identity.
 
 ### ADR P2-3: Focus Management Ownership
+
 **Decision:** Core remains entirely ignorant of focus. Focus orchestration (`focus-first-invalid`, `scroll-to-invalid`) is explicitly owned by the Vanilla adapter and framework adapters.
 **Rationale:** Focus is a DOM/presentation concern. Mixing them violates the headless boundary and inflates the core bundle with DOM interfaces.
 
 ### ADR P2-4: Framework-Native Integration Strategy
+
 **Decision:** Expand adapter surfaces to match framework idiomatic usage without bleeding framework semantics into Core. Keep Angular directive integration (`[viiField]`) separate from Signal Forms interoperability; do not conflate them as they solve different integration problems.
 **Rationale:** Idiomatic DX reduces application boilerplate. RSC boundaries simply require "use client" directives at the adapter export level, maintaining the client-side nature of Form state.
 
 ### ADR P2-5: Select-Multiple Ownership
+
 **Decision:** Rejected from Core explicit abstraction; DEFERRED indefinitely.
 **Rationale:** The DOM implementation of `<select multiple>` is specific and often replaced by custom UI components. Application developers should own the array transformation.
 
 ### ADR P2-6: Async Parser Pipeline & External State Sync
+
 **Decision:** Both explicitly REJECTED.
 **Rationale:** Validation handles async requirements. True async parsing is an enrichment side-effect. External state sync (Redux/URL) introduces lifecycle ambiguity; consumers must implement unidirectional observers from the Form.
 
 ### ADR P2-7: Explicit Cross-Field Validation & Dependency Tracking
+
 **Decision:** Implement cross-field validation via explicit field dependency declarations (`dependencies: [fieldA] | (self) => [fieldA]`) and snapshot context reads (`ctx.get(depField)`). Hidden signal interception or global dependency graphs are rejected.
 **Rationale:**
+
 1. **Explicit Ownership:** Issues belong exclusively to the node evaluating the validation rule. Cross-field rules do not pollute sibling or parent issues.
 2. **Deterministic Wave Execution:** Changes to dependencies trigger a topological validation wave using Kahn's algorithm, executing downstream dependents dependencies-first with 0 duplicate executions per wave.
 3. **Cycle & Leak Prevention:** Direct and transitive cycles are detected during registration/validation and throw descriptive errors. Disposed fields cleanly sever dependent registrations without resurrection.
@@ -172,6 +183,7 @@ The architecture defines exactly three conceptually separate operations:
 ## 11. Compatibility Policy (Preview Phase)
 
 `@vii-labs/form` is a **Preview Candidate** (`0.1.0-experimental.1`).
+
 - **API Compatibility Rule:** Additive changes are allowed via minor/patch bumps. Preview breaking changes remain possible, but deprecation should be preferred where practical and support cost is reasonable.
 - **API Snapshot Governance:** Every public API change REQUIRES an update to `packages/form/api-surface.json` and its boundary tests. No accidental exports.
 - **Version/Release Separation:** Package remains private and unpublished. Internal slices do not automatically mandate package version bumps until a release gate is executed.
@@ -188,6 +200,7 @@ The architecture defines exactly three conceptually separate operations:
 The Phase 2 roadmap follows a strictly sequential recommended execution order to eliminate dependency ambiguity.
 
 ### **P2b — Core: Dynamic Tree Registration Semantics** (FIRST RUNTIME SLICE)
+
 - **Objective:** Prove contract-first semantics for dynamic logical registration/unregistration while preserving the rule that UI adapter mount/unmount does not affect canonical Form node existence.
 - **Owner:** Core Form Domain.
 - **Dependencies:** None.
@@ -216,6 +229,7 @@ The Phase 2 roadmap follows a strictly sequential recommended execution order to
 - **Stop Condition:** 0 unresolved blocking architecture questions. Contract tests pass.
 
 ### **P2c — Core: Cross-Field Validation & Dependencies**
+
 - **Objective:** Ergonomic APIs for `confirm password`, dependent date ranges, and field dependency tracking.
 - **Owner:** Core Form Domain.
 - **Dependencies:** P2b.
@@ -224,6 +238,7 @@ The Phase 2 roadmap follows a strictly sequential recommended execution order to
 - **Stop Condition:** Cyclic dependencies throw descriptively; dependent fields evaluate correctly.
 
 ### **P2d — Adapters: DOM Focus & Accessibility Orchestration** [COMPLETED]
+
 - **Objective:** Vanilla adapter implementation of `focus-first-invalid`, `scroll-to-invalid`, and enhanced ARIA coordination.
 - **Owner:** Vanilla Adapter.
 - **Dependencies:** P2c.
@@ -244,15 +259,33 @@ The Phase 2 roadmap follows a strictly sequential recommended execution order to
   - [x] 41/41 hard performance, bundle, and memory gates pass with zero budget expansion.
 - **Stop Condition:** Standard submit failures can optionally focus the first invalid DOM node. (Achieved and verified across unit, browser, and clean consumer fixtures).
 
-### **P2e — Frameworks: Idiomatic React & Vue Integrations**
-- **Objective:** React `Controller` / `FormProvider` and Vue `useField` composition enhancements.
+### **P2e — Frameworks: Idiomatic React & Vue Integrations** [COMPLETED]
+
+- **Objective:** React `Controller` / `FormProvider` and Vue `useViiField` / `provideForm` / `vViiField` composition and integration enhancements.
 - **Owner:** React & Vue Adapters.
 - **Dependencies:** P2d.
-- **Public API Impact:** High within `/react` and `/vue` subpaths.
-- **Tests Required:** SSR import safety, strict-mode.
-- **Stop Condition:** Controller correctly bridges generic components without parent renders.
+- **Architecture Continuity:**
+  - Preserves one canonical state tree: zero duplicated form state, zero hidden external stores, zero automatic structural unregistration on UI component unmount (ADR P2-1).
+  - Preserves strict adapter isolation: React and Vue adapters remain 100% framework-isolated and do not import DOM or vanilla focus implementation modules.
+  - Granular reactivity: field mutation triggers re-renders or effect runs strictly in affected subscriber components without whole-form re-renders.
+- **Public API Impact:** High within `/react` and `/vue` subpaths (Additive, 0 breaking changes).
+  - React exports: `FormProvider`, `useFormContext`, `useController`, `Controller`, plus types `FormProviderProps`, `UseControllerOptions`, `ControllerRenderProps`, `ControllerFieldState`, `UseControllerReturn`, `ControllerProps`. Under Preferred Option A, `ControllerRenderProps` omits any fake DOM ref callback, allowing consumers to attach standard React refs directly to UI elements or native inputs without coupling or misleading no-ops.
+  - Vue exports: `useViiField`, `useViiForm`, `useViiFieldArray`, `provideForm`, `useFormContext`, `vViiField`, plus types `SupportedVueFieldElement`, `SupportedVueFieldState`, `ViiFieldDirective`, `VueFieldBindProps`, `VueFieldComposable`.
+- **Acceptance Matrix:**
+  - [x] `FormProvider` transports canonical form instance via React Context without subscribing to state changes.
+  - [x] `useController` bridges canonical fields to custom inputs and UI component libraries with granular `field` and `fieldState` props, cleanly composing with direct consumer DOM refs.
+  - [x] `Controller` render-prop component wraps `useController` cleanly.
+  - [x] `useViiField` provides reactive handles, two-way writable `model` computed, and `bind()` helper in active Vue `effectScope`.
+  - [x] `provideForm` and `useFormContext` transport form instances down Vue component hierarchies with descriptive errors on missing context.
+  - [x] `vViiField` Vue directive (`ViiFieldDirective`) provides overloaded template typing (`<textarea>` for string fields, `<input>` for string/boolean fields) and runtime discriminated narrowing (`isBooleanField`, `isStringField`) with zero unsafe setter casts, fail-closed safety on element/field type mismatches, and clean listener teardown.
+  - [x] 100-field isolation verified: mutating a single field among 100 executes effects/re-renders strictly for that field.
+  - [x] 1,000-cycle resource stress tests prove 0 subscription leaks upon unmount/teardown.
+  - [x] All 41/41 hard performance, bundle, and memory gates pass with 0 budget weakening.
+  - [x] All 8 packed consumers (Root, Vanilla, React 18, React 19, Angular 17, Angular 22, Vue 3.3, Vue 3.5) pass cleanly.
+- **Stop Condition:** Controller correctly bridges generic components without parent renders; Vue composables provide full idiomatic reactivity with 0 leaks. (Achieved and verified).
 
 ### **P2f — Frameworks: Angular Ecosystem Integration**
+
 - **Objective:** Angular Signal Forms interoperability, `ControlValueAccessor` bridge.
 - **Owner:** Angular Adapter.
 - **Dependencies:** P2e.
@@ -261,6 +294,7 @@ The Phase 2 roadmap follows a strictly sequential recommended execution order to
 - **Stop Condition:** Form successfully maps to Angular Signals without memory leaks.
 
 ### **P2g — Cross-Browser Infrastructure Expansion**
+
 - **Objective:** Add WebKit and Firefox to Playwright test matrix.
 - **Owner:** Test Infrastructure.
 - **Dependencies:** P2f.
@@ -269,6 +303,7 @@ The Phase 2 roadmap follows a strictly sequential recommended execution order to
 - **Stop Condition:** Firefox/WebKit tests pass consistently in CI.
 
 ### **P2h — Phase 2 Graduation Review**
+
 - **Objective:** Final API review, documentation sync, performance audit.
 - **Owner:** Repository Maintainers.
 - **Dependencies:** P2g.
@@ -279,6 +314,7 @@ The Phase 2 roadmap follows a strictly sequential recommended execution order to
 ## 14. Graduation Criteria for Phase 2
 
 Phase 2 concludes when:
+
 1. Dynamic conditional trees function without memory leaks via explicit `unregister`.
 2. Angular, React, and Vue adapters support native idiomatic patterns (Signal Forms, Context/Controller).
 3. Focus management orchestrates flawlessly upon submission failure (opt-in).

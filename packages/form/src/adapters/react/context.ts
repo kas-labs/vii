@@ -15,14 +15,12 @@ import type { FormFieldsRecord, FormInstance } from "../../core/types.js";
  */
 export interface FormContextValue<TFields extends FormFieldsRecord = FormFieldsRecord> {
   readonly form: FormInstance<TFields>;
-  readonly formBinding?: unknown;
 }
 
 const ViiFormContext = createContext<FormContextValue | null>(null);
 
 export interface FormProviderProps<TFields extends FormFieldsRecord = FormFieldsRecord> {
   readonly form: FormInstance<TFields>;
-  readonly formBinding?: unknown;
   readonly children?: ReactNode | undefined;
 }
 
@@ -40,9 +38,8 @@ export function FormProvider<TFields extends FormFieldsRecord = FormFieldsRecord
   const value = useMemo<FormContextValue<TFields>>(
     () => ({
       form: props.form,
-      formBinding: props.formBinding,
     }),
-    [props.form, props.formBinding],
+    [props.form],
   );
 
   return createElement(ViiFormContext.Provider, { value }, props.children);
@@ -59,13 +56,4 @@ export function useFormContext<
     throw new Error("useFormContext must be used within a <FormProvider>");
   }
   return ctx.form as FormInstance<TFields>;
-}
-
-/**
- * Internal helper to optionally retrieve form context without throwing.
- */
-export function useOptionalFormContext<
-  TFields extends FormFieldsRecord = FormFieldsRecord,
->(): FormContextValue<TFields> | null {
-  return useContext(ViiFormContext) as FormContextValue<TFields> | null;
 }

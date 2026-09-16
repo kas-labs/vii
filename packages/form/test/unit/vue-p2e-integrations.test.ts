@@ -1,7 +1,13 @@
 import { effect, effectScope, type DirectiveBinding, type VNode } from "vue";
 import { describe, expect, it } from "vitest";
 import { createField, createForm, type FieldState } from "../../src/index.js";
-import { useFormContext, useViiField, vViiField } from "../../src/adapters/vue/index.js";
+import {
+  useFormContext,
+  useViiField,
+  vViiField,
+  type SupportedVueFieldElement,
+  type SupportedVueFieldState,
+} from "../../src/adapters/vue/index.js";
 
 function trackField(field: FieldState<unknown, unknown>) {
   const signalKeys = [
@@ -121,9 +127,9 @@ describe("Vue P2e Integrations (@vii-labs/form/vue)", () => {
       } as unknown as HTMLInputElement;
 
       const createBinding = (
-        value: FieldState<unknown, unknown>,
-        oldValue: FieldState<unknown, unknown> | null = null,
-      ): DirectiveBinding<FieldState<unknown, unknown>> => ({
+        value: SupportedVueFieldState,
+        oldValue: SupportedVueFieldState | null = null,
+      ): DirectiveBinding<SupportedVueFieldState> => ({
         value,
         oldValue,
         modifiers: {},
@@ -131,15 +137,10 @@ describe("Vue P2e Integrations (@vii-labs/form/vue)", () => {
         instance: null,
         dir: vViiField,
       });
-      const dummyVNode = null as unknown as VNode<unknown, HTMLElement>;
+      const dummyVNode = null as unknown as VNode<unknown, SupportedVueFieldElement>;
 
       // Mount directive
-      vViiField.mounted!(
-        dummyInput,
-        createBinding(field as FieldState<unknown, unknown>),
-        dummyVNode,
-        null,
-      );
+      vViiField.mounted!(dummyInput, createBinding(field), dummyVNode, null);
 
       // DOM value initialized
       expect(dummyInput.value).toBe("initial");
@@ -165,12 +166,7 @@ describe("Vue P2e Integrations (@vii-labs/form/vue)", () => {
       expect(field.touched.get()).toBe(true);
 
       // Unmount directive cleans up listeners and signal subscription
-      vViiField.unmounted!(
-        dummyInput,
-        createBinding(field as FieldState<unknown, unknown>),
-        dummyVNode,
-        null,
-      );
+      vViiField.unmounted!(dummyInput, createBinding(field), dummyVNode, null);
       expect((listeners["input"] || []).length).toBe(0);
       expect((listeners["blur"] || []).length).toBe(0);
 
@@ -200,9 +196,9 @@ describe("Vue P2e Integrations (@vii-labs/form/vue)", () => {
       } as unknown as HTMLInputElement;
 
       const createBinding = (
-        value: FieldState<unknown, unknown>,
-        oldValue: FieldState<unknown, unknown> | null = null,
-      ): DirectiveBinding<FieldState<unknown, unknown>> => ({
+        value: SupportedVueFieldState,
+        oldValue: SupportedVueFieldState | null = null,
+      ): DirectiveBinding<SupportedVueFieldState> => ({
         value,
         oldValue,
         modifiers: {},
@@ -210,27 +206,14 @@ describe("Vue P2e Integrations (@vii-labs/form/vue)", () => {
         instance: null,
         dir: vViiField,
       });
-      const dummyVNode = null as unknown as VNode<unknown, HTMLElement>;
+      const dummyVNode = null as unknown as VNode<unknown, SupportedVueFieldElement>;
 
       // Mount fieldA
-      vViiField.mounted!(
-        dummyInput,
-        createBinding(fieldA as FieldState<unknown, unknown>),
-        dummyVNode,
-        null,
-      );
+      vViiField.mounted!(dummyInput, createBinding(fieldA), dummyVNode, null);
       expect(dummyInput.value).toBe("A");
 
       // Update to fieldB
-      vViiField.updated!(
-        dummyInput,
-        createBinding(
-          fieldB as FieldState<unknown, unknown>,
-          fieldA as FieldState<unknown, unknown>,
-        ),
-        dummyVNode,
-        dummyVNode,
-      );
+      vViiField.updated!(dummyInput, createBinding(fieldB, fieldA), dummyVNode, dummyVNode);
       expect(dummyInput.value).toBe("B");
 
       // External mutation on fieldA no longer affects DOM
@@ -241,14 +224,126 @@ describe("Vue P2e Integrations (@vii-labs/form/vue)", () => {
       fieldB.setRawValue("B-changed");
       expect(dummyInput.value).toBe("B-changed");
 
-      vViiField.unmounted!(
-        dummyInput,
-        createBinding(fieldB as FieldState<unknown, unknown>),
-        dummyVNode,
-        null,
-      );
+      vViiField.unmounted!(dummyInput, createBinding(fieldB), dummyVNode, null);
       fieldA.dispose();
       fieldB.dispose();
+    });
+
+    it("binds checkbox inputs and syncs boolean values bidirectionally", () => {
+      const field = createField<boolean>({ initialValue: false });
+
+      const listeners: Record<string, ((e: Event) => void)[]> = {};
+      const dummyCheckbox = {
+        tagName: "INPUT",
+        type: "checkbox",
+        checked: false,
+        addEventListener: (event: string, fn: (e: Event) => void) => {
+          (listeners[event] = listeners[event] || []).push(fn);
+        },
+        removeEventListener: (event: string, fn: (e: Event) => void) => {
+          listeners[event] = (listeners[event] || []).filter((l) => l !== fn);
+        },
+      } as unknown as HTMLInputElement;
+
+      const createBinding = (
+        value: SupportedVueFieldState,
+      ): DirectiveBinding<SupportedVueFieldState> => ({
+        value,
+        oldValue: null,
+        modifiers: {},
+        arg: undefined,
+        instance: null,
+        dir: vViiField,
+      });
+      const dummyVNode = null as unknown as VNode<unknown, SupportedVueFieldElement>;
+
+      vViiField.mounted!(dummyCheckbox, createBinding(field), dummyVNode, null);
+      expect(dummyCheckbox.checked).toBe(false);
+
+      // External mutation updates checkbox DOM
+      field.setRawValue(true);
+      expect(dummyCheckbox.checked).toBe(true);
+
+      // DOM change event updates field
+      dummyCheckbox.checked = false;
+      const changeFns = listeners["change"] || [];
+      for (const fn of changeFns) {
+        fn({ target: dummyCheckbox } as unknown as Event);
+      }
+      expect(field.value.get()).toBe(false);
+
+      vViiField.unmounted!(dummyCheckbox, createBinding(field), dummyVNode, null);
+      expect((listeners["change"] || []).length).toBe(0);
+      field.dispose();
+    });
+
+    it("binds textarea elements and syncs string values", () => {
+      const field = createField<string>({ initialValue: "notes" });
+
+      const listeners: Record<string, ((e: Event) => void)[]> = {};
+      const dummyTextarea = {
+        tagName: "TEXTAREA",
+        value: "",
+        addEventListener: (event: string, fn: (e: Event) => void) => {
+          (listeners[event] = listeners[event] || []).push(fn);
+        },
+        removeEventListener: (event: string, fn: (e: Event) => void) => {
+          listeners[event] = (listeners[event] || []).filter((l) => l !== fn);
+        },
+      } as unknown as HTMLTextAreaElement;
+
+      const createBinding = (
+        value: SupportedVueFieldState,
+      ): DirectiveBinding<SupportedVueFieldState> => ({
+        value,
+        oldValue: null,
+        modifiers: {},
+        arg: undefined,
+        instance: null,
+        dir: vViiField,
+      });
+      const dummyVNode = null as unknown as VNode<unknown, SupportedVueFieldElement>;
+
+      vViiField.mounted!(dummyTextarea, createBinding(field), dummyVNode, null);
+      expect(dummyTextarea.value).toBe("notes");
+
+      field.setRawValue("updated notes");
+      expect(dummyTextarea.value).toBe("updated notes");
+
+      vViiField.unmounted!(dummyTextarea, createBinding(field), dummyVNode, null);
+      field.dispose();
+    });
+
+    it("ignores unsupported DOM elements cleanly without attaching listeners", () => {
+      const field = createField<string>({ initialValue: "test" });
+      const listeners: Record<string, ((e: Event) => void)[]> = {};
+      const unsupportedDiv = {
+        tagName: "DIV",
+        addEventListener: (event: string, fn: (e: Event) => void) => {
+          (listeners[event] = listeners[event] || []).push(fn);
+        },
+        removeEventListener: (event: string, fn: (e: Event) => void) => {
+          listeners[event] = (listeners[event] || []).filter((l) => l !== fn);
+        },
+      } as unknown as HTMLInputElement;
+
+      const createBinding = (
+        value: SupportedVueFieldState,
+      ): DirectiveBinding<SupportedVueFieldState> => ({
+        value,
+        oldValue: null,
+        modifiers: {},
+        arg: undefined,
+        instance: null,
+        dir: vViiField,
+      });
+      const dummyVNode = null as unknown as VNode<unknown, SupportedVueFieldElement>;
+
+      vViiField.mounted!(unsupportedDiv as never, createBinding(field), dummyVNode, null);
+      expect(Object.keys(listeners).length).toBe(0);
+
+      vViiField.unmounted!(unsupportedDiv as never, createBinding(field), dummyVNode, null);
+      field.dispose();
     });
   });
 

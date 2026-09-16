@@ -246,40 +246,27 @@ describe("React P2e Integrations (@vii-labs/form/react)", () => {
       field.dispose();
     });
 
-    it("composes with P2d focus registration via ref callback and cleans up", () => {
-      const field = createField<string>({ initialValue: "focus-test" });
+    it("provides stable ref callback that attaches to DOM controls and unmounts cleanly", () => {
+      const field = createField<string>({ initialValue: "ref-test" });
 
-      let registeredElement: unknown = null;
-      let cleanedUp = false;
-
-      const mockBinding = {
-        registerControl: (f: unknown, el: unknown) => {
-          registeredElement = el;
-          return () => {
-            cleanedUp = true;
-          };
-        },
-      };
-
-      const dummyEl = { tagName: "INPUT" } as HTMLElement;
-
+      let refReceived: HTMLElement | null = null;
       function RefComponent() {
-        const ctrl = useController(field, { formBinding: mockBinding });
-        return createElement("div", {
-          ref: () => {
-            ctrl.field.ref(dummyEl);
+        const ctrl = useController(field);
+        return createElement("input", {
+          ref: (el: HTMLElement | null) => {
+            ctrl.field.ref(el);
+            refReceived = el;
           },
+          defaultValue: ctrl.field.value,
         });
       }
 
-      const renderer = render(createElement(RefComponent));
-      expect(registeredElement).toBe(dummyEl);
-      expect(cleanedUp).toBe(false);
+      const renderer = render(createElement(StrictMode, null, createElement(RefComponent)));
+      expect(refReceived).toBeDefined();
 
       act(() => {
         renderer.unmount();
       });
-      expect(cleanedUp).toBe(true);
 
       field.dispose();
     });

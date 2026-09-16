@@ -37,6 +37,56 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-09-16 23:15 CEST | Form: React Controller & Vue Directive Contract Refinement (P2e)
+
+Status: completed
+Branch: `feat/form-p2e-react-vue-integrations`
+PR: https://github.com/kas-labs/vii/pull/198 (Draft)
+
+### Scope
+
+- Refine React Controller and Vue Directive contracts for official Vii Form Phase 2 roadmap slice P2e in `@vii-labs/form`:
+  - Adopt Option B for React P2e: Eliminate dynamic property probing (`candidate.registerControl`, `candidate._focusRegistry`) and remove `formBinding` from `FormProviderProps`, `FormContextValue`, and `UseControllerOptions`. Keep `field.ref` as a pure, stable consumer callback ref without coupling to Vanilla DOM focus orchestration.
+  - Review and narrow Vue directive (`vViiField`) contract: Explicitly type supported elements as `SupportedVueFieldElement` (`HTMLInputElement | HTMLTextAreaElement`) and supported field states as `SupportedVueFieldState` (`FieldState<unknown, string> | FieldState<unknown, boolean>`). Support text inputs, textareas, and checkboxes (`boolean`), while safely ignoring unsupported elements (radio, file, button, div).
+  - Update unit tests: Replace fake mock focus registration tests with stable ref and StrictMode tests for React `useController`, and add checkbox, textarea, and unsupported element tests for Vue `vViiField`.
+  - Update `api-surface.json` and documentation (`README.md`, `FORM_PHASE2_ARCHITECTURE.md`, `PROJECT_STATE.md`).
+  - Preserve all 41/41 HARD performance, bundle, and memory gates with 0 budget weakening.
+  - Preserve all 8 clean packed consumers.
+
+### Changes Made
+
+- `packages/form/src/adapters/react/types.ts`: Removed `formBinding` from `FormProviderProps` and `UseControllerOptions`.
+- `packages/form/src/adapters/react/context.ts`: Removed `formBinding` from `FormContextValue` and `FormProviderProps`. Removed unused internal `useOptionalFormContext`.
+- `packages/form/src/adapters/react/use-controller.ts`: Refactored `useController` under Option B: removed `useOptionalFormContext`, dynamic property probing, `activeUnsubRef`, and unmount cleanup of external registry. `ref` is a stable callback returning void. Minified bundle size reduced by ~485 B.
+- `packages/form/src/adapters/vue/types.ts`: Exported `SupportedVueFieldElement` (`HTMLInputElement | HTMLTextAreaElement`) and `SupportedVueFieldState` (`FieldState<unknown, string> | FieldState<unknown, boolean>`).
+- `packages/form/src/adapters/vue/directive.ts`: Updated `vViiField` typing to `ObjectDirective<SupportedVueFieldElement, SupportedVueFieldState>`. Streamlined element filtering to handle text inputs, textareas, and checkboxes (`boolean`), ignoring unsupported elements safely.
+- `packages/form/src/adapters/vue/index.ts`: Re-exported `SupportedVueFieldElement` and `SupportedVueFieldState`.
+- `packages/form/api-surface.json`: Added `SupportedVueFieldElement` and `SupportedVueFieldState` to `./vue` public types.
+- `packages/form/test/unit/react-p2e-integrations.test.ts`: Replaced mock focus test with stable ref callback and StrictMode tests.
+- `packages/form/test/unit/vue-p2e-integrations.test.ts`: Added tests for checkbox (`boolean`), textarea (`string`), and unsupported element rejection.
+- `packages/form/README.md`: Updated Section 13 (React) and 16 (Vue) to accurately document `FormProvider`, `useFormContext`, `useController`, and `vViiField` without any claims of Vanilla focus orchestration.
+- `docs/architecture/FORM_PHASE2_ARCHITECTURE.md`: Documented Option B and Vue directive contracts.
+- `PROJECT_STATE.md`: Updated P2e entry with exact Option B and Vue directive specifications.
+
+### Validation Results
+
+- `pnpm -r typecheck`: passed.
+- `pnpm --filter @vii-labs/form test`: 35 files, 483 tests passed.
+- `pnpm --filter @vii-labs/form run test:browser`: 46 tests passed.
+- `pnpm --filter @vii-labs/form run performance`: 41/41 HARD gates passed.
+  - `bundle.reactAdapter.maxMinifiedBytes`: 6,329 B (threshold: 7,000 B)
+  - `bundle.reactAdapter.maxGzipBytes`: 1,521 B (threshold: 2,000 B)
+  - `bundle.reactAdapter.maxBrotliBytes`: 1,372 B (threshold: 1,800 B)
+  - `bundle.vueAdapter.maxMinifiedBytes`: 7,644 B (threshold: 8,000 B)
+  - `bundle.vueAdapter.maxGzipBytes`: 1,991 B (threshold: 2,000 B)
+  - `bundle.vueAdapter.maxBrotliBytes`: 1,687 B (threshold: 1,800 B)
+- `pnpm --filter @vii-labs/form run validate-package`: all 8 clean consumers passed (Root, Vanilla, React 18, React 19, Angular 17, Angular 22, Vue 3.3, Vue 3.5).
+
+### Remaining Work
+
+- None for P2e refinement.
+- Next slice: P2f (Angular Signal Forms Interoperability) once authorized.
+
 ## 2026-09-12 00:35 CEST | Form: Frameworks Idiomatic React & Vue Integrations (P2e)
 
 Status: completed

@@ -134,6 +134,8 @@
         "vViiField"
       ],
       "publicTypes": [
+        "SupportedVueFieldElement",
+        "SupportedVueFieldState",
         "VueAdapterOptions",
         "VueArrayHandle",
         "VueArrayRefs",

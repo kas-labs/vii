@@ -24,4 +24,6 @@ export type {
   VueFormHandle,
   VueFormRefs,
   VueReadonlyRef,
+  SupportedVueFieldElement,
+  SupportedVueFieldState,
 } from "./types.js";

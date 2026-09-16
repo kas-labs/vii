@@ -129,7 +129,6 @@ export interface ReactArrayBinding<
  */
 export interface FormProviderProps<TFields extends FormFieldsRecord = FormFieldsRecord> {
   readonly form: FormInstance<TFields>;
-  readonly formBinding?: unknown;
   readonly children?: ReactNode | undefined;
 }
 
@@ -138,7 +137,6 @@ export interface FormProviderProps<TFields extends FormFieldsRecord = FormFields
  */
 export interface UseControllerOptions {
   readonly name?: string;
-  readonly formBinding?: unknown;
 }
 
 /**

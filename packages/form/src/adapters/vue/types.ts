@@ -3,6 +3,7 @@ import type {
   FieldArray,
   FieldArrayItem,
   FieldIssue,
+  FieldState,
   FormFieldsRecord,
   FormInstance,
   FormNode,
@@ -163,3 +164,15 @@ export interface VueArrayHandle<
   reset(): void;
   dispose(): void;
 }
+
+/**
+ * Elements supported by the `v-vii-field` directive.
+ */
+export type SupportedVueFieldElement = HTMLInputElement | HTMLTextAreaElement;
+
+/**
+ * FieldState types supported by the `v-vii-field` directive.
+ * Restricted to controls with string raw representation (text-like inputs, textarea)
+ * and boolean raw representation (checkboxes).
+ */
+export type SupportedVueFieldState = FieldState<unknown, string> | FieldState<unknown, boolean>;

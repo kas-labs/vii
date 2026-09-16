@@ -253,15 +253,15 @@ The Phase 2 roadmap follows a strictly sequential recommended execution order to
   - Preserves strict adapter isolation: React and Vue adapters remain 100% framework-isolated and do not import DOM or vanilla focus implementation modules.
   - Granular reactivity: field mutation triggers re-renders or effect runs strictly in affected subscriber components without whole-form re-renders.
 - **Public API Impact:** High within `/react` and `/vue` subpaths (Additive, 0 breaking changes).
-  - React exports: `FormProvider`, `useFormContext`, `useOptionalFormContext`, `useController`, `Controller`, plus types `FormProviderProps`, `FormContextValue`, `UseControllerOptions`, `ControllerRenderProps`, `ControllerFieldState`, `UseControllerReturn`, `ControllerProps`.
-  - Vue exports: `useViiField`, `useViiForm`, `useViiFieldArray`, `provideForm`, `useFormContext`, `vViiField`, plus types `VueFieldBindProps`, `VueFieldComposable`.
+  - React exports: `FormProvider`, `useFormContext`, `useController`, `Controller`, plus types `FormProviderProps`, `FormContextValue`, `UseControllerOptions`, `ControllerRenderProps`, `ControllerFieldState`, `UseControllerReturn`, `ControllerProps`. Under Option B, React adapter maintains pure component-level controller binding and consumer callback ref without coupling to Vanilla DOM focus orchestration.
+  - Vue exports: `useViiField`, `useViiForm`, `useViiFieldArray`, `provideForm`, `useFormContext`, `vViiField`, plus types `SupportedVueFieldElement`, `SupportedVueFieldState`, `VueFieldBindProps`, `VueFieldComposable`.
 - **Acceptance Matrix:**
-  - [x] `FormProvider` transports canonical form (and optional binding) via React Context without subscribing to state changes.
-  - [x] `useController` bridges canonical fields to custom inputs and UI component libraries with granular `field` and `fieldState` props.
+  - [x] `FormProvider` transports canonical form instance via React Context without subscribing to state changes.
+  - [x] `useController` bridges canonical fields to custom inputs and UI component libraries with granular `field` and `fieldState` props, providing a stable ref callback without external focus coupling.
   - [x] `Controller` render-prop component wraps `useController` cleanly.
   - [x] `useViiField` provides reactive handles, two-way writable `model` computed, and `bind()` helper in active Vue `effectScope`.
   - [x] `provideForm` and `useFormContext` transport form instances down Vue component hierarchies with descriptive errors on missing context.
-  - [x] `vViiField` Vue directive enables declarative two-way DOM binding directly to `FieldState` with clean listener teardown.
+  - [x] `vViiField` Vue directive enables declarative two-way DOM binding directly to supported `FieldState` controls (`<input>`, `<textarea>`, `<input type="checkbox">` with string/boolean raw representation) with clean listener teardown and safe no-op on unsupported elements.
   - [x] 100-field isolation verified: mutating a single field among 100 executes effects/re-renders strictly for that field.
   - [x] 1,000-cycle resource stress tests prove 0 subscription leaks upon unmount/teardown.
   - [x] All 41/41 hard performance, bundle, and memory gates pass with 0 budget weakening.

@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, type ReactElement } from "react";
+import { useCallback, useMemo, type ReactElement } from "react";
 import type { FieldState } from "../../core/types.js";
-import { useOptionalFormContext } from "./context.js";
 import type {
   ControllerFieldState,
   ControllerProps,
@@ -19,40 +18,10 @@ export function useController<TValue, TRaw = TValue>(
   options?: UseControllerOptions,
 ): UseControllerReturn<TValue, TRaw> {
   const binding = useField(field);
-  const activeUnsubRef = useRef<(() => void) | null>(null);
 
-  const formContext = useOptionalFormContext();
-  const effectiveBinding = options?.formBinding ?? formContext?.formBinding;
-
-  const ref = useCallback(
-    (el: HTMLElement | null): void => {
-      if (activeUnsubRef.current) {
-        activeUnsubRef.current();
-        activeUnsubRef.current = null;
-      }
-      if (el && effectiveBinding && typeof effectiveBinding === "object") {
-        const candidate = effectiveBinding as {
-          readonly registerControl?: (f: unknown, el: unknown) => () => void;
-          readonly _focusRegistry?: {
-            readonly register?: (f: unknown, el: unknown) => () => void;
-          };
-        };
-        const reg = candidate.registerControl ?? candidate._focusRegistry?.register;
-        if (typeof reg === "function") {
-          activeUnsubRef.current = reg(field, el);
-        }
-      }
-    },
-    [effectiveBinding, field],
-  );
-
-  useEffect(() => {
-    return () => {
-      if (activeUnsubRef.current) {
-        activeUnsubRef.current();
-        activeUnsubRef.current = null;
-      }
-    };
+  const ref = useCallback((): void => {
+    // Pure consumer ref callback: no-op default that allows UI libraries
+    // and custom components to attach ref callbacks cleanly.
   }, []);
 
   const onChange = useCallback(

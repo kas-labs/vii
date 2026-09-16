@@ -303,8 +303,8 @@ function UserProfile({ form }) {
 
 For deeply nested form component hierarchies and complex UI libraries:
 
-- **`FormProvider` & `useFormContext`:** Transports the canonical `form` (and optional `formBinding`) instance down the component tree via React Context without subscribing the provider component to state changes.
-- **`useController`:** Bridges a canonical `FieldState` to custom inputs, UI component libraries (MUI, Radix, Shadcn), or native controls without whole-form re-renders. Exposes `field` (`value`, `onChange`, `onBlur`, `ref`) and fine-grained `fieldState` (`invalid`, `isTouched`, `isDirty`, `isValid`, `isPending`, `error`, `issues`).
+- **`FormProvider` & `useFormContext`:** Transports the canonical `form` instance down the component tree via React Context without subscribing the provider component to state changes.
+- **`useController`:** Bridges a canonical `FieldState` to custom inputs, UI component libraries (MUI, Radix, Shadcn), or native controls without whole-form re-renders. Exposes `field` (`name`, `value`, `onChange`, `onBlur`, `ref`) and fine-grained `fieldState` (`invalid`, `isTouched`, `isDirty`, `isValid`, `isPending`, `error`, `issues`). The returned `ref` callback provides a standard React ref callback for consumer DOM control integration.
 - **`Controller`:** Declarative render-prop component wrapping `useController`.
 
 ```tsx
@@ -319,7 +319,7 @@ function MyForm({ form }) {
 }
 
 function NestedInputs() {
-  const { form } = useFormContext();
+  const form = useFormContext();
 
   return (
     <Controller
@@ -452,10 +452,10 @@ Transport form instances down deeply nested Vue component trees without prop dri
 
 ```ts
 // In parent component:
-provideForm(form, formBinding);
+provideForm(form);
 
 // In child component:
-const { form, formBinding } = useFormContext();
+const form = useFormContext();
 ```
 
 ### Directive (`vViiField`)
@@ -464,9 +464,18 @@ Declarative two-way DOM binding directly to a canonical `FieldState`:
 
 ```vue
 <template>
+  <!-- Text-like inputs (string raw value) -->
   <input v-vii-field="form.fields.username" type="text" />
+
+  <!-- Textarea elements (string raw value) -->
+  <textarea v-vii-field="form.fields.bio" />
+
+  <!-- Checkbox inputs (boolean raw value) -->
+  <input v-vii-field="form.fields.agree" type="checkbox" />
 </template>
 ```
+
+> **Supported Controls:** `vViiField` supports text-like inputs, `<textarea>`, and `<input type="checkbox">` bound to fields whose raw representation is `string` or `boolean`. It synchronizes DOM input/change events to `field.setRawValue()`, updates DOM on `field.rawValue` subscription, and marks the field touched on blur. Radio groups, file inputs, and select[multiple] are not supported by this directive; for those controls, use the `useViiField` composable with standard `v-model` or explicit bindings.
 
 ### Low-Level Signal Projections (`createVueField`, `createVueForm`, `createVueFieldArray`)
 

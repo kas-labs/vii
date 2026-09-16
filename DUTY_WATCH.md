@@ -41,7 +41,7 @@ PR: <number or not opened>
 
 Status: completed
 Branch: `feat/form-p2f-angular-ecosystem`
-PR: not opened (draft PR to be created immediately)
+PR: https://github.com/kas-labs/vii/pull/200 (Draft)
 
 ### Scope
 

@@ -1,24 +1,17 @@
-import { signal, type Signal } from "@angular/core";
+import type { ControlValueAccessor } from "@angular/forms";
 import type { FieldState } from "../../core/types.js";
 import { createTeardown } from "./destroy.js";
 import type { AngularAdapterOptions } from "./types.js";
 
-/**
- * ControlValueAccessor bridge connecting a canonical Vii FieldState to Angular forms.
- *
- * Guarantees:
- * - Vii FieldState remains authoritative canonical state.
- * - Reentrancy guard prevents feedback loops during Angular-originated writes.
- * - Presentation-owned disabled state projected via Angular Signal.
- * - Preserves raw vs domain value distinction (operates on TRaw).
- * - Destroying the accessor only tears down adapter subscriptions; canonical field survives.
- */
-export class ViiControlValueAccessor<TValue = unknown, TRaw = TValue> {
+/** Angular Forms `ControlValueAccessor` bridge; Vii `FieldState` remains canonical. */
+export class ViiControlValueAccessor<
+  TValue = unknown,
+  TRaw = TValue,
+> implements ControlValueAccessor {
   private isPropagatingFromAngular = false;
   private onChangeCallback?: ((value: TRaw) => void) | undefined;
   private onTouchedCallback?: (() => void) | undefined;
-  private readonly disabledSig = signal(false);
-  readonly disabled: Signal<boolean> = this.disabledSig.asReadonly();
+  private disabledState = false;
   private readonly teardown: ReturnType<typeof createTeardown>;
 
   constructor(
@@ -64,8 +57,12 @@ export class ViiControlValueAccessor<TValue = unknown, TRaw = TValue> {
 
   setDisabledState(isDisabled: boolean): void {
     if (!this.teardown.isDisposed()) {
-      this.disabledSig.set(isDisabled);
+      this.disabledState = isDisabled;
     }
+  }
+
+  disabled(): boolean {
+    return this.disabledState;
   }
 
   dispose(): void {
@@ -73,14 +70,4 @@ export class ViiControlValueAccessor<TValue = unknown, TRaw = TValue> {
     this.onChangeCallback = undefined;
     this.onTouchedCallback = undefined;
   }
-}
-
-/**
- * Creates a ViiControlValueAccessor bridge for a canonical Vii FieldState.
- */
-export function createViiControlValueAccessor<TValue, TRaw = TValue>(
-  field: FieldState<TValue, TRaw>,
-  options?: AngularAdapterOptions,
-): ViiControlValueAccessor<TValue, TRaw> {
-  return new ViiControlValueAccessor(field, options);
 }

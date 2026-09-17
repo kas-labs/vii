@@ -30,9 +30,7 @@ export function injectViiForm<
 >(): FormInstance<TFields> {
   const form = inject(VII_FORM_TOKEN, { optional: true });
   if (!form) {
-    throw new Error(
-      "ViiForm context was not found in the current Angular injector hierarchy. Call provideViiForm(form) in a parent component or injector.",
-    );
+    throw new Error("ViiForm not found. Use provideViiForm() upstream.");
   }
   return form as FormInstance<TFields>;
 }

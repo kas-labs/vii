@@ -422,7 +422,8 @@ Standalone directive providing two-way binding between native form controls (`<i
 - **DOM Synchronization:** Listens to `input` / `change` events and propagates to `field.setRawValue()`. Subscribes to `field.rawValue` and updates DOM property `value` or `checked`.
 - **Blur & Touch:** Listens to `blur` events and calls `field.markTouched()`.
 - **Fail-Closed Safety:** Validates element and field compatibility; silently ignores unsupported elements or incompatible types (e.g. non-boolean field bound to checkbox) to prevent DOM corruption.
-- **Node & SSR Safe:** Defined via native Ivy `ɵdir` definition, requiring zero JIT compiler overhead and operating safely in SSR/Node environments where `ElementRef` may not be present.
+- **Angular compiler output:** Authored with public `@Directive` / `@Input` APIs and emitted via partial compilation (`ngc`); consumers link metadata with their Angular toolchain (17+).
+- **Host injection:** Angular injects the real host `ElementRef`; the directive never constructs or accepts a manual element reference in production usage.
 - **Teardown Invariant:** Directive destruction detaches DOM listeners and unregisters signal effects, but **never** disposes or unregisters the underlying canonical `FieldState`.
 
 ```html
@@ -431,34 +432,51 @@ Standalone directive providing two-way binding between native form controls (`<i
 <textarea [viiField]="bioField"></textarea>
 ```
 
-### ControlValueAccessor Bridge (`createViiControlValueAccessor`)
+### ControlValueAccessor bridge (`ViiControlValueAccessor`)
 
-Implements Angular's `ControlValueAccessor` interface to bridge canonical Vii fields with custom form controls and UI component libraries.
+`ViiControlValueAccessor` implements Angular Forms' public `ControlValueAccessor` contract. Register it with `NG_VALUE_ACCESSOR` on a host component and delegate the four CVA methods; Vii `FieldState` remains canonical for raw/value semantics.
 
-- **Anti-Loop Reentrancy Guard:** Prevents infinite ping-pong cycles between Angular form controls and Vii Form's canonical signal store via internal reentrancy flags.
-- **Disabled State:** Exposes a presentation-owned `disabled()` signal controlled by `setDisabledState()`.
-- **Clean Lifecycle:** Calling `.destroy()` cleanly unbinds change/touch callbacks and canonical subscriptions without mutating the canonical field.
+- **Anti-loop guard:** Skips propagating Vii raw updates back to Angular while `writeValue` is applying an Angular → Vii write.
+- **Disabled state:** Presentation-owned via `setDisabledState()` / `disabled()`; apply disabled styling or native `disabled` on your template—the adapter does not mutate the canonical field.
+- **Lifecycle:** Call `dispose()` (or rely on `destroyRef` from `AngularAdapterOptions`) to drop adapter subscriptions without unregistering the field.
 
 ```ts
-import { createViiControlValueAccessor } from "@vii-labs/form/angular";
+import {
+  ViiControlValueAccessor,
+  ViiFieldDirective,
+} from "@vii-labs/form/angular";
+import { NG_VALUE_ACCESSOR, ControlValueAccessor } from "@angular/forms";
 
 @Component({
-  selector: "my-custom-input",
+  selector: "my-vii-input",
+  standalone: true,
+  imports: [ViiFieldDirective],
+  template: `<input type="text" [viiField]="field" [disabled]="presentationDisabled" />`,
   providers: [
     {
       provide: NG_VALUE_ACCESSOR,
-      useExisting: forwardRef(() => MyCustomInput),
+      useExisting: forwardRef(() => MyViiInput),
       multi: true,
     },
   ],
 })
-export class MyCustomInput implements ControlValueAccessor {
-  private cva = createViiControlValueAccessor(this.field, { destroyRef: inject(DestroyRef) });
+export class MyViiInput implements ControlValueAccessor, OnInit, OnDestroy {
+  @Input({ required: true }) field!: FieldState<string>;
+  presentationDisabled = false;
+  private bridge?: ViiControlValueAccessor<unknown, string>;
 
-  writeValue(value: unknown) { this.cva.writeValue(value); }
-  registerOnChange(fn: any) { this.cva.registerOnChange(fn); }
-  registerOnTouched(fn: any) { this.cva.registerOnTouched(fn); }
-  setDisabledState(isDisabled: boolean) { this.cva.setDisabledState(isDisabled); }
+  ngOnInit() {
+    this.bridge = new ViiControlValueAccessor(this.field, { destroyRef: inject(DestroyRef) });
+  }
+
+  writeValue(value: unknown) { this.bridge?.writeValue(value); }
+  registerOnChange(fn: (value: string) => void) { this.bridge?.registerOnChange(fn); }
+  registerOnTouched(fn: () => void) { this.bridge?.registerOnTouched(fn); }
+  setDisabledState(isDisabled: boolean) {
+    this.bridge?.setDisabledState(isDisabled);
+    this.presentationDisabled = isDisabled;
+  }
+  ngOnDestroy() { this.bridge?.dispose(); }
 }
 ```
 

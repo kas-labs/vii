@@ -55,7 +55,6 @@ describe("@vii-labs/form package boundary (P1m)", () => {
         "createAngularField",
         "createAngularFieldArray",
         "createAngularForm",
-        "createViiControlValueAccessor",
         "injectViiForm",
         "provideViiForm",
       ].sort(),
@@ -118,12 +117,14 @@ describe("@vii-labs/form package boundary (P1m)", () => {
       "@vii-labs/core": ">=0.1.0-experimental.2",
       react: ">=18.0.0",
       "@angular/core": ">=17.0.0",
+      "@angular/forms": ">=17.0.0",
       vue: ">=3.3.0",
     });
 
     expect(manifest.peerDependenciesMeta).toEqual({
       react: { optional: true },
       "@angular/core": { optional: true },
+      "@angular/forms": { optional: true },
       vue: { optional: true },
     });
   });

@@ -1,6 +1,8 @@
+/* eslint-disable @typescript-eslint/consistent-type-imports -- ElementRef is a runtime DI token for Angular. */
 import {
-  ɵɵdefineDirective,
-  type ElementRef,
+  Directive,
+  ElementRef,
+  Input,
   type OnChanges,
   type OnDestroy,
   type SimpleChanges,
@@ -8,66 +10,32 @@ import {
 import type { FieldState } from "../../core/types.js";
 import type { SupportedAngularFieldElement, SupportedAngularFieldState } from "./types.js";
 
-function isBooleanField(field: SupportedAngularFieldState): field is FieldState<unknown, boolean> {
-  return typeof field.rawValue.get() === "boolean";
-}
-
-function isStringField(field: SupportedAngularFieldState): field is FieldState<unknown, string> {
-  return typeof field.rawValue.get() === "string";
-}
-
-/**
- * Angular standalone directive for declarative two-way DOM binding to a Vii FieldState.
- *
- * Supported controls:
- * - Text-like inputs (`<input type="text">`, `<input type="email">`, etc.) with `string` raw values.
- * - Textarea elements (`<textarea>`) with `string` raw values.
- * - Checkbox inputs (`<input type="checkbox">`) with `boolean` raw values.
- *
- * Excluded controls:
- * - File inputs, radio groups, select[multiple], or custom controls fail closed safely
- *   without attaching listeners or subscriptions.
- *
- * Fail-Closed Safety:
- * If a checkbox is paired with a string field, or a text-like input / textarea is paired
- * with a boolean field, the directive fails closed without attaching listeners or subscriptions.
- *
- * Usage in template:
- * `<input [viiField]="usernameField" />`
- */
+@Directive({ selector: "[viiField]", standalone: true })
 export class ViiFieldDirective implements OnChanges, OnDestroy {
-  static ɵfac = (t?: unknown) =>
-    t ? new (t as new (...args: unknown[]) => ViiFieldDirective)() : new ViiFieldDirective();
+  @Input()
+  viiField: SupportedAngularFieldState | undefined;
 
-  static ɵdir = ɵɵdefineDirective({
-    type: ViiFieldDirective,
-    selectors: [["", "viiField", ""]],
-    inputs: { field: "viiField" },
-    standalone: true,
-  });
-
-  field: SupportedAngularFieldState | undefined;
-
-  private currentField: SupportedAngularFieldState | undefined;
   private cleanupFn?: (() => void) | undefined;
-  private readonly element: SupportedAngularFieldElement | null;
 
-  constructor(elementRef?: ElementRef<SupportedAngularFieldElement>) {
-    this.element = (elementRef?.nativeElement as SupportedAngularFieldElement) ?? null;
-  }
+  constructor(private readonly elementRef: ElementRef<SupportedAngularFieldElement>) {}
 
-  ngOnChanges(changes?: SimpleChanges): void {
-    if (!changes || "field" in changes || this.field !== this.currentField) {
-      this.unbind();
-      this.currentField = this.field;
-      if (this.field && this.element) {
-        this.bind(this.element, this.field);
-      }
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes["viiField"]) {
+      this.syncFieldBinding();
     }
   }
 
   ngOnDestroy(): void {
     this.unbind();
+  }
+
+  private syncFieldBinding(): void {
+    this.unbind();
+    const field = this.viiField;
+    const element = this.elementRef.nativeElement;
+    if (field && element) {
+      this.bind(element, field);
+    }
   }
 
   private bind(el: SupportedAngularFieldElement, field: SupportedAngularFieldState): void {
@@ -78,7 +46,8 @@ export class ViiFieldDirective implements OnChanges, OnDestroy {
     if (t === "file" || t === "radio") return;
 
     const isCheckbox = t === "checkbox";
-    if (isCheckbox ? !isBooleanField(field) : !isStringField(field)) return;
+    const rawKind = typeof field.rawValue.get();
+    if (isCheckbox ? rawKind !== "boolean" : rawKind !== "string") return;
 
     const inputEl = el as HTMLInputElement;
     const update = (): void => {
@@ -121,6 +90,5 @@ export class ViiFieldDirective implements OnChanges, OnDestroy {
       this.cleanupFn = undefined;
       clean();
     }
-    this.currentField = undefined;
   }
 }

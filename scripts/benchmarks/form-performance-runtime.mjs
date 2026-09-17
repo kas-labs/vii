@@ -20,6 +20,9 @@ const { createField, createFieldGroup, createFieldArray, createForm, createNumbe
 
 const { useField } = await import(pathToFileURL(`${FORM_DIST}/adapters/react/index.js`).href);
 const { bindField } = await import(pathToFileURL(`${FORM_DIST}/adapters/vanilla/index.js`).href);
+await import(
+  pathToFileURL(resolve(REPO_ROOT, "node_modules/@angular/compiler/fesm2022/compiler.mjs")).href
+);
 const { createAngularField } = await import(
   pathToFileURL(`${FORM_DIST}/adapters/angular/index.js`).href
 );

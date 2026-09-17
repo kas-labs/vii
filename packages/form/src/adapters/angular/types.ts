@@ -150,16 +150,3 @@ export type SupportedAngularFieldElement = HTMLInputElement | HTMLTextAreaElemen
  * and boolean raw representation (checkboxes).
  */
 export type SupportedAngularFieldState = FieldState<unknown, string> | FieldState<unknown, boolean>;
-
-/**
- * Angular ControlValueAccessor interface projection for Vii Form fields.
- */
-export interface ViiControlValueAccessor<TValue = unknown, TRaw = TValue> {
-  readonly field: FieldState<TValue, TRaw>;
-  readonly disabled: Signal<boolean>;
-  writeValue(value: unknown): void;
-  registerOnChange(fn: (value: TRaw) => void): void;
-  registerOnTouched(fn: () => void): void;
-  setDisabledState?(isDisabled: boolean): void;
-  dispose(): void;
-}

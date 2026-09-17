@@ -12,6 +12,7 @@
     },
     "typecheck": {
       "executor": "nx:run-commands",
+      "dependsOn": ["build"],
       "options": {
         "command": "pnpm typecheck",
         "cwd": "packages/form"

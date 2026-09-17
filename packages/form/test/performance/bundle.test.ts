@@ -6,8 +6,21 @@ import { fileURLToPath } from "node:url";
 import { brotliCompressSync, gzipSync } from "node:zlib";
 import { beforeAll, describe, expect, it } from "vitest";
 import { build } from "vite";
-
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
+
+function bundlesForeignFrameworkImport(
+  code: string,
+  framework: "react" | "vue" | "angular",
+): boolean {
+  switch (framework) {
+    case "react":
+      return /(?:from|import)\s*["']react(?:\/|-|$)/.test(code);
+    case "vue":
+      return /(?:from|import)\s*["']vue(?:\/|-|$)/.test(code);
+    case "angular":
+      return /(?:from|import)\s*["']@angular\//.test(code);
+  }
+}
 const REPO_ROOT = resolve(__dirname, "../../../..");
 const FORM_DIST = resolve(REPO_ROOT, "packages/form/dist");
 
@@ -68,6 +81,7 @@ describe("P1l Bundle, Tree-Shaking, and Framework Isolation Gate", () => {
     "react",
     "react-dom",
     "@angular/core",
+    "@angular/forms",
     "vue",
     "zod",
     "valibot",
@@ -120,30 +134,30 @@ describe("P1l Bundle, Tree-Shaking, and Framework Isolation Gate", () => {
       isFile: true,
       external: ["@vii-labs/core", ...externals],
     });
-    expect(react.code.includes("@angular/core")).toBe(false);
-    expect(react.code.includes("vue")).toBe(false);
+    expect(bundlesForeignFrameworkImport(react.code, "angular")).toBe(false);
+    expect(bundlesForeignFrameworkImport(react.code, "vue")).toBe(false);
 
     const vanilla = await bundleCode(resolve(FORM_DIST, "adapters/vanilla/index.js"), {
       isFile: true,
       external: ["@vii-labs/core", ...externals],
     });
-    expect(vanilla.code.includes("react")).toBe(false);
-    expect(vanilla.code.includes("@angular/core")).toBe(false);
-    expect(vanilla.code.includes("vue")).toBe(false);
+    expect(bundlesForeignFrameworkImport(vanilla.code, "react")).toBe(false);
+    expect(bundlesForeignFrameworkImport(vanilla.code, "angular")).toBe(false);
+    expect(bundlesForeignFrameworkImport(vanilla.code, "vue")).toBe(false);
 
     const angular = await bundleCode(resolve(FORM_DIST, "adapters/angular/index.js"), {
       isFile: true,
       external: ["@vii-labs/core", ...externals],
     });
-    expect(angular.code.includes("react")).toBe(false);
-    expect(angular.code.includes("vue")).toBe(false);
+    expect(bundlesForeignFrameworkImport(angular.code, "react")).toBe(false);
+    expect(bundlesForeignFrameworkImport(angular.code, "vue")).toBe(false);
 
     const vue = await bundleCode(resolve(FORM_DIST, "adapters/vue/index.js"), {
       isFile: true,
       external: ["@vii-labs/core", ...externals],
     });
-    expect(vue.code.includes("react")).toBe(false);
-    expect(vue.code.includes("@angular/core")).toBe(false);
+    expect(bundlesForeignFrameworkImport(vue.code, "react")).toBe(false);
+    expect(bundlesForeignFrameworkImport(vue.code, "angular")).toBe(false);
   });
 
   it("verifies packed tarball excludes fixtures, research, and tests", () => {

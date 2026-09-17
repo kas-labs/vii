@@ -6,6 +6,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { brotliCompressSync, gzipSync } from "node:zlib";
 import { build } from "vite";
+import { bundlesForeignFrameworkImport } from "../package-validation/framework-isolation.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, "../..");
@@ -58,6 +59,7 @@ export async function measureFormBundles() {
     "react",
     "react-dom",
     "@angular/core",
+    "@angular/forms",
     "vue",
     "zod",
     "valibot",
@@ -159,17 +161,22 @@ export async function measureFormBundles() {
     vueAdapter,
     isolation: {
       rootFrameworkClean:
-        !root.code.includes("react") &&
-        !root.code.includes("@angular/core") &&
-        !root.code.includes("vue"),
+        !bundlesForeignFrameworkImport(root.code, "react") &&
+        !bundlesForeignFrameworkImport(root.code, "angular") &&
+        !bundlesForeignFrameworkImport(root.code, "vue"),
       reactClean:
-        !reactAdapter.code.includes("@angular/core") && !reactAdapter.code.includes("vue"),
+        !bundlesForeignFrameworkImport(reactAdapter.code, "angular") &&
+        !bundlesForeignFrameworkImport(reactAdapter.code, "vue"),
       vanillaClean:
-        !vanillaAdapter.code.includes("react") &&
-        !vanillaAdapter.code.includes("@angular/core") &&
-        !vanillaAdapter.code.includes("vue"),
-      angularClean: !angularAdapter.code.includes("react") && !angularAdapter.code.includes("vue"),
-      vueClean: !vueAdapter.code.includes("react") && !vueAdapter.code.includes("@angular/core"),
+        !bundlesForeignFrameworkImport(vanillaAdapter.code, "react") &&
+        !bundlesForeignFrameworkImport(vanillaAdapter.code, "angular") &&
+        !bundlesForeignFrameworkImport(vanillaAdapter.code, "vue"),
+      angularClean:
+        !bundlesForeignFrameworkImport(angularAdapter.code, "react") &&
+        !bundlesForeignFrameworkImport(angularAdapter.code, "vue"),
+      vueClean:
+        !bundlesForeignFrameworkImport(vueAdapter.code, "react") &&
+        !bundlesForeignFrameworkImport(vueAdapter.code, "angular"),
       schemaProvidersClean:
         !root.code.includes("zod") &&
         !root.code.includes("valibot") &&

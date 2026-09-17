@@ -37,6 +37,45 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-09-17 22:00 UTC | Form P2f: real Angular directive, CVA, and acceptance proof
+
+Status: completed
+Branch: `feat/form-p2f-angular-ecosystem`
+PR: https://github.com/kas-labs/vii/pull/200 (Draft)
+
+### Scope
+
+- Correct P2f blockers on PR #200: replace hand-authored private Ivy metadata with public `@Directive` + partial `ngc`; prove `[viiField]` via TestBed and packed Angular 17/modern consumers; implement real Angular Forms CVA (Option A); pass 41/41 performance gates without rebaseline.
+
+### Changes
+
+- `directive.ts`: public `@Directive` / `@Input() viiField`, required host `ElementRef` DI, presentation-only teardown.
+- Build: `tsc` for angular signal bridges; isolated `ngc` for `directive.ts` only (`tsconfig.angular.build.json`).
+- `cva.ts`: genuine `ControlValueAccessor` with reentrancy guard; removed factory/component shortcuts from public surface.
+- Tests: `angular-template.integration.test.ts` (TestBed acceptance); updated unit tests; packed consumer fixture with real templates.
+- `validate-form.mjs`, performance isolation fixes, README/architecture/PROJECT_STATE/API surface sync.
+
+### Validation
+
+- `pnpm format:check`: Passed.
+- `pnpm lint`: Passed.
+- `pnpm typecheck`: Passed.
+- `pnpm test`: Passed (510 form tests).
+- `pnpm validate`: Passed (8/8 packed consumers).
+- `pnpm test:browser`: Passed (46/46) after Playwright Chromium install in agent environment.
+- `pnpm --filter @vii-labs/form run performance`: Passed (41/41 HARD; angularAdapter gzip 1,975 B, brotli 1,779 B).
+- Exact-head CI: pending after push (not run at handoff time).
+
+### Architecture / compatibility
+
+- No changes to `packages/core` or `packages/form/src/core`.
+- Signal Forms remain deferred; Angular 17.3.12 baseline preserved.
+- Optional peer `@angular/forms` for CVA consumers.
+
+### Remaining / recovery
+
+- Monitor exact-head CI on PR #200 (Governance, Dependency Review, CodeQL, Validate). P2f pending independent review; do not mark Ready or merge.
+
 ## 2026-09-17 01:50 CEST | Form: Angular Ecosystem Integration (P2f)
 
 Status: completed

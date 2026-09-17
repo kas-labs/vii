@@ -293,8 +293,9 @@ The Phase 2 roadmap follows a strictly sequential recommended execution order to
 - **Tests Required:** Angular 17.3.12 and latest modern Angular template compatibility.
 - **Status:** COMPLETED.
   - [x] Signal Forms Option A (Formal Deferral) executed: preserved strict compatibility with Angular 17.3.12 without experimental compiler requirements.
-  - [x] `ViiFieldDirective` (`[viiField]`): Standalone Ivy directive (`ɵdir`) providing two-way DOM synchronization, blur/touch handling, runtime type guards (`isBooleanField`, `isStringField`), fail-closed safety, SSR compatibility, and zero-leak listener teardown.
-  - [x] `ViiControlValueAccessor` / `createViiControlValueAccessor`: CVA bridge with reentrancy guard (`isPropagatingFromAngular`) preventing infinite loops, presentation-owned `disabled` signal, and isolated lifecycle cleanup.
+  - [x] `ViiFieldDirective` (`[viiField]`): Public `@Directive` standalone bridge (partial `ngc` emit) with real host `ElementRef` DI, two-way DOM sync for text/textarea/checkbox, blur/touch, fail-closed raw/type mismatch, TestBed template acceptance, and presentation-only teardown.
+  - [x] `ViiControlValueAccessor`: Real Angular Forms `ControlValueAccessor` + `NG_VALUE_ACCESSOR` integration with reentrancy guard, presentation-owned disabled state, FormControl acceptance tests, and adapter-only lifecycle cleanup.
+  - [x] Angular adapter build split: generic `tsc` for signal bridges; isolated `ngc` partial compilation for the decorated directive only (no hand-authored private Ivy metadata in source).
   - [x] Scoped DI: `VII_FORM_TOKEN`, `provideViiForm`, and `injectViiForm` for hierarchical form injection.
   - [x] Presentation destruction invariant verified: adapter destruction NEVER disposes or unregisters canonical `FieldState` or `FormInstance`.
   - [x] 100-field isolation verified: mutating a single field among 100 executes effects strictly for that field.

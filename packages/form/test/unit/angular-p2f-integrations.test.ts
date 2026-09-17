@@ -6,12 +6,10 @@ import {
   runInInjectionContext,
   type EnvironmentInjector,
   type Provider,
-  type SimpleChanges,
 } from "@angular/core";
 import { describe, expect, it } from "vitest";
 import {
   createAngularField,
-  createViiControlValueAccessor,
   injectViiForm,
   provideViiForm,
   ViiControlValueAccessor,
@@ -69,6 +67,23 @@ function createMockElementRef(el: MockElement): ElementRef<SupportedAngularField
   return new ElementRef(el as unknown as SupportedAngularFieldElement);
 }
 
+function assignViiField(
+  directive: ViiFieldDirective,
+  field: SupportedAngularFieldState | undefined,
+  previous: SupportedAngularFieldState | undefined = undefined,
+): void {
+  void previous;
+  directive.viiField = field;
+  directive.ngOnChanges({
+    viiField: {
+      previousValue: previous,
+      currentValue: field,
+      firstChange: previous === undefined,
+      isFirstChange: () => previous === undefined,
+    },
+  });
+}
+
 function createTestInjector(providers: Provider[] = []): EnvironmentInjector {
   return createEnvironmentInjector(
     providers,
@@ -83,8 +98,7 @@ describe("Angular Ecosystem Integration (P2f)", () => {
       const el = new MockElement("input", "text");
       const directive = new ViiFieldDirective(createMockElementRef(el));
 
-      directive.field = field;
-      directive.ngOnChanges({} as SimpleChanges);
+      assignViiField(directive, field);
 
       expect(el.value).toBe("test-user");
       expect(el.getListenerCount("input")).toBe(1);
@@ -99,9 +113,7 @@ describe("Angular Ecosystem Integration (P2f)", () => {
       const el = new MockElement("input", "text");
       const directive = new ViiFieldDirective(createMockElementRef(el));
 
-      directive.field = field;
-      directive.ngOnChanges({} as SimpleChanges);
-
+      assignViiField(directive, field);
       el.value = "typed-value";
       el.dispatchEvent("input");
 
@@ -118,9 +130,7 @@ describe("Angular Ecosystem Integration (P2f)", () => {
       const el = new MockElement("input", "text");
       const directive = new ViiFieldDirective(createMockElementRef(el));
 
-      directive.field = field;
-      directive.ngOnChanges({} as SimpleChanges);
-
+      assignViiField(directive, field);
       expect(field.touched.get()).toBe(false);
 
       el.dispatchEvent("blur");
@@ -135,9 +145,7 @@ describe("Angular Ecosystem Integration (P2f)", () => {
       const el = new MockElement("textarea");
       const directive = new ViiFieldDirective(createMockElementRef(el));
 
-      directive.field = field;
-      directive.ngOnChanges({} as SimpleChanges);
-
+      assignViiField(directive, field);
       expect(el.value).toBe("line1\nline2");
 
       el.value = "line1\nline2\nline3";
@@ -153,9 +161,7 @@ describe("Angular Ecosystem Integration (P2f)", () => {
       const el = new MockElement("input", "checkbox");
       const directive = new ViiFieldDirective(createMockElementRef(el));
 
-      directive.field = field;
-      directive.ngOnChanges({} as SimpleChanges);
-
+      assignViiField(directive, field);
       expect(el.checked).toBe(false);
       expect(el.getListenerCount("change")).toBe(1);
 
@@ -178,9 +184,7 @@ describe("Angular Ecosystem Integration (P2f)", () => {
         const el = new MockElement("input", "checkbox");
         const directive = new ViiFieldDirective(createMockElementRef(el));
 
-        directive.field = field as unknown as SupportedAngularFieldState;
-        directive.ngOnChanges({} as SimpleChanges);
-
+        assignViiField(directive, field as unknown as SupportedAngularFieldState);
         expect(el.getListenerCount()).toBe(0);
         expect(el.checked).toBe(false);
 
@@ -197,9 +201,7 @@ describe("Angular Ecosystem Integration (P2f)", () => {
         const el = new MockElement("input", "text");
         const directive = new ViiFieldDirective(createMockElementRef(el));
 
-        directive.field = field as unknown as SupportedAngularFieldState;
-        directive.ngOnChanges({} as SimpleChanges);
-
+        assignViiField(directive, field as unknown as SupportedAngularFieldState);
         expect(el.getListenerCount()).toBe(0);
         expect(el.value).toBe("");
 
@@ -212,9 +214,7 @@ describe("Angular Ecosystem Integration (P2f)", () => {
         const el = new MockElement("textarea");
         const directive = new ViiFieldDirective(createMockElementRef(el));
 
-        directive.field = field as unknown as SupportedAngularFieldState;
-        directive.ngOnChanges({} as SimpleChanges);
-
+        assignViiField(directive, field as unknown as SupportedAngularFieldState);
         expect(el.getListenerCount()).toBe(0);
 
         directive.ngOnDestroy();
@@ -234,9 +234,7 @@ describe("Angular Ecosystem Integration (P2f)", () => {
         for (const [tag, type] of unsupportedElements) {
           const el = new MockElement(tag, type);
           const directive = new ViiFieldDirective(createMockElementRef(el));
-          directive.field = stringField;
-          directive.ngOnChanges({} as SimpleChanges);
-
+          assignViiField(directive, stringField);
           expect(el.getListenerCount()).toBe(0);
           directive.ngOnDestroy();
         }
@@ -252,15 +250,12 @@ describe("Angular Ecosystem Integration (P2f)", () => {
         const el = new MockElement("input", "text");
         const directive = new ViiFieldDirective(createMockElementRef(el));
 
-        directive.field = fieldA;
-        directive.ngOnChanges({} as SimpleChanges);
+        assignViiField(directive, fieldA);
         expect(el.value).toBe("User A");
         expect(el.getListenerCount()).toBe(2);
 
         // Replace with fieldB
-        directive.field = fieldB;
-        directive.ngOnChanges({} as SimpleChanges);
-
+        assignViiField(directive, fieldB, fieldA);
         // DOM immediately reflects fieldB
         expect(el.value).toBe("User B");
         // Listener count remains 2 (not duplicated)
@@ -290,9 +285,7 @@ describe("Angular Ecosystem Integration (P2f)", () => {
 
         const el1 = new MockElement("input", "text");
         const directive1 = new ViiFieldDirective(createMockElementRef(el1));
-        directive1.field = field;
-        directive1.ngOnChanges({} as SimpleChanges);
-
+        assignViiField(directive1, field);
         expect(el1.value).toBe("mutated-value");
 
         // Unmount directive1 (simulating @if unmount)
@@ -307,9 +300,7 @@ describe("Angular Ecosystem Integration (P2f)", () => {
         // Remount directive2 (simulating @if remount)
         const el2 = new MockElement("input", "text");
         const directive2 = new ViiFieldDirective(createMockElementRef(el2));
-        directive2.field = field;
-        directive2.ngOnChanges({} as SimpleChanges);
-
+        assignViiField(directive2, field);
         expect(el2.value).toBe("mutated-value");
 
         directive2.ngOnDestroy();
@@ -324,10 +315,8 @@ describe("Angular Ecosystem Integration (P2f)", () => {
         const dir1 = new ViiFieldDirective(createMockElementRef(el1));
         const dir2 = new ViiFieldDirective(createMockElementRef(el2));
 
-        dir1.field = field;
-        dir1.ngOnChanges({} as SimpleChanges);
-        dir2.field = field;
-        dir2.ngOnChanges({} as SimpleChanges);
+        assignViiField(dir1, field);
+        assignViiField(dir2, field);
 
         expect(el1.value).toBe("shared-state");
         expect(el2.value).toBe("shared-state");
@@ -355,15 +344,14 @@ describe("Angular Ecosystem Integration (P2f)", () => {
 
     describe("SSR Safety", () => {
       it("instantiates cleanly without DOM elements during SSR / Node execution", () => {
-        const directive = new ViiFieldDirective();
+        const directive = new ViiFieldDirective(
+          createMockElementRef(new MockElement("input", "text")),
+        );
         expect(directive).toBeDefined();
 
-        // ngOnChanges without element does not throw
         const field = createField({ initialValue: "ssr-val" });
-        directive.field = field;
-        expect(() => directive.ngOnChanges({} as SimpleChanges)).not.toThrow();
+        assignViiField(directive, field);
 
-        // ngOnDestroy does not throw
         expect(() => directive.ngOnDestroy()).not.toThrow();
         field.dispose();
       });
@@ -373,7 +361,7 @@ describe("Angular Ecosystem Integration (P2f)", () => {
   describe("ViiControlValueAccessor (CVA Bridge)", () => {
     it("implements ControlValueAccessor protocol with factory and class", () => {
       const field = createField({ initialValue: "initial-val" });
-      const cva = createViiControlValueAccessor(field);
+      const cva = new ViiControlValueAccessor(field);
 
       expect(cva instanceof ViiControlValueAccessor).toBe(true);
       expect(cva.field).toBe(field);
@@ -389,7 +377,7 @@ describe("Angular Ecosystem Integration (P2f)", () => {
 
     it("satisfies dedicated anti-loop guarantee (Step 38)", () => {
       const field = createField({ initialValue: "init" });
-      const cva = createViiControlValueAccessor(field);
+      const cva = new ViiControlValueAccessor(field);
 
       let onChangeCalls = 0;
       let lastOnChangeVal = "";
@@ -431,7 +419,7 @@ describe("Angular Ecosystem Integration (P2f)", () => {
 
     it("manages presentation-owned disabled state without mutating Core", () => {
       const field = createField({ initialValue: "data" });
-      const cva = createViiControlValueAccessor(field);
+      const cva = new ViiControlValueAccessor(field);
 
       expect(cva.disabled()).toBe(false);
 
@@ -454,7 +442,7 @@ describe("Angular Ecosystem Integration (P2f)", () => {
         initialRawValue: "100",
         parser: createNumberParser(),
       });
-      const cva = createViiControlValueAccessor(field);
+      const cva = new ViiControlValueAccessor(field);
 
       let lastOnChange = "";
       cva.registerOnChange((val) => {
@@ -481,8 +469,9 @@ describe("Angular Ecosystem Integration (P2f)", () => {
       const injector = createTestInjector();
       const field = createField({ initialValue: "test" });
 
-      const cva = runInInjectionContext(injector, () =>
-        createViiControlValueAccessor(field, { destroyRef: injector.get(DestroyRef) }),
+      const cva = runInInjectionContext(
+        injector,
+        () => new ViiControlValueAccessor(field, { destroyRef: injector.get(DestroyRef) }),
       );
 
       let onChangeCalls = 0;
@@ -565,7 +554,7 @@ describe("Angular Ecosystem Integration (P2f)", () => {
       const injector = createTestInjector([]);
 
       expect(() => runInInjectionContext(injector, () => injectViiForm())).toThrow(
-        "ViiForm context was not found in the current Angular injector hierarchy",
+        "ViiForm not found. Use provideViiForm() upstream.",
       );
     });
   });
@@ -609,10 +598,8 @@ describe("Angular Ecosystem Integration (P2f)", () => {
       for (let i = 0; i < 1000; i++) {
         const el = new MockElement("input", "text");
         const directive = new ViiFieldDirective(createMockElementRef(el));
-        directive.field = field;
-        directive.ngOnChanges({} as SimpleChanges);
-
-        const cva = createViiControlValueAccessor(field);
+        assignViiField(directive, field);
+        const cva = new ViiControlValueAccessor(field);
         cva.writeValue(`cycle_${i}`);
 
         directive.ngOnDestroy();

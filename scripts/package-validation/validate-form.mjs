@@ -4,6 +4,7 @@ import { mkdir, mkdtemp, readdir, rm, stat } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { readFile } from "node:fs/promises";
 import { prepareConsumer } from "./consumer.mjs";
 
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
@@ -941,96 +942,20 @@ export function runReactApp() {
   );
 
   // Angular and Vue clean consumer validation helpers
-  async function validateAngularVersion({ version, consumerDir, fixtureDir, label }) {
+  async function validateAngularVersion({
+    version,
+    consumerDir,
+    fixtureDir,
+    label,
+    zoneJsVersion,
+  }) {
     await mkdir(consumerDir, { recursive: true });
     await mkdir(path.join(fixtureDir, "src"), { recursive: true });
 
-    const angularConsumerSource = `
-import { createField, createFieldArray, createForm } from "@vii-labs/form";
-import * as formAngular from "@vii-labs/form/angular";
-import {
-  createAngularField,
-  createAngularFieldArray,
-  createAngularForm,
-  createViiControlValueAccessor,
-  ViiControlValueAccessor,
-  ViiFieldDirective,
-  provideViiForm,
-  injectViiForm,
-  VII_FORM_TOKEN,
-} from "@vii-labs/form/angular";
-
-export const angularKeys = Object.keys(formAngular).sort();
-
-export function runAngularSmoke() {
-  const form = createForm({
-    fields: {
-      username: createField({ initialValue: "test-user" }),
-      items: createFieldArray({
-        items: [createField({ initialValue: "item-1" })],
-      }),
-    },
-  });
-
-  const fieldHandle = createAngularField(form.fields.username);
-  const initialValue = fieldHandle.value();
-  fieldHandle.setValue("mutated-user");
-  const mutatedValue = fieldHandle.value();
-  const canonicalValue = form.fields.username.getValue();
-  fieldHandle.dispose();
-
-  form.fields.username.setValue("post-dispose");
-  const postDisposeValue = form.fields.username.getValue();
-
-  const formHandle = createAngularForm(form);
-  const formValue = formHandle.value();
-  const submissionStatus = formHandle.submissionStatus();
-  formHandle.dispose();
-
-  const arrayHandle = createAngularFieldArray(form.fields.items);
-  const arrayLen = arrayHandle.length();
-  const firstItemId = arrayHandle.items()[0]?.id;
-  arrayHandle.dispose();
-
-  const cva = createViiControlValueAccessor(form.fields.username);
-  cva.writeValue("cva-user");
-  const cvaWrittenValue = form.fields.username.getValue();
-  cva.setDisabledState(true);
-  const cvaDisabled = cva.disabled();
-  cva.dispose();
-
-  const directive = new ViiFieldDirective();
-  const hasDirective = Boolean(
-    directive &&
-    typeof directive.ngOnChanges === "function" &&
-    typeof directive.ngOnDestroy === "function"
-  );
-
-  const provider = provideViiForm(form);
-  const hasProvider = Boolean(
-    provider &&
-    (provider as any).provide === VII_FORM_TOKEN &&
-    (provider as any).useValue === form
-  );
-
-  form.dispose();
-
-  return {
-    initialValue,
-    mutatedValue,
-    canonicalValue,
-    postDisposeValue,
-    formValue,
-    submissionStatus,
-    arrayLen,
-    firstItemId,
-    cvaWrittenValue,
-    cvaDisabled,
-    hasDirective,
-    hasProvider,
-  };
-}
-`;
+    const angularConsumerSource = await readFile(
+      path.join(scriptDirectory, "fixtures/angular-packed-consumer.ts"),
+      "utf8",
+    );
 
     await import("node:fs/promises").then((fs) =>
       fs.writeFile(path.join(fixtureDir, "src/main.ts"), angularConsumerSource, "utf8"),
@@ -1046,7 +971,17 @@ export function runAngularSmoke() {
         dependencies: {
           "@vii-labs/form": `file:${formArtifactPath}`,
           "@vii-labs/core": `file:${coreArtifactPath}`,
+          "@angular/common": version,
+          "@angular/compiler": version,
           "@angular/core": version,
+          "@angular/forms": version,
+          "@angular/platform-browser": version,
+          "@angular/platform-browser-dynamic": version,
+          rxjs: "7.8.2",
+          "zone.js": zoneJsVersion,
+        },
+        devDependencies: {
+          "happy-dom": "20.0.10",
         },
       },
       repositoryRoot,
@@ -1063,25 +998,22 @@ export function runAngularSmoke() {
         "createAngularField",
         "createAngularFieldArray",
         "createAngularForm",
-        "createViiControlValueAccessor",
         "injectViiForm",
         "provideViiForm",
       ].sort(),
       `clean ${label} consumer subpath export must contain P1j and P2f exports`,
     );
 
-    const angularSmokeResult = angularConsumer.runAngularSmoke();
-    assert.equal(angularSmokeResult.initialValue, "test-user");
-    assert.equal(angularSmokeResult.mutatedValue, "mutated-user");
-    assert.equal(angularSmokeResult.canonicalValue, "mutated-user");
-    assert.equal(angularSmokeResult.postDisposeValue, "post-dispose");
-    assert.equal(angularSmokeResult.submissionStatus, "idle");
-    assert.equal(angularSmokeResult.arrayLen, 1);
-    assert.ok(angularSmokeResult.firstItemId);
-    assert.equal(angularSmokeResult.cvaWrittenValue, "cva-user");
-    assert.equal(angularSmokeResult.cvaDisabled, true);
-    assert.ok(angularSmokeResult.hasDirective);
-    assert.ok(angularSmokeResult.hasProvider);
+    const angularTemplateResult = angularConsumer.runAngularTemplateIntegration();
+    assert.equal(angularTemplateResult.hasProvider, true);
+    assert.equal(angularTemplateResult.templateCompiled, true);
+    assert.equal(angularTemplateResult.textRawAfterInput, "packed-dom");
+    assert.equal(angularTemplateResult.boolRawAfterToggle, true);
+    assert.equal(angularTemplateResult.cvaControlValue, "from-packed-user");
+    assert.equal(angularTemplateResult.cvaFieldRaw, "from-packed-user");
+    assert.equal(angularTemplateResult.cvaInputValue, "from-packed-user");
+    assert.ok(angularTemplateResult.controlChanges >= 2);
+    assert.equal(angularTemplateResult.bridgeWritten, "bridge-user");
   }
 
   async function validateVueVersion({ version, consumerDir, fixtureDir, label }) {
@@ -1232,6 +1164,7 @@ export function runVueSmoke() {
     consumerDir: angular17ConsumerDirectory,
     fixtureDir: angular17FixtureDirectory,
     label: "angular-17",
+    zoneJsVersion: "0.14.10",
   });
 
   // 2. Angular 22 latest tested consumer
@@ -1240,6 +1173,7 @@ export function runVueSmoke() {
     consumerDir: angular22ConsumerDirectory,
     fixtureDir: angular22FixtureDirectory,
     label: "angular-22",
+    zoneJsVersion: "0.16.0",
   });
 
   // 3. Vue 3.3 minimum supported consumer

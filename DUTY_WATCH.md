@@ -56,8 +56,8 @@ PR: https://github.com/kas-labs/vii/pull/200 (Draft)
 
 ### Validation
 
-- Full `pnpm validate`, performance, browser, validate-package: run at commit time.
-- Exact-head CI: pending after push.
+- `pnpm validate`, performance (41/41), browser (46/46), validate-package (8/8 + core-only): Passed locally.
+- Exact-head CI on `c6f0c41`: Governance, Dependency Review, CodeQL, Validate — Passed.
 
 ### Architecture / compatibility
 
@@ -65,7 +65,7 @@ PR: https://github.com/kas-labs/vii/pull/200 (Draft)
 
 ### Remaining / recovery
 
-- Independent P2f review; PR #200 stays Draft.
+- Independent P2f review; PR #200 stays Draft. PR description update blocked by forge permissions — body draft recorded in correction commit message / agent report.
 
 ## 2026-09-17 22:00 UTC | Form P2f: real Angular directive, CVA, and acceptance proof
 

@@ -434,7 +434,9 @@ Standalone directive providing two-way binding between native form controls (`<i
 
 ### ControlValueAccessor bridge (`ViiControlValueAccessor`)
 
-`ViiControlValueAccessor` implements Angular Forms' public `ControlValueAccessor` contract. Register it with `NG_VALUE_ACCESSOR` on a host component and delegate the four CVA methods; Vii `FieldState` remains canonical for raw/value semantics.
+`ViiControlValueAccessor` implements Angular Forms' public `ControlValueAccessor` protocol. It does not declare an Angular component/directive and does not register `NG_VALUE_ACCESSOR` itself. Use it from a **consumer** host component or directive that registers **itself** under `NG_VALUE_ACCESSOR` and delegates the four CVA methods. Vii `FieldState` remains canonical for raw/value semantics.
+
+**Package boundary:** `@vii-labs/form/angular` signal handles, `[viiField]`, and scoped DI require `@angular/core` only. Importing or typing `ViiControlValueAccessor` additionally requires `@angular/forms` (optional peer).
 
 - **Anti-loop guard:** Skips propagating Vii raw updates back to Angular while `writeValue` is applying an Angular → Vii write.
 - **Disabled state:** Presentation-owned via `setDisabledState()` / `disabled()`; apply disabled styling or native `disabled` on your template—the adapter does not mutate the canonical field.
@@ -442,10 +444,20 @@ Standalone directive providing two-way binding between native form controls (`<i
 
 ```ts
 import {
+  Component,
+  DestroyRef,
+  forwardRef,
+  inject,
+  Input,
+  type OnDestroy,
+  type OnInit,
+} from "@angular/core";
+import {
   ViiControlValueAccessor,
   ViiFieldDirective,
 } from "@vii-labs/form/angular";
-import { NG_VALUE_ACCESSOR, ControlValueAccessor } from "@angular/forms";
+import { NG_VALUE_ACCESSOR, type ControlValueAccessor } from "@angular/forms";
+import type { FieldState } from "@vii-labs/form";
 
 @Component({
   selector: "my-vii-input",
@@ -463,10 +475,11 @@ import { NG_VALUE_ACCESSOR, ControlValueAccessor } from "@angular/forms";
 export class MyViiInput implements ControlValueAccessor, OnInit, OnDestroy {
   @Input({ required: true }) field!: FieldState<string>;
   presentationDisabled = false;
+  private readonly destroyRef = inject(DestroyRef);
   private bridge?: ViiControlValueAccessor<unknown, string>;
 
   ngOnInit() {
-    this.bridge = new ViiControlValueAccessor(this.field, { destroyRef: inject(DestroyRef) });
+    this.bridge = new ViiControlValueAccessor(this.field, { destroyRef: this.destroyRef });
   }
 
   writeValue(value: unknown) { this.bridge?.writeValue(value); }

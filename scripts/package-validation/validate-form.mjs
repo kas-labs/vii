@@ -23,6 +23,8 @@ const angular17ConsumerDirectory = path.join(temporaryRoot, "angular17-consumer"
 const angular17FixtureDirectory = path.join(temporaryRoot, "angular17-fixture");
 const angular22ConsumerDirectory = path.join(temporaryRoot, "angular22-consumer");
 const angular22FixtureDirectory = path.join(temporaryRoot, "angular22-fixture");
+const angular17CoreOnlyConsumerDirectory = path.join(temporaryRoot, "angular17-core-only-consumer");
+const angular17CoreOnlyFixtureDirectory = path.join(temporaryRoot, "angular17-core-only-fixture");
 const vue33ConsumerDirectory = path.join(temporaryRoot, "vue33-consumer");
 const vue33FixtureDirectory = path.join(temporaryRoot, "vue33-fixture");
 const vue35ConsumerDirectory = path.join(temporaryRoot, "vue35-consumer");
@@ -1175,6 +1177,46 @@ export function runVueSmoke() {
     label: "angular-22",
     zoneJsVersion: "0.16.0",
   });
+
+  // Angular 17 signal adapter without @angular/forms (optional peer proof)
+  await mkdir(angular17CoreOnlyConsumerDirectory, { recursive: true });
+  await mkdir(path.join(angular17CoreOnlyFixtureDirectory, "src"), { recursive: true });
+  const angularCoreOnlySource = await readFile(
+    path.join(scriptDirectory, "fixtures/angular-core-only-consumer.ts"),
+    "utf8",
+  );
+  await import("node:fs/promises").then((fs) =>
+    fs.writeFile(
+      path.join(angular17CoreOnlyFixtureDirectory, "src/main.ts"),
+      angularCoreOnlySource,
+      "utf8",
+    ),
+  );
+  await prepareConsumer({
+    directory: angular17CoreOnlyConsumerDirectory,
+    fixtureDirectory: angular17CoreOnlyFixtureDirectory,
+    packageJson: {
+      name: "vii-packed-form-angular17-core-only-consumer",
+      private: true,
+      type: "module",
+      dependencies: {
+        "@vii-labs/form": `file:${formArtifactPath}`,
+        "@vii-labs/core": `file:${coreArtifactPath}`,
+        "@angular/core": "17.3.12",
+      },
+    },
+    repositoryRoot,
+    pnpm,
+  });
+  const angularCoreOnlyConsumer = await import(
+    path.join(angular17CoreOnlyConsumerDirectory, "dist/main.js")
+  );
+  const coreOnlySmoke = angularCoreOnlyConsumer.runAngularCoreOnlySmoke();
+  assert.equal(coreOnlySmoke.fieldValue, "mutated");
+  assert.equal(coreOnlySmoke.formValid, true);
+  assert.equal(coreOnlySmoke.arrayLength, 1);
+  assert.equal(coreOnlySmoke.hasToken, true);
+  console.log("[validate-form] Angular 17 core-only consumer (no @angular/forms) passed.");
 
   // 3. Vue 3.3 minimum supported consumer
   await validateVueVersion({

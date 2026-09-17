@@ -37,6 +37,36 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-09-17 22:25 UTC | Form P2f: public contract and docs sync
+
+Status: completed
+Branch: `feat/form-p2f-angular-ecosystem`
+PR: https://github.com/kas-labs/vii/pull/200 (Draft)
+
+### Scope
+
+- Bounded correction: align architecture/README/PROJECT_STATE/api-surface counts and CVA ownership wording; fix README `inject(DestroyRef)` example; prove optional `@angular/forms` peer via packed Angular 17 core-only consumer; refresh PR metadata.
+
+### Changes
+
+- Export counts: 8 runtime / 9 public types on `./angular` (api-surface authoritative).
+- CVA docs: `ViiControlValueAccessor` implements the protocol; consumer host registers `NG_VALUE_ACCESSOR`.
+- `validate-form.mjs`: Angular 17 packed consumer without `@angular/forms` for signal adapters.
+- README, `FORM_PHASE2_ARCHITECTURE.md`, `PROJECT_STATE.md`, latest Duty Watch clarifications.
+
+### Validation
+
+- Full `pnpm validate`, performance, browser, validate-package: run at commit time.
+- Exact-head CI: pending after push.
+
+### Architecture / compatibility
+
+- No API or Core changes; CVA remains on `@vii-labs/form/angular` (no forms subpath split).
+
+### Remaining / recovery
+
+- Independent P2f review; PR #200 stays Draft.
+
 ## 2026-09-17 22:00 UTC | Form P2f: real Angular directive, CVA, and acceptance proof
 
 Status: completed
@@ -51,7 +81,7 @@ PR: https://github.com/kas-labs/vii/pull/200 (Draft)
 
 - `directive.ts`: public `@Directive` / `@Input() viiField`, required host `ElementRef` DI, presentation-only teardown.
 - Build: `tsc` for angular signal bridges; isolated `ngc` for `directive.ts` only (`tsconfig.angular.build.json`).
-- `cva.ts`: genuine `ControlValueAccessor` with reentrancy guard; removed factory/component shortcuts from public surface.
+- `cva.ts`: implements Angular Forms `ControlValueAccessor` for delegation from consumer hosts registered via `NG_VALUE_ACCESSOR` (the exported class does not register the provider); reentrancy guard; removed factory/component shortcuts from public surface.
 - Tests: `angular-template.integration.test.ts` (TestBed acceptance); updated unit tests; packed consumer fixture with real templates.
 - `validate-form.mjs`, performance isolation fixes, README/architecture/PROJECT_STATE/API surface sync.
 
@@ -70,7 +100,7 @@ PR: https://github.com/kas-labs/vii/pull/200 (Draft)
 
 - No changes to `packages/core` or `packages/form/src/core`.
 - Signal Forms remain deferred; Angular 17.3.12 baseline preserved.
-- Optional peer `@angular/forms` for CVA consumers.
+- Optional peer `@angular/forms` for CVA types/integration; signal-only `@angular/core` packed consumer passes without `@angular/forms`.
 
 ### Remaining / recovery
 

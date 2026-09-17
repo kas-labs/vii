@@ -289,13 +289,15 @@ The Phase 2 roadmap follows a strictly sequential recommended execution order to
 - **Objective:** Angular ecosystem interoperability (`ControlValueAccessor` bridge, `[viiField]` directive, scoped DI context).
 - **Owner:** Angular Adapter.
 - **Dependencies:** P2e.
-- **Public API Impact:** High within `/angular` subpath (9 runtime exports, 9 public types).
+- **Public API Impact:** High within `/angular` subpath (8 runtime exports, 9 public types).
 - **Tests Required:** Angular 17.3.12 and latest modern Angular template compatibility.
 - **Status:** COMPLETED.
   - [x] Signal Forms Option A (Formal Deferral) executed: preserved strict compatibility with Angular 17.3.12 without experimental compiler requirements.
   - [x] `ViiFieldDirective` (`[viiField]`): Public `@Directive` standalone bridge (partial `ngc` emit) with real host `ElementRef` DI, two-way DOM sync for text/textarea/checkbox, blur/touch, fail-closed raw/type mismatch, TestBed template acceptance, and presentation-only teardown.
-  - [x] `ViiControlValueAccessor`: Real Angular Forms `ControlValueAccessor` + `NG_VALUE_ACCESSOR` integration with reentrancy guard, presentation-owned disabled state, FormControl acceptance tests, and adapter-only lifecycle cleanup.
+  - [x] `ViiControlValueAccessor`: Implements the Angular Forms `ControlValueAccessor` protocol for delegation from a consumer host component/directive registered through `NG_VALUE_ACCESSOR`; reentrancy guard, presentation-owned disabled state, FormControl acceptance tests, adapter-only lifecycle cleanup.
   - [x] Angular adapter build split: generic `tsc` for signal bridges; isolated `ngc` partial compilation for the decorated directive only (no hand-authored private Ivy metadata in source).
+  - [x] Form `tsconfig.build.json` uses `removeComments: true` for emitted `.js` across all Form subpaths (smaller artifacts; LICENSE remains in packed `package/LICENSE`; declaration files keep public API typings).
+  - [x] Optional `@angular/forms` peer: signal-only packed consumer (`createAngularField` / `createAngularForm` / `createAngularFieldArray`) typechecks with `@angular/core` only; CVA usage requires `@angular/forms`.
   - [x] Scoped DI: `VII_FORM_TOKEN`, `provideViiForm`, and `injectViiForm` for hierarchical form injection.
   - [x] Presentation destruction invariant verified: adapter destruction NEVER disposes or unregisters canonical `FieldState` or `FormInstance`.
   - [x] 100-field isolation verified: mutating a single field among 100 executes effects strictly for that field.

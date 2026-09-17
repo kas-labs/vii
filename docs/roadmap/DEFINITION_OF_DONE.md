@@ -7,7 +7,12 @@ A Vii work item is complete only when the relevant criteria below are satisfied.
 - the behavior matches accepted RFCs and ADRs;
 - scope and non-goals remain respected;
 - public terminology is consistent with the documentation;
-- new architecture decisions are recorded.
+- new architecture decisions are recorded;
+- framework-neutral public APIs assess both Vanilla JavaScript runtime consumption and Vanilla TypeScript typed consumption where technically applicable;
+- JavaScript and TypeScript consumers share the same canonical runtime semantics rather than language-specific implementations;
+- framework adapters translate canonical Vii behavior without redefining it.
+
+See `docs/architecture/VANILLA_CONSUMER_COMPATIBILITY.md` for the canonical meaning of Vanilla and the required distinction between implemented, verified, documented, and planned support.
 
 ## Implementation
 
@@ -22,6 +27,7 @@ A Vii work item is complete only when the relevant criteria below are satisfied.
 - regression tests exist for corrected defects;
 - adapter or runtime contract tests are updated where applicable;
 - clean consumer fixtures pass;
+- when a framework-neutral package claims Vanilla support, ordinary `.js` runtime consumption and strict `.ts` consumption are verified where practical rather than inferred from TypeScript compilation alone;
 - memory, SSR isolation, accessibility, or security tests are included when relevant.
 
 ## Performance

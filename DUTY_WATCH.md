@@ -37,6 +37,134 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-09-17 22:25 UTC | Form P2f: public contract and docs sync
+
+Status: completed
+Branch: `feat/form-p2f-angular-ecosystem`
+PR: https://github.com/kas-labs/vii/pull/200 (Draft)
+
+### Scope
+
+- Bounded correction: align architecture/README/PROJECT_STATE/api-surface counts and CVA ownership wording; fix README `inject(DestroyRef)` example; prove optional `@angular/forms` peer via packed Angular 17 core-only consumer; refresh PR metadata.
+
+### Changes
+
+- Export counts: 8 runtime / 9 public types on `./angular` (api-surface authoritative).
+- CVA docs: `ViiControlValueAccessor` implements the protocol; consumer host registers `NG_VALUE_ACCESSOR`.
+- `validate-form.mjs`: Angular 17 packed consumer without `@angular/forms` for signal adapters.
+- README, `FORM_PHASE2_ARCHITECTURE.md`, `PROJECT_STATE.md`, latest Duty Watch clarifications.
+
+### Validation
+
+- `pnpm validate`, performance (41/41), browser (46/46), validate-package (8/8 + core-only): Passed locally.
+- Exact-head CI on `c6f0c41`: Governance, Dependency Review, CodeQL, Validate — Passed.
+
+### Architecture / compatibility
+
+- No API or Core changes; CVA remains on `@vii-labs/form/angular` (no forms subpath split).
+
+### Remaining / recovery
+
+- Independent P2f review; PR #200 stays Draft. PR description update blocked by forge permissions — body draft recorded in correction commit message / agent report.
+
+## 2026-09-17 22:00 UTC | Form P2f: real Angular directive, CVA, and acceptance proof
+
+Status: completed
+Branch: `feat/form-p2f-angular-ecosystem`
+PR: https://github.com/kas-labs/vii/pull/200 (Draft)
+
+### Scope
+
+- Correct P2f blockers on PR #200: replace hand-authored private Ivy metadata with public `@Directive` + partial `ngc`; prove `[viiField]` via TestBed and packed Angular 17/modern consumers; implement real Angular Forms CVA (Option A); pass 41/41 performance gates without rebaseline.
+
+### Changes
+
+- `directive.ts`: public `@Directive` / `@Input() viiField`, required host `ElementRef` DI, presentation-only teardown.
+- Build: `tsc` for angular signal bridges; isolated `ngc` for `directive.ts` only (`tsconfig.angular.build.json`).
+- `cva.ts`: implements Angular Forms `ControlValueAccessor` for delegation from consumer hosts registered via `NG_VALUE_ACCESSOR` (the exported class does not register the provider); reentrancy guard; removed factory/component shortcuts from public surface.
+- Tests: `angular-template.integration.test.ts` (TestBed acceptance); updated unit tests; packed consumer fixture with real templates.
+- `validate-form.mjs`, performance isolation fixes, README/architecture/PROJECT_STATE/API surface sync.
+
+### Validation
+
+- `pnpm format:check`: Passed.
+- `pnpm lint`: Passed.
+- `pnpm typecheck`: Passed.
+- `pnpm test`: Passed (510 form tests).
+- `pnpm validate`: Passed (8/8 packed consumers).
+- `pnpm test:browser`: Passed (46/46) after Playwright Chromium install in agent environment.
+- `pnpm --filter @vii-labs/form run performance`: Passed (41/41 HARD; angularAdapter gzip 1,975 B, brotli 1,779 B).
+- Exact-head CI: pending after push (not run at handoff time).
+
+### Architecture / compatibility
+
+- No changes to `packages/core` or `packages/form/src/core`.
+- Signal Forms remain deferred; Angular 17.3.12 baseline preserved.
+- Optional peer `@angular/forms` for CVA types/integration; signal-only `@angular/core` packed consumer passes without `@angular/forms`.
+
+### Remaining / recovery
+
+- Monitor exact-head CI on PR #200 (Governance, Dependency Review, CodeQL, Validate). P2f pending independent review; do not mark Ready or merge.
+
+## 2026-09-17 01:50 CEST | Form: Angular Ecosystem Integration (P2f)
+
+Status: completed
+Branch: `feat/form-p2f-angular-ecosystem`
+PR: https://github.com/kas-labs/vii/pull/200 (Draft)
+
+### Scope
+
+- Implement official Vii Form Phase 2 roadmap slice P2f: Angular Ecosystem Integration for `@vii-labs/form` (`@vii-labs/form/angular`).
+- Preserve Angular 17.3.12 minimum compatibility baseline without regressions.
+- Execute Option A (Formal Deferral) for Angular Signal Forms integration to avoid experimental compiler dependencies or runtime bloat.
+- Implement standalone directive `ViiFieldDirective` (`[viiField]`) with native Ivy `ɵdir` and `ɵfac`, two-way DOM synchronization, blur/touch handling, runtime type narrowing (`isBooleanField`, `isStringField`), fail-closed safety, and zero-leak teardown.
+- Implement `ViiControlValueAccessor` and `createViiControlValueAccessor` CVA bridge with reentrancy guard (`isPropagatingFromAngular`) preventing ping-pong recursion, presentation-owned `disabled` signal, and isolated lifecycle cleanup.
+- Implement scoped DI context helpers `provideViiForm`, `injectViiForm`, and `VII_FORM_TOKEN`.
+- Guarantee the core teardown invariant: adapter presentation destruction never disposes or unregisters canonical `FieldState` or `FormInstance`.
+- Maintain strict package boundaries: 0 modifications to `packages/core` or `packages/form/src/core`.
+- Pass all 41/41 HARD performance, bundle, and memory gates with zero budget weakening.
+- Pass all 8 clean packed consumers (including Angular 17.3.12 and modern Angular).
+
+### Changes
+
+- `packages/form/src/adapters/angular/destroy.ts`: Created shared `createTeardown` and `bridgeSignal` helper, reducing bundle size across all adapter files.
+- `packages/form/src/adapters/angular/context.ts`: Implemented `VII_FORM_TOKEN`, `provideViiForm`, and `injectViiForm`.
+- `packages/form/src/adapters/angular/cva.ts`: Implemented `ViiControlValueAccessor` and `createViiControlValueAccessor` with reentrancy guard, presentation-owned `disabled` signal, and isolated lifecycle teardown.
+- `packages/form/src/adapters/angular/directive.ts`: Implemented `ViiFieldDirective` (`[viiField]`) using native Ivy `ɵdir` and `ɵfac`, runtime type guards, fail-closed safety, and DOM event/attribute syncing.
+- `packages/form/src/adapters/angular/field.ts`, `form.ts`, `array.ts`: Refactored to use shared `bridgeSignal` and `createTeardown`.
+- `packages/form/src/adapters/angular/types.ts`: Added `SupportedAngularFieldElement`, `SupportedAngularFieldState`, `ViiControlValueAccessor`.
+- `packages/form/src/adapters/angular/index.ts`: Re-exported all new P2f APIs and types.
+- `packages/form/api-surface.json`: Synchronized `./angular` runtimeExports (9) and publicTypes (9).
+- `packages/form/test/package-boundary.test.ts`: Updated expected exports; passes 7/7 tests.
+- `packages/form/test/unit/angular-p2f-integrations.test.ts`: Added 23 comprehensive tests (anti-loop, DOM binding, fail-closed, field replacement, multi-form DI isolation, 100-field isolation, 1,000-cycle stress).
+- `scripts/package-validation/validate-form.mjs`: Added new files to required build files, added smoke tests for CVA, directive, and DI.
+- `packages/form/README.md`: Documented directive, CVA bridge, DI helpers, and Signal Forms deferral note.
+- `docs/architecture/FORM_PHASE2_ARCHITECTURE.md`: Marked P2f completed, documented deliverables and Signal Forms deferral.
+- `PROJECT_STATE.md`: Updated active slice and state.
+
+### Validation
+
+- `pnpm format:check`: Passed (all files formatted).
+- `CI=true NX_INTERACTIVE=false pnpm lint`: Passed (0 errors, 0 warnings across all 12 projects).
+- `CI=true NX_INTERACTIVE=false pnpm typecheck`: Passed (all 12 projects).
+- `CI=true NX_INTERACTIVE=false pnpm test`: Passed (508/508 form tests, all workspace tests).
+- `CI=true NX_INTERACTIVE=false pnpm test:browser`: Passed (46/46 Playwright tests).
+- `pnpm --filter @vii-labs/form run performance`: Passed (41/41 HARD checks pass with 0 budget weakening; angularAdapter: 6,312 B minified [budget 8,000 B], 1,883 B gzip [budget 2,000 B], 1,682 B brotli [budget 1,800 B]).
+- `pnpm --filter @vii-labs/form run validate-package`: Passed (all 8 clean packed consumers pass).
+- `CI=true NX_INTERACTIVE=false pnpm validate`: Passed.
+- `git diff --check`: Passed (clean).
+
+### Architecture / compatibility
+
+- Core packages untouched: 0 lines changed in `packages/core` and `packages/form/src/core`.
+- Strict Angular 17.3.12 minimum compatibility preserved with zero experimental compiler requirements.
+- Memory lifecycle: 0 retained subscriptions, 0 retained scopes across 1,000-cycle stress tests.
+- Single source of truth preserved: presentation layer never duplicates domain state or disposes canonical nodes.
+
+### Remaining / recovery
+
+- Open Draft PR on GitHub, monitor exact-head CI workflows, and deliver report.
+
 ## 2026-09-17 01:20 CEST | Form: React Controller Ref Removal & Vue Directive Type Safety (P2e)
 
 Status: completed

@@ -98,7 +98,7 @@ The architecture formally distinguishes:
 - **Angular 21:** Signal Forms available as transitional/new API generation.
 - **Angular 22+:** Signal Forms stable according to current Angular documentation.
 
-**Constraint:** Not all Angular >=17 consumers can import Signal Forms APIs. Signal Forms integration must not silently break the accepted Angular 17.3.12 consumer. Future P2f must not unconditionally import `@angular/forms/signals` if doing so breaks Angular 17 consumers. Future compatibility options include: feature detection, a separate Angular Signal Forms subpath, an optional integration module, an API design that does not statically require Signal Forms for the baseline adapter, or raising the minimum Angular version in a future breaking change. Implementation choice is deferred.
+**Constraint:** Not all Angular >=17 consumers can import Signal Forms APIs. Signal Forms integration must not silently break the accepted Angular 17.3.12 consumer. In P2f, **Option A (Formal Deferral)** was executed: Signal Forms integration is formally deferred to keep `@vii-labs/form/angular` cleanly rooted in stable Angular 17.3.12+ Signals and Ivy primitives without experimental compiler dependencies or runtime bloat. CVA and standalone directives provide complete ecosystem interoperability.
 
 ## 8. Competitor Comparison Matrix
 
@@ -284,14 +284,27 @@ The Phase 2 roadmap follows a strictly sequential recommended execution order to
   - [x] All 8 packed consumers (Root, Vanilla, React 18, React 19, Angular 17, Angular 22, Vue 3.3, Vue 3.5) pass cleanly.
 - **Stop Condition:** Controller correctly bridges generic components without parent renders; Vue composables provide full idiomatic reactivity with 0 leaks. (Achieved and verified).
 
-### **P2f — Frameworks: Angular Ecosystem Integration**
+### **P2f — Frameworks: Angular Ecosystem Integration** [COMPLETED]
 
-- **Objective:** Angular Signal Forms interoperability, `ControlValueAccessor` bridge.
+- **Objective:** Angular ecosystem interoperability (`ControlValueAccessor` bridge, `[viiField]` directive, scoped DI context).
 - **Owner:** Angular Adapter.
 - **Dependencies:** P2e.
-- **Public API Impact:** High within `/angular` subpath.
+- **Public API Impact:** High within `/angular` subpath (8 runtime exports, 9 public types).
 - **Tests Required:** Angular 17.3.12 and latest modern Angular template compatibility.
-- **Stop Condition:** Form successfully maps to Angular Signals without memory leaks.
+- **Status:** COMPLETED.
+  - [x] Signal Forms Option A (Formal Deferral) executed: preserved strict compatibility with Angular 17.3.12 without experimental compiler requirements.
+  - [x] `ViiFieldDirective` (`[viiField]`): Public `@Directive` standalone bridge (partial `ngc` emit) with real host `ElementRef` DI, two-way DOM sync for text/textarea/checkbox, blur/touch, fail-closed raw/type mismatch, TestBed template acceptance, and presentation-only teardown.
+  - [x] `ViiControlValueAccessor`: Implements the Angular Forms `ControlValueAccessor` protocol for delegation from a consumer host component/directive registered through `NG_VALUE_ACCESSOR`; reentrancy guard, presentation-owned disabled state, FormControl acceptance tests, adapter-only lifecycle cleanup.
+  - [x] Angular adapter build split: generic `tsc` for signal bridges; isolated `ngc` partial compilation for the decorated directive only (no hand-authored private Ivy metadata in source).
+  - [x] Form `tsconfig.build.json` uses `removeComments: true` for emitted `.js` across all Form subpaths (smaller artifacts; LICENSE remains in packed `package/LICENSE`; declaration files keep public API typings).
+  - [x] Optional `@angular/forms` peer: signal-only packed consumer (`createAngularField` / `createAngularForm` / `createAngularFieldArray`) typechecks with `@angular/core` only; CVA usage requires `@angular/forms`.
+  - [x] Scoped DI: `VII_FORM_TOKEN`, `provideViiForm`, and `injectViiForm` for hierarchical form injection.
+  - [x] Presentation destruction invariant verified: adapter destruction NEVER disposes or unregisters canonical `FieldState` or `FormInstance`.
+  - [x] 100-field isolation verified: mutating a single field among 100 executes effects strictly for that field.
+  - [x] 1,000-cycle resource stress tests prove 0 subscription or memory leaks upon teardown.
+  - [x] All 41/41 hard performance, bundle, and memory gates pass with 0 budget weakening.
+  - [x] All 8 clean packed consumers (Root, Vanilla, React 18, React 19, Angular 17, Angular 22, Vue 3.3, Vue 3.5) pass cleanly.
+- **Stop Condition:** Form successfully maps to Angular Signals without memory leaks; CVA and directive provide seamless Angular template integration with 0 leaks. (Achieved and verified).
 
 ### **P2g — Cross-Browser Infrastructure Expansion**
 

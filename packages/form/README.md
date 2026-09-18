@@ -398,8 +398,14 @@ console.log(result.focused); // true if an eligible invalid element was focused
 
 Projects canonical nodes into native Angular Signals (`@angular/core` `>=17.0.0`):
 
+### Signal Handles (`createAngularField`, `createAngularForm`, `createAngularFieldArray`)
+
 ```ts
-import { createAngularField, createAngularForm } from "@vii-labs/form/angular";
+import {
+  createAngularField,
+  createAngularForm,
+  createAngularFieldArray,
+} from "@vii-labs/form/angular";
 
 const fieldHandle = createAngularField(field, { destroyRef });
 const formHandle = createAngularForm(form, { destroyRef });
@@ -408,6 +414,107 @@ const formHandle = createAngularForm(form, { destroyRef });
 console.log(fieldHandle.value());
 console.log(formHandle.submissionStatus());
 ```
+
+### Directive (`ViiFieldDirective` / `[viiField]`)
+
+Standalone directive providing two-way binding between native form controls (`<input>`, `<textarea>`) and canonical Vii `FieldState`.
+
+- **DOM Synchronization:** Listens to `input` / `change` events and propagates to `field.setRawValue()`. Subscribes to `field.rawValue` and updates DOM property `value` or `checked`.
+- **Blur & Touch:** Listens to `blur` events and calls `field.markTouched()`.
+- **Fail-Closed Safety:** Validates element and field compatibility; silently ignores unsupported elements or incompatible types (e.g. non-boolean field bound to checkbox) to prevent DOM corruption.
+- **Angular compiler output:** Authored with public `@Directive` / `@Input` APIs and emitted via partial compilation (`ngc`); consumers link metadata with their Angular toolchain (17+).
+- **Host injection:** Angular injects the real host `ElementRef`; the directive never constructs or accepts a manual element reference in production usage.
+- **Teardown Invariant:** Directive destruction detaches DOM listeners and unregisters signal effects, but **never** disposes or unregisters the underlying canonical `FieldState`.
+
+```html
+<input [viiField]="nameField" type="text" />
+<input [viiField]="termsField" type="checkbox" />
+<textarea [viiField]="bioField"></textarea>
+```
+
+### ControlValueAccessor bridge (`ViiControlValueAccessor`)
+
+`ViiControlValueAccessor` implements Angular Forms' public `ControlValueAccessor` protocol. It does not declare an Angular component/directive and does not register `NG_VALUE_ACCESSOR` itself. Use it from a **consumer** host component or directive that registers **itself** under `NG_VALUE_ACCESSOR` and delegates the four CVA methods. Vii `FieldState` remains canonical for raw/value semantics.
+
+**Package boundary:** `@vii-labs/form/angular` signal handles, `[viiField]`, and scoped DI require `@angular/core` only. Importing or typing `ViiControlValueAccessor` additionally requires `@angular/forms` (optional peer).
+
+- **Anti-loop guard:** Skips propagating Vii raw updates back to Angular while `writeValue` is applying an Angular → Vii write.
+- **Disabled state:** Presentation-owned via `setDisabledState()` / `disabled()`; apply disabled styling or native `disabled` on your template—the adapter does not mutate the canonical field.
+- **Lifecycle:** Call `dispose()` (or rely on `destroyRef` from `AngularAdapterOptions`) to drop adapter subscriptions without unregistering the field.
+
+```ts
+import {
+  Component,
+  DestroyRef,
+  forwardRef,
+  inject,
+  Input,
+  type OnDestroy,
+  type OnInit,
+} from "@angular/core";
+import {
+  ViiControlValueAccessor,
+  ViiFieldDirective,
+} from "@vii-labs/form/angular";
+import { NG_VALUE_ACCESSOR, type ControlValueAccessor } from "@angular/forms";
+import type { FieldState } from "@vii-labs/form";
+
+@Component({
+  selector: "my-vii-input",
+  standalone: true,
+  imports: [ViiFieldDirective],
+  template: `<input type="text" [viiField]="field" [disabled]="presentationDisabled" />`,
+  providers: [
+    {
+      provide: NG_VALUE_ACCESSOR,
+      useExisting: forwardRef(() => MyViiInput),
+      multi: true,
+    },
+  ],
+})
+export class MyViiInput implements ControlValueAccessor, OnInit, OnDestroy {
+  @Input({ required: true }) field!: FieldState<string>;
+  presentationDisabled = false;
+  private readonly destroyRef = inject(DestroyRef);
+  private bridge?: ViiControlValueAccessor<unknown, string>;
+
+  ngOnInit() {
+    this.bridge = new ViiControlValueAccessor(this.field, { destroyRef: this.destroyRef });
+  }
+
+  writeValue(value: unknown) { this.bridge?.writeValue(value); }
+  registerOnChange(fn: (value: string) => void) { this.bridge?.registerOnChange(fn); }
+  registerOnTouched(fn: () => void) { this.bridge?.registerOnTouched(fn); }
+  setDisabledState(isDisabled: boolean) {
+    this.bridge?.setDisabledState(isDisabled);
+    this.presentationDisabled = isDisabled;
+  }
+  ngOnDestroy() { this.bridge?.dispose(); }
+}
+```
+
+### Scoped Dependency Injection (`provideViiForm`, `injectViiForm`)
+
+Scoped DI helpers for providing and injecting canonical `FormInstance` trees in Angular component hierarchies:
+
+```ts
+import { provideViiForm, injectViiForm, VII_FORM_TOKEN } from "@vii-labs/form/angular";
+
+// In parent component:
+@Component({
+  providers: [provideViiForm(checkoutForm)],
+})
+export class CheckoutPageComponent {}
+
+// In child / deeply nested component:
+@Component({...})
+export class PaymentStepComponent {
+  private form = injectViiForm<CheckoutFormValues>();
+}
+```
+
+> [!NOTE]
+> **Signal Forms Compatibility:** Angular's experimental Signal Forms are formally deferred (Option A) to preserve strict compatibility with the Angular 17.3.12 minimum baseline without introducing unstable experimental compiler dependencies.
 
 ---
 

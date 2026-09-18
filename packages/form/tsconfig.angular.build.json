@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.build.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "src",
+    "module": "ES2022",
+    "moduleResolution": "Bundler",
+    "useDefineForClassFields": false
+  },
+  "include": ["src/adapters/angular/directive.ts"],
+  "exclude": [],
+  "angularCompilerOptions": {
+    "compilationMode": "partial",
+    "strictInjectionParameters": true,
+    "strictTemplates": false
+  }
+}

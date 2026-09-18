@@ -3,6 +3,7 @@ import type {
   FieldArray,
   FieldArrayItem,
   FieldIssue,
+  FieldState,
   FormFieldsRecord,
   FormInstance,
   FormNode,
@@ -137,3 +138,15 @@ export interface AngularArrayHandle<
   reset(): void;
   dispose(): void;
 }
+
+/**
+ * Elements supported by the ViiFieldDirective.
+ */
+export type SupportedAngularFieldElement = HTMLInputElement | HTMLTextAreaElement;
+
+/**
+ * FieldState types supported by the ViiFieldDirective.
+ * Restricted to controls with string raw representation (text-like inputs, textarea)
+ * and boolean raw representation (checkboxes).
+ */
+export type SupportedAngularFieldState = FieldState<unknown, string> | FieldState<unknown, boolean>;

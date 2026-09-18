@@ -22,6 +22,8 @@ export async function prepareConsumer({
           noEmit: false,
           outDir: "dist",
           rootDir: "src",
+          experimentalDecorators: true,
+          useDefineForClassFields: false,
         },
         include: ["src/**/*.ts"],
       },
@@ -31,7 +33,7 @@ export async function prepareConsumer({
   );
 
   run(pnpm, ["install", "--ignore-scripts", "--no-frozen-lockfile"], directory);
-  run(pnpm, ["exec", "tsc", "-p", path.join(directory, "tsconfig.json")], directory);
+  run(pnpm, ["exec", "tsc", "-p", path.join(directory, "tsconfig.json")], repositoryRoot);
 }
 
 function run(command, args, cwd) {

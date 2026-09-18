@@ -306,14 +306,21 @@ The Phase 2 roadmap follows a strictly sequential recommended execution order to
   - [x] All 8 clean packed consumers (Root, Vanilla, React 18, React 19, Angular 17, Angular 22, Vue 3.3, Vue 3.5) pass cleanly.
 - **Stop Condition:** Form successfully maps to Angular Signals without memory leaks; CVA and directive provide seamless Angular template integration with 0 leaks. (Achieved and verified).
 
-### **P2g — Cross-Browser Infrastructure Expansion**
+### **P2g — Cross-Browser Infrastructure Expansion** [COMPLETED]
 
 - **Objective:** Add WebKit and Firefox to Playwright test matrix.
 - **Owner:** Test Infrastructure.
 - **Dependencies:** P2f.
 - **Public API Impact:** Zero.
 - **Tests Required:** Browser matrix CI runs.
-- **Stop Condition:** Firefox/WebKit tests pass consistently in CI.
+- **Status:** COMPLETED.
+  - [x] Playwright projects: `chromium`, `firefox`, and `webkit` using official Desktop Chrome / Desktop Firefox / Desktop Safari device presets.
+  - [x] CI installs Playwright-managed Chromium, Firefox, and WebKit via one `playwright install --with-deps chromium firefox webkit` step (no system-browser fallback).
+  - [x] One Validate job runs the full Form browser acceptance suite against all three engines; a failure in any engine fails CI. List + GitHub reporters identify the failing project.
+  - [x] Identical test inventory on all three engines (46 tests each: DOM binding, form interactions, P2d focus/a11y, Axe, dynamic unregister, lifecycle, IME, React 19, historical regressions).
+  - [x] Existing Chromium acceptance remains intact; Firefox and WebKit execute the same suite rather than a reduced smoke subset.
+  - [x] Zero public API change; zero Form Core change; zero performance-budget change.
+- **Stop Condition:** Firefox and WebKit tests pass consistently in CI. Local matrix: Chromium 46/46, Firefox 46/46, WebKit 46/46 with identical inventory. Exact-head CI is recorded in Duty Watch.
 
 ### **P2h — Phase 2 Graduation Review**
 

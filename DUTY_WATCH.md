@@ -37,6 +37,57 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-09-18 23:19 UTC | Form P2g: Cross-Browser Infrastructure Expansion
+
+Status: completed
+Branch: `feat/form-p2g-cross-browser`
+PR: https://github.com/kas-labs/vii/pull/201 (Draft)
+
+### Scope
+
+- Official Vii Form Phase 2 slice P2g only: expand Playwright Form browser acceptance from Chromium-only to Chromium, Firefox, and WebKit.
+- Infrastructure-only. Zero public API change. Zero Form Core change. P2h not started.
+
+### Changes
+
+- `packages/form/test/browser/playwright.config.ts`: added explicit Playwright projects `chromium`, `firefox`, and `webkit` using official Desktop Chrome / Desktop Firefox / Desktop Safari device presets. Preserved webServer, baseURL, 15s timeout, CI retry=1, workers=1, trace retain-on-failure, screenshot only-on-failure. CI reporter is list + github so logs identify the failing engine.
+- `.github/workflows/validate.yml`: one deterministic `pnpm exec playwright install --with-deps chromium firefox webkit` step; job timeout 10 → 15 minutes for three-engine install + suite. One Validate job still runs `pnpm test:browser` against all projects; any engine failure fails CI.
+- Docs: `FORM_PHASE2_ARCHITECTURE.md` P2g completed; `PROJECT_STATE.md` P2g paragraph; `packages/form/README.md` browser/a11y gate scope now names Chromium, Firefox, and WebKit. Native OS IME candidate UI remains out of automated scope.
+
+### Playwright matrix
+
+- Design: Option A — one browser test job, three Playwright projects, identical Form acceptance inventory.
+- Browser installation: Playwright-managed binaries only (`playwright install --with-deps chromium firefox webkit`). No system-browser fallback.
+
+### Validation
+
+- `pnpm format:check`: Passed.
+- `pnpm lint`: Passed.
+- `pnpm typecheck`: Passed.
+- `pnpm test`: Passed (510 Form unit tests).
+- `pnpm validate`: Passed.
+- `pnpm test:browser`: Passed 138/138 (identical 46-test inventory × 3 engines).
+  - Chromium: 46/46 PASS
+  - Firefox: 46/46 PASS
+  - WebKit: 46/46 PASS
+- Axe accessibility checks executed on all three engines with 0 violations (existing `vanilla-a11y.spec.ts` and focus-orchestration Axe tests).
+- `pnpm --filter @vii-labs/form run performance`: Passed 41/41 HARD. `createFieldOnly` thresholds unchanged (18000 / 5000 / 4500). Tarball compressed 98,039 B.
+- `pnpm --filter @vii-labs/form run validate-package` / packed consumers: 8/8 PASS (Root/Core-only, Vanilla, React 18.3.1, React 19.2.8, Angular 17.3.12, Angular modern, Vue 3.3.13, Vue 3.5.41). Angular 17 signal-only / no-`@angular/forms` consumer passed.
+- `git diff --check`: Passed.
+- Exact-head CI: pending after push.
+
+### Architecture / compatibility
+
+- `packages/form/api-surface.json`: unchanged.
+- `packages/form/src/core/` and `packages/core/`: unchanged.
+- `packages/form/performance-budgets.json`: unchanged.
+- No browser-specific production fixes.
+- No browser-specific test accommodations or skips.
+
+### Remaining / recovery
+
+- Monitor exact-head CI on https://github.com/kas-labs/vii/pull/201 (Governance, Dependency Review, CodeQL, Validate). Inspect Form browser logs for Chromium, Firefox, and WebKit execution. Do not merge. P2h not started.
+
 ## 2026-09-17 22:25 UTC | Form P2f: public contract and docs sync
 
 Status: completed

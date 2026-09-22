@@ -63,9 +63,9 @@ PR: https://github.com/kas-labs/vii/pull/202 (Draft, unmerged)
 - `pnpm test`: Passed (510 Form unit tests).
 - `pnpm validate`: Passed (includes pack:check / 8 packed consumers + Angular 17 no-`@angular/forms`).
 - `pnpm test:browser`: Passed 138/138. Chromium 46/46, Firefox 46/46, WebKit 46/46. Axe 0 WCAG violations on all three engines (`vanilla-a11y.spec.ts` and focus-orchestration a11y audit).
-- `pnpm --filter @vii-labs/form run performance`: Passed 41/41 HARD. Budgets unchanged. createFieldOnly 15,997 / 4,589 / 4,113 B. Root 54,065 / 12,464 / 10,822 B. React 6,285 / 1,503 / 1,355 B. Vanilla 10,918 / 3,567 / 3,182 B. Angular 6,625 / 1,975 / 1,779 B. Vue 7,462 / 1,863 / 1,577 B. Tarball 98,039 B compressed. Memory: retained subscriptions 0, scopes 0, timers 0, stale commits 0, unhandled rejections 0.
+- `pnpm --filter @vii-labs/form run performance`: Passed 41/41 HARD. Budgets unchanged. createFieldOnly 15,997 / 4,589 / 4,113 B. Root 54,065 / 12,464 / 10,822 B. React 6,285 / 1,503 / 1,355 B. Vanilla 10,918 / 3,567 / 3,182 B. Angular 6,625 / 1,975 / 1,779 B. Vue 7,462 / 1,863 / 1,577 B. Local tarball before README sync 98,039 B; exact-head CI tarball 98,664 B compressed. Memory: retained subscriptions 0, scopes 0, timers 0, stale commits 0, unhandled rejections 0.
 - Packed consumers 8/8: Root/Core-only, Vanilla, React 18.3.1, React 19.2.8, Angular 17.3.12, Angular 22.1.4, Vue 3.3.13, Vue 3.5.41. Angular 17 signal-only / no-`@angular/forms` passed.
-- Exact-head CI: pending after push.
+- Exact-head CI on `e3a18634022549f16ad093669496fccb2a8fa330`: Governance PASS, Dependency Review PASS, CodeQL PASS, Validate PASS (5m9s). Validate children: Install Playwright browsers PASS; Validate repository PASS; Run Form browser tests PASS (`Running 138 tests using 1 worker`; Chromium 46, Firefox 46, WebKit 46; `138 passed (1.8m)`; Axe 0 violations on all three engines); Run Form performance and size gate PASS (41/41 HARD, tarball 98,664 B).
 
 ### Architecture / compatibility
 
@@ -75,7 +75,7 @@ PR: https://github.com/kas-labs/vii/pull/202 (Draft, unmerged)
 
 ### Remaining / recovery
 
-- Independent review. PR https://github.com/kas-labs/vii/pull/202 remains Draft and unmerged. Do not merge. Exact-head CI pending on this PR (Governance, Dependency Review, CodeQL, Validate including Playwright three-engine and performance child jobs). No P2i. No publication.
+- Independent review. PR https://github.com/kas-labs/vii/pull/202 remains Draft and unmerged. Do not merge. Exact-head CI on `e3a1863` is green. No P2i. No publication.
 
 
 ## 2026-09-18 23:28 UTC | Form P2g: exact-head CI proof

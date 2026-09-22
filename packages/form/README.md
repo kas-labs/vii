@@ -668,7 +668,7 @@ All performance metrics and size budgets are enforced by 41 automated HARD budge
   - Vanilla adapter: 10,918 B minified / 3,567 B gzip / 3,182 B brotli.
   - Angular adapter: 6,625 B minified / 1,975 B gzip / 1,779 B brotli.
   - Vue adapter: 7,462 B minified / 1,863 B gzip / 1,577 B brotli.
-  - Packed tarball: 98,039 B compressed (budget 120,000 B).
+  - Packed tarball: 98,664 B compressed (budget 120,000 B; exact-head CI measurement including current README).
 
 See [`docs/performance/FORM_P1L_BASELINE.md`](../../docs/performance/FORM_P1L_BASELINE.md) for full benchmark methodology and runner environment details.
 

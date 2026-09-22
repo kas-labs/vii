@@ -1,4 +1,4 @@
-import { defineConfig } from "@playwright/test";
+import { defineConfig, devices } from "@playwright/test";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -10,14 +10,28 @@ export default defineConfig({
   timeout: 15_000,
   retries: process.env.CI ? 1 : 0,
   workers: 1,
+  reporter: process.env.CI ? [["list"], ["github"]] : [["list"]],
   use: {
-    browserName: "chromium",
     headless: true,
     baseURL: "http://127.0.0.1:4173",
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     video: "off",
   },
+  projects: [
+    {
+      name: "chromium",
+      use: { ...devices["Desktop Chrome"] },
+    },
+    {
+      name: "firefox",
+      use: { ...devices["Desktop Firefox"] },
+    },
+    {
+      name: "webkit",
+      use: { ...devices["Desktop Safari"] },
+    },
+  ],
   webServer: {
     command: "pnpm exec vite --config test/browser/fixture/vite.config.ts",
     url: "http://127.0.0.1:4173",

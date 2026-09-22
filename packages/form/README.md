@@ -619,7 +619,7 @@ console.log(formHandle.submissionStatus.value);
 
 ## 18. Accessibility (a11y) Scope
 
-The Vanilla DOM adapter implements automated accessibility invariants verified via `@axe-core/playwright` under Chromium:
+The Vanilla DOM adapter implements automated accessibility invariants verified via `@axe-core/playwright` under Playwright-managed Chromium, Firefox, and WebKit:
 
 - **ARIA Attribute Projection:** `aria-invalid="true"` is asserted only when a field is invalid, and restored to its initial state when valid or disposed.
 - **Describedby Linking:** Additively links `issueElement.id` into `aria-describedby` without clobbering existing application descriptions.
@@ -660,7 +660,7 @@ See [`docs/performance/FORM_P1L_BASELINE.md`](../../docs/performance/FORM_P1L_BA
 ### Limitations
 
 - **Select-Multiple:** Native `<select multiple>` binding is deferred and currently fails closed with an explicit `TypeError`.
-- **Browser Gate Scope:** Automated browser acceptance is executed against headless Chromium via Playwright; cross-browser certification (Safari/Firefox) and native OS IME candidate UI interaction are outside automated scope.
+- **Browser Gate Scope:** Automated browser acceptance executes the same Playwright suite against Playwright-managed Chromium, Firefox, and WebKit. Native OS IME candidate UI interaction remains outside automated scope; composition sequencing is proven with synthetic `composition*` / `input` events.
 
 ### Non-Goals
 

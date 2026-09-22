@@ -77,6 +77,22 @@ describe("README runnable code examples", () => {
     expect(form.dirty.get()).toBe(true);
     expect(form.submissionStatus.get()).toBe("succeeded");
 
+    // Dynamic registration (P2b)
+    type Shape = {
+      name: ReturnType<typeof createField<string>>;
+      coupon?: ReturnType<typeof createField<string>>;
+    };
+    const dynamicForm = createForm<Shape>({
+      fields: {
+        name: createField({ initialValue: "Alice" }),
+      },
+    });
+    dynamicForm.register("coupon", createField({ initialValue: "" }));
+    expect(dynamicForm.getValue()).toEqual({ name: "Alice", coupon: "" });
+    dynamicForm.unregister("coupon");
+    expect(dynamicForm.getValue()).toEqual({ name: "Alice" });
+    dynamicForm.dispose();
+
     // Standard Schema bridge
     const mockSchema = {
       "~standard": {

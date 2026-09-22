@@ -4,16 +4,16 @@ This document establishes the official architecture, scope, and roadmap for `@vi
 
 ## 1. Current Phase 1 Baseline
 
-Vii Form has successfully completed Phase 1 product development.
+Vii Form has successfully completed Phase 1 product development. Phase 2 product development is complete (P2a–P2h). Preview readiness is confirmed. The package remains Preview, private, and unpublished.
 
-- **Current Status:** Preview Candidate
+- **Current Status:** Preview (`vii.stability: "preview"`). Phase 2 product development complete. Preview readiness confirmed. Not Stable. Not published.
 - **Version:** `0.1.0-experimental.1`
-- **Publication:** Deferred (Private)
+- **Publication:** Deferred (Private). Publication remains a separate explicit maintainer gate. P2h does not publish.
 - **Architecture Base:** Headless state engine, strictly separating domain values from raw presentation, with framework adapters.
-- **Validation:** Standard Schema native, fully async-capable, independent generation tracking.
-- **Identity:** Stable key extraction for FieldArrays.
+- **Validation:** Standard Schema native, fully async-capable, independent generation tracking, explicit cross-field dependencies (P2c).
+- **Identity:** Stable key extraction for FieldArrays; explicit logical `register` / `unregister` (P2b).
 
-Phase 1 established a high-performance, strictly isolated core. Phase 2 extends consumer ergonomics without compromising this foundation.
+Phase 1 established a high-performance, strictly isolated core. Phase 2 extended consumer ergonomics without compromising this foundation.
 
 ## 2. Phase 2 Mission
 
@@ -109,7 +109,7 @@ The architecture formally distinguishes:
 | **Identity / Array** | Explicit Key tracking          | Positional + Internal IDs | Granular subscriptions | Typed FieldTree      | Composition API paths |
 | **Focus Mgmt**       | Adapter-owned (SHOULD)         | Core-integrated (refs)    | Adapter/App-owned      | App-owned            | App-owned             |
 | **Conditional Reg**  | Explicit Logical Unregister    | `shouldUnregister` config | Dynamic components     | Dynamic schema       | `keep-values` config  |
-| **Cross-field Val**  | Explicit Deps (Planned)        | Schema-level or triggers  | Form-level validation  | Form-level/Schema    | Cross-field rules     |
+| **Cross-field Val**  | Explicit Deps (P2c complete)   | Schema-level or triggers  | Form-level validation  | Form-level/Schema    | Cross-field rules     |
 
 ## 9. Core Lifecycle Operations
 
@@ -199,43 +199,59 @@ _No fourth Core lifecycle state (e.g., active/inactive) is permitted._
 
 The Phase 2 roadmap follows a strictly sequential recommended execution order to eliminate dependency ambiguity.
 
-### **P2b — Core: Dynamic Tree Registration Semantics** (FIRST RUNTIME SLICE)
+### **P2a — Architecture & Scope** [COMPLETED]
+
+- **Objective:** Establish Phase 2 architecture, gap inventory, competitor analysis, ADRs, and the sequential slice roadmap without implementing runtime features.
+- **Owner:** Repository Maintainers.
+- **Dependencies:** Phase 1 (P1m).
+- **Public API Impact:** Zero.
+- **Status:** COMPLETED. This document is the P2a deliverable. No Phase 2 runtime was implemented in P2a.
+
+### **P2b — Core: Dynamic Tree Registration Semantics** [COMPLETED]
 
 - **Objective:** Prove contract-first semantics for dynamic logical registration/unregistration while preserving the rule that UI adapter mount/unmount does not affect canonical Form node existence.
 - **Owner:** Core Form Domain.
 - **Dependencies:** None.
 - **Candidate Public API Impact:** Minimal new unregister primitives. P2a does NOT authorize any public `active` signal unless P2b contract-first evidence later proves them necessary. Explicit structural registration/unregistration semantics using the smallest possible extension to existing Group/Array APIs.
+- **Status:** COMPLETED.
 - **Acceptance Matrix:**
-  - [ ] UI unmount does not unregister.
-  - [ ] logical unregister excludes node from aggregate values.
-  - [ ] logical unregister excludes node from validation.
-  - [ ] logical unregister excludes node from submission snapshot.
-  - [ ] logical unregister disposes owned resources.
-  - [ ] pending validation becomes non-authoritative/cancelled.
-  - [ ] UI remount of still-registered node preserves state.
-  - [ ] FieldArray UI unmount preserves stable identity.
-  - [ ] FieldArray reorder without UI binding preserves stable identity.
-  - [ ] FieldArray logical remove disposes identity/node resources.
-  - [ ] reset behavior defined.
-  - [ ] reinitialize behavior defined.
-  - [ ] server issue behavior defined.
-  - [ ] 1,000 logical registration/unregistration stress cycles.
-  - [ ] P1l budgets remain green.
-  - [ ] No undefined attach/detach semantics.
+  - [x] UI unmount does not unregister (presentation lifecycle only; canonical node survives).
+  - [x] logical unregister excludes node from aggregate values.
+  - [x] logical unregister excludes node from validation.
+  - [x] logical unregister excludes node from submission snapshot.
+  - [x] logical unregister disposes owned resources.
+  - [x] pending validation becomes non-authoritative/cancelled.
+  - [x] UI remount of still-registered node preserves state.
+  - [x] FieldArray UI unmount preserves stable identity.
+  - [x] FieldArray reorder without UI binding preserves stable identity.
+  - [x] FieldArray logical remove disposes identity/node resources.
+  - [x] reset behavior defined.
+  - [x] reinitialize behavior defined.
+  - [x] server issue behavior defined.
+  - [x] 1,000 logical registration/unregistration stress cycles.
+  - [x] P1l budgets remain green.
+  - [x] No undefined attach/detach semantics. No fourth public lifecycle state. Required keys cannot unregister; optional/dynamic keys preserve typing.
 - **Performance Gate:** Before/after construction cost measurements.
 - **Memory/Resource Gate:**
   - **CORE STRUCTURAL STRESS:** 1,000 cycles of: register logical node, exercise representative state, unregister logical node, verify disposal (Assert: 0 residual subscriptions, 0 residual owned Scopes, 0 stale validation commits, 0 outstanding owned timers/controllers where relevant).
   - **UI LIFECYCLE REGRESSION:** Use existing adapter lifecycle tests to prove: mount adapter, unmount adapter, canonical node survives.
-- **Stop Condition:** 0 unresolved blocking architecture questions. Contract tests pass.
+- **Stop Condition:** 0 unresolved blocking architecture questions. Contract tests pass. (Achieved.)
 
-### **P2c — Core: Cross-Field Validation & Dependencies**
+### **P2c — Core: Cross-Field Validation & Dependencies** [COMPLETED]
 
 - **Objective:** Ergonomic APIs for `confirm password`, dependent date ranges, and field dependency tracking.
 - **Owner:** Core Form Domain.
 - **Dependencies:** P2b.
-- **Public API Impact:** Low/Moderate (Validation configuration).
+- **Public API Impact:** Low/Moderate (Validation configuration: `dependencies: [fieldA] | (self) => [fieldA]`, `ctx.get(depField)`).
 - **Tests Required:** Async dependency races, cyclic detection.
-- **Stop Condition:** Cyclic dependencies throw descriptively; dependent fields evaluate correctly.
+- **Status:** COMPLETED.
+  - [x] Explicit dependency graph only (no hidden signal interception).
+  - [x] Topological validation waves, dependencies-first, max once per dependent per wave.
+  - [x] Direct and transitive cycle detection with value-free errors.
+  - [x] Foreign/disposed field rejection.
+  - [x] Async cancellation and no stale async commits.
+  - [x] Unregister severs dependency edges without resurrection.
+- **Stop Condition:** Cyclic dependencies throw descriptively; dependent fields evaluate correctly. (Achieved.)
 
 ### **P2d — Adapters: DOM Focus & Accessibility Orchestration** [COMPLETED]
 
@@ -322,26 +338,39 @@ The Phase 2 roadmap follows a strictly sequential recommended execution order to
   - [x] Zero public API change; zero Form Core change; zero performance-budget change.
 - **Stop Condition:** Firefox and WebKit tests pass consistently in CI. Local matrix: Chromium 46/46, Firefox 46/46, WebKit 46/46 with identical inventory. Exact-head CI is recorded in Duty Watch.
 
-### **P2h — Phase 2 Graduation Review**
+### **P2h — Phase 2 Graduation Review** [COMPLETED]
 
 - **Objective:** Final API review, documentation sync, performance audit.
 - **Owner:** Repository Maintainers.
 - **Dependencies:** P2g.
-- **Public API Impact:** Zero.
+- **Public API Impact:** Zero. Expected production source delta: zero. Expected `api-surface.json` semantic delta: zero. Expected performance-budget delta: zero.
 - **Tests Required:** Full validation suite.
-- **Stop Condition:** Documentation synchronized, Preview readiness confirmed.
+- **Status:** COMPLETED after graduation evidence passed.
+  - [x] Public API audit: 35 runtime exports and 93 public named types across 5 preview entrypoints; snapshot matches implementation; no accidental leakage.
+  - [x] Documentation synchronized with the current implementation (stale Phase 1 current-state counts and Chromium-only claims corrected where they described present readiness).
+  - [x] Package boundaries: packed artifact, peers, optional `@angular/forms`, isolation, LICENSE, no research/test leakage.
+  - [x] Performance/memory: 41/41 HARD gates pass; budgets unchanged.
+  - [x] Packed consumers: 8/8 plus Angular 17 signal-only / no-`@angular/forms`.
+  - [x] Cross-browser: Chromium 46/46, Firefox 46/46, WebKit 46/46 (138/138); Axe 0 violations on all engines.
+  - [x] Security/privacy/accessibility invariants intact.
+  - [x] No P2i created. Phase 3 not started. Package remains preview, private, unpublished.
+- **Stop Condition:** Documentation synchronized, Preview readiness confirmed. (Achieved.)
 
 ## 14. Graduation Criteria for Phase 2
 
-Phase 2 concludes when:
+Phase 2 concludes when the following are evidenced. P2h evaluated each criterion against accepted slice decisions rather than treating planning-era wording as a silent override.
 
-1. Dynamic conditional trees function without memory leaks via explicit `unregister`.
-2. Angular, React, and Vue adapters support native idiomatic patterns (Signal Forms, Context/Controller).
-3. Focus management orchestrates flawlessly upon submission failure (opt-in).
-4. P1l performance and bundle budgets are met or explicitly justified via ADR.
-5. Scope is strictly defined by the accepted Phase 2 roadmap slices.
+1. **Dynamic conditional trees function without memory leaks via explicit `unregister`.** Satisfied by P2b: UI mount/unmount is presentation-only; logical register/unregister is the structural contract; required keys cannot unregister; 1,000-cycle stress and current memory gates (0 retained subscriptions/scopes/timers, 0 stale commits, 0 unhandled rejections).
+2. **Angular, React, and Vue adapters support native idiomatic patterns.** Satisfied by the accepted P2e/P2f contracts: React `FormProvider` / `useFormContext` / `useController` / `Controller` (no fake DOM ref); Vue `useViiField` / `useViiForm` / `useViiFieldArray` / `provideForm` / `useFormContext` / `vViiField`; Angular Signals plus `[viiField]` and CVA. The original planning phrase "Signal Forms, Context/Controller" is reconciled with the accepted P2f Option A: Angular Signal Forms remain formally deferred and are **not** a Phase 2 hard requirement.
+3. **Focus management orchestrates upon submission failure (opt-in).** Satisfied by P2d: adapter-owned Vanilla `focus-first-invalid` / `scroll-to-invalid` with DOM-order resolution, radio checked-first fallback, hidden/disabled/inert/aria-hidden/fieldset exclusion, tabindex custom controls, actual focus success verification, and lifecycle registry cleanup. Core remains DOM-neutral.
+4. **P1l performance and bundle budgets are met or explicitly justified via ADR.** Satisfied: 41/41 HARD gates pass on the P2h audit; `packages/form/performance-budgets.json` is unchanged.
+5. **Scope is strictly defined by the accepted Phase 2 roadmap slices.** Satisfied: P2a–P2h complete. No P2i. No Phase 3 Form work, Signal Forms implementation, publication, or version bump is part of graduation.
+
+**Graduation conclusion:** Phase 2 product development complete. Preview readiness confirmed. Package remains Preview (`vii.stability: "preview"`), private (`"private": true`), and unpublished. Publication remains a separate explicit maintainer gate. This is not a Stable API promotion and not a production npm release.
 
 ## 15. Open Questions
 
-1. **Angular Signal Forms vs CVA Priority:** (Non-blocking) Should Signal Forms interoperability entirely replace the need for CVA in v19+?
-2. **React 19 Form Actions:** (Non-blocking) How deeply should the React adapter integrate with native `useActionState` and `<form action={...}>`? Deferred to P2e investigation.
+Foundational Phase 2 questions are resolved or explicitly deferred beyond Phase 2. None silently remain as Preview-readiness blockers.
+
+1. **Angular Signal Forms vs CVA Priority:** Resolved for Phase 2 by P2f Option A (Formal Deferral). CVA and `[viiField]` remain the Angular 17.3.12+ interoperability surface. Whether Signal Forms should later replace CVA for newer Angular versions is deferred beyond Phase 2 and is not a Preview-readiness blocker. P2h does not implement Signal Forms.
+2. **React 19 Form Actions:** P2e did not add `useActionState` or native `<form action={...}>` integration. Canonical Form state remains the React adapter source of truth; consumers submit through `form.submit` / `useForm`. Native React 19 Form Actions integration is deferred beyond Phase 2 and is not a Preview-readiness blocker. The earlier "deferred to P2e investigation" wording is retired because P2e is complete.

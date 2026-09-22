@@ -4,10 +4,12 @@ Preview reactive headless form state and validation engine for the Vii ecosystem
 
 ## Status
 
-**Preview Candidate (Phase 1 Graduation — P1m)**
+**Preview (Phase 2 product development complete; publication deferred)**
 
-- **Stability Classification:** `preview` (under [`docs/governance/API_STABILITY.md`](../../docs/governance/API_STABILITY.md)).
-- **Publication Status:** **Private / Unpublished.** Publication remains strictly deferred pending explicit maintainer release approval (`"private": true` in `package.json`).
+- **Stability Classification:** `preview` (under [`docs/governance/API_STABILITY.md`](../../docs/governance/API_STABILITY.md)). Usable and documented; still subject to refinement. Not Stable.
+- **Phase status:** Phase 2 product development complete (P2a–P2h). Preview readiness confirmed.
+- **Publication Status:** **Private / Unpublished.** Publication remains strictly deferred pending explicit maintainer release approval (`"private": true` in `package.json`). Version remains `0.1.0-experimental.1`.
+- **Public API (current, from `api-surface.json`):** 35 runtime exports and 93 public named types across 5 entrypoints (root 7/50, React 7/12, Vanilla 4/9, Angular 8/9, Vue 9/13).
 
 ---
 
@@ -28,7 +30,7 @@ When published under approved governance, the package contract requires:
 
 - **Runtime Peer Dependency:** `@vii-labs/core` (`>=0.1.0-experimental.2`)
 - **Type-Resolution Dependency:** `@standard-schema/spec` (`^1.1.0`, consumed type-only)
-- **Optional Framework Peers:** `react` (`>=18.0.0`), `@angular/core` (`>=17.0.0`), `vue` (`>=3.3.0`)
+- **Optional Framework Peers:** `react` (`>=18.0.0`), `@angular/core` (`>=17.0.0`), `@angular/forms` (`>=17.0.0`, CVA types/integration only), `vue` (`>=3.3.0`)
 
 Deep imports into package internals (such as `@vii-labs/form/dist/core/field.js`) are unsupported and disallowed by the package `exports` map.
 
@@ -146,6 +148,30 @@ form.reinitialize({
   value: { user: { name: "Bob" } },
   rawValue: { user: { name: "Bob" } },
 });
+```
+
+### Dynamic tree registration (`register` / `unregister`)
+
+UI adapter mount/unmount is presentation lifecycle only: the canonical node survives. Structural membership is a separate logical operation.
+
+- **Logical `register`:** the node enters aggregation, validation, submission, and reset.
+- **Logical `unregister`:** structural membership ends; the node leaves aggregation/validation/submission; owned resources are disposed; there is no resurrection and no fourth public lifecycle state.
+- Required static keys cannot unregister. Optional and dynamic keys preserve typing. FieldArray stable identity is unchanged.
+
+```ts
+type Shape = {
+  name: ReturnType<typeof createField<string>>;
+  coupon?: ReturnType<typeof createField<string>>;
+};
+
+const form = createForm<Shape>({
+  fields: {
+    name: createField({ initialValue: "Alice" }),
+  },
+});
+
+form.register("coupon", createField({ initialValue: "" }));
+form.unregister("coupon");
 ```
 
 ---
@@ -634,14 +660,15 @@ The Vanilla DOM adapter implements automated accessibility invariants verified v
 All performance metrics and size budgets are enforced by 41 automated HARD budget checks in CI.
 
 - **Leaf Mutation Latency:** Single-field update with local subscriber executes in ~0.45 – 0.81 µs ($O(1)$ size-insensitive across 10 to 1,000 fields) with 0 sibling subscriber notifications.
-- **Memory Retention:** 0 retained scopes, 0 retained subscriptions, and 0 retained timers after 500 complete form lifecycle cycles.
-- **Tree-Shaking Boundaries:**
-  - Standalone `createField` (Core external): ~15.99 kB minified (4.58 kB gzip).
-  - Root `@vii-labs/form` (Core external): ~54.06 kB minified (12.46 kB gzip).
-  - React adapter: ~5.07 kB minified (1.08 kB gzip).
-  - Vanilla adapter: ~13.19 kB minified (3.61 kB gzip).
-  - Angular adapter: ~6.13 kB minified (1.25 kB gzip).
-  - Vue adapter: ~5.71 kB minified (1.21 kB gzip).
+- **Memory Retention:** 0 retained scopes, 0 retained subscriptions, 0 retained timers, 0 stale commits, and 0 unhandled rejections after the hard memory gate (including 500 complete form lifecycle cycles).
+- **Tree-Shaking Boundaries (current P2h measurements; Core external):**
+  - Standalone `createField`: 15,997 B minified / 4,589 B gzip / 4,113 B brotli.
+  - Root `@vii-labs/form`: 54,065 B minified / 12,464 B gzip / 10,822 B brotli.
+  - React adapter: 6,285 B minified / 1,503 B gzip / 1,355 B brotli.
+  - Vanilla adapter: 10,918 B minified / 3,567 B gzip / 3,182 B brotli.
+  - Angular adapter: 6,625 B minified / 1,975 B gzip / 1,779 B brotli.
+  - Vue adapter: 7,462 B minified / 1,863 B gzip / 1,577 B brotli.
+  - Packed tarball: 98,039 B compressed (budget 120,000 B).
 
 See [`docs/performance/FORM_P1L_BASELINE.md`](../../docs/performance/FORM_P1L_BASELINE.md) for full benchmark methodology and runner environment details.
 
@@ -650,7 +677,7 @@ See [`docs/performance/FORM_P1L_BASELINE.md`](../../docs/performance/FORM_P1L_BA
 ## 20. Stability & Migration Policy
 
 - **Current Level:** `preview` (under [`docs/governance/API_STABILITY.md`](../../docs/governance/API_STABILITY.md)).
-- **Pre-1.0 Compatibility:** As a Preview Candidate, APIs are usable and documented but subject to refinement before 1.0. Any breaking changes will include explicit migration notes in changesets and release documentation.
+- **Pre-1.0 Compatibility:** As Preview, APIs are usable and documented but subject to refinement before 1.0. Any breaking changes will include explicit migration notes in changesets and release documentation. Phase 2 completion is not a Stable promotion and not a public npm release.
 - **Zero Silent Removals:** Deprecated APIs will provide replacement guidance before scheduled retirement.
 
 ---

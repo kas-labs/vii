@@ -10,6 +10,7 @@ Before every non-trivial task, read:
 - the latest entry in `DUTY_WATCH.md`
 - `CONTRIBUTING.md`
 - `docs/strategy/PRODUCT_BOUNDARIES.md`
+- `docs/architecture/DOMAIN_DRIVEN_ARCHITECTURE.md`
 - `docs/governance/CODE_QUALITY_STANDARDS.md`
 - `docs/governance/FEATURE_ACCEPTANCE_GATE.md`
 - `docs/governance/RFC_PROCESS.md`
@@ -59,6 +60,7 @@ architecture, RFC/ADR, security, privacy, approval, branch, validation, or publi
 - Keep canonical runtime behavior framework-agnostic and platform-neutral where practical.
 - Keep React, Angular, build-tool, devtools, transport, filesystem, network, and provider-specific details at explicit edges.
 - Preserve dependency direction toward stable core contracts. Core packages must not import framework adapters or higher-level product surfaces.
+- Use the pragmatic DDD guidance in `docs/architecture/DOMAIN_DRIVEN_ARCHITECTURE.md`: keep a shared ubiquitous language, explicit bounded-context ownership, and inward dependency direction, but do not add tactical DDD patterns without a concrete invariant or boundary that needs them.
 - Keep side effects behind narrow typed boundaries. Prefer deterministic, observable behavior and explicit lifecycle/disposal.
 - Do not add hidden network calls, telemetry, automatic dependency installation, publishing, releases, or irreversible automation without an explicit approved decision.
 - Public API, package-boundary, compatibility, privacy, security, and migration changes follow the RFC/ADR rules in `docs/governance/`.

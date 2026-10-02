@@ -21,6 +21,7 @@ This directory is the primary map for Vii product, architecture, security, gover
 15. [Schema Architecture](architecture/SCHEMA_ARCHITECTURE.md)
 16. [Rendering Strategy](architecture/RENDERING_STRATEGY.md)
 17. [Vanilla JavaScript and TypeScript Consumer Compatibility](architecture/VANILLA_CONSUMER_COMPATIBILITY.md)
+18. [Domain-Driven Architecture Guidance](architecture/DOMAIN_DRIVEN_ARCHITECTURE.md)
 
 ## Current implementation focus
 
@@ -72,6 +73,7 @@ Developers and agents should read these guides together with the architecture do
 - `architecture/SYSTEM_OVERVIEW.md`
 - `architecture/ARCHITECTURE_MAP.md`
 - `architecture/CORE_PRINCIPLES.md`
+- `architecture/DOMAIN_DRIVEN_ARCHITECTURE.md`, pragmatic DDD and Clean Architecture guidance for ubiquitous language, bounded contexts, dependency direction, and conditional tactical patterns.
 - `architecture/VANILLA_CONSUMER_COMPATIBILITY.md`, canonical meaning of Vanilla and first-class JavaScript/TypeScript consumer policy for framework-neutral packages.
 - `architecture/PACKAGE_MODEL.md`
 - `architecture/RUNTIME_COMPATIBILITY.md`

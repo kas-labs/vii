@@ -119,11 +119,11 @@ Vii Schema may move to Planned only after a real consumer need, an integration-v
 
 See `docs/architecture/SCHEMA_ARCHITECTURE.md` and `docs/quality/SCHEMA_BENCHMARK_PLAN.md`.
 
-### Vii Form — Complete (Research Accepted) / Production Phase 1 Active
+### Vii Form — Complete (Research Accepted) / Production Phase 2 Complete (Preview, Unpublished)
 
 Vii Form is the reactive, headless form state and validation engine for the Vii ecosystem, reusing State, Scope, diagnostics, and framework adapters.
 
-Research track F0–F10 is complete and accepted via PR #166. Production Form Phase 1 is active (P1a architecture and P1b package skeleton complete; Slice P1c Field Core next).
+Research track F0–F10 is complete and accepted via PR #166. Production Form Phase 1 (P1a–P1m) and Phase 2 (P2a–P2h) product development are complete. Preview readiness is confirmed. The package remains Preview, private, and unpublished. Publication remains a separate explicit maintainer gate. No P2i. Phase 3 Form work is not started.
 
 Production Phase 1 scope:
 

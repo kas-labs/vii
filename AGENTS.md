@@ -11,6 +11,7 @@ Before every non-trivial task, read:
 - `CONTRIBUTING.md`
 - `docs/strategy/PRODUCT_BOUNDARIES.md`
 - `docs/architecture/DOMAIN_DRIVEN_ARCHITECTURE.md`
+- `docs/governance/ARCHITECTURE_PREFLIGHT.md`
 - `docs/governance/CODE_QUALITY_STANDARDS.md`
 - `docs/governance/FEATURE_ACCEPTANCE_GATE.md`
 - `docs/governance/RFC_PROCESS.md`
@@ -26,6 +27,14 @@ Before implementation or proposing the next work item, apply the canonical triag
 blast radius, ambiguity, risk, verification burden, unknowns, harness, model role, delegation,
 grilling gate, context plan, approval gate, budget, and stop condition explicit. Triage is a routing
 and transparency gate; it does not grant mutation, publication, credential, or delegation authority.
+
+## Architecture preflight
+
+Before designing, implementing, refactoring, or materially editing any non-trivial feature, package, adapter, runtime primitive, application surface, CLI behavior, or public API, follow `docs/governance/ARCHITECTURE_PREFLIGHT.md`.
+
+The agent must identify the owning bounded context or capability, read the relevant canonical architecture and governance sources, recover the established ubiquitous language and naming, verify dependency direction, classify public API and compatibility impact, consider security/trust and lifecycle boundaries, apply code-size limits, and define required verification before implementation begins.
+
+Print or record the required `Architecture Preflight` before implementation. Do not invent architecture, terminology, layers, abstractions, naming conventions, package boundaries, or tactical DDD patterns when repository authority already defines them. If a material architecture decision is missing, contradictory, or unresolved, stop and use the repository RFC/ADR/discovery process rather than guessing.
 
 ## Task routing and design interrogation
 

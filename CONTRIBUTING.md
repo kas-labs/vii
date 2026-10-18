@@ -73,6 +73,8 @@ For relevant runtime changes, explicitly review allocation/disposal, subscriptio
 
 For non-trivial changes, first inspect repository truth, record a proportionate System Design with relevant Mermaid diagrams, DDD ownership, contracts, failure/lifecycle paths and a verification matrix. Obtain explicit design approval before production implementation. Existing approved RFC/design coverage can be linked instead of duplicated. See `docs/architecture/SYSTEM_DESIGN_GUIDELINES.md` for exceptions and review rules.
 
+New designs keep editable diagram sources in `docs/designs/<task-slug>/`. Excalidraw (`.excalidraw`) and draw.io (`.drawio`) require matching SVG previews; Mermaid (`.md` or `.mmd`) needs no SVG export. Use only the formats relevant to the problem. Review source/preview consistency, DDD ownership, contracts, dependencies and explicit owner approval before implementation.
+
 ## Delivery workflow
 
 1. Create a focused branch using `<type>/<short-kebab-description>`.

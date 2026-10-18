@@ -1,10 +1,10 @@
 # Vii Form Production Architecture & Package Contract
 
-> **Status:** Phase 1 Production Architecture Implemented / Preview Candidate
+> **Status:** Phase 1 production architecture implemented. Phase 2 product development complete. Preview readiness confirmed. Package remains Preview, private, and unpublished.
 > **Package Target:** `@vii-labs/form` (`packages/form/`)
-> **Phase 2 Strategy:** [FORM_PHASE2_ARCHITECTURE.md](./FORM_PHASE2_ARCHITECTURE.md)
+> **Phase 2 Strategy:** [FORM_PHASE2_ARCHITECTURE.md](./FORM_PHASE2_ARCHITECTURE.md) (P2a–P2h complete)
 > **Prerequisites:** `@vii-labs/core` (Stable Reactive Primitives), Form Research F0–F10 Acceptance (PR #166, SHA `b908a52c`)
-> **Maturity Level:** Preview Candidate (under `docs/governance/API_STABILITY.md`)
+> **Maturity Level:** Preview (under `docs/governance/API_STABILITY.md`). Not Stable. Not published.
 > **Governing Strategy:** Small-Core Headless Reactive Engine with Clean Framework Projections
 
 ---
@@ -18,7 +18,7 @@ Provide application developers across Vanilla DOM, React, Angular, Vue, and futu
 
 ### Performance & Quality Charter
 - **Evidence-Backed Baseline:** F10 research demonstrated sub-microsecond leaf mutations under isolated microbenchmarks. Production Phase 1 is designed to preserve competitive fine-grained reactivity without hardcoding latency promises into the public API contract.
-- **Production Gate:** Exact performance baselines, memory retention budgets, and bundle limits will be measured and enforced during slice P1l on production artifacts.
+- **Production Gate:** Exact performance baselines, memory retention budgets, and bundle limits were measured and enforced during slice P1l on production artifacts. Phase 2 preserves those HARD budgets unless an explicit rebaseline is approved.
 
 ---
 
@@ -512,7 +512,7 @@ Vii Form enforces complete rejection ownership to prevent Node/browser unhandled
 3. **Framework Adapter Suites:** React, Vanilla, Angular, and Vue compliance suites (`packages/form/test/adapters/`).
 4. **Historical Regression Suite:** Ported F1–F10 regression fixtures (`packages/form/test/regressions/`).
 5. **Security & Privacy Suite:** Prototype pollution, XSS sinks, cyclic snapshot, and diagnostics sentinel privacy tests (`packages/form/test/security/`).
-6. **Real Browser Smoke Suite:** Playwright tests in headless Chromium (`packages/form/test/browser/`).
+6. **Real Browser Smoke Suite:** Playwright tests against Playwright-managed Chromium, Firefox, and WebKit (`packages/form/test/browser/`). The current acceptance inventory is identical on all three engines (46 tests each, 138 total).
 7. **Clean Consumer Fixtures:** Packed `.tgz` artifact verification in clean temporary consumer projects.
 
 ---

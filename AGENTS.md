@@ -32,6 +32,8 @@ and transparency gate; it does not grant mutation, publication, credential, or d
 
 Before any non-trivial implementation, document a proportionate design with diagrams, contracts, DDD boundaries, risks and verification evidence; obtain explicit architecture approval and link it in the implementation task. Follow `docs/architecture/SYSTEM_DESIGN_GUIDELINES.md`. Existing accepted RFCs/designs may satisfy this gate when they cover the exact scope. Small non-architectural edits use the lightweight exception. Never infer approval from a task prompt alone.
 
+Agents MUST store editable diagrams in `docs/designs/<task-slug>/`, include synchronized SVG previews for `.excalidraw` and `.drawio`, and link diagram sources and architecture approval in implementation PRs. Mermaid `.md`/`.mmd` is equally supported; choose tools by need, not by quota. Check diagram/DDD/dependency consistency at review. Do not implement until the owner approves the design.
+
 ## Task routing and design interrogation
 
 Before implementation, classify every non-trivial request. If the route is not obvious, use the

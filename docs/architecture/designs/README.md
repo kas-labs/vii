@@ -1,6 +1,6 @@
 # Vii design records
 
-Store a design in `<topic>/DESIGN.md` for each non-trivial feature or architecture change. Use the canonical [System Design First policy](../SYSTEM_DESIGN_GUIDELINES.md) and existing RFC/ADR governance. An accepted RFC or architecture document may serve as the design record if it contains equivalent evidence; link it rather than duplicating it.
+For new work, store editable diagrams and the design record under `docs/designs/<task-slug>/`. This directory remains an index for existing architecture design records; do not duplicate legacy decisions. Use the canonical [System Design First policy](../SYSTEM_DESIGN_GUIDELINES.md) and existing RFC/ADR governance. An accepted RFC or architecture document may serve as the design record if it contains equivalent evidence; link it rather than duplicating it.
 
 A design record starts as **proposed**. No implementation starts until its scope has explicit approval. Keep diagrams and approval evidence current when scope changes.
 
@@ -26,4 +26,4 @@ Approval evidence: pending
 ## Decision and approval record
 ```
 
-Mermaid diagrams are preferred for reviewable diffs. Label proposed and implemented elements explicitly.
+Use Excalidraw, draw.io and/or Mermaid as appropriate. Commit native editable files and SVG previews for Excalidraw/draw.io. See the canonical policy for storage and review requirements. Label proposed and implemented elements explicitly.

@@ -12,7 +12,7 @@ Read `AGENTS.md`, `PROJECT_STATE.md`, the latest `DUTY_WATCH.md` entry, relevant
 
 ## 2. Create a design artifact
 
-For a non-trivial change, create `docs/architecture/designs/<topic>/DESIGN.md` (or link an existing accepted RFC/architecture document with equivalent coverage). Include:
+For a non-trivial change, create `docs/designs/<task-slug>/DESIGN.md` (or link an existing accepted RFC/architecture document with equivalent coverage). Include:
 
 1. Status (proposed / approved / superseded), owner, date, relevant issue and RFC/ADR links.
 2. Problem, use cases, functional and non-functional requirements, scope and non-goals.
@@ -26,6 +26,36 @@ For a non-trivial change, create `docs/architecture/designs/<topic>/DESIGN.md` (
 10. Open questions, risks, rollback, implementation slices and explicit approval record.
 
 Prefer Mermaid in Markdown for diffable diagrams; `.mmd` files may be used for large diagrams. Diagrams must name the contracts across boundaries, not just boxes. Do not assume a package is a bounded context. Keep the design proportional to the blast radius; a short diagram and design note can suffice for a focused change.
+
+## Diagram tooling and canonical storage
+
+For each new or materially changed design, keep the **editable source** in `docs/designs/<task-slug>/`, with a linked `DESIGN.md` or accepted RFC/ADR. The existing `docs/architecture/designs/` directory remains an index and home for legacy records; do not duplicate or relocate accepted historical designs solely for this policy. New diagrams live in `docs/designs/` even when the main design decision is recorded elsewhere.
+
+Choose one or combine several formats based on the design question. **All three are not required**:
+
+| Format | Use for | Committed files |
+| --- | --- | --- |
+| Excalidraw | architecture sketches, wireframes, collaborative visual exploration | `*.excalidraw` editable JSON **and** matching `*.svg` preview |
+| diagrams.net / draw.io | detailed component, integration, network and deployment views | `*.drawio` editable XML **and** matching `*.svg` preview |
+| Mermaid | sequence, flowchart, state, data-flow and text-reviewable architecture diagrams | `*.mmd` or fenced `mermaid` in `*.md`; SVG optional |
+
+Use matching basenames, for example `components.drawio` and `components.svg`. Exports must accurately reflect the editable source. Keep SVGs reviewable and self-contained; avoid embedded scripts, external network resources, secrets or personal data. SVG is a preview, **not** the editable source. Reviewers must be able to open and modify the native file without a proprietary export step. Do not commit binary-only diagrams in place of source files.
+
+A recommended structure:
+
+```text
+docs/designs/<task-slug>/
+  DESIGN.md
+  architecture.excalidraw
+  architecture.svg
+  deployment.drawio
+  deployment.svg
+  sequence.mmd
+```
+
+Only include files relevant to the task. `DESIGN.md` links each diagram and records purpose, source-of-truth status, existing versus proposed components, affected DDD bounded contexts, contracts and approval evidence. A design that uses only Mermaid may contain just `DESIGN.md` with fenced diagrams. When design lives in an accepted RFC/ADR, use `docs/designs/<task-slug>/README.md` as a lightweight pointer to the decision and diagram sources rather than copying the decision text.
+
+During architecture review, inspect both native sources and rendered previews, verify that labels, arrows, dependency direction, DDD ownership, security boundaries, error paths and deployment assumptions match repository reality. Check source/preview synchronization. If a diagram changes materially after approval, request renewed approval before implementation.
 
 ## 3. Review and approval gate
 

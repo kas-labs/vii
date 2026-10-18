@@ -11,6 +11,7 @@ Before every non-trivial task, read:
 - `CONTRIBUTING.md`
 - `docs/strategy/PRODUCT_BOUNDARIES.md`
 - `docs/architecture/DOMAIN_DRIVEN_ARCHITECTURE.md`
+- `docs/architecture/SYSTEM_DESIGN_GUIDELINES.md`
 - `docs/governance/CODE_QUALITY_STANDARDS.md`
 - `docs/governance/FEATURE_ACCEPTANCE_GATE.md`
 - `docs/governance/RFC_PROCESS.md`
@@ -26,6 +27,10 @@ Before implementation or proposing the next work item, apply the canonical triag
 blast radius, ambiguity, risk, verification burden, unknowns, harness, model role, delegation,
 grilling gate, context plan, approval gate, budget, and stop condition explicit. Triage is a routing
 and transparency gate; it does not grant mutation, publication, credential, or delegation authority.
+
+## System Design First gate
+
+Before any non-trivial implementation, document a proportionate design with diagrams, contracts, DDD boundaries, risks and verification evidence; obtain explicit architecture approval and link it in the implementation task. Follow `docs/architecture/SYSTEM_DESIGN_GUIDELINES.md`. Existing accepted RFCs/designs may satisfy this gate when they cover the exact scope. Small non-architectural edits use the lightweight exception. Never infer approval from a task prompt alone.
 
 ## Task routing and design interrogation
 

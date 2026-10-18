@@ -14,6 +14,7 @@ Read:
 - `docs/strategy/PRODUCT_BOUNDARIES.md`
 - `docs/governance/CODE_QUALITY_STANDARDS.md`
 - `docs/governance/RFC_PROCESS.md`
+- `docs/architecture/SYSTEM_DESIGN_GUIDELINES.md`
 - `docs/governance/API_STABILITY.md`
 - `docs/quality/TEST_STRATEGY.md`
 
@@ -67,6 +68,10 @@ Default guardrails for hand-written production code:
 - use SOLID, Clean Architecture, DRY, KISS, YAGNI, and composition to reduce coupling, not to create unused layers or abstractions.
 
 For relevant runtime changes, explicitly review allocation/disposal, subscriptions, retained references, batching, deterministic ordering, SSR safety, tree-shaking, bundle impact, package artifacts, and diagnostics overhead.
+
+## Architecture-first delivery
+
+For non-trivial changes, first inspect repository truth, record a proportionate System Design with relevant Mermaid diagrams, DDD ownership, contracts, failure/lifecycle paths and a verification matrix. Obtain explicit design approval before production implementation. Existing approved RFC/design coverage can be linked instead of duplicated. See `docs/architecture/SYSTEM_DESIGN_GUIDELINES.md` for exceptions and review rules.
 
 ## Delivery workflow
 

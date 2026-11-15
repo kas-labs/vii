@@ -37,6 +37,47 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-09-22 13:57 UTC | Form P2h: Phase 2 Graduation Review
+
+Status: completed
+Branch: `feat/form-p2h-phase2-graduation`
+PR: https://github.com/kas-labs/vii/pull/202 (Draft, unmerged)
+
+### Scope
+
+- Official Vii Form Phase 2 slice P2h only: final API review, documentation sync, and performance audit. Graduation / audit. No new features. No P2i. No Phase 3. No publication.
+
+### Changes
+
+- Documentation/governance only plus README example coverage. Zero production source delta. Zero `api-surface.json` semantic delta. Zero `performance-budgets.json` delta. Version remains `0.1.0-experimental.1`. `"private": true`. `vii.stability: "preview"`. Changeset unconsumed.
+- Public API counts (from `packages/form/api-surface.json`): root 7 runtime / 50 types; React 7 / 12; Vanilla 4 / 9; Angular 8 / 9; Vue 9 / 13; totals 35 runtime exports / 93 public types. All entrypoints `preview`.
+- Reconciled: `docs/architecture/FORM_PHASE2_ARCHITECTURE.md` (P2a–P2h complete, graduation criteria vs accepted P2f Signal Forms deferral, open questions deferred beyond Phase 2), `docs/release/FORM_RELEASE_GATE.md` (historical P1m 18/74 and 31/31 Chromium labeled historical; current Stage A2 uses 35/93 and 46×3 engines), `packages/form/README.md`, `docs/architecture/FORM_ARCHITECTURE.md`, `docs/roadmap/FORM_RESEARCH.md`, `ROADMAP.md`, `PROJECT_STATE.md`.
+- `packages/form/test/unit/readme-examples.test.ts`: exercises documented `register` / `unregister` example.
+
+### Validation
+
+- Baseline: `origin/main` `c7079cc88ff2e8b0ac4cfa5a7657236f248025d0` (`test(form): expand cross-browser matrix (P2g) (#201)`).
+- `pnpm format:check`: Passed (pre-doc-edit).
+- `pnpm lint`: Passed.
+- `pnpm typecheck`: Passed.
+- `pnpm test`: Passed (510 Form unit tests).
+- `pnpm validate`: Passed (includes pack:check / 8 packed consumers + Angular 17 no-`@angular/forms`).
+- `pnpm test:browser`: Passed 138/138. Chromium 46/46, Firefox 46/46, WebKit 46/46. Axe 0 WCAG violations on all three engines (`vanilla-a11y.spec.ts` and focus-orchestration a11y audit).
+- `pnpm --filter @vii-labs/form run performance`: Passed 41/41 HARD. Budgets unchanged. createFieldOnly 15,997 / 4,589 / 4,113 B. Root 54,065 / 12,464 / 10,822 B. React 6,285 / 1,503 / 1,355 B. Vanilla 10,918 / 3,567 / 3,182 B. Angular 6,625 / 1,975 / 1,779 B. Vue 7,462 / 1,863 / 1,577 B. Local tarball before README sync 98,039 B; exact-head CI tarball 98,664 B compressed. Memory: retained subscriptions 0, scopes 0, timers 0, stale commits 0, unhandled rejections 0.
+- Packed consumers 8/8: Root/Core-only, Vanilla, React 18.3.1, React 19.2.8, Angular 17.3.12, Angular 22.1.4, Vue 3.3.13, Vue 3.5.41. Angular 17 signal-only / no-`@angular/forms` passed.
+- Exact-head CI on `e3a18634022549f16ad093669496fccb2a8fa330`: Governance PASS, Dependency Review PASS, CodeQL PASS, Validate PASS (5m9s). Validate children: Install Playwright browsers PASS; Validate repository PASS; Run Form browser tests PASS (`Running 138 tests using 1 worker`; Chromium 46, Firefox 46, WebKit 46; `138 passed (1.8m)`; Axe 0 violations on all three engines); Run Form performance and size gate PASS (41/41 HARD, tarball 98,664 B).
+
+### Architecture / compatibility
+
+- Root remains DOM-free / framework-neutral / headless. Dependency direction unchanged: adapters → public Form API → internal Form modules → `@vii-labs/core`. No Core modification. No public API add/remove/rename.
+- P2b–P2g contracts reconfirmed (register/unregister, explicit deps, adapter-owned focus, React/Vue idiomatic APIs, Angular directive/CVA/DI with Signal Forms deferred, three-engine browser matrix).
+- Graduation conclusion: Phase 2 product development complete. Preview readiness confirmed. Package remains preview/private/unpublished. Publication not performed.
+
+### Remaining / recovery
+
+- Independent review. PR https://github.com/kas-labs/vii/pull/202 remains Draft and unmerged. Do not merge. Exact-head CI on `e3a1863` is green. No P2i. No publication.
+
+
 ## 2026-09-18 23:28 UTC | Form P2g: exact-head CI proof
 
 Status: completed

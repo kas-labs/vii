@@ -1,7 +1,7 @@
 # Vii Form Research Roadmap
 
 > **Status**: Research Concluded & Accepted (F0-F10 Completed via PR #166)
-> **Current Phase**: Production Form Phase 1 (P1b Completed, P1c Next)
+> **Current Phase**: Production Form Phase 2 complete (P2h). Preview readiness confirmed. Package remains private and unpublished.
 > **Governing Strategy**: Evidence-driven Build-vs-Buy (Option A: Graduate to Build)
 > **Prerequisites**: Phase 1 (Core State), Phase 2 (Adapters/CLI), Scope/Lifecycle Foundations, Schema Research (`Wrap + Reduce`)
 
@@ -92,7 +92,7 @@ Vii Form is a research track investigating whether a small, typed, framework-agn
 | **F7** | **Framework Adapter Compliance (Vanilla, React, Angular, Vue)** | Prototype thin adapters for Vanilla DOM, React (`useForm` / `useField` / `useFieldArray`), Angular (`createAngularForm` / `createAngularField`), and Vue (`createVueForm` / `createVueField`). Verify zero whole-form rerenders, exact cross-framework semantic equivalence, and framework-native ergonomics. *(Completed Prototype in `research/form/adapters/`)* |
 | **F8** | **Accessibility + Security + Privacy Hardening** | Prototype accessible HTML helpers (`aria-invalid`, `aria-describedby`, error focus identification at adapter edge), prototype-pollution defense in field paths, empirical depth/width bounds, and value-free diagnostics redaction. *(Completed Prototype in `research/form/`)* |
 | **F9** | **Runtime / Memory / TypeScript / Bundle Evidence** | Measure bundle footprint (minified, gzip, brotli), field update latency, memory retention across 100/500 cycles (zero retained resources; empirical heap budget), and TypeScript compilation wall time. *(Completed Prototype & Evidence in `research/form/F9_EVIDENCE.md`)* |
-| **F10** | **Real Consumer Validation + Build-vs-Buy Graduation Gate** | Validate Form prototype on expanded multi-step Vanilla onboarding fixture and React task board. Execute formal Build-vs-Buy comparative benchmarks against TanStack Form, React Hook Form, and Angular Signal Forms. Render graduation decision. *(Not Started)* |
+| **F10** | **Real Consumer Validation + Build-vs-Buy Graduation Gate** | Validate Form prototype on expanded multi-step Vanilla onboarding fixture and React task board. Execute formal Build-vs-Buy comparative benchmarks against TanStack Form, React Hook Form, and Angular Signal Forms. Render graduation decision. *(Completed via PR #166; see `research/form/F10_CONSUMER_VALIDATION.md`)* |
 
 ---
 

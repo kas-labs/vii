@@ -102,12 +102,18 @@ An inspection of `packages/form/src/`, `packages/core/src/diagnostics.ts`, and `
 
 ### 3.2 Documented / Partially Wired Capabilities (Implementation Gaps)
 
-1. **Diagnostics Producer Contract Mismatch (`packages/form/src/submission/state-machine.ts` vs `packages/core/src/diagnostics.ts`):**
+1. **Diagnostics Producer Contract Mismatch & Incomplete Lifecycle Coverage (`packages/form/src/submission/state-machine.ts` vs `packages/core/src/diagnostics.ts`):**
    - `CreateFormOptions` accepts `diagnostics?: Diagnostics`.
    - However, `@vii-labs/core`'s public `Diagnostics` interface only exposes `mode`, `droppedEvents`, `run()`, `recordSecurity()`, `getEvents()`, `exportTrace()`, `clear()`. It does **not** expose `record(type, payload, causeId?)` (which lives on internal `DiagnosticsRuntime`).
-   - `SubmissionCoordinator` works around this via a private runtime duck-type check (`"record" in diag && typeof diag.record === "function"`) to emit only two events: `form.submission.started` and `form.submission.cancelled`.
-   - `DiagnosticEvent.package` in Core is hardcoded to `"@vii-labs/core"`, so Form events emitted through `diag.record()` are misattributed to `@vii-labs/core`.
-   - There are **no** events for `form.submission.succeeded`, `form.submission.failed`, `form.validation.*`, `form.tree.*` (`register`/`unregister`/`reinitialize`), or `form.field.*`, and no `causeId` linking.
+   - **Existing emissions (submission-only, via private duck-typing):** `SubmissionCoordinator` works around the missing public contract via a runtime duck-type check (`"record" in diag && typeof diag.record === "function"`) to emit six `form.submission.*` events:
+     - `form.submission.started` (`{ revision }`)
+     - `form.submission.validation_blocked` (`{ issueCount }`)
+     - `form.submission.submitting` (`{ revision }`)
+     - `form.submission.succeeded` (`{ revision }`)
+     - `form.submission.failed` (`{ reason }` on thrown validation/snapshot/action errors, or `{ reason: "server_validation", issueCount }` on `!parsedResult.ok`)
+     - `form.submission.cancelled` (`{ revision }` on `cancelSubmit()`, post-validation tree/revision abort, or `isAbortCancellation()`)
+   - **Missing public producer contract & attribution:** `DiagnosticEvent.package` in Core (`packages/core/src/diagnostics.ts:227`) is hardcoded to `"@vii-labs/core"`, so all Form events emitted through `diag.record()` are misattributed to `@vii-labs/core` rather than `@vii-labs/form`.
+   - **Missing lifecycle coverage:** Outside `SubmissionCoordinator`, there are **no** events for `form.tree.*` (`register`, `unregister`, `reinitialize`, `reset`, `dispose`), `form.validation.*` (standalone `validate()`, cross-field topological waves, async cancellation), or `form.array.*` mutations, and no `causeId` causal linking. Even within `SubmissionCoordinator`, `duplicatePolicy: "drop"` and mid-action superseded/disposed cancellation returns do not emit an event.
 2. **`aria-errormessage` Coordination:** Listed as a Phase 2 `MAY` candidate in `FORM_PHASE2_ARCHITECTURE.md` §12; not implemented (Vanilla uses `aria-invalid` + `aria-describedby`).
 
 ### 3.3 Formally Deferred Decisions (From Phase 1 & Phase 2)
@@ -121,7 +127,7 @@ An inspection of `packages/form/src/`, `packages/core/src/diagnostics.ts`, and `
 
 ### 3.4 Actual Consumer & Ecosystem Gaps
 
-1. **Observability & Devtools Readiness (High Evidence):** Vii Roadmap Phase 3 is *Devtools and explainability foundation* (`vii.trace`, `inspectTrace()`, causal explanations). Form currently cannot participate cleanly in `vii.trace` without duck-typing Core internals, and only traces 2 of its lifecycle transitions.
+1. **Observability & Devtools Readiness (High Evidence):** Vii Roadmap Phase 3 is *Devtools and explainability foundation* (`vii.trace`, `inspectTrace()`, causal explanations). Form currently relies on duck-typing Core's internal `DiagnosticsRuntime.record()`, misattributes `form.submission.*` events to `"@vii-labs/core"`, and lacks `form.tree.*`, `form.validation.*`, and `form.array.*` lifecycle coverage.
 2. **React 19 Server/Form Actions Interop (Moderate Evidence):** React 19 (`19.2.8` is already in `devDependencies` and tested in the packed consumer matrix) makes `<form action={...}>` and `useActionState` standard for progressive enhancement and Next.js Server Actions. Currently, React consumers must bypass native `action` or manually wire `onSubmit`.
 3. **Angular 22+ Signal Forms Coexistence (Moderate Evidence):** Angular 22.1.4 is already in `devDependencies` and the packed consumer matrix. As Angular teams adopt Signal Forms (`@angular/forms/signals` in v21/v22+), they need clarity or a non-breaking bridge to Vii Form without breaking Angular 17.3.12–20 consumers.
 4. **RSC `"use client"` Packaging Marker (Low-Effort Hygiene):** Noted in `FORM_PHASE2_ARCHITECTURE.md` G24 / ADR P2-4 (`"use client"` at React adapter boundary) — currently absent from `packages/form/src/adapters/react/index.ts`.
@@ -141,8 +147,8 @@ An inspection of `packages/form/src/`, `packages/core/src/diagnostics.ts`, and `
 
 | ID | Candidate | Priority | Architectural Impact | Decision |
 | :--- | :--- | :--- | :--- | :--- |
-| **C1** | Form Diagnostics & Vii Devtools Integration | **P0 (High)** | Moderate (Core public producer contract + Form Core emission; value-free) | **ACCEPT** |
-| **C2** | React 19 Form Actions (`<form action>` / `useActionState` bridge) | **P1 (Medium)** | Low (isolated to `@vii-labs/form/react`; zero Core impact) | **ACCEPT** |
+| **C1** | Form Diagnostics & Vii Devtools Integration | **P0 (High)** | Moderate (Core RFC/ADR for restricted producer channel + Form Core emission; value-free) | **ACCEPT** (requires Core RFC/ADR alignment before P3b) |
+| **C2** | React 19 Form Actions (`<form action>` / `useActionState` bridge) | **P1 (Medium)** | Low (isolated to `@vii-labs/form/react`; zero Core impact) | **ACCEPT (Provisional)** (pending React 18/19 compatibility review) |
 | **C3** | Angular Signal Forms Interoperability (preserving Angular 17) | **P2 (Low/Medium)** | High build/peer risk if in `./angular`; needs separate subpath or v22+ peer | **DEFER** (Re-evaluate as optional `./angular/signal-forms` only after consumer demand) |
 | **C4** | Consumer-Driven Validation & Ergonomics (`visited`, per-rule triggers, codecs) | **P2 (Low)** | Moderate Core surface expansion; risks bundle budget | **DEFER** (Wait for external alpha consumer friction) |
 | **C5** | Framework Interop & Lifecycle Hygiene (RSC `"use client"`, `aria-errormessage`, `select[multiple]`) | **P1 (Medium)** | Minimal (`"use client"` in `/react`); `select[multiple]` stays rejected | **PARTIAL ACCEPT** (`"use client"` Accept; `aria-errormessage` & `select[multiple]` Defer/Reject) |
@@ -150,23 +156,25 @@ An inspection of `packages/form/src/`, `packages/core/src/diagnostics.ts`, and `
 
 ### Detailed Candidate Analysis
 
-#### C1: Form Diagnostics & Integration with Vii Devtools — **ACCEPT (Priority: P0)**
-- **Benefits:** Eliminates the fragile `"record" in diag` duck-typing in `packages/form/src/submission/state-machine.ts`; aligns Form with Vii Roadmap Phase 3 (Devtools & explainability, `vii.trace` `0.1`, `inspectTrace()`); provides causal visibility into validation waves, cross-field dependencies, array mutations, and Model A submissions without logging values.
-- **Risks:** Adding a public producer API to `@vii-labs/core` (`Diagnostics.record` or `createDiagnosticsChannel(diagnostics, packageName)`) touches `@vii-labs/core` (which had zero modifications in Form Phase 1–2) and must preserve Core's `off` mode zero-overhead budget ($\le 20\%$) and `production-safe` redaction.
-- **Architectural Impact:** Introduces a narrow, typed `DiagnosticsChannel` (or `record` port) on `@vii-labs/core` so external Vii packages (`@vii-labs/form`, future `@vii-labs/query`) emit `DiagnosticEvent`s with their own `package` identifier (`"@vii-labs/form"`) and `causeId`. Form Core emits structured `form.*` events only when `diagnostics` is provided and `mode !== "off"`.
+#### C1: Form Diagnostics & Integration with Vii Devtools — **ACCEPT (Priority: P0, requires Core RFC/ADR)**
+- **Benefits:** Eliminates the fragile `"record" in diag` duck-typing in `packages/form/src/submission/state-machine.ts`; fixes `package` attribution (`"@vii-labs/form"` instead of `"@vii-labs/core"`); aligns Form with Vii Roadmap Phase 3 (`vii.trace` `0.1`, `inspectTrace()`); extends value-free causal visibility to `form.tree.*`, `form.validation.*`, and `form.array.*` lifecycles.
+- **Risks:** Adding a public producer seam to `@vii-labs/core` touches Core (which had zero modifications in Form Phase 1–2) and, if exposed as an unrestricted emitter, could let arbitrary callers spoof Core/security event types or leak sensitive payloads. Must preserve Core's `off` mode zero-overhead budget ($\le 20\%$) and `production-safe` redaction.
+- **Architectural Impact:** Introduces a restricted, namespace- and package-bound `DiagnosticsChannel` (see §5.4) via a Core RFC/ADR so external Vii packages emit `DiagnosticEvent`s with Core-enforced `package` attribution, payload constraints, and `causeId` linking.
 - **Alternatives:**
-  1. *Form-local event emitter:* Rejected — fragments tracing and cannot correlate Form events with Core `Scope`/`State`/`Batch` events in `vii.trace`.
-  2. *Keep duck-typing `DiagnosticsRuntime`:* Rejected — breaks TypeScript encapsulation and misattributes events to `"@vii-labs/core"`.
-- **Recommendation:** **ACCEPT** as the primary Phase 3 Core/Diagnostics slice (requires Core RFC/ADR alignment for the `Diagnostics` producer seam).
+  1. *Unrestricted `diagnostics.record(type, payload)` on public `Diagnostics`:* Rejected — allows arbitrary callers to spoof `"@vii-labs/core"` or `"security.event"`, emit unbounded payloads, or bypass `production-safe` redaction.
+  2. *Domain-specific `recordFormEvent()` on Core (like `recordSecurity`):* Rejected — couples `@vii-labs/core` to Form domain vocabulary, violating Core's Form-ignorant boundary.
+  3. *Form-local event emitter:* Rejected — fragments tracing and cannot correlate Form events with Core `Scope`/`State`/`Batch` events in `vii.trace`.
+  4. *Keep duck-typing `DiagnosticsRuntime`:* Rejected — breaks TypeScript encapsulation and misattributes events to `"@vii-labs/core"`.
+- **Recommendation:** **ACCEPT** as the primary Phase 3 slice, gated on Core RFC/ADR approval for the restricted `DiagnosticsChannel` seam.
 
-#### C2: React 19 Form Actions Integration — **ACCEPT (Priority: P1)**
+#### C2: React 19 Form Actions Integration — **ACCEPT (Provisional, Priority: P1)**
 - **Benefits:** Enables idiomatic React 19 `<form action={...}>` and `useActionState` progressive-enhancement workflows while preserving Vii Form as the canonical client validation/state engine (Model A submission, Raw/Value retention, ServerIssue routing).
-- **Risks:** React 18 compatibility must not break (`@vii-labs/form` supports `react >= 18.0.0`, and React 18 lacks `useActionState` / `<form action={fn}>` transition semantics). Mixing React's `isPending` with Form's `submitting` can create dual sources of truth if not clearly bridged.
-- **Architectural Impact:** Strictly isolated to `@vii-labs/form/react`. Zero Form Core changes. Provides a thin adapter helper (e.g., `createReactFormAction(form, action)` or `useFormAction(form, action)`) that runs client validation/snapshotting and delegates to the user's React Action / `startTransition` without requiring React 19-only runtime imports in the React 18 path (or guarded via optional/feature-detected `useActionState` / form-action handler).
+- **Risks:** React 18 compatibility must not break (`@vii-labs/form` supports `react >= 18.0.0`, and React 18 lacks `useActionState` / `<form action={fn}>` transition semantics). Mixing React's `isPending` with Form's `submitting` or non-JS progressive enhancement expectations can create dual sources of truth or subtle hydration/SSR mismatches if not reviewed.
+- **Architectural Impact:** Strictly isolated to `@vii-labs/form/react`. Zero Form Core changes. Exact hook/component signature remains **unapproved** pending a dedicated React 18/19 compatibility review.
 - **Alternatives:**
   1. *Let consumers manually write `onSubmit` + `startTransition`:* Works today, but causes boilerplate and misses `formAction` / `useFormStatus` integration.
   2. *Replace Model A `SubmissionCoordinator` with React `useActionState`:* Rejected — violates headless Core ownership and breaks Angular/Vue/Vanilla parity.
-- **Recommendation:** **ACCEPT** as a bounded React adapter slice, gated on preserving 100% React 18.3.1 packed-consumer compatibility and bundle budget ($\le 7,000$ B min / $\le 2,000$ B gzip).
+- **Recommendation:** **ACCEPT (Provisional)** as a bounded React adapter slice, gated on a dedicated React 18/19 compatibility review, 100% React 18.3.1 packed-consumer compatibility, and bundle budget ($\le 7,000$ B min / $\le 2,000$ B gzip).
 
 #### C3: Angular Signal Forms Interoperability (Preserving Angular 17) — **DEFER (Priority: P2)**
 - **Benefits:** Would allow Angular 21/22+ apps using `@angular/forms/signals` (`form()`, `Field`, `Schema`) to interoperate with Vii Form's headless tree or Standard Schema / Raw-Value pipeline.
@@ -267,36 +275,46 @@ No framework adapter may import another adapter or Core internals. `@vii-labs/co
 
 ### 5.4 Proposed API & Contract Sketches
 
-#### P3b: Public Diagnostics Producer Seam (`@vii-labs/core` + `@vii-labs/form`)
+#### P3b: Restricted Diagnostics Producer Seam (`@vii-labs/core` + `@vii-labs/form`)
 
-In `@vii-labs/core` (proposed additive interface on `Diagnostics` or factory `createDiagnosticsChannel`):
+Rather than exposing an unrestricted `diagnostics.record(type, payload)` method on `Diagnostics` (which would allow arbitrary callers to spoof `"@vii-labs/core"` or `"security.event"`, emit unbounded payloads, or bypass redaction), `@vii-labs/core` should provide a **namespace- and package-bound channel** (requiring a Core RFC/ADR before P3b implementation):
 
 ```ts
-// @vii-labs/core (Proposed)
-export interface DiagnosticsChannel {
-  emit(type: string, payload: Readonly<Record<string, unknown>>, causeId?: string): void;
+// @vii-labs/core (Proposed — requires Core RFC/ADR)
+export interface DiagnosticsChannelOptions {
+  readonly package: string;      // e.g. "@vii-labs/form" (attributed on DiagnosticEvent.package)
+  readonly namespace: string;    // e.g. "form." (Core rejects/prefixes events outside namespace)
 }
 
-// On Diagnostics interface (or standalone helper):
-export interface Diagnostics {
-  // ...existing members (mode, droppedEvents, run, recordSecurity, getEvents, exportTrace, clear)
-  channel?(packageName: string): DiagnosticsChannel;
+export interface DiagnosticsChannel {
+  readonly isActive: boolean;    // false when mode === "off" (allows callers to skip work)
+  emit(
+    eventName: string,           // combined with namespace, e.g. "submission.started" -> "form.submission.started"
+    payload: Readonly<Record<string, number | boolean | string>>,
+    causeId?: string,
+  ): void;
 }
 ```
 
-In `@vii-labs/form` (internal `FormDiagnosticsEmitter` consuming `diagnostics.channel?.("@vii-labs/form")`):
+**Governance & Contract Rules for `DiagnosticsChannel`:**
+- **Event Schema Ownership:** `@vii-labs/core` owns the `DiagnosticEvent` envelope (`protocolVersion`, `id`, `type`, `timestamp`, `traceId`, `package`, `causeId`, `payload`) and `vii.trace` `0.1` export; `@vii-labs/form` owns the `form.*` event names and payload schemas.
+- **Package Attribution:** `DiagnosticEvent.package` records the channel's declared `package` (`"@vii-labs/form"`), fixing the current misattribution to `"@vii-labs/core"`.
+- **Payload Restrictions & Privacy Guarantees:** Channel payloads are restricted to primitive structural values (`number | boolean | string` with finite string length limits and `Object.freeze`), never nested arbitrary objects, `value`, `rawValue`, `ServerIssue.message`, `ValidationIssue.message`, or user input. Reserved Core/security event namespaces (`state.*`, `computed.*`, `scope.*`, `security.event`) cannot be emitted through an external package channel.
+- **Disabled-Mode Behavior (`mode === "off"`):** `channel.isActive` is `false` and `channel.emit(...)` returns immediately before clock reads, ID allocation, or payload freezing. When `options.diagnostics` is `undefined`, Form incurs zero channel allocation.
+- **Backward Compatibility:** `getEvents()`, `exportTrace()`, `DiagnosticSink`, and `@vii-labs/cli-core`'s `inspectTrace()` remain compatible; `DiagnosticEvent.package` remains a string (`"@vii-labs/core"` for Core events, `"@vii-labs/form"` for Form events).
+- **RFC/ADR Requirement:** Modifying `@vii-labs/core`'s `Diagnostics` surface and `DiagnosticEvent.package` attribution requires an explicit Core RFC/ADR per `CONTRIBUTING.md`.
 
-- **Value-Free Event Taxonomy (`form.*`):**
-  - `form.tree.registered` / `form.tree.unregistered` (`{ nodeKind, keyCount }`)
-  - `form.tree.reinitialized` (`{ fieldCount }`)
-  - `form.validation.started` / `form.validation.completed` / `form.validation.cancelled` (`{ trigger, revision, issueCount, durationMs }`)
-  - `form.submission.started` / `form.submission.succeeded` / `form.submission.failed` / `form.submission.cancelled` (`{ revision, serverIssueCount? }`)
-- **Privacy Invariant:** Field values, `rawValue`s, `ServerIssue.message`, and `ValidationIssue.message` are **never** included in diagnostic payloads. In `production-safe` mode, structural counts and revisions remain available while optional user identifiers are omitted per `DIAGNOSTICS_PROTOCOL.md`.
+In `@vii-labs/form`, an internal `FormDiagnosticsEmitter` consumes the channel to preserve existing `form.submission.*` events and close missing lifecycle coverage:
+- **Existing `form.submission.*` events (migrated off duck-typing):** `started`, `validation_blocked`, `submitting`, `succeeded`, `failed`, `cancelled` (plus covering `drop` and mid-action superseded cancellations).
+- **New lifecycle coverage:** `form.tree.registered`, `form.tree.unregistered`, `form.tree.reinitialized`, `form.tree.reset`, `form.tree.disposed`, `form.validation.started`, `form.validation.completed`, `form.validation.cancelled`, and `form.array.mutated` (`{ operation, count }`).
 
-#### P3c: React 19 Form Actions Bridge (`@vii-labs/form/react`)
+#### P3c: React 19 Form Actions Bridge (`@vii-labs/form/react`) — **Provisional Sketch Only**
+
+> [!NOTE]
+> **Not Approved:** The signature below is an exploratory sketch only. React 19 Form Actions integration is pending a dedicated React 18/19 compatibility review covering `useActionState`, `useFormStatus`, `<form action={...}>` vs `onSubmit` progressive enhancement, SSR/hydration, and dual-pending state (`submitting` vs React transition `isPending`).
 
 ```ts
-// @vii-labs/form/react (Proposed)
+// @vii-labs/form/react (Provisional Sketch — NOT approved)
 export interface UseFormActionOptions<TFields extends FormFieldsRecord, TResult> {
   readonly form: FormInstance<TFields>;
   readonly action: SubmitAction<FormValues<TFields>, TResult>;
@@ -304,44 +322,69 @@ export interface UseFormActionOptions<TFields extends FormFieldsRecord, TResult>
 }
 
 /**
- * Returns a React-compatible form action handler `(formData?: FormData) => Promise<void>`
- * suitable for `<form action={handleAction}>` in React 19 while keeping
- * `@vii-labs/form` Model A SubmissionCoordinator as the single source of truth.
+ * Provisional bridge returning a handler for `<form action={...}>` in React 19
+ * while keeping `@vii-labs/form` Model A SubmissionCoordinator as the single source of truth.
+ * Exact signature and React 18 fallback semantics are subject to the React 18/19 review.
  */
 export function useFormAction<TFields extends FormFieldsRecord, TResult = void>(
   options: UseFormActionOptions<TFields, TResult>,
 ): (formData?: FormData) => Promise<FormSubmitResult<TResult, FieldIssue>>;
 ```
 
-*Note:* By returning a `(formData?: FormData) => Promise<...>` handler that delegates to `form.submit(action, submitOptions)` (and optionally integrates with React 19 transitions), `@vii-labs/form/react` avoids importing React 19-only hooks (`useActionState`) unconditionally, preserving full React 18.3.1 compatibility.
-
-### 5.5 Data Flow & Lifecycle (P3b Diagnostics & P3c React Action)
+### 5.5 Data Flow & Lifecycle (`SubmissionCoordinator` Actual Transitions + Proposed P3b/P3c)
 
 ```mermaid
 sequenceDiagram
   autonumber
   actor User
-  participant ReactForm as React <form action={handleAction}>
-  participant Adapter as useFormAction (@vii-labs/form/react)
-  participant Form as FormInstance / SubmissionCoordinator
-  participant Diag as DiagnosticsChannel (@vii-labs/core)
+  participant ReactForm as React <form action={...}> (Provisional P3c)
+  participant Adapter as React Action Bridge (Provisional P3c)
+  participant Coord as SubmissionCoordinator (@vii-labs/form)
+  participant Diag as DiagnosticsChannel (@vii-labs/core, Proposed P3b)
 
   User->>ReactForm: Submits form
-  ReactForm->>Adapter: Invokes handleAction(formData)
-  Adapter->>Form: form.submit(action, submitOptions)
-  Form->>Diag: emit("form.submission.started", { revision })
-  Form->>Form: validateTree("submit") + deepCloneSnapshot()
-  alt Validation fails
-    Form->>Diag: emit("form.submission.failed", { revision, reason: "validation" })
-    Form-->>Adapter: { status: "failed", issues }
+  ReactForm->>Adapter: Invokes action handler
+  Adapter->>Coord: form.submit(action, submitOptions)
+  Note over Coord: Checks duplicatePolicy ("reject" throws, "drop" returns cancelled, "supersede" aborts active)
+  Coord->>Coord: status = "validating"
+  Coord->>Diag: emit("submission.started", { revision })
+  Coord->>Coord: validateTree("submit")
+
+  alt validateTree throws
+    Coord->>Coord: status = "failed"
+    Coord->>Diag: emit("submission.failed", { reason: err.name })
+    Coord-->>Adapter: re-throws valErr
+  else Tree mutated / revision mismatch / aborted / disposed
+    Coord->>Coord: status = "cancelled"
+    Coord->>Diag: emit("submission.cancelled", { revision })
+    Coord-->>Adapter: { status: "cancelled" }
+  else Validation issues present (invalid)
+    Coord->>Coord: status = "idle"
+    Coord->>Diag: emit("submission.validation_blocked", { issueCount })
+    Coord-->>Adapter: { status: "invalid", issues }
   else Validation passes
-    Form->>Adapter: action(snapshot, { signal })
-    alt Action succeeds
-      Form->>Diag: emit("form.submission.succeeded", { revision })
-      Form-->>Adapter: { status: "succeeded", result }
-    else Cancelled / Aborted
-      Form->>Diag: emit("form.submission.cancelled", { revision })
-      Form-->>Adapter: { status: "cancelled" }
+    Coord->>Coord: deepCloneSnapshot() (throws -> status "failed" + submission.failed + re-throw)
+    Coord->>Coord: status = "submitting"
+    Coord->>Diag: emit("submission.submitting", { revision })
+    Coord->>Adapter: action(outputSnapshot, { signal })
+    alt Superseded / aborted / disposed mid-action
+      Coord-->>Adapter: { status: "cancelled" }
+    else Server issues returned (!parsedResult.ok)
+      Coord->>Coord: routeServerIssuesToTree() + status = "failed"
+      Coord->>Diag: emit("submission.failed", { reason: "server_validation", issueCount })
+      Coord-->>Adapter: { status: "server-invalid", issues }
+    else Action succeeds
+      Coord->>Coord: status = "succeeded"
+      Coord->>Diag: emit("submission.succeeded", { revision })
+      Coord-->>Adapter: { status: "succeeded", result }
+    else Action throws AbortError (isAbortCancellation)
+      Coord->>Coord: status = "cancelled"
+      Coord->>Diag: emit("submission.cancelled", { revision })
+      Coord-->>Adapter: { status: "cancelled" }
+    else Action throws unexpected error
+      Coord->>Coord: status = "failed"
+      Coord->>Diag: emit("submission.failed", { reason: err.name })
+      Coord-->>Adapter: re-throws actionErr
     end
   end
 ```
@@ -376,10 +419,11 @@ sequenceDiagram
 
 | Criterion / Risk | Required Evidence | Target Slice |
 | :--- | :--- | :--- |
+| Core RFC/ADR for restricted `DiagnosticsChannel` | Approved Core RFC/ADR + Core unit tests for namespace, `package` attribution, and `mode === "off"` no-op | P3b |
 | Zero duck-typing of Core `DiagnosticsRuntime` | Static typecheck (`pnpm typecheck`) + removal of `"record" in diag` cast | P3b |
 | Value-free `form.*` trace events & `package: "@vii-labs/form"` | Unit tests in `diagnostics-privacy.test.ts` + `inspectTrace()` integration test | P3b |
-| Zero overhead when diagnostics `off` or omitted | `pnpm --filter @vii-labs/form run performance` (41/41 HARD gates) | P3b, P3c |
-| React 19 `<form action>` + React 18 compatibility | Unit tests + Playwright real-browser test + React 18 & 19 packed consumers | P3c |
+| Zero overhead when diagnostics `off` or omitted | `pnpm --filter @vii-labs/form run performance` (41/41 HARD gates) + Core diagnostics `off` budget | P3b, P3c |
+| React 18/19 compatibility review & Action bridge | Written compatibility review + unit tests + Playwright real-browser test + React 18 & 19 packed consumers | P3c |
 | `"use client"` preserved in emitted React adapter JS | Package boundary test inspecting `dist/adapters/react/index.js` | P3c |
 | Cross-browser & WCAG 2.2 AA continuity | `pnpm test:browser` (Chromium, Firefox, WebKit — 0 Axe violations) | P3b, P3c |
 
@@ -417,7 +461,7 @@ sequenceDiagram
 
 ## 11. Unresolved Decisions (Require Owner Input Before P3b)
 
-1. **Core `DiagnosticsChannel` Scope:** Should `@vii-labs/core` expose `diagnostics.channel(packageName)` directly on `Diagnostics` (requiring a small Core RFC/ADR update), or should `createDiagnosticsChannel(diagnostics, packageName)` be a separate Core export?
+1. **Core `DiagnosticsChannel` RFC/ADR & Shape:** Should `@vii-labs/core` expose `diagnostics.channel({ package, namespace })` directly on `Diagnostics` or via a separate `createDiagnosticsChannel(diagnostics, options)` helper, and what Core RFC/ADR will authorize the `DiagnosticEvent.package` attribution change?
 2. **P3b Validation Event Granularity:** Should `form.validation.*` events be emitted per validation wave (root/field trigger) only, or also per individual rule execution in `development` mode? (Recommendation: wave-level only to avoid noisy traces on 1,000-field forms).
-3. **P3c React Action Scope:** Should `useFormAction` be the sole React 19 Action primitive, or should `<Form>` wrapper component also be considered? (Recommendation: `useFormAction` hook only, keeping `@vii-labs/form/react` headless and consistent with `useForm`).
+3. **P3c React 18/19 Compatibility Review:** Before locking any hook signature (`useFormAction` vs `<Form>` vs `useActionState` opt-in), complete the dedicated React 18/19 compatibility review covering `react >= 18.0.0`, `isPending` vs `submitting`, and SSR/progressive enhancement semantics.
 4. **Publication Timing:** Should Stage B publication of `@vii-labs/form` (`0.2.0` or `0.2.0-preview.0`) happen from the current P2h Preview baseline *before* P3b begins, or after Phase 3 completes?

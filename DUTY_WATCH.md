@@ -37,6 +37,47 @@ PR: <number or not opened>
 - If partial or blocked, include the safest recovery point and next command/action.
 ```
 
+## 2026-11-15 23:40 CET | Form P3a: Phase 3 Discovery & System Design (Review Fixes)
+
+Status: completed
+Branch: `docs/form-p3a-system-design`
+PR: https://github.com/kas-labs/vii/pull/208
+
+### Scope
+
+- Vii Form Phase 3 Slice P3a only: Discovery & System Design (`docs/designs/form-phase3/DESIGN.md`) and review corrections on PR #208.
+- Documentation and architecture only. Zero production code changes, zero public API changes, zero dependency/version/Changeset changes, zero publication.
+
+### Changes
+
+- Created and refined `docs/designs/form-phase3/DESIGN.md` covering:
+  - Canonical task triage (`8/10`) and Architecture Preflight.
+  - Restored repository truth confirming P2h merge (`e790a4f`, PR #202) and `@vii-labs/form` Preview status (`0.1.0-experimental.1`, `"private": true`, `vii.stability: "preview"`, 35 runtime / 93 type exports, 41/41 HARD gates, 138/138 cross-browser tests).
+  - Re-audited `SubmissionCoordinator` (`packages/form/src/submission/state-machine.ts`) vs `packages/core/src/diagnostics.ts`: documented all 6 existing `form.submission.*` events (`started`, `validation_blocked`, `submitting`, `succeeded`, `failed`, `cancelled`) emitted via private `"record" in diag` duck-typing, separated from the missing public Core producer contract (hardcoded `package: "@vii-labs/core"`) and missing `form.tree.*` / `form.validation.*` / `form.array.*` lifecycle coverage.
+  - Corrected the Mermaid sequence diagram to match exact `SubmissionCoordinator` transitions (`validating -> idle` on `invalid`, `failed` + rethrow on thrown validation/snapshot/action errors, `failed` + `server-invalid` on `!parsedResult.ok`, `cancelled`, `submitting -> succeeded`).
+  - Refined `DiagnosticsChannel` design with restricted namespace/package binding, schema ownership, primitive payload rules, privacy guarantees, `mode === "off"` no-op, backward compatibility, and Core RFC/ADR requirement (rejecting unrestricted public `record()`).
+  - Kept React 19 Form Actions (`useFormAction`) as a provisional unapproved sketch pending a dedicated React 18/19 compatibility review.
+  - Candidate decision matrix, proposed ADRs P3-1 through P3-4, verification matrix, proposed P3b–P3d slices, and unresolved decisions.
+
+### Validation
+
+- `CI=true pnpm format:check`: Passed.
+- `CI=true pnpm lint`: Passed (12/12 projects).
+- `git diff --check`: Passed.
+- `pnpm --filter @vii-labs/form test`: Failed in `pretest` (`pnpm run build` -> `Command "ngc" not found` in local `node_modules`; no `pnpm install` run per task/governance constraints).
+- `pnpm typecheck`, `pnpm validate`, `pnpm test:browser`, `pnpm --filter @vii-labs/form run performance`: Not run locally (documentation-only PR).
+- GitHub CI on PR #208 (prior commit `b696750`): `CodeQL`, `Governance/delivery-policy`, and `Dependency Review` passed; `Validate/validate` was still pending before this review-fix commit.
+
+### Architecture / compatibility
+
+- Zero runtime, public API, Core, adapter, bundle, memory, or package-boundary changes.
+- Approval gate active: owner approval required before any P3b implementation.
+
+### Remaining / recovery
+
+- Monitor GitHub CI on PR #208 after pushing review fixes.
+- Owner review and approval of `docs/designs/form-phase3/DESIGN.md` and resolution of Section 11 open decisions before starting P3b.
+
 ## 2026-09-22 13:57 UTC | Form P2h: Phase 2 Graduation Review
 
 Status: completed

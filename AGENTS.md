@@ -11,6 +11,7 @@ Before every non-trivial task, read:
 - `CONTRIBUTING.md`
 - `docs/strategy/PRODUCT_BOUNDARIES.md`
 - `docs/architecture/DOMAIN_DRIVEN_ARCHITECTURE.md`
+- `docs/architecture/SYSTEM_DESIGN_GUIDELINES.md`
 - `docs/governance/ARCHITECTURE_PREFLIGHT.md`
 - `docs/governance/CODE_QUALITY_STANDARDS.md`
 - `docs/governance/FEATURE_ACCEPTANCE_GATE.md`
@@ -28,13 +29,17 @@ blast radius, ambiguity, risk, verification burden, unknowns, harness, model rol
 grilling gate, context plan, approval gate, budget, and stop condition explicit. Triage is a routing
 and transparency gate; it does not grant mutation, publication, credential, or delegation authority.
 
+## System Design First gate
+
+Before any non-trivial implementation, document a proportionate design with diagrams, contracts, DDD boundaries, risks and verification evidence; obtain explicit architecture approval and link it in the implementation task. Follow `docs/architecture/SYSTEM_DESIGN_GUIDELINES.md`. Existing accepted RFCs/designs may satisfy this gate when they cover the exact scope. Small non-architectural edits use the lightweight exception. Never infer approval from a task prompt alone.
+
+Agents MUST store editable diagrams in `docs/designs/<task-slug>/`, include synchronized SVG previews for `.excalidraw` and `.drawio`, and link diagram sources and architecture approval in implementation PRs. Mermaid `.md`/`.mmd` is equally supported; choose tools by need, not by quota. Check diagram/DDD/dependency consistency at review. Do not implement until the owner approves the design.
+
 ## Architecture preflight
 
 Before designing, implementing, refactoring, or materially editing any non-trivial feature, package, adapter, runtime primitive, application surface, CLI behavior, or public API, follow `docs/governance/ARCHITECTURE_PREFLIGHT.md`.
 
-The agent must identify the owning bounded context or capability, read the relevant canonical architecture and governance sources, recover the established ubiquitous language and naming, verify dependency direction, classify public API and compatibility impact, consider security/trust and lifecycle boundaries, apply code-size limits, and define required verification before implementation begins.
-
-Print or record the required `Architecture Preflight` before implementation. Do not invent architecture, terminology, layers, abstractions, naming conventions, package boundaries, or tactical DDD patterns when repository authority already defines them. If a material architecture decision is missing, contradictory, or unresolved, stop and use the repository RFC/ADR/discovery process rather than guessing.
+Record the owning bounded context, canonical architecture sources and vocabulary, dependency direction, API/compatibility impact, security/trust and lifecycle boundaries, code-size budget, verification and unresolved decisions. Do not invent architecture or terminology when repository authority defines them; stop for the RFC/ADR process when an architectural question remains unresolved. The preflight complements, but does not replace, the owner's explicit System Design approval.
 
 ## Task routing and design interrogation
 

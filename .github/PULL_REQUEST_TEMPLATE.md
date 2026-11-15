@@ -22,6 +22,22 @@ Describe the problem, the chosen approach, and the observable outcome.
 - [ ] Website or public documentation
 - [ ] Claude Design / design-system related
 
+## System Design and diagram review
+
+- Design record / accepted RFC or ADR link:
+- Diagram source directory (`docs/designs/<task-slug>/`):
+- Diagram formats used (Excalidraw / draw.io / Mermaid / none):
+- Architecture approval link and scope (or reason lightweight exception applies):
+- Design changes since approval and re-approval evidence:
+
+- [ ] Existing architecture, RFC/ADR decisions and DDD bounded contexts were inspected.
+- [ ] Relevant diagrams show contracts, dependencies, error/data flows and proposed versus implemented components.
+- [ ] Editable native diagram sources are committed; `.excalidraw` and `.drawio` have matching SVG previews.
+- [ ] Diagram sources and SVG previews are synchronized and contain no external references or sensitive data.
+- [ ] Design approval is documented before production implementation (or a justified lightweight exception is stated).
+- [ ] Implementation and tests match the approved design; material deviations received renewed review.
+- [ ] No new or changed architecture diagrams are needed for this PR (explain above).
+
 ## Validation
 
 List the exact commands and evidence used to validate this change. Do not claim a check passed unless it was run.

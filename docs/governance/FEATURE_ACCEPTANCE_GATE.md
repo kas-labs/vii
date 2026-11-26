@@ -191,6 +191,10 @@ For behavior changes with a clear test seam, prefer red-green or equivalent test
 
 Research may begin with exploratory fixtures, but accepted behavior must end with repeatable automated evidence where practical.
 
+## Independent review and evidence status
+
+For a substantial implementation change, link the approved System Design, acceptance/test matrix and proportionate product/RAID/RACI plan. Record exact-head SHA, environment, commands, results, known limits and any manual verification required. Use the canonical five-state vocabulary (`PASS`, `FAIL`, `PENDING`, `BLOCKED`, `NOT APPLICABLE`). Unknown or not-run results must never appear as PASS. The reviewer must examine **test quality as well as implementation**, challenge weakened assertions or unverified claims and confirm architecture/diagram alignment. The project owner controls final merge and separately approves release; an agent cannot independently approve its own work.
+
 ## Merge gate
 
 Before committing or opening an implementation pull request, run the relevant focused checks.

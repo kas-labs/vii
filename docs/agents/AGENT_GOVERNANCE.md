@@ -216,6 +216,12 @@ An agent stops and requests a decision when a task would:
 - create hidden network behavior;
 - introduce executable registry content.
 
+## AI engineering quality and budget
+
+For agent-powered tooling or optional AI-integrated features, establish deterministic evaluation cases before implementation, covering output validity, grounding, prompt injection, context isolation, permission denial, structured tool calls, cancellation, error/retry behavior, provider unavailability and expected human approval. Version evaluation fixtures and record provider/model details **only when observed**. Mock providers by default. Live tests involving external models, tokens, private context or spending require scope, privacy and cost approval, and must not silently run through a CI job.
+
+An agent's task may name an independent reviewer, but the implementing agent never approves its own changes. Review covers production code, changed tests, architecture, accessibility and security evidence. Public design decisions, merge and release remain the project owner's actions; neither tool availability nor task triage conveys those rights. Tool-specific instructions (Cursor, Claude Code, Codex, Copilot, Antigravity) are adapters to `AGENTS.md` and canonical governance, not independent policy sources. Generated skill mirrors should be regenerated from their canonical source instead of edited separately.
+
 ## Failure and stop conditions
 
 The agent stops before mutation when:

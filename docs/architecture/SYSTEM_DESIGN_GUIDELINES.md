@@ -27,6 +27,14 @@ For a non-trivial change, create `docs/designs/<task-slug>/DESIGN.md` (or link a
 
 Prefer Mermaid in Markdown for diffable diagrams; `.mmd` files may be used for large diagrams. Diagrams must name the contracts across boundaries, not just boxes. Do not assume a package is a bounded context. Keep the design proportional to the blast radius; a short diagram and design note can suffice for a focused change.
 
+## Discovery, planning and test design requirements
+
+Before substantial System Design, use the canonical delivery workflow in `docs/governance/REPOSITORY_OPERATING_MODEL.md`. The design record (or linked accepted RFC/ADR) should contain proportional product discovery, a comparative SWOT where material, RAID risks, delivery slices, RACI ownership and effort/calendar assumptions. Treat hypotheses as hypotheses; defer work without a real consumer or architectural justification.
+
+Include an **Accessibility Impact Assessment** whenever a UI surface is added or changed. For Web UI target WCAG 2.2 Level AA; evaluate platform accessibility guidance for native/desktop surfaces. Assess the relevance of the European Accessibility Act (EAA), EN 301 549 and German Barrierefreiheitsstärkungsgesetz (BFSG) where applicable, without claiming legal compliance from checklist completion. Define keyboard/focus, semantic labels, screen-reader, contrast, reflow, touch, motion and alternative-interaction acceptance criteria proportionately. Accessibility is not a paid-only capability.
+
+Test strategy is written **before** implementation: existing baseline and observable behavior; requirement -> acceptance criterion -> test scenario -> expected evidence; happy, edge, negative, regression, failure and recovery cases; fixtures, environments, automated/manual commands, release blockers and known gaps. Existing tests may be run during discovery. **Do not write new feature implementation tests or production code before owner design approval.** Once approved, use TDD (red/green/refactor) when an executable invariant or bug reproduction makes it useful; otherwise write tests alongside implementation.
+
 ## Diagram tooling and canonical storage
 
 For each new or materially changed design, keep the **editable source** in `docs/designs/<task-slug>/`, with a linked `DESIGN.md` or accepted RFC/ADR. The existing `docs/architecture/designs/` directory remains an index and home for legacy records; do not duplicate or relocate accepted historical designs solely for this policy. New diagrams live in `docs/designs/` even when the main design decision is recorded elsewhere.

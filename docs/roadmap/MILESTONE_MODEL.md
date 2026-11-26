@@ -66,6 +66,19 @@ A milestone must contain:
 
 A milestone must not be closed solely because code was merged. Validation, documentation, and clean-consumer evidence are part of completion.
 
+## Delivery planning and capacity
+
+For substantial milestones and independently reviewable slices, record:
+
+- outcome, business/user impact and existing priority if assigned;
+- dependencies, critical approval gates, artifacts and acceptance criteria;
+- Responsible role and exactly one Accountable owner per deliverable;
+- human active effort, agent execution effort and calendar duration as **separate ranges** with units, confidence and assumptions;
+- testing, accessibility, security, independent review, rework, waiting time and contingency where relevant;
+- material RAID risks and the trigger for re-planning.
+
+Use existing issues, milestone descriptions and design records; do not create a second project-management board or force a methodology. T-shirt sizing, timeboxing, Work Breakdown Structure, critical-path mapping and PERT are optional planning aids, not required deliverables. Unknown owner availability is a schedule uncertainty, not permission to invent a deadline. See [Repository Operating Model](../governance/REPOSITORY_OPERATING_MODEL.md).
+
 ## Date policy
 
 Dates may be added for coordination, but scope is not silently reduced to meet a date. Any scope change must be visible in the milestone description and roadmap.

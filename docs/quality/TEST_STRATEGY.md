@@ -243,6 +243,24 @@ If AI tooling gains project access, tests cover:
 - no direct execution of model output;
 - provider and data-scope configuration.
 
+## Risk-based verification planning and traceability
+
+Before implementation, each approved design includes a test matrix: `Requirement -> Acceptance criterion -> Test scenario -> Evidence`. Record existing behavior and baseline command/results separately from changes introduced by the task. Include positive, negative, edge, recovery, cancellation, lifecycle, migration and hostile-input cases where relevant, and identify test data, fixtures, platforms, CI commands and necessary manual review. Research may run existing tests but must not write new functionality tests before Design First approval. After approval, prefer Red -> Green -> Refactor for isolated logic, contracts and reproducible defects; otherwise tests may accompany production work.
+
+Choose unit, integration, component, contract, API, end-to-end, visual regression, accessibility, performance/load, security/privacy, migration, compatibility, recovery, smoke, AI evaluation or content validation **according to changed risk**, not as a mandatory exhaustive set. For reproducible bugs, add a regression test or document a verified equivalent. Never delete meaningful tests, weaken assertions, or change expected output merely to achieve a green build. See `docs/governance/FEATURE_ACCEPTANCE_GATE.md`.
+
+## Accessibility-first verification
+
+A UI change requires a proportional accessibility impact assessment during design and targeted evidence during verification. For web interfaces, use **WCAG 2.2 Level AA** as the target. For desktop/mobile, use relevant platform accessibility guidance and applicable WCAG criteria. Where a product is offered in a regulated market, check whether EAA, EN 301 549, Germany's BFSG or other applicable rules impose specific obligations; do not assert legal conformity without a qualified review and adequate evidence.
+
+Review semantic HTML, accessible names/descriptions, keyboard and focus behavior, screen-reader announcements, contrast and non-color indicators, text scaling/reflow, reduced motion, alternative text, form errors, target sizes, dialogs, drag-and-drop alternatives, captions/transcripts, data visualizations and asynchronous AI/agent status where affected. Prefer native semantics over unnecessary ARIA. Apply design-token contrast checks for light/dark themes when relevant.
+
+Use existing axe-core / Playwright fixtures where applicable **plus manual checks** with keyboard and a relevant platform screen reader (e.g. VoiceOver, NVDA or TalkBack), documenting the actual device/browser/assistive-technology coverage. Automated scans alone never establish full accessibility. A known critical barrier or missing required review is a release blocker for the affected surface. Accessibility is part of baseline quality, not an upsell.
+
+## AI evaluation and deterministic evidence
+
+For **features that invoke models or agents**, test structured-output validation, grounding, prompt regressions, tool permissions, injection, context isolation, human approvals, unauthorized actions, cost/token ceilings, timeouts, cancellation, retries, provider failures and compatibility as applicable. Use mocked providers, deterministic fixtures and versioned evaluation datasets. A live paid evaluation requires explicit owner authorization and a cost/data-scope limit. One favorable model response is not a reliability claim. This policy does not turn AI into a Vii runtime dependency.
+
 ## Required quality gates
 
 A stable package cannot be released when:

@@ -378,6 +378,9 @@ cost.
 - Durable architecture, package maturity, validation-surface, or roadmap changes must update this document.
 - Public API, package, protocol, compatibility, privacy, security, or migration changes follow the RFC/ADR governance rules.
 
+- Engineering governance process index: `docs/governance/REPOSITORY_OPERATING_MODEL.md` now ties discovery, SWOT/RAID, RACI, estimates, Design First, accessibility, verification, independent PR review, owner merge and release quality gates into one proportional workflow. It extends existing Task Triage and does not change runtime architecture or roadmap sequence.
+- Current CI workflows remain unchanged; full Validate, browser and Form performance checks run on PRs, including documentation-only work. The workflow inventory is recorded for a future, separately approved cost/coverage review.
+
 ## Quality baseline
 
 The canonical quality baseline is `docs/governance/CODE_QUALITY_STANDARDS.md`.

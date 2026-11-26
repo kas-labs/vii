@@ -75,6 +75,12 @@ For non-trivial changes, first inspect repository truth, record a proportionate 
 
 New designs keep editable diagram sources in `docs/designs/<task-slug>/`. Excalidraw (`.excalidraw`) and draw.io (`.drawio`) require matching SVG previews; Mermaid (`.md` or `.mmd`) needs no SVG export. Use only the formats relevant to the problem. Review source/preview consistency, DDD ownership, contracts, dependencies and explicit owner approval before implementation.
 
+## Product and project-management handoff
+
+For material features, architecture or integrations, link the discovery evidence, alternatives, relevant SWOT/RAID assessment, slice plan, RACI ownership, separate human/agent/calendar estimates, accessibility impact and test strategy in the approved design or issue. Use the existing [operating model](docs/governance/REPOSITORY_OPERATING_MODEL.md) rather than new parallel documents. Implementation begins only after explicit design approval.
+
+A reviewer separate from the implementing agent checks both code and tests. The project owner controls merge and releases; approval of a design does not approve future slices or publication.
+
 ## Delivery workflow
 
 1. Create a focused branch using `<type>/<short-kebab-description>`.

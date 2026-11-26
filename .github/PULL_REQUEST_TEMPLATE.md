@@ -129,6 +129,13 @@ Describe changes to permissions, diagnostics, data handling, registry content, d
 - [ ] New runtime dependencies are explicitly justified.
 - [ ] No secrets, private source code, or personal data are included.
 
+## Known limitations, pending checks and release blockers
+
+- Known limitations / deferred follow-up (or `None identified`):
+- Checks still `PENDING` or `BLOCKED`, owner and expected next action:
+- Release blockers (or `NOT APPLICABLE` for this change):
+- Merge permission: project owner only; merge is not release authorization.
+
 ## Documentation and durable state
 
 - [ ] Public behavior is documented

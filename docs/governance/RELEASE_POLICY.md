@@ -56,6 +56,16 @@ Depending on the package, a release must pass:
 - accessibility checks for UI packages
 - migration fixtures for breaking changes
 
+## Release candidate readiness and decision evidence
+
+Treat merge, release candidate approval and actual publication as **separate gates**. For a release candidate, record exact commit SHA/tag, package version, build/installer or packed-artifact digest where available, target platform/deployment environment, validation commands, environment and observed outcomes. Apply `PASS`, `FAIL`, `PENDING`, `BLOCKED` or `NOT APPLICABLE` per required check. A required non-PASS result prevents a release-ready claim.
+
+Select appropriate production build, unit/contract/integration/regression tests, critical journeys, browser/desktop/mobile installation, supported runtimes, accessibility, security, dependency, packaging, authentication/billing where applicable, data integrity, migrations, deployment and rollback/recovery tests. For web/backend validate the actual deployment environment; for desktop/mobile validate real distributable artifacts and supported platforms. Independent review and **explicit project-owner release authorization** are mandatory before publishing. Do not modify `publish-core.yml`, npm configuration or secrets as part of ordinary governance changes.
+
+## Post-release verification
+
+After an authorized release, perform scoped smoke tests and critical journeys in the real target environment, inspect errors, package/update compatibility, migration/data integrity and recovery readiness as relevant, and record incidents or rollback decisions. Do not enable telemetry, collect user data or add external monitoring without separate privacy/security approval. Use release notes/changelog for shipped changes; a merged PR is not automatically a published release.
+
 ## Publication
 
 npm is the initial primary registry. Releases should use trusted publishing and provenance when available.

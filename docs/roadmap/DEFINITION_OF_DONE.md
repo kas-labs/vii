@@ -2,6 +2,16 @@
 
 A Vii work item is complete only when the relevant criteria below are satisfied.
 
+## Workflow and approvals
+
+- substantial tasks have recorded discovery, realistic alternatives (including defer), proportional SWOT/RAID, ownership, effort assumptions and accepted scope;
+- Design First architecture, diagrams, accessibility impact and test plan are explicitly approved **before** new feature code or tests;
+- implementation and test evidence map back to accepted requirements and the approved design;
+- an independent reviewer inspects the final diff and tests, and the owner controls merge;
+- post-merge verification records the actual state of `main`, with release and post-release gates separate.
+
+The canonical process and proportional exceptions are in `docs/governance/REPOSITORY_OPERATING_MODEL.md`.
+
 ## Product and architecture
 
 - the behavior matches accepted RFCs and ADRs;

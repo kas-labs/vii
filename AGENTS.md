@@ -41,6 +41,14 @@ Before designing, implementing, refactoring, or materially editing any non-trivi
 
 Record the owning bounded context, canonical architecture sources and vocabulary, dependency direction, API/compatibility impact, security/trust and lifecycle boundaries, code-size budget, verification and unresolved decisions. Do not invent architecture or terminology when repository authority defines them; stop for the RFC/ADR process when an architectural question remains unresolved. The preflight complements, but does not replace, the owner's explicit System Design approval.
 
+## Product, planning and delivery gates
+
+For substantial changes, use `docs/governance/REPOSITORY_OPERATING_MODEL.md` for product discovery, comparative SWOT, RAID, RACI, time/resource planning and the end-to-end quality workflow. Use `docs/roadmap/MILESTONE_MODEL.md` for slices, `docs/quality/TEST_STRATEGY.md` for test planning/accessibility and `docs/governance/RELEASE_POLICY.md` for release gates. Keep all records in existing issue/design/PR context; do not introduce a second tracker. Separate business priority, effort and triage score.
+
+Determine the actual agent harness under `docs/governance/AGENT_TASK_TRIAGE_POLICY.md`. Never invent model availability or switch models, delegate paid work, consume provider tokens, or run live evaluations without approval. Use canonical repository rules regardless of whether the task runs in Cursor, Claude Code, Codex, GitHub Copilot, Antigravity or another host. Generated skill mirrors are not separate policy authorities.
+
+The **project owner merges** after independent review and required CI; agents must not self-merge or authorize releases. After merge, verify `main`, update durable state as needed and treat the release as a separate owner decision.
+
 ## Task routing and design interrogation
 
 Before implementation, classify every non-trivial request. If the route is not obvious, use the

@@ -38,6 +38,33 @@ Describe the problem, the chosen approach, and the observable outcome.
 - [ ] Implementation and tests match the approved design; material deviations received renewed review.
 - [ ] No new or changed architecture diagrams are needed for this PR (explain above).
 
+## Product, planning and independent review
+
+For substantial changes, summarize or link the existing plan. For small changes, state the proportional exception; do not add empty process artifacts.
+
+- User problem / audience / value and evidence (observed vs hypothesis):
+- Priority (not triage score), milestone, slice, dependencies and non-goals:
+- Alternative / defer decision and relevant SWOT or risk trade-offs:
+- RAID: material risk, assumption, issue, dependency, owner and mitigation:
+- Responsibility: Responsible / one Accountable / Consulted / Informed (RACI as relevant):
+- Human effort range / AI-agent effort range / calendar range, assumptions and confidence:
+- Acceptance criteria and Definition of Done:
+- Independent reviewer and review evidence (code **and tests**):
+
+## Verification evidence matrix
+
+Each required check has one status: **PASS / FAIL / PENDING / BLOCKED / NOT APPLICABLE**. Record an actual observed outcome; never mark an unrun check PASS.
+
+| Check / acceptance criterion | Status | Exact command or manual method | Commit SHA / environment | Evidence link / blocker |
+| --- | --- | --- | --- | --- |
+| Baseline / focused tests | PENDING | | | |
+| Regression / failure / recovery | PENDING | | | |
+| Accessibility (automated **and** manual if UI changes) | PENDING | | | |
+| Security / privacy / AI evaluations if affected | PENDING | | | |
+| Full relevant CI / package / deployment checks | PENDING | | | |
+
+Do not merge with a required FAIL, BLOCKED or PENDING check. Explain justified NOT APPLICABLE cases. A documentation-only task need not run runtime tests unless its contents affect executable examples or supported claims. Record release blockers separately; merge is not a release approval.
+
 ## Validation
 
 List the exact commands and evidence used to validate this change. Do not claim a check passed unless it was run.
@@ -101,6 +128,13 @@ Describe changes to permissions, diagnostics, data handling, registry content, d
 - [ ] No hidden telemetry or network access was introduced.
 - [ ] New runtime dependencies are explicitly justified.
 - [ ] No secrets, private source code, or personal data are included.
+
+## Known limitations, pending checks and release blockers
+
+- Known limitations / deferred follow-up (or `None identified`):
+- Checks still `PENDING` or `BLOCKED`, owner and expected next action:
+- Release blockers (or `NOT APPLICABLE` for this change):
+- Merge permission: project owner only; merge is not release authorization.
 
 ## Documentation and durable state
 

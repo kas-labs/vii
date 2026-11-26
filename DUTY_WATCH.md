@@ -78,6 +78,37 @@ PR: https://github.com/kas-labs/vii/pull/208
 - Monitor GitHub CI on PR #208 after pushing review fixes.
 - Owner review and approval of `docs/designs/form-phase3/DESIGN.md` and resolution of Section 11 open decisions before starting P3b.
 
+## 2026-11-26 | Universal engineering and project-management governance alignment
+
+Status: partial (documentation PR #209 opened; owner approval and CI still pending)
+Branch: `docs/universal-engineering-governance`
+PR: https://github.com/kas-labs/vii/pull/209
+
+### Scope
+
+- Audit current Vii governance, AGENTS.md, architecture and DDD policies, roadmap, product decisions, risk and milestones, tests/accessibility, CI and release gates.
+- Align existing canonical policies for discovery, SWOT, RAID, RACI, estimates, Design First, independent review and post-merge/release quality. No production code, dependencies, public contracts, CI, branch settings or release execution.
+
+### Changes
+
+- Reuse the repository operating model as the workflow index and keep specialized rules in existing triage, architecture, agent, milestone, test, Definition of Done, release, PR and contributor documents.
+- Source baseline: latest main includes P3a PR #208; no open PR at audit time.
+
+### Validation
+
+- GitHub repository tree, recent main commits, open PRs and existing source documents/workflow YAML inspected.
+- GitHub compare against main confirmed 14 modified Markdown files only; edited Markdown code fences checked for balanced opening/closing delimiters.
+- GitHub connector editing only: local `pnpm validate`, `pnpm test:browser`, `pnpm nx performance form`, and `git diff --check` not run.
+- GitHub CI: pending after PR creation. No claims of passing checks.
+
+### Architecture / compatibility
+
+- Documentation-only governance changes. Existing Design First, RFC/ADR, DDD, Core dependency direction, testing budgets, versioning and publication authority preserved.
+
+### Remaining / recovery
+
+- Review PR #209 checks at the latest head SHA and record remaining blockers; owner performs independent review and merge. No subsequent implementation authorized.
+
 ## 2026-09-22 13:57 UTC | Form P2h: Phase 2 Graduation Review
 
 Status: completed

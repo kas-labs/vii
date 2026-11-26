@@ -66,6 +66,37 @@ Budget: <bounded estimate or context budget> · Stop when: <observable condition
 Follow it with one sentence naming the smallest change the maintainer could make that would lower
 the score. Never present a guessed model, budget, or delegation capability as a verified fact.
 
+## Environment selection and model availability
+
+Determine the actual execution harness first: Cursor, Claude Code, Codex, GitHub Copilot, Antigravity or another tool. Reuse an already verified environment; if it is unknown, ask the owner before choosing environment-specific capabilities or commands. A repository integration or editor name is not evidence that a particular model, thinking level or paid agent is available. The model **role** in the score table is a recommendation, not an instruction to switch models.
+
+Before naming a concrete model or reasoning-effort setting, verify that the chosen harness exposes it. If this cannot be verified, write `Model: unknown (role: economy / mid-tier / frontier)` and `Reasoning effort: desired level, availability unverified`; do not invent vendor names, versions, token budgets or reasoning modes. The lowest tier corresponds to Economy, mid to Mid-tier, and frontier to Frontier as descriptive routing roles. No model switching, additional paid agents, live provider evaluation or parallel paid delegation without explicit owner approval.
+
+The context budget is a **scoped reading plan** (named documents, paths, changed symbols and evidence), with a numeric token limit only if the harness exposes one. Record estimated tool/cost bounds when observable, otherwise `unverified`.
+
+## Task Triage Verdict fields
+
+The canonical compact verdict below remains valid. For tasks requiring a fuller handoff, include:
+
+```text
+Task: <goal>
+Environment: <verified harness or unknown>
+Score: <0–10>/10
+Blast Radius: <0–2> (reason)
+Ambiguity: <0–2> (reason)
+Risk: <0–2> (reason)
+Verification: <0–2> (reason)
+Unknowns: <0–2> (reason)
+Recommended Model: <verified concrete model or role only>
+Reasoning Effort: <supported level or unverified recommendation>
+Context Budget: <scoped paths and known/unknown limit>
+Delegation: <none by default>
+Approval Required: <owner decision and scope>
+Stop Condition: <observable condition>
+```
+
+A material scope change requires re-triage. **Do not** conflate this routing score with delivery priority, business value, size estimate or a release gate. The source of permission remains the applicable owner-approved task and agent mutation protocol.
+
 ## Routing rules
 
 - A clear, bounded edit with accepted behavior takes the direct implementation path; use `tdd` when
